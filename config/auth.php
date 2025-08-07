@@ -14,8 +14,12 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+        // Change the default guard to one of your existing guards
+        // Or, if you always explicitly specify guards, you can remove this env() call
+        'guard' => env('AUTH_GUARD', 'super_admin'), // Changed from 'web' to 'super_admin'
+        // Change the default password broker to one of your existing ones,
+        // or remove it if you don't use a generic password reset
+        'passwords' => env('AUTH_PASSWORD_BROKER', 'super_admins'), // Changed from 'users' to 'super_admins'
     ],
 
     /*
@@ -36,11 +40,28 @@ return [
     */
 
     'guards' => [
-        'web' => [
+        // If you don't use a generic 'web' guard, you can remove or comment this out.
+        // If you need a 'web' guard, you MUST configure it to use one of your existing providers.
+        // For example, if 'super_admin' is your primary, you could do:
+        // 'web' => [
+        //     'driver' => 'session',
+        //     'provider' => 'super_admins',
+        // ],
+        // For now, we'll assume you don't need a generic 'web' guard that isn't one of your specific roles.
+        'super_admin' => [
             'driver' => 'session',
-            'provider' => 'users',
+            'provider' => 'super_admins',
+        ],
+        'owner' => [
+            'driver' => 'session',
+            'provider' => 'owners',
+        ],
+        'staff' => [
+            'driver' => 'session',
+            'provider' => 'staff',
         ],
     ],
+
 
     /*
     |--------------------------------------------------------------------------
@@ -60,15 +81,19 @@ return [
     */
 
     'providers' => [
-        'users' => [
+        // Removed the default 'users' provider as you don't use a 'users' table or App\Models\User model.
+        'super_admins' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => App\Models\SuperAdmin::class,
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'owners' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Owner::class,
+        ],
+        'staff' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Staff::class,
+        ],
     ],
 
     /*
@@ -91,12 +116,18 @@ return [
     */
 
     'passwords' => [
-        'users' => [
-            'provider' => 'users',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+        // If you need password reset for SuperAdmins, Owners, or Staff,
+        // you should define separate password brokers for each,
+        // pointing to their respective providers.
+        // For example:
+        'super_admins' => [
+            'provider' => 'super_admins',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'), // You'll need this table
             'expire' => 60,
             'throttle' => 60,
         ],
+        // You can add 'owners' and 'staff' password brokers similarly if needed.
+        // Removed the default 'users' password broker as it's not used.
     ],
 
     /*
@@ -107,6 +138,7 @@ return [
     | Here you may define the number of seconds before a password confirmation
     | window expires and users are asked to re-enter their password via the
     | confirmation screen. By default, the timeout lasts for three hours.
+    |
     |
     */
 
