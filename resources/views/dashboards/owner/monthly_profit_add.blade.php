@@ -1,77 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://unpkg.com/flowbite@latest/dist/flowbite.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@0..1" rel="stylesheet">
-    <link href='https://fonts.googleapis.com/css?family=Poppins' rel='stylesheet'>  
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-        }
-        .nav-label {
-            font-size: 0.875rem;
-        }
-    </style>
-</head>
-<body class="min-h-screen bg-gradient-to-b from-white to-blue-100 flex p-4">
+@extends('dashboards.owner.owner') 
 
-    <aside id="sidebar" class="top-5 bottom-5 w-64 bg-black text-white p-4 rounded mr-3">
-        <div>
-            <div class="flex items-center mb-6 mt-3">
-                <img src="{{ asset('assets/logo.png') }}" class="w-8 h-8 rounded ml-2 mr-2">
-                <span class="text-white font-bold">Shoplytix</span>
-            </div>
-
-            <nav class="space-y-2">
-                <a href="{{ route('dashboards.owner.dashboard') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                    <span class="material-symbols-rounded">dashboard</span>
-                    <span class="nav-label">Dashboard</span>
-                </a>
-                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                    <span class="material-symbols-rounded">shopping_cart</span>
-                    <span class="nav-label">Inventory</span>
-                </a>
-                <div class="group">
-                    <button id="reportsToggle" class="w-full flex items-center justify-between p-3 rounded hover:bg-red-600 hover:text-white">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-rounded">stacked_line_chart</span>
-                            <span class="nav-label">Reports</span>
-                        </div>
-                        <span class="nav-label material-symbols-rounded">keyboard_arrow_down</span>
-                    </button>
-          
-                    <div id="reportsDropdown" class="hidden ml-3 mt-2 space-y-1 border-l-4 border-gray-600">
-                        <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                            <span class="report-label hidden material-symbols-rounded">history_toggle_off</span>
-                            <span class="report-label hidden text-sm">Activty Log</span>
-                        </a>
-                        <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                            <span class="report-label hidden material-symbols-rounded">support_agent</span>
-                            <span class="report-label hidden text-sm">Technical Support</span>
-                        </a>
-                    </div>
-                </div>
-                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                    <span class="material-symbols-rounded">local_mall</span>
-                    <span class="nav-label">Store</span>
-                </a>
-            </nav>
-        </div>
-    </aside>
-
-    <main class="flex-1 space-y-1">
-        <!-- Top Navbar -->
-        <div class="flex justify-end items-center border-b-2 border-gray-300 pb-2 px-4 mb-3">
-            <span class="material-symbols-rounded mr-5" style="font-variation-settings: 'FILL' 1;">
-                notifications
-            </span>
-            <img src="{{ asset('assets/user.png') }}" class="w-9 h-9 rounded-full">
-        </div>
+@section('content')
 
         <div class="grid gap-5 p-2">
             <div class="bg-white rounded-lg shadow p-6 w-full">     
@@ -135,7 +64,7 @@
                             </div>
                             
                             <div class="p-4">
-                                <form method="POST" action="{{ route('owner.monthly_profit_add') }}" class="space-y-4">
+                                <form method="POST" action="{{ route('dashboards.owner.monthly_profit_add') }}" class="space-y-4">
                                     @csrf
 
                                     <div>
@@ -202,5 +131,4 @@
         });        
     </script>
 
-</body>
-</html>
+@endsection
