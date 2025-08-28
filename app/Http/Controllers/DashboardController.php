@@ -20,27 +20,71 @@ class DashboardController extends Controller
         $owner_name = $owner->firstname;
 
         $selectedYear = $request->input('year');
-
-        // Get latest year from expenses
-        $latestYear = collect(DB::select("
-            SELECT MAX(YEAR(expense_created)) as latestYear FROM expenses
-        "))->pluck('latestYear')->first();
-
-        $latestYear = $latestYear ?? now()->year;
-
-        $latestMonth = collect(DB::select("
-            SELECT MAX(MONTH(expense_created)) as latestMonth FROM expenses WHERE expense_created = ?
-        ", [$latestYear]))->pluck('latestMonth')->first();
-
+        $latestYear = now()->year;
         $yearToUse = $selectedYear ?? $latestYear;
+        
+        
+        $currentMonth = (int)date('n');
+        $months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        $months = array_slice($months, 0, $currentMonth);
+        $allMonths = range(0, ($currentMonth-1)); 
+        
 
-        $profits = collect(DB::select("
+        $netProfits = []; //compatative analysis - latest nga year
+        $profits = [];  //sa graph ni
+
+
+        $expenses = collect(DB::select("
             SELECT 
                 m.month,
-                m.monthly_sales,
-                IFNULL(e.monthly_expenses, 0) AS monthly_expenses,
-                (m.monthly_sales - IFNULL(e.monthly_expenses, 0)) AS net_profit
+                IFNULL(e.expense_total, 0) AS expense_total
             FROM (
+                SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+            ) m
+            LEFT JOIN (
+                SELECT 
+                    MONTH(expense_created) AS month,
+                    SUM(expense_amount) AS expense_total
+                FROM expenses
+                WHERE YEAR(expense_created) = ? AND owner_id = ?
+                GROUP BY MONTH(expense_created)
+            ) e ON m.month = e.month
+            ORDER BY m.month
+        ", [$latestYear, $owner_id]))->pluck('expense_total')->slice(0, $currentMonth)->toArray();
+
+        $losses = collect(DB::select("
+            SELECT 
+                m.month,
+                IFNULL(l.total_loss, 0) AS total_loss
+            FROM (
+                SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+            ) m
+            LEFT JOIN (
+                SELECT 
+                    MONTH(d.damaged_date) AS month,
+                    SUM(d.damaged_quantity * p.selling_price) AS total_loss
+                FROM damaged_items d
+                JOIN products p ON d.prod_code = p.prod_code
+                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+                GROUP BY MONTH(d.damaged_date)
+            ) l ON m.month = l.month
+            ORDER BY m.month
+        ", [$owner_id, $latestYear]))->pluck('total_loss')->slice(0, $currentMonth)->toArray();
+     
+        $sales = collect(DB::select("
+            SELECT 
+                m.month,
+                IFNULL(s.monthly_sales, 0) AS monthly_sales
+            FROM (
+                SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+            ) m
+            LEFT JOIN (
                 SELECT 
                     MONTH(r.receipt_date) AS month,
                     SUM(p.selling_price * ri.item_quantity) AS monthly_sales
@@ -53,25 +97,99 @@ class DashboardController extends Controller
                     p.owner_id = r.owner_id AND
                     YEAR(r.receipt_date) = ?
                 GROUP BY MONTH(r.receipt_date)
+            ) s ON m.month = s.month
+            ORDER BY m.month
+        ", [$owner_id, $latestYear]))->pluck('monthly_sales')->slice(0, $currentMonth)->toArray();
+
+        foreach ($allMonths as $month) {
+            $sale     = $sales[$month]    ?? null;
+            $expense  = $expenses[$month] ?? null;
+            $loss     = $losses[$month]   ?? null;
+
+            $netProfits[$month] = $sale - ($expense + $loss);
+        }
+
+
+
+        $GraphExpenses = collect(DB::select("
+            SELECT 
+                m.month,
+                IFNULL(e.expense_total, 0) AS expense_total
+            FROM (
+                SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
             ) m
             LEFT JOIN (
                 SELECT 
-                    MONTH(e.expense_created) AS month,
-                    SUM(e.expense_amount) AS monthly_expenses
-                FROM 
-                    expenses e
-                WHERE 
-                    e.owner_id = ? AND
-                    YEAR(e.expense_created) = ?
-                GROUP BY MONTH(e.expense_created)
+                    MONTH(expense_created) AS month,
+                    SUM(expense_amount) AS expense_total
+                FROM expenses
+                WHERE YEAR(expense_created) = ? AND owner_id = ?
+                GROUP BY MONTH(expense_created)
             ) e ON m.month = e.month
-            ORDER BY m.month;
-        ", [
-            $owner_id, $yearToUse,
-            $owner_id, $yearToUse  
-        ]))->toArray();
+            ORDER BY m.month
+        ", [$yearToUse, $owner_id]))->pluck('expense_total')->toArray();
 
-        $profitData = array_map(fn($row) => (float) $row->net_profit, $profits);
+        $GraphLosses = collect(DB::select("
+            SELECT 
+                m.month,
+                IFNULL(l.total_loss, 0) AS total_loss
+            FROM (
+                SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+            ) m
+            LEFT JOIN (
+                SELECT 
+                    MONTH(d.damaged_date) AS month,
+                    SUM(d.damaged_quantity * p.selling_price) AS total_loss
+                FROM damaged_items d
+                JOIN products p ON d.prod_code = p.prod_code
+                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+                GROUP BY MONTH(d.damaged_date)
+            ) l ON m.month = l.month
+            ORDER BY m.month
+        ", [$owner_id, $yearToUse]))->pluck('total_loss')->toArray();
+     
+        $GraphSales = collect(DB::select("
+            SELECT 
+                m.month,
+                IFNULL(s.monthly_sales, 0) AS monthly_sales
+            FROM (
+                SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+            ) m
+            LEFT JOIN (
+                SELECT 
+                    MONTH(r.receipt_date) AS month,
+                    SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+                FROM 
+                    receipt r
+                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                JOIN products p ON p.prod_code = ri.prod_code
+                WHERE 
+                    r.owner_id = ? AND
+                    p.owner_id = r.owner_id AND
+                    YEAR(r.receipt_date) = ?
+                GROUP BY MONTH(r.receipt_date)
+            ) s ON m.month = s.month
+            ORDER BY m.month
+        ", [$owner_id, $yearToUse]))->pluck('monthly_sales')->toArray();
+
+        foreach ($allMonths as $month) {
+            $Gsale     = $GraphSales[$month]    ?? null;
+            $Gexpense  = $GraphExpenses[$month] ?? null;
+            $Gloss     = $GraphLosses[$month]   ?? null;
+
+            $profits[$month] = $Gsale - ($Gexpense + $Gloss);
+        }
+
+
+        $profitMonth = $netProfits[$currentMonth - 1] ?? 0;
+
+
 
         $productCategory = collect(DB::select("
             SELECT 
@@ -86,7 +204,6 @@ class DashboardController extends Controller
         ", [
             $latestYear, $owner_id
         ]))->toArray();
-
         $productData = array_map(fn($row) => (float) $row->total_amount, $productCategory);
 
         $productCategoryPrev = collect(DB::select("
@@ -102,82 +219,61 @@ class DashboardController extends Controller
         ", [
             $latestYear-1,$owner_id 
         ]))->toArray();
-
         $productPrevData = array_map(fn($row) => (float) $row->total_amount, $productCategoryPrev);
 
 
-        $profitMonth = collect(DB::select("
-            SELECT 
-                months.month,
-                IFNULL(m.monthly_sales, 0) AS monthly_sales,
-                IFNULL(e.monthly_expenses, 0) AS monthly_expenses,
-                (IFNULL(m.monthly_sales, 0) - IFNULL(e.monthly_expenses, 0)) AS net_profit
-            FROM (
-                SELECT DISTINCT MONTH(date) AS month
-                FROM (
-                    SELECT receipt_date AS date FROM receipt WHERE owner_id = ? AND YEAR(receipt_date) = ?
-                    UNION
-                    SELECT expense_created AS date FROM expenses WHERE owner_id = ? AND YEAR(expense_created) = ?
-                ) AS all_dates
-            ) AS months
-            LEFT JOIN (
-                SELECT 
-                    MONTH(r.receipt_date) AS month,
-                    SUM(p.selling_price * ri.item_quantity) AS monthly_sales
-                FROM 
-                    receipt r
-                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
-                JOIN products p ON p.prod_code = ri.prod_code
-                WHERE 
-                    r.owner_id = ? AND
-                    p.owner_id = r.owner_id AND
-                    YEAR(r.receipt_date) = ?
-                GROUP BY MONTH(r.receipt_date)
-            ) m ON months.month = m.month
-            LEFT JOIN (
-                SELECT 
-                    MONTH(e.expense_created) AS month,
-                    SUM(e.expense_amount) AS monthly_expenses
-                FROM 
-                    expenses e
-                WHERE 
-                    e.owner_id = ? AND
-                    YEAR(e.expense_created) = ?
-                GROUP BY MONTH(e.expense_created)
-            ) e ON months.month = e.month
-            ORDER BY months.month DESC;
-        ", [
-            $owner_id, $latestYear,  // 1 - receipt subquery
-            $owner_id, $latestYear,  // 2 - expense subquery
-            $owner_id, $latestYear,  // 3 - sales join
-            $owner_id, $latestYear   // 4 - expense join
-        ]))->first();
-
+        //ORIGINAL NGA QUERY mao ni ang net profit nga mokatell sa current month
+        // $profitMonth = collect(DB::select("
+        //     SELECT 
+        //         months.month,
+        //         IFNULL(m.monthly_sales, 0) AS monthly_sales,
+        //         IFNULL(e.monthly_expenses, 0) AS monthly_expenses,
+        //         (IFNULL(m.monthly_sales, 0) - IFNULL(e.monthly_expenses, 0)) AS net_profit
+        //     FROM (
+        //         SELECT DISTINCT MONTH(date) AS month
+        //         FROM (
+        //             SELECT receipt_date AS date FROM receipt WHERE owner_id = ? AND YEAR(receipt_date) = ?
+        //             UNION
+        //             SELECT expense_created AS date FROM expenses WHERE owner_id = ? AND YEAR(expense_created) = ?
+        //         ) AS all_dates
+        //     ) AS months
+        //     LEFT JOIN (
+        //         SELECT 
+        //             MONTH(r.receipt_date) AS month,
+        //             SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+        //         FROM 
+        //             receipt r
+        //         JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+        //         JOIN products p ON p.prod_code = ri.prod_code
+        //         WHERE 
+        //             r.owner_id = ? AND
+        //             p.owner_id = r.owner_id AND
+        //             YEAR(r.receipt_date) = ?
+        //         GROUP BY MONTH(r.receipt_date)
+        //     ) m ON months.month = m.month
+        //     LEFT JOIN (
+        //         SELECT 
+        //             MONTH(e.expense_created) AS month,
+        //             SUM(e.expense_amount) AS monthly_expenses
+        //         FROM 
+        //             expenses e
+        //         WHERE 
+        //             e.owner_id = ? AND
+        //             YEAR(e.expense_created) = ?
+        //         GROUP BY MONTH(e.expense_created)
+        //     ) e ON months.month = e.month
+        //     ORDER BY months.month DESC;
+        // ", [
+        //     $owner_id, $latestYear, 
+        //     $owner_id, $latestYear, 
+        //     $owner_id, $latestYear,  
+        //     $owner_id, $latestYear,
+        // ]))->first();
 
         $categories = collect(DB::select(
             "select category from categories"
         ))->pluck('category')->toArray();
 
-        $months = collect(DB::select(
-            "select distinct month(expense_created) as month_num, 
-                            monthname(expense_created) as month_name
-            from expenses
-            where year(expense_created) = ? and owner_id = ?
-            order by month_num", [$yearToUse, $owner_id]))->pluck('month_name')->toArray();
-
-        $expenses = collect(DB::select(
-            "select month(expense_created) as expense_month, sum(expense_amount) as expense_total
-            from expenses
-            where year(expense_created) = ? and owner_id = ?
-            group by month(expense_created)
-            order by month(expense_created)", [$yearToUse, $owner_id]))->pluck('expense_total')->toArray();
-
-        $sales = collect(DB::select(
-            "select month(receipt_date), sum(receipt_total) as sales_total
-            from receipt
-            where year(receipt_date) = ? and owner_id = ?
-            group by month(receipt_date)
-            order by month(receipt_date)", [$yearToUse, $owner_id]))->pluck('sales_total')->toArray(); 
 
         $year = collect(DB::select("
             SELECT DISTINCT YEAR(expense_created) AS year
@@ -189,18 +285,22 @@ class DashboardController extends Controller
         $dateDisplay = Carbon::now('Asia/Manila');
 
         return view('dashboards.owner.dashboard', [
-            'owner_id' => $owner_id,
             'owner_name' => $owner_name,
             'months' => $months,
-            'profits' => $profitData,
+            'profits' => $profits,
             'year' => $year,
             'expenses' => $expenses,
             'dateDisplay' => $dateDisplay,
             'profitMonth' => $profitMonth,
+            'losses' => $losses,
             'sales' => $sales,
+            'netprofits' => $netProfits,
             'products' => $productData,
             'productsPrev' => $productPrevData,
             'categories' => $categories,
         ]);
     }
 }
+
+
+//wa pa nahuman ang comparative matrix

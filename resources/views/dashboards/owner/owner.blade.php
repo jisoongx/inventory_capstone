@@ -3,76 +3,69 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://unpkg.com/flowbite@latest/dist/flowbite.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@0..1" rel="stylesheet">
-    <link href='https://fonts.googleapis.com/css?family=Poppins' rel='stylesheet'>
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-        }
+    <title></title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
 
+    <!-- jQuery + DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+    
+    <style>
         .nav-label {
-            font-size: 0.875rem;
+            font-size: 0.85rem;
         }
     </style>
 </head>
 
-<body class="bg-gradient-to-b from-white to-blue-100 min-h-screen">
+<body class="bg-slate-50 min-h-screen" oncontextmenu="return false;">
 
-    <aside id="sidebar" class="w-20 transition-all duration-300 bg-black text-white h-screen fixed top-0 left-0 p-4 flex flex-col justify-between z-50">
+    <aside id="sidebar" class="w-64 transition-all duration-300 bg-black text-white h-screen fixed top-0 left-0 p-4 flex flex-col justify-between z-50">
         <div>
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-2">
-                    <img src="{{ asset('assets/logo.png') }}" class="w-8 h-8 rounded">
-                    <span id="brandName" class="text-lg font-semibold nav-label hidden">Shoplytix</span>
-                </div>
-                <button id="menu" class="ml-auto">
-                    <span id="menuIcon" class="material-symbols-rounded text-white text-sm">arrow_forward_ios</span>
-                </button>
+            <div class="flex flex-col items-center justify-center mb-6 mt-5">
+                <img src="{{ asset('assets/logo.png') }}" class="w-12 h-12 mb-2">
+                <span id="brandName" class="font-poppins text-lg font-semibold nav-label">Shoplytix</span>
             </div>
 
             <nav class="space-y-2">
-                <a href="{{ route('dashboards.owner.dashboard') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+                <a href="{{ route('dashboards.owner.dashboard') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Dashboard">
                     <span class="material-symbols-rounded">dashboard</span>
-                    <span class="nav-label hidden">Dashboard</span>
+                    <span class="nav-label">Dashboard</span>
                 </a>
-                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Inventory">
                     <span class="material-symbols-rounded">shopping_cart</span>
-                    <span class="nav-label hidden">Inventory</span>
+                    <span class="nav-label">Inventory</span>
                 </a>
                 <div class="group">
-                    <button id="reportsToggle" class="w-full flex items-center justify-between p-3 rounded hover:bg-red-600 hover:text-white">
+                    <button id="reportsToggle" class="w-full flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white"  title="Reports">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-rounded">stacked_line_chart</span>
-                            <span class="nav-label hidden">Reports</span>
+                            <span class="nav-label">Reports</span>
                         </div>
-                        <span class="nav-label hidden material-symbols-rounded">keyboard_arrow_down</span>
+                        <span class="nav-label material-symbols-rounded">keyboard_arrow_down</span>
                     </button>
 
-                    <div id="reportsDropdown" class="hidden ml-3 mt-2 space-y-1 border-l-4 border-gray-600">
-                        <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                            <span class="nav-label hidden material-symbols-rounded">history_toggle_off</span>
-                            <span class="nav-label hidden text-sm">Activty Log</span>
+                    <div id="reportsDropdown" class="ml-3 mt-2 space-y-1 border-l-4 border-gray-600 hidden">
+                        <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Activity Log">
+                            <span class="nav-label material-symbols-rounded">history_toggle_off</span>
+                            <span class="nav-label">Activty Log</span>
                         </a>
-                        <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                            <span class="nav-label hidden material-symbols-rounded">support_agent</span>
-                            <span class="nav-label hidden text-sm">Technical Support</span>
+                        <a href="{{ route('dashboards.owner.technical_request') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Technical Support">
+                            <span class="nav-label material-symbols-rounded">support_agent</span>
+                            <span class="nav-label">Technical Support</span>
                         </a>
                     </div>
                 </div>
-                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Store">
                     <span class="material-symbols-rounded">local_mall</span>
-                    <span class="nav-label hidden">Store</span>
+                    <span class="nav-label">Store</span>
                 </a>
             </nav>
         </div>
     </aside>
 
-    <main id="mainContent" class="flex-1 p-3 ml-20 transition-all duration-300">
+    <main id="mainContent" class="ml-64 flex-1 p-3 transition-all duration-300">
         <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 relative pb-2">
             <div class="relative">
                 <button id="userButton" class="focus:outline-none">
@@ -95,37 +88,11 @@
 
     <script>
         const sidebar = document.getElementById('sidebar');
-        const menu = document.getElementById('menu');
-        const menuIcon = document.getElementById('menuIcon');
-        const labels = sidebar.querySelectorAll('.nav-label');
         const reportsToggle = document.getElementById('reportsToggle');
         const reportsDropdown = document.getElementById('reportsDropdown');
-        const mainContent = document.getElementById('mainContent'); // Added this line
 
         reportsToggle.addEventListener('click', () => {
             reportsDropdown.classList.toggle('hidden');
-        });
-
-        menu.addEventListener('click', () => {
-            const isExpanded = sidebar.classList.contains('w-64');
-
-            if (isExpanded) {
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-20');
-                labels.forEach(label => label.classList.add('hidden'));
-                menuIcon.textContent = 'arrow_forward_ios';
-                reportsDropdown.classList.add('hidden');
-                mainContent.classList.remove('ml-64'); // Added this line
-                mainContent.classList.add('ml-20'); // Added this line
-            } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-64');
-                labels.forEach(label => label.classList.remove('hidden'));
-                menuIcon.textContent = 'arrow_back_ios';
-                reportsDropdown.classList.add('hidden');
-                mainContent.classList.remove('ml-20'); // Added this line
-                mainContent.classList.add('ml-64'); // Added this line
-            }
         });
 
         // User dropdown toggle
@@ -142,6 +109,21 @@
                 dropdownMenu.classList.add('hidden');
             }
         });
+
+        // document.onkeydown = function(e) {
+        // if(event.keyCode == 123) {
+        // return false;
+        // }
+        // if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)){
+        // return false;
+        // }
+        // if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)){
+        // return false;
+        // }
+        // if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)){
+        // return false;
+        // }
+        // }
     </script>
 
 </body>

@@ -12,20 +12,30 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
+use App\Http\Controllers\TechnicalController;
+
 
 
 Route::get('/', function () {
     return view('login');
 });
 
-// Route::post('/login', [AuthController::class, 'login']);
-
-
-// Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 Route::get('/monthly_profit', [MonthlyController::class, 'index'])->name('dashboards.owner.monthly_profit');
 Route::post('/monthly_profit', [MonthlyController::class, 'add'])->name('dashboards.owner.monthly_profit_add');
+Route::post('/monthly_profit/{$expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.monthly_profit_edit');
 
+
+Route::get('/owner/technical-request', [TechnicalController::class, 'index'])->name('dashboards.owner.technical_request');
+Route::get('/dashboard/owner/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.owner.technical_request');
+Route::post('/dashboard/owner/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.owner.technical_insert');
+Route::post('/dashboard/owner/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.owner.technical_add');
+
+
+Route::get('/staff/technical-request', [TechnicalController::class, 'index'])->name('dashboards.staff.technical_request');
+Route::get('/dashboard/staff/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.staff.technical_request');
+Route::post('/dashboard/staff/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.staff.technical_insert');
+Route::post('/dashboard/staff/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.staff.technical_add');
 
 
 

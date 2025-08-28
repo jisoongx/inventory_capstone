@@ -1,11 +1,21 @@
-module.exports = {
-    content: [
-        './resources/**/*.blade.php',
-        './resources/**/*.js',
-        './resources/**/*.vue',
-    ],
-    theme: {
-        extend: {},
+export default {
+  content: [
+    "./resources/**/*.blade.php", 
+    "./resources/js/**/*.js",        
+    "./resources/js/**/*.vue",         
+    "./node_modules/flowbite/**/*.js",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Poppins', 'sans-serif'],
+      },
     },
-    plugins: [],
+  },
+  corePlugins: {
+    preflight: true, 
+  },
+  plugins: [
+    require('flowbite/plugin')
+  ],
 }
