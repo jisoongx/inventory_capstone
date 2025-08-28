@@ -161,7 +161,7 @@
         $(document).ready(function() {
             let table = $('#expensesTable').DataTable({
                 pageLength: 5,          
-                ordering: false,
+                // ordering: false,
                 searching: true,
             });
 
