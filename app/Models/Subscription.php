@@ -7,11 +7,9 @@ use Illuminate\Support\Carbon;
 
 class Subscription extends Model
 {
-    // REMOVE THIS LINE: protected $table = 'subscription';
-    // Laravel will now correctly infer 'subscriptions' from the model name.
 
+    protected $table = 'subscriptions';
     protected $primaryKey = 'subscription_id';
-
     public $timestamps = false;
 
     protected $fillable = [
@@ -20,6 +18,13 @@ class Subscription extends Model
         'plan_id',
         'owner_id',
         'status',
+        'progress_view'
+    ];
+
+    protected $casts = [
+        'progress_view' => 'boolean',
+        'subscription_start' => 'datetime',
+        'subscription_end'   => 'datetime'
     ];
 
     public function isActive()
@@ -32,18 +37,11 @@ class Subscription extends Model
     {
         return $this->belongsTo(Owner::class, 'owner_id');
     }
+
     public function planDetails()
     {
         return $this->belongsTo(Plan::class, 'plan_id', 'plan_id');
     }
-    public function handle()
-    {
-        $now = Carbon::now();
-
-        $expired = Subscription::where('status', 'paid') // lowercase 'paid'
-            ->whereDate('subscription_end', '<', $now)
-            ->update(['status' => 'expired']); // lowercase 'expired'
-
-        $this->info("Marked {$expired} subscriptions as expired.");
-    }
+    
+   
 }

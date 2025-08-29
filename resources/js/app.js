@@ -1,5 +1,6 @@
 import './bootstrap';
 import '../css/app.css';
+import $ from "jquery";
 import 'flowbite';
 import { Chart, registerables } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';

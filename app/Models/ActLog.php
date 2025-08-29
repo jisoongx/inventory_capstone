@@ -12,16 +12,16 @@ class ActLog extends Model
     protected $primaryKey = 'log_id';
 
     protected $fillable = [
-        'log-timestamp', // Keep as-is if column name really uses hyphen
+        'log_timestamp', 
         'log_type',
         'staff_id',
         'owner_id',
         'super_id',
+        'log_location'
     ];
 
-    // Optionally: use attribute casting if needed
     protected $casts = [
-        'log-timestamp' => 'datetime', // Laravel will still accept it, but use quotes
+        'log_timestamp' => 'datetime',
     ];
 
     public function staff()

@@ -40,37 +40,42 @@ Route::post('/dashboard/staff/technical_request/request', [TechnicalController::
 
 
 //Login and logout
-Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
+Route::get('/', fn() => view('login'))->name('login');
 Route::post('/', [LoginController::class, 'login'])->name('login.submit');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 //Signup
-Route::get('/signup', [RegisterController::class, 'showRegistrationForm'])->name('signup');
+Route::get('/signup',  fn() => view('signup'))->name('signup');
 Route::post('/signup', [RegisterController::class, 'register'])->name('signup.submit');
+Route::get('/term-of-service',  fn() => view('terms_of_service'))->name('terms.of.service');
+Route::get('/privacy-policy',  fn() => view('privacy_policy'))->name('privacy.');
 
 //Subscription
 Route::get('/subscription/select', [SubscriptionController::class, 'create'])->name('subscription.selection');
-Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store'); // This is the route for your form submission
-Route::get('/subscribe/success', [SubscriptionController::class, 'showSubscriptionSuccess'])->name('subscription.success');
+Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store');
+Route::get('/subscription/progress', [SubscriptionController::class, 'progress'])->name('subscription.progress');
+Route::get('/subscription/success', fn() => view('subscription_success'))->name('subscription.success');
+Route::get('/subscription/expired', fn() => view('subscription_expired'))->name('subscription.expired');
 
 //Different user dashboards used as layout
 Route::get('/super-admin/dashboard', fn() => view('dashboards.super_admin.super_admin'))->name('super_admin.dashboard');
 Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('dashboards.owner.dashboard');
 Route::get('/staff/dashboard', fn() => view('dashboards.staff.staff'))->name('staff.dashboard');
 
-//Super Admin navbar functions****
 //clients management
-Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+Route::get('/clients', [ClientController::class, 'showClients'])->name('clients.index');
 Route::get('/clients/search', [ClientController::class, 'search'])->name('clients.search'); 
 Route::put('/clients/{owner_id}/status', [ClientController::class, 'updateStatus'])->name('clients.updateStatus');
-//Route::get('/clients/filter-by-status', [ClientController::class, 'filterByStatus'])->name('clients.filterByStatus');
-//subscription management
-Route::get('/subscription', [ClientController::class, 'subscribers'])->name('subscription');
-Route::put('/subs/{owner_id}/status', [ClientController::class, 'updateSubStatus'])->name('subs.updateStatus');
-Route::get('/clients/sub-search', [ClientController::class, 'sub_search'])->name('clients.sub_search');
+
+//subscription plan management
+Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');
+Route::put('/subs/{owner_id}/status', [SubscriptionController::class, 'updateSubStatus'])->name('subs.updateStatus');
+Route::get('/clients/sub-search', [SubscriptionController::class, 'sub_search'])->name('clients.sub_search');
+
 // activity logs
 Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('actLogs');
-
+Route::get('/staff-logs', [ActivityLogController::class, 'staffLogs'])->name('staffLogs');
+Route::get('/activity-logs/search', [ActivityLogController::class, 'activity_search'])->name('actlogs.search');
 
 //Profile Management for Super admin, owner, and staff
 Route::get('/super-admin/profile', [ProfileController::class, 'showSuperAdminProfile'])->name('super_admin.profile');
@@ -80,9 +85,8 @@ Route::put('/owner/profile', [ProfileController::class, 'updateOwnerProfile'])->
 Route::get('/staff/profile', [ProfileController::class, 'showStaffProfile'])->name('staff.profile');
 Route::put('/staff/profile', [ProfileController::class, 'updateStaffProfile'])->name('staff.profile.update'); 
 
-// Staff Management for Owners
-Route::get('/owner/staff', [OwnerStaffController::class, 'index'])->name('owner.staff.index'); // <--- ADDED: Route to show staff creation form
-Route::post('/owner/staff', [OwnerStaffController::class, 'store'])->name('owner.staff.store');
-Route::put('/owner/staff/{staff}/status', [OwnerStaffController::class, 'updateStatus'])->name('owner.staff.updateStatus'); // Route to update status from dropdown
-Route::put('/owner/staff/{staff}', [OwnerStaffController::class, 'update'])->name('owner.staff.update');
-Route::delete('/owner/staff/{staff}', [OwnerStaffController::class, 'destroy'])->name('owner.staff.destroy'); // Route to delete staff
+// Staff Management 
+Route::get('/owner/staff', [OwnerStaffController::class, 'showStaff'])->name('owner.show.staff'); 
+Route::post('/owner/staff', [OwnerStaffController::class, 'addStaff'])->name('owner.add.staff');
+Route::put('/owner/staff/{staff}/status', [OwnerStaffController::class, 'updateStatus'])->name('owner.staff.updateStatus'); 
+Route::put('/owner/staff/{staff}', [OwnerStaffController::class, 'updateStaffInfo'])->name('owner.staff.update');

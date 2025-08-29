@@ -12,10 +12,143 @@ use Illuminate\Support\Facades\Log;
 
 class SubscriptionController extends Controller
 {
-    public function __construct()
+
+    public function subscribers()
     {
-        $this->middleware('auth:owner');
+        $today = now()->startOfDay();
+        $subscriptions = Subscription::where('subscription_end', '<=', $today)
+            ->where('status', '!=', 'expired')
+            ->get();
+
+        foreach ($subscriptions as $sub) {
+            $sub->status = 'expired';
+            $sub->save();
+
+            $owner = Owner::find($sub->owner_id);
+            if ($owner) {
+                $owner->status = 'Deactivated';
+                $owner->save();
+            }
+        }
+        
+        $clients = Owner::with(['subscriptions' => function ($query) {
+            $query->where('status', '!=', 'pending') // exclude pending
+                ->with('planDetails');
+        }])
+            ->whereIn('status', ['Active', 'Deactivated'])
+            ->orderBy('created_on', 'desc')
+            ->paginate(10);
+
+        return view('dashboards.super_admin.subscribers', compact('clients'));
     }
+
+
+    public function sub_search(Request $request)
+    {
+        $query = $request->input('query');
+        $plan = $request->input('plan');
+        $status = $request->input('status');
+        $date = $request->input('date');
+
+        $clients = Owner::with(['subscription.planDetails'])
+            ->where('status', '!=', 'Declined')
+            ->when($query, function ($q) use ($query) {
+                $q->where(function ($sub) use ($query) {
+                    $sub->where('store_name', 'like', "%{$query}%")
+                        ->orWhere('firstname', 'like', "%{$query}%")
+                        ->orWhere('middlename', 'like', "%{$query}%")
+                        ->orWhere('lastname', 'like', "%{$query}%")
+                        ->orWhere('email', 'like', "%{$query}%");
+                });
+            })
+            ->when($plan, function ($q) use ($plan) {
+                $q->whereHas('subscription', function ($sub) use ($plan) {
+                    $sub->where('plan_id', $plan);
+                });
+            })
+            ->when($status, function ($q) use ($status) {
+                $q->whereHas('subscription', function ($sub) use ($status) {
+                    $sub->where('status', $status);
+                });
+            })
+            ->when($date, function ($q) use ($date) {
+                $q->whereHas('subscription', function ($sub) use ($date) {
+                    $sub->whereDate('created_on', $date);
+                });
+            })
+            ->orderBy('created_on', 'desc')
+            ->get();
+
+        return response()->json($clients);
+    }
+
+    public function updateSubStatus(Request $request, $owner_id)
+    {   
+        
+        $request->validate([
+            'status' => 'required|in:paid,expired'
+        ]);
+
+        $subscription = Subscription::where('owner_id', $owner_id)->first();
+
+        if (!$subscription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Subscription not found for this client.'
+            ], 404);
+        }
+
+        $requestedStatus = $request->input('status');
+
+        if ($requestedStatus === 'expired') {
+            $subscription->status = 'expired';
+            $subscription->save();
+
+            $owner = Owner::find($owner_id);
+            if ($owner) {
+                $owner->status = 'Deactivated';
+                $owner->save();
+            }
+        } elseif ($requestedStatus === 'paid') {
+            $today = now()->startOfDay();
+            $endDate = \Carbon\Carbon::parse($subscription->subscription_end)->startOfDay();
+
+            if ($today->lte($endDate)) {
+                $subscription->status = 'paid';
+                $subscription->save();
+
+                $owner = Owner::find($owner_id);
+                if ($owner) {
+                    $owner->status = 'Active';
+                    $owner->save();
+                }
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot mark as paid. Subscription already expired.',
+                ], 400);
+            }
+        }
+
+        $user = Auth::guard('super_admin')->user();
+        $ownerName = "{$owner->firstname} {$owner->lastname}";
+        $subscriptionStatus = $owner->subscription?->status ?? 'Unknown';
+        $description = "Updated client ({$ownerName}) subscription status to {$subscriptionStatus}";
+        ActivityLogController::log($description, 'super_admin', $user, $request->ip());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Subscription status updated successfully.',
+            'new_status' => $subscription->status
+        ]);
+    }
+
+
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:owner')->except(['create']);
+    // }
+
 
     public function create()
     {
@@ -23,23 +156,8 @@ class SubscriptionController extends Controller
         return view('subscription', compact('plans'));
     }
 
-    /**
-     * Store a newly created subscription and associated payment in storage.
-     * This method handles the form submission from the subscription selection page.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $planId The ID of the plan being subscribed to.
-     * @return \Illuminate\Http\RedirectResponse
-     */
-   
-
    public function store(Request $request, $planId)
-
     {
-        // --- DEBUGGING START: See ALL incoming request data directly from the form ---
-        // dd($request->all()); // <-- This line is now commented out as its debugging purpose is served.
-        // --- DEBUGGING END ---
-
         $owner = Auth::guard('owner')->user();
 
         $request->validate([
@@ -69,19 +187,21 @@ class SubscriptionController extends Controller
         }
 
         try {
-            // 1. Create the Subscription record
+          
             $subscription = Subscription::create([
                 'owner_id' => $owner->owner_id,
                 'plan_id' => $plan->plan_id,
                 'subscription_start' => now(),
                 'subscription_end' => now()->addMonths($plan->plan_duration_months),
-                'status' => 'Active', // This status is for the subscription itself
+                'status' => 'pending', // This status is for the subscription itself
             ]);
 
-            // Get the payment account number using the unified name
+            if ($owner->status === 'Deactivated') {
+                $owner->status = 'Pending';
+                $owner->save();
+            }
+         
             $paymentAccNumber = $request->input('paymentAccNum');
-
-            // Prepare data for Payment creation (without status and transaction_id)
             $paymentData = [
                 'owner_id' => $owner->owner_id,
                 'payment_mode' => $request->paymentMethod,
@@ -90,84 +210,22 @@ class SubscriptionController extends Controller
                 'payment_date' => now(),
             ];
 
-            // --- DEBUGGING: Confirm data just before payment creation (after processing) ---
-            Log::info('Attempting to create payment with data:', $paymentData);
-            // dd($paymentData); // Uncomment this line if you need to see this specific array after dd($request->all())
-            // --- DEBUGGING END ---
-
-            // 2. Create the Payment record
             $payment = Payment::create($paymentData);
-
-            Log::info('Payment record created successfully for owner ID: ' . $owner->owner_id);
-
-            // Redirect to the new success page
-            return redirect()->route('subscription.success'); // <-- CHANGED THIS LINE
+            return redirect()->route('subscription.progress'); 
         } catch (\Exception $e) {
             Log::error('Subscription or Payment creation failed: ' . $e->getMessage(), ['exception' => $e]);
             return back()->with('error', 'Failed to process subscription. Please try again.')->withInput();
         }
     }
 
-    /**
-     * Display the subscription success page.
-     *
-     * @return \Illuminate\View\View
-     */
-    public function showSubscriptionSuccess() // <-- ADDED THIS NEW METHOD
+    public function progress()
     {
-        return view('subscription_success');
-    }
+        $owner = Auth::guard('owner')->user();
+        $subscription = $owner->latestSubscription()
+            ->with('planDetails')
+            ->orderBy('subscription_start', 'desc')
+            ->first();
 
-    public function show(Subscription $subscription)
-    {
-        if ($subscription->owner_id !== Auth::guard('owner')->id()) {
-            abort(403, 'Unauthorized action.');
-        }
-        $subscription->load('payments', 'plan');
-        return view('subscription', compact('subscription'));
-    }
-
-    public function edit(Subscription $subscription)
-    {
-        if ($subscription->owner_id !== Auth::guard('owner')->id()) {
-            abort(403, 'Unauthorized action.');
-        }
-        $plans = Plan::all();
-        return view('subscription', compact('subscription', 'plans'));
-    }
-
-    public function update(Request $request, Subscription $subscription)
-    {
-        if ($subscription->owner_id !== Auth::guard('owner')->id()) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $request->validate([
-            'status' => 'required|in:Active,Cancelled,Expired',
-            'plan_id' => 'required|exists:plans,plan_id',
-        ]);
-
-        try {
-            $subscription->update($request->all());
-            return redirect()->route('subscriptions.index')->with('success', 'Subscription updated successfully.');
-        } catch (\Exception $e) {
-            Log::error('Subscription update failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update subscription. Please try again.')->withInput();
-        }
-    }
-
-    public function destroy(Subscription $subscription)
-    {
-        if ($subscription->owner_id !== Auth::guard('owner')->id()) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        try {
-            $subscription->update(['status' => 'Cancelled', 'subscription_end' => now()]);
-            return redirect()->route('subscriptions.index')->with('success', 'Subscription cancelled successfully.');
-        } catch (\Exception $e) {
-            Log::error('Subscription cancellation failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to cancel subscription. Please try again.');
-        }
+        return view('subscription_progress', compact('subscription'));
     }
 }
