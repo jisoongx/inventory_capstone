@@ -3,25 +3,22 @@
 @section('content')
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
-            <!-- currency -->
+
             <div class="">
                 <span class="text-sm text-gray-500">{{ $dateDisplay->format('F j, Y') }}</span>
                 <h1 class="text-2xl font-semibold mb-4">Welcome, {{ ucwords($owner_name) }}!</h1>
 
-                <div class="flex gap-4 mb-5 w-full">
-                    <!-- Daily Sales - wider -->
+                <div class="flex gap-3 mb-3 w-full">
                     <div class="bg-white border-t-4 border-red-900 p-4 shadow-lg rounded flex-[2] text-center">
                         <p class="text-red-700 text-xl font-bold">₱14,500</p>
                         <span class="text-gray-600 text-xs font-bold">Daily Sales</span>
                     </div>
 
-                    <!-- Weekly Sales -->
                     <div class="bg-white border-t-4 border-red-700 p-4 shadow-lg rounded flex-[1] text-center">
                         <p class="text-red-600 text-xl font-bold">₱20,000</p>
                         <span class="text-gray-600 text-xs">Weekly Sales</span>
                     </div>
 
-                    <!-- Monthly Sales -->
                     <div class="bg-white border-t-4 border-red-500 p-4 shadow-lg rounded flex-[1] text-center">
                         <p class="text-red-400 text-xl font-bold">₱154,000</p>
                         <span class="text-gray-600 text-xs">Monthly Sales</span>
@@ -47,7 +44,6 @@
             <!-- profit chart -->
             <div class="bg-white p-5 rounded shadow border">
                     <p class="text-left text-black font-semibold text-xs border-b border-gray-200 pb-5">Monthly Net Profit</p>
-
                 <div class="flex items-center justify-center pt-4">
                     <div class="flex-2 mr-7">
                         <span class="text-xl font-bold block mb-1">
@@ -109,7 +105,7 @@
                     <div id="profitChart" 
                         data-profits='@json($profits ?? [])' 
                         data-months='@json($months ?? [])'
-                        style="height: 400px; width: 1200px;">
+                        style="height: 380px; width: 1200px;">
                         <canvas></canvas>
                     </div>
                 </div>

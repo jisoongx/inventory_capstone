@@ -5,13 +5,7 @@
     <meta charset="UTF-8">
     <title></title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
-
-    <!-- jQuery + DataTables JS -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
-    
+    <link rel="stylesheet" href="/build/assets/dataTables.dataTables.css">
     <style>
         .nav-label {
             font-size: 0.85rem;

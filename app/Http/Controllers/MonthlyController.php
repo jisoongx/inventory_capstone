@@ -69,10 +69,17 @@ class MonthlyController extends Controller
         return redirect()->back()->with('success', 'Expense added successfully!');
     }
 
-    public function edit(Request $request, $expense_id)
+    public function edit(Request $request, $expense_id = null)
     {
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
+        }
+
+        if (!$expense_id) {
+            $expense_id = $request->input('expense_id');
+        }
+        if (!$expense_id) {
+            return back()->with('error', 'Missing expense_id.');
         }
 
         $owner_id = Auth::guard('owner')->id();
@@ -82,7 +89,7 @@ class MonthlyController extends Controller
             'expense_amount' => 'required|numeric|min:0.01',
         ]);
 
-        DB::update("
+        $updated = DB::update("
             UPDATE expenses
             SET expense_descri = ?, expense_amount = ?
             WHERE expense_id = ? AND owner_id = ?
@@ -93,8 +100,9 @@ class MonthlyController extends Controller
             $owner_id
         ]);
 
-        return redirect()->back()->with('success', 'Expense edited successfully!');
+        return back()->with($updated ? 'success' : 'error', $updated ? 'Expense edited successfully!' : 'Nothing updated or not found.');
     }
+
 
 
 

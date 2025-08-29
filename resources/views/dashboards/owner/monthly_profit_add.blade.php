@@ -13,7 +13,7 @@
                 </div>
             </div>
 
-            <div class="overflow-y-auto flex-grow">    
+            <div class="flex-grow">    
                 <table id="expensesTable" class="w-full text-xs text-left text-gray-700">
                     <thead class="uppercase text-xs font-medium sticky top-0 z-10 bg-white shadow-sm">
                         <tr>
@@ -25,33 +25,35 @@
                     </thead>
                     <tbody>
                         @foreach ($inputs as $input)
-                        <tr>
-                            <form method="POST" action="{{ route('dashboards.owner.monthly_profit_edit', $input->expense_id) }}">
+                            <tr>
+                                <form method="POST" action="{{ route('dashboards.owner.monthly_profit_edit', ['expense_id' => $input->expense_id]) }}">
                                 @csrf
-                                <td>
-                                    <span class="view font-medium">{{ $input->expense_descri }}</span>
-                                    <input type="text" name="expense_descri"
-                                        value="{{ $input->expense_descri }}"
-                                        class="edit hidden border p-1 w-full text-xs font-medium">
-                                </td>
-                                <td>
-                                    <span class="view">{{ $input->expense_amount }}</span>
-                                    <input type="number" step="0.01" name="expense_amount"
-                                        value="{{ $input->expense_amount }}"
-                                        class="edit hidden border p-1 w-full text-xs">
-                                </td>
-                                <td>{{ date('F d • g:i A', strtotime($input->expense_created)) }}</td>
-                                <td>
-                                    <button type="button" class="editBtn bg-blue-500 text-white px-3 py-1.5 rounded">
-                                        Edit
-                                    </button>
-                                    <button type="submit" class="saveBtn hidden bg-green-600 text-white px-3 py-1.5 rounded">
-                                        Save
-                                    </button>
-                                    <button class="justify-center align-center hidden"><span class="cancelBtn material-symbols-rounded text-red-500">cancel</span></button>
-                                </td>
-                            </form>
-                        </tr>
+                                    <td class="p-2">
+                                        <span class="view font-medium p-2">{{ $input->expense_descri }}</span>
+                                        <input type="text" name="expense_descri"
+                                            value="{{ old('expense_descri', $input->expense_descri) }}"
+                                            class="edit hidden border p-2 rounded w-full text-xs font-medium">
+                                    </td>
+                                    <td class=" p-2">
+                                        <span class="view p-2">{{ $input->expense_amount }}</span>
+                                        <input type="number" step="0.01" name="expense_amount"
+                                            value="{{ old('expense_amount', $input->expense_amount) }}"
+                                            class="edit hidden border p-2 rounded w-full text-xs">
+                                    </td>
+                                    <td class="p-2">{{ date('F d • g:i A', strtotime($input->expense_created)) }}</td>
+                                    <td class=" p-2 flex gap-2 items-center p-2">
+                                        <button type="button" class="editBtn bg-red-500 text-white px-3 py-1.5 rounded">
+                                            Edit
+                                        </button>
+                                        <button type="submit" class="saveBtn hidden bg-green-600 text-white px-3 py-1.5 rounded">
+                                            Save
+                                        </button>
+                                        <button type="button" class="cancelBtn hidden flex items-center justify-center w-6 h-6 rounded">
+                                            <span class="material-symbols-rounded text-red-500 text-base">cancel</span>
+                                        </button>
+                                    </td>
+                                </form>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>
@@ -119,65 +121,5 @@
             </div>
         </div>
     </div> 
-
-    <!-- <div id="edit-modal" tabindex="-1" aria-hidden="true" class="hidden fixed inset-0 z-50 flex justify-center items-center">
-        <div class="relative p-4 w-full max-w-md max-h-full">
-            <div class="relative bg-white rounded shadow-sm pt-12">
-                
-                <div class="absolute -top-6 left-1/2 transform -translate-x-1/2">
-                    <img src="{{ asset('assets/edit.png') }}" class="w-20 h-20 rounded-full border-4 border-white">
-                </div>
-
-                <div class="flex items-center justify-center p-3">
-                    <h3 class="text-sm font-semibold">Edit</h3>
-                </div>
-
-                <div class="px-5">
-                    <form method="POST" action="{{ route('dashboards.owner.monthly_profit_edit') }}" class="space-y-4">
-                        @csrf
-
-                        <div>
-                            <label for="expense_descri" class="block mb-2 text-xs font-medium text-gray-900">Item / Purpose</label>
-                            <input type="text" name="expense_descri" id="expense_descri" required
-                                class="border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
-                        </div>
-
-                        <div>
-                            <label for="expense_amount" class="block mb-2 text-xs font-medium text-gray-900">Amount</label>
-                            <input type="number" step="0.01" name="expense_amount" id="expense_amount" required
-                                class="border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
-                        </div>
-
-                        <button type="submit" class="w-full text-white bg-green-600 hover:bg-green-700 font-medium rounded text-sm px-5 py-2.5 text-center">
-                            Confirm Edit
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div> -->
-
-    <script>
-        $(document).ready(function() {
-            let table = $('#expensesTable').DataTable({
-                pageLength: 5,          
-                // ordering: false,
-                searching: true,
-            });
-
-            $('#expensesTable').on('click', '.editBtn', function () {
-                let row = $(this).closest("tr");
-                row.find(".view").addClass("hidden");
-                row.find(".edit").removeClass("hidden");
-
-                row.find(".editBtn").addClass("hidden");
-                row.find(".saveBtn").removeClass("hidden");
-
-                row.find(".cancelBtn").removeClass("hidden");
-            });
-        });
-    </script>
-
-
 
 @endsection

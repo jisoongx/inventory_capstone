@@ -4,9 +4,12 @@ import 'flowbite';
 import { Chart, registerables } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
 
+import 'datatables.net-dt/css/dataTables.dataTables.css';
+import DataTable from 'datatables.net-dt';
+
 Chart.register(...registerables, zoomPlugin);
 
-
+//sa charts ni
 document.addEventListener("DOMContentLoaded", () => {
     const chartEl = document.getElementById("profitChart");
     const ctx = chartEl.querySelector("canvas").getContext("2d");
@@ -91,3 +94,39 @@ document.addEventListener("DOMContentLoaded", () => {
     
 });
 
+//sa monthly nga table
+const table = new DataTable('#expensesTable', {
+    pageLength: 5,
+    ordering: true,
+    searching: true,
+    order: [[2, 'desc']],
+    buttons: 'print',
+    lengthChange: false,
+    dom: `<"flex justify-between items-center mb-2 text-xs"f>t<"flex justify-between items-center mt-2 text-xs"ip>`
+
+});
+
+//sa monthly nga buttons
+document.querySelector('#expensesTable').addEventListener('click', (e) => {
+    if (e.target.closest('.editBtn')) {
+        const row = e.target.closest('tr');
+
+        row.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+        row.querySelectorAll('.edit').forEach(el => el.classList.remove('hidden'));
+
+        row.querySelector('.editBtn').classList.add('hidden');
+        row.querySelector('.saveBtn').classList.remove('hidden');
+        row.querySelector('.cancelBtn').classList.remove('hidden');
+    }
+
+    if (e.target.closest('.cancelBtn')) {
+        const row = e.target.closest('tr');
+
+        row.querySelectorAll('.edit').forEach(el => el.classList.add('hidden'));
+        row.querySelectorAll('.view').forEach(el => el.classList.remove('hidden'));
+
+        row.querySelector('.saveBtn').classList.add('hidden');
+        row.querySelector('.cancelBtn').classList.add('hidden');
+        row.querySelector('.editBtn').classList.remove('hidden');
+    }
+});
