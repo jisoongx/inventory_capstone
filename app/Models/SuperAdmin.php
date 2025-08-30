@@ -18,7 +18,7 @@ class SuperAdmin extends Authenticatable
         'lastname',
         'email',
         'contact',
-        'super_pass', 
+        'super_pass',
     ];
 
 
@@ -28,11 +28,11 @@ class SuperAdmin extends Authenticatable
 
     public function getAuthPassword()
     {
-        return $this->super_pass; 
+        return $this->super_pass;
     }
 
     public function getAuthPasswordName()
     {
-        return 'super_pass'; 
+        return 'super_pass';
     }
 }
