@@ -10,7 +10,7 @@ class Owner extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $table = 'owners'; 
+    protected $table = 'owners';
     protected $primaryKey = 'owner_id';
     public $timestamps = false;
     protected $fillable = [
@@ -22,7 +22,7 @@ class Owner extends Authenticatable
         'store_name',
         'store_address',
         'owner_pass',
-        'status',    
+        'status',
         'email_verified_at',
 
     ];
@@ -31,10 +31,10 @@ class Owner extends Authenticatable
         'owner_pass'
     ];
 
-  
+
     public function getAuthPassword()
     {
-        return $this->owner_pass; 
+        return $this->owner_pass;
     }
 
 
@@ -45,7 +45,7 @@ class Owner extends Authenticatable
 
     public function activeSubscription()
     {
-        return $this->hasOne(Subscription::class, 'owner_id') 
+        return $this->hasOne(Subscription::class, 'owner_id')
             ->where('status', 'paid')
             ->where('subscription_end', '>=', now());
     }
@@ -60,7 +60,7 @@ class Owner extends Authenticatable
         return $this->hasOne(Subscription::class, 'owner_id', 'owner_id');
     }
 
-    
+
     public function latestSubscription()
     {
         return $this->hasOne(Subscription::class, 'owner_id', 'owner_id')
