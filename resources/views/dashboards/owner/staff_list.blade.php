@@ -1,115 +1,146 @@
 @extends('dashboards.owner.owner') {{-- Extend your owner dashboard layout --}}
 
 @section('content')
-<div class="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-extrabold text-gray-900">Manage Staff Accounts</h1>
-        <a href="{{ route('owner.profile') }}" class="text-blue-600 hover:text-blue-800 underline text-sm">Back to Profile</a>
-    </div>
+&nbsp;
 
-    {{-- Success and error message display --}}
-    @if (session('success'))
-    <div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
-        <span class="block sm:inline text-sm">{{ session('success') }}</span>
-    </div>
-    @endif
-
-    @if ($errors->any())
-    <div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
-        <ul class="list-disc list-inside text-sm">
-            @foreach ($errors->all() as $error)
-            <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-    @endif
-    {{-- AJAX success message box (shown via JS) --}}
-    <div id="ajaxSuccessMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
-        <span id="ajaxSuccessText" class="block sm:inline text-sm"></span>
-    </div>
-
-
-
-
-    @if ($staffMembers->isEmpty())
-    <p class="text-gray-600 text-sm text-center py-8">You haven't added any staff members yet.</p>
-    @else
-    <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-blue-200 text-xs font-semibold text-gray-700 tracking-wider text-center">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-center text-xs ">
-                        Name
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs ">
-                        Email
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs ">
-                        Contact
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs ">
-                        Status
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs ">
-                        Actions
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @foreach ($staffMembers as $staff)
-                <tr class="hover:bg-gray-50 transition-colors duration-150">
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
-                        <div class="text-sm font-medium text-gray-900">{{ $staff->firstname }} {{ $staff->middlename ?? '' }} {{ $staff->lastname }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
-                        <div class="text-sm text-gray-900">{{ $staff->email }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
-                        <div class="text-sm text-gray-900">{{ $staff->contact ?? 'N/A' }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
-                        <form action="{{ route('owner.staff.updateStatus', $staff->staff_id) }}" method="POST" class="inline-block">
-                            @csrf
-                            @method('PUT')
-                            <select name="status" onchange="this.form.submit()"
-                                class="block w-auto py-1 px-2 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm
-                                                @if($staff->status == 'Active') bg-green-50 text-green-800 border-green-300
-                                                @elseif($staff->status == 'Inactive') bg-red-50 text-red-800 border-red-300
-                                                @else bg-gray-50 text-gray-800 border-gray-300 @endif">
-                                <option value="Active" {{ $staff->status == 'Active' ? 'selected' : '' }}>Active</option>
-                                <option value="Inactive" {{ $staff->status == 'Inactive' ? 'selected' : '' }}>Inactive</option>
-                            </select>
-                        </form>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                        <button type="button" class="text-blue-600 hover:text-blue-900 inline-flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors duration-150 edit-staff-button"
-                            data-staff-id="{{ $staff->staff_id }}"
-                            data-firstname="{{ $staff->firstname }}"
-                            data-middlename="{{ $staff->middlename ?? '' }}"
-                            data-lastname="{{ $staff->lastname }}"
-                            data-email="{{ $staff->email }}"
-                            data-contact="{{ $staff->contact ?? '' }}">
-                            <span class="material-symbols-rounded text-lg">edit</span>
-                        </button>
-                        <form action="{{ route('owner.staff.destroy', $staff->staff_id) }}" method="POST" class="inline-block ml-2">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="text-red-600 hover:text-red-900 inline-flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors duration-150" onclick="return confirm('Are you sure you want to delete this staff member?');">
-                                <span class="material-symbols-rounded text-lg">delete</span>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-
-    <div class="mt-4">
-        {{ $staffMembers->links() }} {{-- Pagination links --}}
-    </div>
-    @endif
+<div class="flex justify-between items-center mb-6 mx-8">
+    <h1 class="text-2xl font-extrabold text-gray-900">Manage Staff Accounts</h1>
+    <a href="{{ route('owner.profile') }}" class="text-blue-600 hover:text-blue-800 underline text-sm">Back to Profile</a>
 </div>
+
+{{-- Success and error message display --}}
+@if (session('success'))
+<div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
+    <span class="block sm:inline text-sm">{{ session('success') }}</span>
+</div>
+<script>
+    // Reload after 1.5 seconds
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+</script>
+@endif
+
+@if ($errors->any())
+<div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
+    <ul class="list-disc list-inside text-sm">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+{{-- AJAX success message box (shown via JS) --}}
+<div id="ajaxSuccessMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
+    <span id="ajaxSuccessText" class="block sm:inline text-sm"></span>
+</div>
+
+
+<!-- <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 mx-8">
+ 
+    <div class="flex-1">
+        <input
+            type="text"
+            id="search"
+            placeholder="Search by store name or owner name"
+            autocomplete="off"
+            class="w-full p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out"
+            style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;">
+    </div>
+    <div class="relative w-full sm:w-[220px]">
+        <select id="statusFilter"
+            class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50  focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out">
+            <option disabled selected value="">Select Status</option>
+            <option value="paid">Active</option>
+            <option value="expired">Deactivated</option>
+        </select>
+        <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+    </div>
+
+</div> -->
+
+@if ($staffMembers->isEmpty())
+<p class="text-gray-600 text-sm text-center py-8">You haven't added any staff members yet.</p>
+@else
+<div class="overflow-x-auto bg-white shadow-md rounded-xl mx-8">
+    <table class="min-w-full text-xs text-center text-gray-700">
+        <thead class="bg-green-200 text-xs font-semibold text-gray-700 tracking-wider text-center">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-center text-xs ">
+                    Name
+                </th>
+                <th scope="col" class="px-6 py-3 text-center text-xs ">
+                    Email
+                </th>
+                <th scope="col" class="px-6 py-3 text-center text-xs ">
+                    Contact
+                </th>
+                <th scope="col" class="px-6 py-3 text-center text-xs ">
+                    Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-center text-xs ">
+                    Actions
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            @foreach ($staffMembers as $staff)
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-gray-900">{{ $staff->firstname }} {{ $staff->middlename ?? '' }} {{ $staff->lastname }}</div>
+                </td>
+                <td class="px-6 py-4 ">
+                    <div class="text-sm text-gray-900">{{ $staff->email }}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-gray-900">{{ $staff->contact ?? 'N/A' }}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <form action="{{ route('owner.staff.updateStatus', $staff->staff_id) }}" method="POST" class="inline-block">
+                        @csrf
+                        @method('PUT')
+                        <select name="status" onchange="this.form.submit()"
+                            class="block w-auto py-1 px-2 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm
+                                                @if($staff->status == 'Active') bg-green-50 text-green-800 border-green-300
+                                                @elseif($staff->status == 'Deactivated') bg-red-50 text-red-800 border-red-300
+                                                @else bg-gray-50 text-gray-800 border-gray-300 @endif">
+                            <option value="Active" {{ $staff->status == 'Active' ? 'selected' : '' }}>Active</option>
+                            <option value="Deactivated" {{ $staff->status == 'Deactivated' ? 'selected' : '' }}>Deactivated</option>
+                        </select>
+                    </form>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <button type="button" class="text-blue-600 hover:text-blue-900 inline-flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors duration-150 edit-staff-button"
+                        data-staff-id="{{ $staff->staff_id }}"
+                        data-firstname="{{ $staff->firstname }}"
+                        data-middlename="{{ $staff->middlename ?? '' }}"
+                        data-lastname="{{ $staff->lastname }}"
+                        data-email="{{ $staff->email }}"
+                        data-contact="{{ $staff->contact ?? '' }}">
+
+                        <!-- Custom SVG Edit Icon -->
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </button>
+
+
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+
+<div class="mt-4">
+    {{ $staffMembers->links() }} {{-- Pagination links --}}
+</div>
+@endif
+
 
 
 {{-- Edit Staff Modal --}}
