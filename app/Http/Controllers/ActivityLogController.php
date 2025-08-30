@@ -55,7 +55,7 @@ class ActivityLogController extends Controller
         $query = $request->input('query');
         $date  = $request->input('date');
         $time  = $request->input('time');
-        $type  = $request->input('type'); 
+        $type  = $request->input('type');
 
         $logs = ActLog::query();
 
@@ -63,7 +63,6 @@ class ActivityLogController extends Controller
             $user = Auth::guard('super_admin')->user();
             $logs->with('superAdmin')
                 ->where('super_id', $user->super_id);
-
         } elseif (Auth::guard('owner')->check()) {
             $user = Auth::guard('owner')->user();
 
@@ -127,7 +126,7 @@ class ActivityLogController extends Controller
         ActLog::create([
             'log_type'     => $type,
             'super_id'     => $guard === 'super_admin' ? $user->super_id : null,
-            'owner_id'     => $guard === 'owner'? $user->owner_id : ($guard === 'staff' ? $user->owner_id : null),
+            'owner_id'     => $guard === 'owner' ? $user->owner_id : ($guard === 'staff' ? $user->owner_id : null),
             'staff_id'     => $guard === 'staff' ? $user->staff_id : null,
             'log_location' => $location,
             'log_timestamp' => Carbon::now(),
