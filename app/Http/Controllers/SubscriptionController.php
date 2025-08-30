@@ -30,7 +30,7 @@ class SubscriptionController extends Controller
                 $owner->save();
             }
         }
-        
+
         $clients = Owner::with(['subscriptions' => function ($query) {
             $query->where('status', '!=', 'pending') // exclude pending
                 ->with('planDetails');
@@ -83,8 +83,8 @@ class SubscriptionController extends Controller
     }
 
     public function updateSubStatus(Request $request, $owner_id)
-    {   
-        
+    {
+
         $request->validate([
             'status' => 'required|in:paid,expired'
         ]);
@@ -156,7 +156,7 @@ class SubscriptionController extends Controller
         return view('subscription', compact('plans'));
     }
 
-   public function store(Request $request, $planId)
+    public function store(Request $request, $planId)
     {
         $owner = Auth::guard('owner')->user();
 
@@ -187,7 +187,7 @@ class SubscriptionController extends Controller
         }
 
         try {
-          
+
             $subscription = Subscription::create([
                 'owner_id' => $owner->owner_id,
                 'plan_id' => $plan->plan_id,
@@ -200,7 +200,7 @@ class SubscriptionController extends Controller
                 $owner->status = 'Pending';
                 $owner->save();
             }
-         
+
             $paymentAccNumber = $request->input('paymentAccNum');
             $paymentData = [
                 'owner_id' => $owner->owner_id,
@@ -211,7 +211,7 @@ class SubscriptionController extends Controller
             ];
 
             $payment = Payment::create($paymentData);
-            return redirect()->route('subscription.progress'); 
+            return redirect()->route('subscription.progress');
         } catch (\Exception $e) {
             Log::error('Subscription or Payment creation failed: ' . $e->getMessage(), ['exception' => $e]);
             return back()->with('error', 'Failed to process subscription. Please try again.')->withInput();
