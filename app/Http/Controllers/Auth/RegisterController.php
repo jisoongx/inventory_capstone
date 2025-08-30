@@ -7,53 +7,43 @@ use Illuminate\Http\Request;
 use App\Models\Owner;
 use Illuminate\Support\Facades\Hash;
 
-
 class RegisterController extends Controller
 {
-    /**
-     * Show the application registration form.
-     *
-     * @return \Illuminate\View\View
-     */
-    public function showRegistrationForm()
-    {
-        return view('signup'); // Make sure you have a 'register.blade.php' view
-    }
-
-    /**
-     * Handle a registration request for the application.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function register(Request $request)
     {
-        // 1. Validate the incoming request data
         $request->validate([
-            'firstname'  => ['required', 'string', 'max:255'],
-            'middlename' => ['nullable', 'string', 'max:255'],
-            'lastname'   => ['required', 'string', 'max:255'],
-            'store_name' => ['required', 'string', 'max:255', 'unique:owners'], // Store name should be unique
-            'email'      => ['required', 'string', 'email', 'max:255', 'unique:owners'], // Email must be unique in the 'owners' table
-            'contact'    => ['nullable', 'string', 'max:20'],
-            'password'   => ['required', 'string', 'min:8', 'confirmed'], // 'confirmed' requires a 'password_confirmation' field
+            // Names must be letters only, no numbers/symbols
+            'firstname'  => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-]+$/'],
+            'middlename' => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-]+$/'],
+            'lastname'   => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-]+$/'],
+            'store_name' => ['required', 'string', 'max:255', 'unique:owners,store_name'],
+            'email'      => ['required', 'string', 'email', 'max:255', 'unique:owners,email'],
+            'contact'    => ['nullable', 'digits:11', 'starts_with:09'],
+            'password'   => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+
+            'firstname.regex' => 'First name must only contain letters.',
+            'middlename.regex' => 'Middle name must only contain letters.',
+            'lastname.regex' => 'Last name must only contain letters.',
+            'store_name.unique' => 'This store name is already registered.',
+            'email.unique' => 'This email is already taken.',
+            'contact.digits' => 'Contact number must be exactly 11 digits.',
+            'contact.starts_with' => 'The contact number must start with 09.',
+            'password.min'       => 'Password must be at least 8 characters.',
+            'password.confirmed' => 'Password does not match.',
         ]);
 
-        // 2. Create a new Owner record
         $owner = Owner::create([
-            'firstname'  => $request->firstname,
-            'middlename' => $request->middlename,
-            'lastname'   => $request->lastname,
-            'store_name' => $request->store_name,
-            'store_address'=> $request->store_address,
-            'email'      => $request->email,
-            'contact'    => $request->contact,
-            'owner_pass' => Hash::make($request->password), // Hash the password using owner_pass column
-            'status'     => 'Pending', // Default status: 'Pending' for Super Admin approval
-            // 'status'     => 'Active', // Alternatively, set to 'Active' if no approval is needed
-            'created_on' => now(), // Set the registration date
+            'firstname'     => strtoupper($request->firstname),
+            'middlename'    => strtoupper($request->middlename),
+            'lastname'      => strtoupper($request->lastname),
+            'store_name'    => strtoupper($request->store_name),
+            'store_address' => $request->store_address,
+            'email'         => $request->email,
+            'contact'       => $request->contact,
+            'owner_pass'    => Hash::make($request->password),
+            'created_on'    => now(),
         ]);
-
 
         return redirect()->route('login')->with('success', 'Registration successful! Please log in.');
     }
