@@ -4,335 +4,170 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ShopLytix Sign Up</title>
+    <title>Sign Up</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            background: #fff;
-        }
-
-        .container {
-            max-width: 800px;
-            width: 100%;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .header img {
-            width: 40px;
-            margin-right: 8px;
-        }
-
-        .header h1 {
-            color: #DC2626;
-            font-weight: bold;
-            font-size: 20px;
-        }
-
-        form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 25px;
-            margin-bottom: 25px;
-        }
-
-        .input-group {
-            position: relative;
-            flex: 1 1 30%;
-            margin-bottom: 20px;
-        }
-
-        ::placeholder {
-            color: #333;
-        }
-
-        input[type="text"],
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            padding: 14px 35px 14px 12px;
-            border: 1px solid #000;
-            border-radius: 20px;
-            font-size: 12px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .eye-icon {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            display: none;
-            font-size: 14px;
-            color: #888;
-        }
-
-        .checkbox-group {
-            flex: 1 1 45%;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 20px;
-            font-size: 12px;
-        }
-
-        .checkbox-group label {
-            display: flex;
-            align-items: flex-start;
-            gap: 6px;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            margin-top: 2px;
-        }
-
-        .submit-btn {
-            flex: 1 1 100%;
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        button {
-            background-color: #000;
-            color: #fff;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 20px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        a {
-            color: #3333cc;
-            text-decoration: none;
-            font-size: 12px;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 768px) {
-
-            .input-group,
-            .input-group.half {
-                flex: 1 1 100%;
-            }
-        }
-
-        /* Error Modal Style */
-        .error-modal {
-            background-color: #f5c6cb;
-            color: #842029;
-            padding: 16px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            position: relative;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .error-modal ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .error-modal li {
-            margin-bottom: 6px;
-            font-size: 14px;
-        }
-
-        .error-btn {
-            background-color: #c53030;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 12px;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        .error-btn:hover {
-            background-color: #a91e1e;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-6px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
 </head>
 
-<body>
-    @if (session('success') || $errors->any())
-    <div id="overlay-modal" style="
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;">
+<body class="flex items-center justify-center font-[Inter] min-h-screen bg-white p-6">
+    <div class="w-full max-w-4xl">
 
-        <div style="
-        background: white;
-        border-radius: 12px;
-        padding: 20px 30px;
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-        animation: fadeIn 0.3s ease;">
-
-            @if (session('success'))
-            <p style="
-                background-color: #d4edda;
-                color: #155724;
-                padding: 12px;
-                border-radius: 8px;
-                font-size: 14px;
-                margin-bottom: 20px;">
-                {{ session('success') }}
-            </p>
-            <a href="{{ route('login') }}" style="
-                background-color: #28a745;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 20px;
-                font-size: 14px;
-                cursor: pointer;
-                text-decoration: none;">
-                Back to Login
-            </a>
-
-            @endif
-
-            @if ($errors->any())
-            <ul style="
-                background-color: #f8d7da;
-                color: #721c24;
-                padding: 12px;
-                border-radius: 8px;
-                font-size: 14px;
-                margin-bottom: 20px;
-                list-style-type: none;
-                padding-left: 0;">
-                @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-            <button onclick="document.getElementById('overlay-modal').style.display='none'" style="
-                background-color: #c53030;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 20px;
-                font-size: 14px;
-                cursor: pointer;">
-                OK
-            </button>
-            @endif
-        </div>
-    </div>
-    @endif
-
-    <div class="container">
-        <div class="header">
-            <img src="{{ asset('assets/logo.png') }}" alt="Shoplytix Logo" class="w-10 h-10 object-contain" />
-            <h1>SHOPLYTIX</h1>
+        <div class="flex items-center mb-5">
+            <img src="{{ asset('assets/logo.png') }}" class="w-12 h-12 object-contain mr-2" alt="Shoplytix Logo" />
+            <h1 class="text-red-600 font-bold text-2xl">SHOPLYTIX</h1>
         </div>
 
-
-
-        <form method="POST" action="{{ route('signup.submit') }}">
+        <!-- Form -->
+        <form method="POST" action="{{ route('signup.submit') }}" class="space-y-6">
             @csrf
 
-            <div class="input-group"><input type="text" name="firstname" placeholder="First Name" required /></div>
-            <div class="input-group"><input type="text" name="middlename" placeholder="Middle Name" /></div>
-            <div class="input-group"><input type="text" name="lastname" placeholder="Last Name" required /></div>
-            <div class="input-group"><input type="email" name="email" placeholder="Email Address" required /></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <input type="text" name="firstname" placeholder="First Name" required
+                        value="{{ old('firstname') }}"
+                        class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                         @error('firstname') @enderror" />
+                    @error('firstname')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
 
-            <div class="input-group">
-                <input type="password" name="password" id="password" placeholder="Password"
-                    oninput="handlePasswordInput('password', 'togglePasswordIcon1')" required />
-                <i class="fas fa-eye-slash eye-icon" id="togglePasswordIcon1"
-                    onclick="togglePassword('password', 'togglePasswordIcon1')"></i>
+                <div>
+                    <input type="text" name="middlename" placeholder="Middle Name"
+                        value="{{ old('middlename') }}"
+                        class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                        @error('middlename') @enderror" />
+                    @error('middlename')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <input type="text" name="lastname" placeholder="Last Name" required
+                        value="{{ old('lastname') }}"
+                        class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                         @error('lastname') @enderror" />
+                    @error('lastname')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
-            <div class="input-group">
-                <input type="password" name="password_confirmation" id="confirm" placeholder="Confirm Password"
-                    oninput="handlePasswordInput('confirm', 'togglePasswordIcon2')" required />
-                <i class="fas fa-eye-slash eye-icon" id="togglePasswordIcon2"
-                    onclick="togglePassword('confirm', 'togglePasswordIcon2')"></i>
+            <div>
+                <input type="text" name="store_address" placeholder="Store Address" required
+                    value="{{ old('store_address') }}"
+                    class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                    @error('store_address') @enderror" />
+                @error('store_address')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                @enderror
             </div>
 
-            <div class="input-group"><input type="text" name="store_name" placeholder="Store Name" required /></div>
-            <div class="input-group" style="flex: 1 1 64%;"><input type="text" name="store_address" placeholder="Store Address" required /></div>
-            <div class="input-group"><input type="text" name="contact" placeholder="Contact Number" required /></div>
-
-            <div class="checkbox-group">
-                <label>
-                    <input type="checkbox" required /> I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy.</a>
-                </label>
-                <label>
-                    <input type="checkbox" name="marketing_opt_in" /> Yes, I would like to receive marketing communication.
-                </label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <input type="text" name="store_name" placeholder="Store Name" required
+                        value="{{ old('store_name') }}"
+                        class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                        @error('store_name') @enderror" />
+                    @error('store_name')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <input type="email" name="email" placeholder="Email Address" required
+                        value="{{ old('email') }}"
+                        class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                        @error('email') @enderror" />
+                    @error('email')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
-            <div class="submit-btn">
-                <button type="submit">Sign Up</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" placeholder="Password" required
+                            oninput="handlePasswordInput('password','eye1')"
+                            class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                @error('password') @enderror" />
+                        <i id="eye1"
+                            class="fas fa-eye-slash absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hidden cursor-pointer"
+                            onclick="togglePassword('password','eye1')"></i>
+                    </div>
+                    @error('password')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <div class="relative">
+                        <input type="password" id="confirm" name="password_confirmation" placeholder="Confirm Password" required
+                            oninput="handlePasswordInput('confirm','eye2')"
+                            class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                @error('password_confirmation') @enderror" />
+                        <i id="eye2"
+                            class="fas fa-eye-slash absolute right-4 top-1/2 -translate-y-1/2 text-gray-800 hidden cursor-pointer"
+                            onclick="togglePassword('confirm','eye2')"></i>
+                    </div>
+                    @error('password_confirmation')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                <div>
+                    <input type="text" name="contact" placeholder="Contact Number" required
+                        value="{{ old('contact') }}"
+                        class="w-full px-4 py-3 border border-black rounded-full shadow text-sm placeholder-gray-600
+                        @error('contact')  @enderror" />
+                    @error('contact')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="flex flex-col space-y-3 text-sm">
+                    <label class="flex items-start gap-2">
+                        <input type="checkbox" required class="mt-1 shrink-0" />
+                        <span>I agree to the <a href="#" class="text-blue-600">Terms of Service</a> and
+                            <a href="#" class="text-blue-600">Privacy Policy</a>.
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-2">
+                        <input type="checkbox" name="marketing_opt_in" class="mt-1 shrink-0" {{ old('marketing_opt_in') ? 'checked' : '' }} />
+
+                        <span>Yes, I would like to receive marketing communication.</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button type="submit"
+                    class="bg-black text-white px-10 py-3 rounded-2xl text-sm hover:bg-gray-800">Sign Up</button>
             </div>
         </form>
     </div>
 
     <script>
-        function togglePassword(inputId, iconId) {
-            const input = document.getElementById(inputId);
-            const icon = document.getElementById(iconId);
-            const isHidden = input.type === "password";
-
-            input.type = isHidden ? "text" : "password";
-            icon.classList.toggle("fa-eye", isHidden);
-            icon.classList.toggle("fa-eye-slash", !isHidden);
+        function togglePassword(id, eye) {
+            const input = document.getElementById(id);
+            const icon = document.getElementById(eye);
+            const hidden = input.type === "password";
+            input.type = hidden ? "text" : "password";
+            icon.classList.toggle("fa-eye", hidden);
+            icon.classList.toggle("fa-eye-slash", !hidden);
         }
 
-        function handlePasswordInput(inputId, iconId) {
-            const input = document.getElementById(inputId);
-            const icon = document.getElementById(iconId);
-
-            if (input.value.trim().length > 0) {
-                icon.style.display = "block";
-            } else {
-                icon.style.display = "none";
+        function handlePasswordInput(id, eye) {
+            const input = document.getElementById(id);
+            const icon = document.getElementById(eye);
+            icon.style.display = input.value.trim() ? "block" : "none";
+            if (!input.value.trim()) {
                 input.type = "password";
-                icon.classList.remove("fa-eye");
                 icon.classList.add("fa-eye-slash");
+                icon.classList.remove("fa-eye");
             }
         }
     </script>
