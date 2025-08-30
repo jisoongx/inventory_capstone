@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-6 sm:px-6 lg:px-8"> {{-- Adjusted padding for better responsiveness --}}
-    <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Good Morning, Staff!</h1> {{-- Smaller greeting --}}
+    <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Welcome, {{ $staff->firstname }}!</h1> {{-- Smaller greeting --}}
     <p class="text-base text-gray-600 mb-6">{{ \Carbon\Carbon::now()->format('l, F d, Y') }}</p> {{-- Smaller date --}}
 
     <div class="bg-white shadow-xl rounded-xl p-6 max-w-3xl mx-auto space-y-6 border border-gray-100"> {{-- Reduced padding, max-width, and spacing --}}
@@ -51,15 +51,15 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3"> {{-- Reduced gap --}}
                 <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200"> {{-- Reduced padding --}}
                     <p class="text-sm font-medium text-gray-500">Store Name</p>
-                    <p class="text-base text-gray-900 font-semibold mt-0.5">{{ $staff->owner->store_name ?? 'N/A' }}</p> {{-- Smaller text --}}
+                    <p class="text-base text-gray-900 font-medium mt-0.5">{{ $staff->owner->store_name ?? 'N/A' }}</p> {{-- Smaller text --}}
                 </div>
                 <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200"> {{-- Reduced padding --}}
                     <p class="text-sm font-medium text-gray-500">Position</p>
-                    <p class="text-base text-gray-900 font-semibold mt-0.5">{{ $staff->position ?? 'Staff' }}</p> {{-- Smaller text --}}
+                    <p class="text-base text-gray-900 font-medium mt-0.5">{{ $staff->position ?? 'Staff' }}</p> {{-- Smaller text --}}
                 </div>
                 <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200"> {{-- Reduced padding --}}
                     <p class="text-sm font-medium text-gray-500">Contact Number</p>
-                    <p class="text-base text-gray-900 font-semibold mt-0.5">{{ $staff->contact ?? 'N/A' }}</p> {{-- Smaller text --}}
+                    <p class="text-base text-gray-900 font-medium mt-0.5">{{ $staff->contact ?? 'N/A' }}</p> {{-- Smaller text --}}
                 </div>
             </div>
         </div>
