@@ -12,7 +12,7 @@ class ActLog extends Model
     protected $primaryKey = 'log_id';
 
     protected $fillable = [
-        'log_timestamp', 
+        'log_timestamp',
         'log_type',
         'staff_id',
         'owner_id',
