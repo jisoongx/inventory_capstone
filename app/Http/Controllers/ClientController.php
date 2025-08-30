@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ClientController extends Controller
 {
-    
+
     public function showClients()
     {
         $clients = Owner::with('subscription.planDetails')
@@ -24,7 +24,7 @@ class ClientController extends Controller
     {
         $query = $request->input('query');
         $status = $request->input('status');
-        $date = $request->input('date'); 
+        $date = $request->input('date');
         $plan = $request->input('plan');
 
         $clients = Owner::with(['subscription.planDetails'])
@@ -81,8 +81,7 @@ class ClientController extends Controller
             if ($owner->status === 'Declined') {
                 $subscription->status = 'Declined';
                 $subscription->save();
-            }
-           else if ($owner->status === 'Deactivated') {
+            } else if ($owner->status === 'Deactivated') {
                 $subscription->status = 'expired';
                 $subscription->subscription_end = now();
                 $subscription->save();
@@ -108,29 +107,13 @@ class ClientController extends Controller
                         ->update(['payment_date' => $newStart]);
                 }
             }
-
-
-            // if ($subscription) {
-            //     $today = now()->startOfDay();
-            //     $endDate = \Carbon\Carbon::parse($subscription->subscription_end)->startOfDay();
-
-            //     if ($today->lte($endDate)) {
-            //         $subscription->status = 'paid';
-            //         $subscription->save();
-            //     } else {
-            //         return response()->json([
-            //             'success' => false,
-            //             'message' => 'Cannot activate client. Subscription already expired.',
-            //         ], 400);
-            //     }
-            // }
         }
 
         $user = Auth::guard('super_admin')->user();
         $ownerName = "{$owner->firstname} {$owner->lastname}";
         $description = "Updated client ({$ownerName}) status to {$owner->status}";
 
-        ActivityLogController::log($description,'super_admin',$user, $request->ip());
+        ActivityLogController::log($description, 'super_admin', $user, $request->ip());
 
         return response()->json([
             'success' => true,
@@ -138,5 +121,4 @@ class ClientController extends Controller
             'new_status' => $owner->status
         ]);
     }
-
 }
