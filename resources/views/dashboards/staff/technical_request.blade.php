@@ -3,11 +3,11 @@
 @section('content')
 
 
-    <div class="flex-1 grid grid-cols-3 gap-5 p-2">
+    <div class="flex-1 grid grid-cols-3 gap-4 p-2">
         <div class="h-[40rem] bg-white shadow-lg p-5 rounded-lg col-span-1 flex flex-col">
             <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                    <span class="font-bold text-lg">Technical Request</span>
+                    <span class="font-semibold text-lg">Technical Request</span>
                     <button data-modal-target="add-modal" data-modal-toggle="add-modal" type="button">
                         <span class="material-symbols-rounded bg-slate-200 rounded-full p-2">
                             edit_square
@@ -41,7 +41,7 @@
                             "></span>
                         </div>
                         <div class="flex flex-col items-start gap-1">
-                            <span class="font-bold text-red-700">{{ $req->req_ticket }}</span>
+                            <span class="font-medium text-red-700 text-sm">{{ $req->req_ticket }}</span>
                             <p class="text-xs">{{ $req->req_title }}</p>
                         </div>
                     </a>
@@ -50,6 +50,7 @@
                         <span class="text-sm text-gray-500">No requests to show.</span>
                     </div>
                 @endforelse
+
             </div>
         </div>
         
@@ -62,7 +63,7 @@
                     @if(empty($recentreq))
                         <p class="text-sm">No request ticket to show</p>
                     @else
-                        <p class="font-semibold text-gray-800">{{ $recentreq->req_title }}</p>
+                        <p class="text-sm font-semibold text-gray-800">{{ $recentreq->req_title }}</p>
                         <p class="text-xs text-gray-400">{{ $recentreq->req_ticket }}</p>
                     @endif
                 </div>
@@ -124,7 +125,7 @@
                     <div class="relative">
                         <form action="{{ route('dashboards.staff.technical_insert', ['req_id' => $recentreq->req_id]) }}" method="POST">
                             @csrf
-                            <textarea name="message" class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none bg-white" placeholder="Enter message here..." rows="3"></textarea>
+                            <textarea name="message" class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none bg-white text-sm" placeholder="Enter message here..." rows="3"></textarea>
                             <button type="submit" class="absolute right-2 bottom-2">
                                 <span class="material-symbols-rounded">send</span>
                             </button>
@@ -133,13 +134,13 @@
                 </div>
             @else
                 <div class="absolute bottom-2 left-0 w-full px-4">
-                    <textarea class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none" placeholder="Enter message here..." rows="3" disabled></textarea>
+                    <textarea class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none text-sm" placeholder="Enter message here..." rows="3" disabled></textarea>
                 </div>
             @endif
         </div>
     </div>
 
-    <div id="add-modal" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed z-50 inset-0 flex justify-center items-center w-full">
+    <div id="add-modal" tabindex="-1" aria-hidden="true" class="hidden fixed inset-0 z-50 flex justify-center items-center">
         <div class="relative p-4 w-full max-w-md max-h-full">
             <div class="relative bg-white rounded shadow-sm pt-12">
                 
@@ -155,14 +156,14 @@
                     <form action="{{ route('dashboards.staff.technical_add') }}" method="POST" class="space-y-3">
                         @csrf
                         <div>
-                            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                            <label for="title" class="block text-xs font-medium text-gray-700 mb-2">Title</label>
                             <input type="text" id="title" name="title" 
-                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+                                class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" 
                                 placeholder="Enter message title" required>
                         </div>
                         <div>
-                            <label for="body" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                            <textarea id="body" name="body" rows="7" class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your message..." required></textarea>
+                            <label for="body" class="block text-xs font-medium text-gray-700 mb-2">Message</label>
+                            <textarea id="body" name="body" rows="7" class="w-full border border-gray-300 rounded px-3 py-2 text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your message..." required></textarea>
                         </div>
                         <div class="flex justify-center pb-4">
                             <button type="submit" 

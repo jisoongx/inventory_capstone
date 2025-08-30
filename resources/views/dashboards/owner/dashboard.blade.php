@@ -125,13 +125,13 @@
                                 @if (count($expenses) === 0)
                                     <td class="px-4 py-4 text-center text-xs text-white w-full border-b border-slate-200">
                                     </td>
-                                @else
-                                    @foreach ($months as $index => $month)
+                                @else   
+                                    @foreach ($tableMonthNames as $index => $month)
                                         <th class="px-4 py-3 border-b border-red-300 text-white">{{ $month }}</th>
 
-                                        @if ($index < count($months) - 1)
+                                        @if ($index < count($tableMonthNames) - 1)
                                             <th class="px-4 py-3 border-b border-slate-300 text-white">
-                                                {{ $month }}-{{ $months[$index + 1] }} (%)
+                                                {{ $month }}-{{ $tableMonthNames[$index + 1] }} (%)
                                             </th>
                                         @endif
                                     @endforeach

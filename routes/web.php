@@ -25,6 +25,7 @@ Route::get('/', function () {
 Route::get('/monthly_profit', [MonthlyController::class, 'index'])->name('dashboards.owner.monthly_profit');
 Route::post('/monthly_profit/add', [MonthlyController::class, 'add'])->name('dashboards.owner.monthly_profit_add');
 Route::post('/monthly_profit/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.monthly_profit_edit');
+Route::get('/expenses/attachment/{expense_id?}', [MonthlyController::class, 'viewAttachment'])->name('expenses.attachment');
 
 
 Route::get('/owner/technical-request', [TechnicalController::class, 'index'])->name('dashboards.owner.technical_request');

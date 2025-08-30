@@ -26,8 +26,18 @@ class DashboardController extends Controller
         
         $currentMonth = (int)date('n');
         $months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        $months = array_slice($months, 0, $currentMonth);
-        $allMonths = range(0, ($currentMonth-1)); 
+        $tableMonths = range(0, ($currentMonth - 1));
+        $tableMonthNames = array_slice($months, 0, $currentMonth);
+
+        if (is_null($selectedYear)) {
+            $months = array_slice($months, 0, $currentMonth);
+            $allMonths = range(0, ($currentMonth - 1));
+        } elseif ($selectedYear == $latestYear) {
+            $months = array_slice($months, 0, $currentMonth);
+            $allMonths = range(0, ($currentMonth - 1));
+        } else {
+            $allMonths = range(0, 11);
+        }
         
 
         $netProfits = []; //compatative analysis - latest nga year
@@ -101,7 +111,7 @@ class DashboardController extends Controller
             ORDER BY m.month
         ", [$owner_id, $latestYear]))->pluck('monthly_sales')->slice(0, $currentMonth)->toArray();
 
-        foreach ($allMonths as $month) {
+        foreach ($tableMonths as $month) {
             $sale     = $sales[$month]    ?? null;
             $expense  = $expenses[$month] ?? null;
             $loss     = $losses[$month]   ?? null;
@@ -222,54 +232,6 @@ class DashboardController extends Controller
         $productPrevData = array_map(fn($row) => (float) $row->total_amount, $productCategoryPrev);
 
 
-        //ORIGINAL NGA QUERY mao ni ang net profit nga mokatell sa current month
-        // $profitMonth = collect(DB::select("
-        //     SELECT 
-        //         months.month,
-        //         IFNULL(m.monthly_sales, 0) AS monthly_sales,
-        //         IFNULL(e.monthly_expenses, 0) AS monthly_expenses,
-        //         (IFNULL(m.monthly_sales, 0) - IFNULL(e.monthly_expenses, 0)) AS net_profit
-        //     FROM (
-        //         SELECT DISTINCT MONTH(date) AS month
-        //         FROM (
-        //             SELECT receipt_date AS date FROM receipt WHERE owner_id = ? AND YEAR(receipt_date) = ?
-        //             UNION
-        //             SELECT expense_created AS date FROM expenses WHERE owner_id = ? AND YEAR(expense_created) = ?
-        //         ) AS all_dates
-        //     ) AS months
-        //     LEFT JOIN (
-        //         SELECT 
-        //             MONTH(r.receipt_date) AS month,
-        //             SUM(p.selling_price * ri.item_quantity) AS monthly_sales
-        //         FROM 
-        //             receipt r
-        //         JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
-        //         JOIN products p ON p.prod_code = ri.prod_code
-        //         WHERE 
-        //             r.owner_id = ? AND
-        //             p.owner_id = r.owner_id AND
-        //             YEAR(r.receipt_date) = ?
-        //         GROUP BY MONTH(r.receipt_date)
-        //     ) m ON months.month = m.month
-        //     LEFT JOIN (
-        //         SELECT 
-        //             MONTH(e.expense_created) AS month,
-        //             SUM(e.expense_amount) AS monthly_expenses
-        //         FROM 
-        //             expenses e
-        //         WHERE 
-        //             e.owner_id = ? AND
-        //             YEAR(e.expense_created) = ?
-        //         GROUP BY MONTH(e.expense_created)
-        //     ) e ON months.month = e.month
-        //     ORDER BY months.month DESC;
-        // ", [
-        //     $owner_id, $latestYear, 
-        //     $owner_id, $latestYear, 
-        //     $owner_id, $latestYear,  
-        //     $owner_id, $latestYear,
-        // ]))->first();
-
         $categories = collect(DB::select(
             "select category from categories"
         ))->pluck('category')->toArray();
@@ -283,6 +245,18 @@ class DashboardController extends Controller
         ", [$owner_id]))->pluck('year')->toArray();
 
         $dateDisplay = Carbon::now('Asia/Manila');
+
+        $day = now()->day;
+
+        // $dailySales = collect(DB::select("
+        //     select sum(p.selling_price * ri.quantity), DAY(r.receipt_date) as dailySales
+        //     from receipt r
+        //     join receipt_item on r.receipt_id = ri.receipt_id
+        //     join products p on ri.prod_code = p.prod_code
+        //     where day(receipt_date) = ?
+        //     and owner_id = ?
+        //     group by DAY(r.receipt_date)
+        // ", [$day, $owner_id]))->first();
 
         return view('dashboards.owner.dashboard', [
             'owner_name' => $owner_name,
@@ -298,6 +272,10 @@ class DashboardController extends Controller
             'products' => $productData,
             'productsPrev' => $productPrevData,
             'categories' => $categories,
+            'currentMonth' => $currentMonth,
+            'latestYear' => $latestYear,
+            'tableMonthNames' => $tableMonthNames,
+            // 'dailySales' => $dailySales,
         ]);
     }
 }

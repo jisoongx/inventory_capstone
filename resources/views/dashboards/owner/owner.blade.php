@@ -90,7 +90,6 @@
             reportsDropdown.classList.toggle('hidden');
         });
 
-        // User dropdown toggle
         const userButton = document.getElementById('userButton');
         const dropdownMenu = document.getElementById('dropdownMenu');
 

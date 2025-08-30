@@ -158,12 +158,12 @@
                         <div>
                             <label for="title" class="block text-xs font-medium text-gray-700 mb-2">Title</label>
                             <input type="text" id="title" name="title" 
-                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+                                class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" 
                                 placeholder="Enter message title" required>
                         </div>
                         <div>
                             <label for="body" class="block text-xs font-medium text-gray-700 mb-2">Message</label>
-                            <textarea id="body" name="body" rows="7" class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your message..." required></textarea>
+                            <textarea id="body" name="body" rows="7" class="w-full border border-gray-300 rounded px-3 py-2 text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your message..." required></textarea>
                         </div>
                         <div class="flex justify-center pb-4">
                             <button type="submit" 
