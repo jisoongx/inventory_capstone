@@ -75,7 +75,7 @@
             $end = \Carbon\Carbon::parse($subscription->subscription_end ?? now());
             $daysLeft = now()->diffInDays($end, false);
 
-            $planTitle = $subscription->planDetails->plan_title ?? '-';
+            $planTitle = trim($subscription->planDetails->plan_title ?? '-');
             $planClass = match($planTitle) {
             'Basic' => 'bg-blue-500 text-white',
             'Premium' => 'bg-purple-500 text-white',
