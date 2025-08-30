@@ -59,24 +59,23 @@
             </div>
         </aside>
 
-        <main id="mainContent" class="flex-1 p-3 ml-20 transition-all duration-300">
-            <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 relative pb-2">
-            <div class="relative">
-                <button id="userButton" class="focus:outline-none">
-                    <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
-                </button>
-                <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
-                    <form method="GET" action="{{ route('owner.profile') }}">
-                        {{-- Removed @csrf as it's not needed for GET requests --}}
-                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-100">Profile</button>
-                    </form>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-100">Logout</button>
-                    </form>
+        <main id="mainContent" class="flex-1 p-5 ml-20 transition-all duration-300">
+            <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 pb-5 relative">
+                <div class="relative">
+                    <button id="userButton" class="focus:outline-none">
+                        <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
+                    </button>
+                    <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
+                        <form method="GET" action="{{ route('super_admin.profile') }}">
+                            <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</button>
+                        </form>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
             @yield('content')
 
