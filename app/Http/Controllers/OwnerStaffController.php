@@ -6,18 +6,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use App\Models\Staff; 
+use App\Models\Staff;
 
 class OwnerStaffController extends Controller
 {
-    
+
     public function showStaff()
     {
         $ownerId = Auth::guard('owner')->id();
-        $staffMembers = Staff::where('owner_id', $ownerId)->paginate(10); 
+        $staffMembers = Staff::where('owner_id', $ownerId)->paginate(10);
         return view('dashboards.owner.staff_list', compact('staffMembers'));
     }
-  
+
     public function updateStatus(Request $request, Staff $staff)
     {
         $request->validate([
@@ -30,12 +30,12 @@ class OwnerStaffController extends Controller
 
         $user = Auth::guard('owner')->user();
         $description = "Updated status of staff ({$staffName}) to {$staff->status}";
-        ActivityLogController::log($description, 'owner',  $user,$request->ip());
+        ActivityLogController::log($description, 'owner',  $user, $request->ip());
 
         return back()->with('success', 'Staff status updated successfully!');
     }
 
- 
+
     public function updateStaffInfo(Request $request, Staff $staff)
     {
         if (Auth::guard('owner')->id() !== $staff->owner_id) {
@@ -65,7 +65,7 @@ class OwnerStaffController extends Controller
         }
     }
 
-   
+
     public function addStaff(Request $request)
     {
         $ownerId = Auth::guard('owner')->id();
@@ -73,9 +73,9 @@ class OwnerStaffController extends Controller
             'firstname' => ['required', 'string', 'max:255'],
             'middlename' => ['nullable', 'string', 'max:255'],
             'lastname' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:staff'], 
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:staff'],
             'contact' => ['nullable', 'string', 'max:20'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'], 
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $staff = Staff::create([
