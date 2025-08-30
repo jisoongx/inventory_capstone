@@ -49,7 +49,6 @@ Route::get('/signup',  fn() => view('signup'))->name('signup');
 Route::post('/signup', [RegisterController::class, 'register'])->name('signup.submit');
 Route::get('/term-of-service',  fn() => view('terms_of_service'))->name('terms.of.service');
 Route::get('/privacy-policy',  fn() => view('privacy_policy'))->name('privacy.');
-
 //Subscription
 Route::get('/subscription/select', [SubscriptionController::class, 'create'])->name('subscription.selection');
 Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store');
@@ -64,7 +63,7 @@ Route::get('/staff/dashboard', fn() => view('dashboards.staff.staff'))->name('st
 
 //clients management
 Route::get('/clients', [ClientController::class, 'showClients'])->name('clients.index');
-Route::get('/clients/search', [ClientController::class, 'search'])->name('clients.search'); 
+Route::get('/clients/search', [ClientController::class, 'search'])->name('clients.search');
 Route::put('/clients/{owner_id}/status', [ClientController::class, 'updateStatus'])->name('clients.updateStatus');
 
 //subscription plan management
@@ -83,10 +82,10 @@ Route::put('/super-admin/profile', [ProfileController::class, 'updateSuperAdminP
 Route::get('/owner/profile', [ProfileController::class, 'showOwnerProfile'])->name('owner.profile');
 Route::put('/owner/profile', [ProfileController::class, 'updateOwnerProfile'])->name('owner.profile.update');
 Route::get('/staff/profile', [ProfileController::class, 'showStaffProfile'])->name('staff.profile');
-Route::put('/staff/profile', [ProfileController::class, 'updateStaffProfile'])->name('staff.profile.update'); 
+Route::put('/staff/profile', [ProfileController::class, 'updateStaffProfile'])->name('staff.profile.update');
 
 // Staff Management 
-Route::get('/owner/staff', [OwnerStaffController::class, 'showStaff'])->name('owner.show.staff'); 
+Route::get('/owner/staff', [OwnerStaffController::class, 'showStaff'])->name('owner.show.staff');
 Route::post('/owner/staff', [OwnerStaffController::class, 'addStaff'])->name('owner.add.staff');
-Route::put('/owner/staff/{staff}/status', [OwnerStaffController::class, 'updateStatus'])->name('owner.staff.updateStatus'); 
+Route::put('/owner/staff/{staff}/status', [OwnerStaffController::class, 'updateStatus'])->name('owner.staff.updateStatus');
 Route::put('/owner/staff/{staff}', [OwnerStaffController::class, 'updateStaffInfo'])->name('owner.staff.update');
