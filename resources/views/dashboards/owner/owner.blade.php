@@ -69,11 +69,11 @@
                 <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
                     <form method="GET" action="{{ route('owner.profile') }}">
                         {{-- Removed @csrf as it's not needed for GET requests --}}
-                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-100">Profile</button>
+                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</button>
                     </form>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-100">Logout</button>
+                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
                     </form>
                 </div>
             </div>
