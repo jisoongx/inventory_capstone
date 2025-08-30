@@ -20,7 +20,7 @@ class Plan extends Model
         'plan_price' => 'decimal:2',
     ];
 
-    
+
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class, 'plan_id', 'plan_id');
