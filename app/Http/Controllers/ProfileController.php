@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException; 
+use Illuminate\Validation\ValidationException;
 use App\Models\Staff;
 use App\Http\Controllers\ActivityLogController;
 
@@ -22,7 +22,7 @@ class ProfileController extends Controller
 
     public function updateSuperAdminProfile(Request $request)
     {
-        $superAdmin = Auth::guard('super_admin')->user(); 
+        $superAdmin = Auth::guard('super_admin')->user();
         $request->validate([
             'current_password' => ['required', 'string'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -48,7 +48,7 @@ class ProfileController extends Controller
         $owner = Auth::guard('owner')->user();
         return view('dashboards.owner.owner_profile', compact('owner'));
     }
- 
+
     public function updateOwnerProfile(Request $request)
     {
         $owner = Auth::guard('owner')->user();
@@ -124,17 +124,17 @@ class ProfileController extends Controller
         $staff = Staff::with('owner')->find($staffId);
 
         if (!$staff) {
-            Auth::guard('staff')->logout(); 
+            Auth::guard('staff')->logout();
             return redirect()->route('login')->withErrors(['error' => 'Your staff account could not be found. Please log in again.']);
         }
 
         return view('dashboards.staff.profile', compact('staff'));
     }
-   
+
     public function updateStaffProfile(Request $request)
     {
-        $staff = Auth::guard('staff')->user(); 
-      
+        $staff = Auth::guard('staff')->user();
+
         $request->validate([
             'current_password' => ['required', 'string'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
