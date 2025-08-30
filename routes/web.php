@@ -13,6 +13,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
 use App\Http\Controllers\TechnicalController;
+use App\Http\Controllers\InventoryOwnerController;
 
 
 
@@ -89,3 +90,10 @@ Route::get('/owner/staff', [OwnerStaffController::class, 'showStaff'])->name('ow
 Route::post('/owner/staff', [OwnerStaffController::class, 'addStaff'])->name('owner.add.staff');
 Route::put('/owner/staff/{staff}/status', [OwnerStaffController::class, 'updateStatus'])->name('owner.staff.updateStatus');
 Route::put('/owner/staff/{staff}', [OwnerStaffController::class, 'updateStaffInfo'])->name('owner.staff.update');
+
+//Inventory for Owners
+Route::get('/inventory-owner', [InventoryOwnerController::class, 'index'])->name('inventory-owner');   
+Route::get('/inventory-owner/search', [InventoryOwnerController::class, 'index'])->name('inventory.search');
+Route::get('/inventory-owner/suggest', [InventoryOwnerController::class, 'suggest']);
+Route::post('/check-barcode', [InventoryOwnerController::class, 'checkBarcode']);
+Route::post('/register-product', [InventoryOwnerController::class, 'registerProduct']);
