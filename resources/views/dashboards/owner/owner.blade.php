@@ -6,6 +6,7 @@
     <title></title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="/build/assets/dataTables.dataTables.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         .nav-label {
             font-size: 0.85rem;
@@ -27,7 +28,7 @@
                     <span class="material-symbols-rounded">dashboard</span>
                     <span class="nav-label">Dashboard</span>
                 </a>
-                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Inventory">
+                <a href="{{ route('inventory-owner') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Inventory">
                     <span class="material-symbols-rounded">shopping_cart</span>
                     <span class="nav-label">Inventory</span>
                 </a>
