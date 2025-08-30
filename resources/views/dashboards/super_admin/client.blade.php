@@ -2,11 +2,11 @@
 
 @section('content')
 &nbsp;
-<h1 class="text-2xl font-extrabold text-gray-900 mb-6">Clients</h1>
+<h1 class="text-2xl font-extrabold text-gray-900 mb-6 mx-6">Clients</h1>
 
-<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 mx-6">
     <!-- Smaller, Rounded Search Bar -->
-    <div class="flex-1 relative">
+    <div class="flex-1">
         <input
             type="text"
             id="search"
@@ -28,30 +28,19 @@
             </svg>
         </div>
     </div>
-
-    @php
-    $baseDate = now()->startOfMonth(); // Use a fixed reference point to avoid duplicate months
-    @endphp
     <div class="relative w-full sm:w-[180px]">
-        <select id="dateFilter"
-            class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out">
-            <option disabled selected value="">Select Date</option>
-            @for ($i = 0; $i < 18; $i++) {{-- Show last 18 months --}}
-                @php
-                $date=$baseDate->copy()->subMonths($i);
-                @endphp
-                <option value="{{ $date->format('Y-m') }}">{{ $date->format('F Y') }}</option>
-                @endfor
-        </select>
-        <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-500">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-        </div>
+        <input
+            type="date"
+            id="dateFilter"
+            name="dateFilter"
+            class="appearance-none w-full p-3 pl-4 pr-4 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out" />
     </div>
 
+
+
+
     <!-- Status Filter Buttons -->
-    <div class="flex flex-wrap gap-2 mt-2 md:mt-0">
+    <div class="flex flex-wrap gap-2 mt-2 md:mt-0 text-sm">
         @php
         $statuses = [
         'Pending' => 'bg-orange-500 hover:bg-orange-600',
@@ -62,7 +51,7 @@
 
         @foreach ($statuses as $status => $color)
         <button
-            class="status-filter-btn px-4 py-2 rounded-full text-white text-sm font-medium transition {{ $color }}"
+            class="status-filter-btn px-4 py-2 rounded-full text-white text-sm font-medium transition shadow-md {{ $color }}"
             data-status="{{ $status }}">
             {{ $status }}
         </button>
@@ -72,11 +61,11 @@
 </div>
 
 
-<div class="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+<div class="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 mx-6">
     <div class="overflow-x-auto">
-        <table class="min-w-full leading-normal">
+        <table class="min-w-full leading-normal text-sm">
             <thead>
-                <tr class="bg-emerald-200 border-b border-emerald-200 text-xs font-semibold text-gray-700 tracking-wider text-center">
+                <tr class="bg-green-200 border-b border-emerald-200 text-sm font-normal text-gray-700 tracking-wider text-center">
                     <th class="px-6 py-3">Store Name</th>
                     <th class="px-6 py-3">Owner Name</th>
                     <th class="px-6 py-3">Status</th>
@@ -92,11 +81,11 @@
                 {{-- Initial data loaded via Blade --}}
                 @forelse ($clients as $client)
 
-                <tr class="hover:bg-gray-50 transition duration-150 ease-in-out" data-owner-id="{{ $client->owner_id }}">
-                    <td class="px-6 py-4 text-xs text-gray-900 text-center">{{ $client->store_name }}</td>
-                    <td class="px-6 py-4 text-xs text-gray-900 text-center">{{ $client->firstname }} {{ $client->middlename }} {{ $client->lastname }}</td>
-                    <td class="px-6 py-4 text-xs text-center">
-                        <span class="status-badge w-24 text-center px-3 py-1 inline-flex items-center justify-center text-xs leading-5 font-medium rounded-full
+                <tr class="hover:bg-gray-50 transition duration-150 ease-in-out text-center" data-owner-id="{{ $client->owner_id }}">
+                    <td class="px-6 py-4  text-gray-900 uppercase">{{ $client->store_name }}</td>
+                    <td class="px-6 py-4  text-gray-900 uppercase">{{ $client->firstname }} {{ $client->middlename }} {{ $client->lastname }}</td>
+                    <td class="px-6 py-4  text-center text-sm">
+                        <span class="status-badge w-28 text-center px-3 py-1 inline-flex items-center justify-center leading-5 font-medium rounded-full
                             @if($client->status == 'Active') border border-green-600 text-green-600
                             @elseif($client->status == 'Pending') border border-orange-600 text-orange-600
                             @elseif($client->status == 'Deactivated') border border-red-600 text-red-600
@@ -105,9 +94,9 @@
                             {{ $client->status }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-xs text-gray-900 text-center">
+                    <td class="px-6 py-4  text-gray-900">
 
-                        {{ $client->created_on ? \Carbon\Carbon::parse($client->created_on)->format('M d, Y') : '-' }}
+                        {{ $client->created_on ? \Carbon\Carbon::parse($client->created_on)->format('M j, Y') : '-' }}
                     </td>
                     @php
                     $planTitle = $client->subscription->planDetails->plan_title ?? '-';
@@ -118,9 +107,9 @@
                     };
                     @endphp
 
-                    <td class="px-6 py-4 text-xs text-center">
+                    <td class="px-6 py-4">
                         @if ($planTitle !== '-')
-                        <span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-xs leading-5 font-medium rounded-full {{ $planClass }}">
+                        <span class="w-28 px-3 py-1 inline-flex items-center justify-center leading-5 font-medium rounded-full {{ $planClass }}">
                             {{ $planTitle }}
                         </span>
                         @else
@@ -131,7 +120,7 @@
 
 
 
-                    <td class="px-6 py-4 text-xs text-center">
+                    <td class="px-6 py-4">
                         <button type="button"
                             class="edit-status-btn text-blue-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
                             data-owner-id="{{ $client->owner_id }}"
@@ -145,17 +134,21 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-4 text-center text-xs text-gray-500">No clients found.</td>
+                    <td colspan="6" class="px-6 py-4 text-gray-900">No clients found.</td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-
+    @if ($clients->hasPages())
     <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end" id="pagination-links">
         {{ $clients->links() }}
     </div>
+    @endif
+
 </div>
+
+
 
 <!-- Status Update Modal -->
 <div id="statusUpdateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
@@ -182,7 +175,7 @@
             <div class="flex justify-between text-sm text-gray-700 items-center">
                 <span class="font-medium">Current Status:</span>
                 <span id="modalCurrentStatus"
-                    class="font-semibold text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-800 inline-block">
+                    class="font-semibold text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-800 inline-block">
                 </span>
             </div>
         </div>
@@ -219,7 +212,7 @@
         let currentQuery = '';
         let currentStatus = '';
         let date = '';
-        let selectedPlan = ''; 
+        let selectedPlan = '';
 
 
         $('#search').on('input', function() {
@@ -282,7 +275,7 @@
                                     bgColor = 'border border-red-600';
                                     textColor = 'text-red-600';
                                 }
-                                return `<span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-xs leading-5 font-medium rounded-full ${bgColor} ${textColor}">${status}</span>`;
+                                return `<span class="w-28 text-center px-3 py-1 inline-flex items-center justify-center text-sm leading-5 font-medium rounded-full ${bgColor} ${textColor}">${status}</span>`;
                             }
 
                             const statusBadge = getStatusBadgeHtml(client.status);
@@ -296,17 +289,17 @@
                             const planInfo = planMap[planId];
 
                             const planBadge = planInfo ?
-                                `<span class="w-24 text-center px-2 py-1 inline-flex items-center justify-center text-xs font-medium leading-5 rounded-full ${planInfo.color}">${planInfo.title}</span>` :
+                                `<span class="w-28 text-center px-2 py-1 inline-flex items-center justify-center text-sm font-medium leading-5 rounded-full ${planInfo.color}">${planInfo.title}</span>` :
                                 '-';
 
                             html += `
-                            <tr class="hover:bg-gray-50 transition duration-150 ease-in-out" data-owner-id="${client.owner_id}">
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">${client.store_name}</td>
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
-                                <td class="px-6 py-4 text-xs text-center">${statusBadge}</td>
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">${formattedDate}</td>
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">${planBadge}</td>
-                                <td class="px-6 py-4 text-xs text-center">
+                            <tr class="hover:bg-gray-50 transition duration-150 ease-in-out text-sm" data-owner-id="${client.owner_id}">
+                                <td class="px-6 py-4 text-gray-900 text-center uppercase">${client.store_name}</td>
+                                <td class="px-6 py-4  text-gray-900 text-center uppercase">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
+                                <td class="px-6 py-4  text-center">${statusBadge}</td>
+                                <td class="px-6 py-4  text-gray-900 text-center">${formattedDate}</td>
+                                <td class="px-6 py-4  text-gray-900 text-center">${planBadge}</td>
+                                <td class="px-6 py-4  text-center">
                                     <button type="button"
                                             class="edit-status-btn text-blue-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
                                             data-owner-id="${client.owner_id}"
@@ -318,7 +311,7 @@
                         `;
                         });
                     } else {
-                        html = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No clients found.</td></tr>`;
+                        html = `<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No clients found.</td></tr>`;
                     }
 
                     $('#client-table-body').html(html);
@@ -365,7 +358,7 @@
             textColor = 'text-gray-500';
         }
 
-        element.removeClass().addClass(`w-24 text-center px-2 py-1 inline-flex items-center justify-center text-xs font-semibold rounded-full ${bgColor} ${textColor}`).text(newStatus);
+        element.removeClass().addClass(`w-28 text-center px-2 py-1 inline-flex items-center justify-center text-sm font-semibold rounded-full ${bgColor} ${textColor}`).text(newStatus);
     }
 
     $(document).on('click', '.edit-status-btn', function() {
@@ -383,8 +376,8 @@
         const declineLabel = $('#declineBtnLabel');
 
         // Reset buttons
-        approveBtn.prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-        declineBtn.prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+        approveBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
+        declineBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
 
         // Set button labels based on current status
         if (currentStatus === 'Pending') {
@@ -460,7 +453,8 @@
                     $('#notification').text('Status updated to ' + response.new_status + ' successfully!').removeClass('bg-red-500 hidden').addClass('bg-green-500 flex');
                     setTimeout(() => {
                         $('#notification').removeClass('flex').addClass('hidden');
-                    }, 3000); // Hide after 3 seconds
+                        location.reload();
+                    }, 2000); // Hide after 3 seconds
 
                 } else {
                     alert('Failed to update status: ' + (response.message || 'Unknown error'));
@@ -468,6 +462,7 @@
                     $('#notification').text('Failed to update status: ' + (response.message || 'Unknown error')).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
                     setTimeout(() => {
                         $('#notification').removeClass('flex').addClass('hidden');
+                        location.reload();
                     }, 5000);
                 }
             },
@@ -479,6 +474,7 @@
                 $('#notification').text(errorMessage).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
                 setTimeout(() => {
                     $('#notification').removeClass('flex').addClass('hidden');
+                    location.reload();
                 }, 5000);
             },
             complete: function() {
