@@ -2,26 +2,22 @@
 
 @section('content')
 &nbsp;
-<div class="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+<div class="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 mx-6">
     <!-- Left Column: Title, Search & Dropdown -->
     <div class="flex-1">
         <h1 class="text-2xl font-bold text-gray-800 mb-4">Subscription Plan Management</h1>
 
-        <!-- Search + Dropdown aligned -->
         <div class="flex flex-col sm:flex-row gap-4">
-            <!-- Search Bar -->
-            <input
-                type="text"
-                id="search"
-                placeholder="Search by store name or owner name"
+            <!-- Search -->
+            <input type="text" id="search" placeholder="Search by store name or owner name"
                 autocomplete="off"
                 class="w-full sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out"
                 style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;" />
 
-            <!-- Native Dropdown (Improved Look) -->
+            <!-- Status Filter -->
             <div class="relative w-full sm:w-[220px]">
                 <select id="statusFilter"
-                    class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50  focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out">
+                    class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out">
                     <option disabled selected value="">Select Status</option>
                     <option value="paid">Paid</option>
                     <option value="expired">Expired</option>
@@ -32,142 +28,100 @@
                     </svg>
                 </div>
             </div>
-            @php
-            $baseDate = now()->startOfMonth(); // Use a fixed reference point to avoid duplicate months
-            @endphp
+
+            <!-- Date Filter -->
             <div class="relative w-full sm:w-[180px]">
-                <select id="dateFilter"
-                    class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out">
-                    <option disabled selected value="">Select Date</option>
-                    @for ($i = 0; $i < 18; $i++) {{-- Show last 18 months --}}
-                        @php
-                        $date=$baseDate->copy()->subMonths($i);
-                        @endphp
-                        <option value="{{ $date->format('Y-m') }}">{{ $date->format('F Y') }}</option>
-                        @endfor
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-500">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </div>
+                <input type="date" id="dateFilter" name="dateFilter"
+                    class="appearance-none w-full p-3 pl-4 pr-4 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out" />
             </div>
-
-
-
         </div>
     </div>
 
     <!-- Right Column: Plan Buttons -->
     <div class="flex gap-2 mt-4 md:mt-10">
-        <!-- BASIC Button -->
-        <button type="button"
-            class="filter-plan w-36 bg-blue-500 text-xs text-white font-semibold py-2 px-4 rounded-xl shadow hover:bg-blue-200 transition-all duration-200"
-            data-plan="1">
+        <button type="button" class="filter-plan w-36 bg-blue-500 text-sm text-white font-semibold py-2 px-4 rounded-xl shadow-md hover:bg-blue-200 transition-all duration-200" data-plan="1">
             BASIC<br>
             <span class="text-lg font-bold">₱250</span><br>
-            <span class="text-[10px] font-normal text-white">for 6 months</span>
+            <span class="text-xs font-normal text-white">for 6 months</span>
         </button>
-
-        <!-- PREMIUM Button -->
-        <button type="button"
-            class="filter-plan w-36 bg-purple-500 text-xs text-white font-semibold py-2 px-4 rounded-xl shadow hover:bg-purple-300 transition-all duration-200"
-            data-plan="2">
+        <button type="button" class="filter-plan w-36 bg-purple-500 text-sm text-white font-semibold py-2 px-4 rounded-xl shadow-md hover:bg-purple-300 transition-all duration-200" data-plan="2">
             PREMIUM<br>
             <span class="text-lg font-bold">₱500</span><br>
-            <span class="text-[10px] font-normal text-white">for 1 year</span>
+            <span class="text-xs font-normal text-white">for 1 year</span>
         </button>
     </div>
 </div>
 
-
 @if($clients->count())
-<div class="overflow-x-auto bg-white shadow-md rounded-lg">
+<div class="overflow-x-auto bg-white shadow-md rounded-lg mx-6">
     <table class="min-w-full table-auto border-collapse">
-        <thead class="bg-emerald-200 text-left text-xs font-semibold text-gray-700 tracking-wider text-center">
+        <thead class="bg-green-200 text-sm font-medium text-gray-700 tracking-wider text-center">
             <tr>
-                <th class="px-6 py-4">Store Name</th>
-                <th class="px-6 py-4">Owner Name</th>
-                <th class="px-6 py-4">Subscription Plan</th>
-                <th class="px-6 py-4">Status</th>
-                <th class="px-6 py-4">Start Date</th>
-                <th class="px-6 py-4">Expiry Date</th>
-                <th class="px-6 py-4">Days Left</th>
-                <th class="px-6 py-4">Actions</th>
-
+                <th class="px-6 py-3">Store Name</th>
+                <th class="px-6 py-3">Owner Name</th>
+                <th class="px-6 py-3">Subscription Plan</th>
+                <th class="px-6 py-3 text-center">Status</th>
+                <th class="px-6 py-3">Start Date</th>
+                <th class="px-6 py-3">Expiry Date</th>
+                <th class="px-6 py-3">Days Left</th>
+                <th class="px-6 py-3">Actions</th>
             </tr>
         </thead>
-        <tbody class="text-sm text-gray-800">
+        <tbody class="text-sm text-gray-800 text-center">
             @foreach($clients as $client)
+            @foreach($client->subscriptions as $subscription)
             @php
-            $subscription = $client->subscription;
-            $start = \Carbon\Carbon::parse($subscription->start_date);
-            $end = \Carbon\Carbon::parse($subscription->expiry_date);
+            $start = \Carbon\Carbon::parse($subscription->subscription_start ?? now());
+            $end = \Carbon\Carbon::parse($subscription->subscription_end ?? now());
             $daysLeft = now()->diffInDays($end, false);
+
+            $planTitle = $subscription->planDetails->plan_title ?? '-';
+            $planClass = match($planTitle) {
+            'Basic' => 'bg-blue-500 text-white',
+            'Premium' => 'bg-purple-500 text-white',
+            default => 'bg-gray-100 text-gray-800',
+            };
+
+            $subStatus = $subscription->status;
+            $statusClass = match($subStatus) {
+            'paid' => 'border border-green-600 text-green-600',
+            'expired' => 'border border-red-600 text-red-600',
+            default => 'bg-gray-100 border border-gray-400 text-gray-600'
+            };
             @endphp
             <tr class="border-b hover:bg-gray-50">
+                <td class="px-6 py-4 uppercase">{{ $client->store_name }}</td>
+                <td class="px-6 py-4 uppercase">{{ $client->firstname }} {{ $client->middlename ?? '' }} {{ $client->lastname }}</td>
 
-                <td class="px-6 py-4 text-xs text-center">{{ $client->store_name }}</td>
-                <td class="px-6 py-4 text-xs text-center">{{ $client->firstname }} {{ $client->middlename }} {{ $client->lastname }}</td>
-
-                @php
-                $planTitle = $client->subscription->planDetails->plan_title ?? '-';
-                $planClass = match($planTitle) {
-                'Basic' => 'bg-blue-500 text-white',
-                'Premium' => 'bg-purple-500 text-white',
-                default => 'bg-gray-100 text-gray-800',
-                };
-                @endphp
-
-                <td class="px-6 py-4 text-xs text-center">
+                <td class="px-6 py-4">
                     @if ($planTitle !== '-')
-                    <span class="w-24 text-center px-2 py-1 inline-flex items-center justify-center text-xs font-medium leading-5 rounded-full {{ $planClass }}">
+                    <span class="w-24 px-2 py-1 inline-flex items-center justify-center font-medium leading-5 rounded-full {{ $planClass }}">
                         {{ $planTitle }}
                     </span>
                     @else
                     -
                     @endif
                 </td>
-                <td class="px-6 py-4">
-                    @php
-                    $subStatus = $subscription->status;
-                    $statusClass = match($subStatus) {
-                    'paid' => 'border border-green-100 border border-green-600 text-green-600',
-                    'expired' => 'border border-red-100 border border-red-600 text-red-600',
-                    default => 'bg-gray-100 border border-gray-400 text-gray-600'
-                    };
-                    @endphp
 
-                    <span class="w-24 text-center px-2 py-1 inline-flex items-center justify-center text-xs font-medium leading-5 rounded-full {{ $statusClass }}">
+                <td class="px-6 py-4">
+                    <span class="w-24 px-2 py-1 inline-flex items-center justify-center font-medium leading-5 rounded-full {{ $statusClass }}">
                         {{ $subStatus }}
                     </span>
                 </td>
 
-                <td class="px-6 py-4 text-xs text-gray-900 text-center">
+                <td class="px-6 py-4">{{ $subscription->subscription_start ? \Carbon\Carbon::parse($subscription->subscription_start)->format('M j, Y') : '-' }}</td>
+                <td class="px-6 py-4">{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('M j, Y') : '-' }}</td>
 
-                    {{ $client->subscription->subscription_start ? \Carbon\Carbon::parse($client->subscription->subscription_start)->format('M d, Y') : '-' }}
-                </td>
-                <td class="px-6 py-4 text-xs text-gray-900 text-center">
-
-                    {{ $client->subscription->subscription_end ? \Carbon\Carbon::parse($client->subscription->subscription_end)->format('M d, Y') : '-' }}
-                </td>
-                @php
-                $end = optional($client->subscription)->subscription_end;
-                $endDate = $end ? \Carbon\Carbon::parse($end) : null;
-                $daysLeft = $endDate ? now()->diffInDays($endDate, false) : null;
-                $daysLeft = isset($daysLeft) ? intval($daysLeft) : null;
-                @endphp
-
-                <td class="px-6 py-4 text-xs text-center">
-                    @if (is_null($daysLeft))
-                    -
-                    @elseif ($daysLeft < 0)
+                <td class="px-6 py-4">
+                    @if ($daysLeft < 0)
                         <span class="text-red-500">Expired</span>
                         @else
-                        {{ $daysLeft }} day{{ $daysLeft !== 1 ? 's' : '' }}
+                        {{ floor($daysLeft) }} day{{ floor($daysLeft) !== 1 ? 's' : '' }}
                         @endif
                 </td>
-                <td class="px-6 py-4 text-xs text-center">
+
+
+                <td class="px-6 py-4">
                     <button type="button"
                         class="edit-status-btn text-blue-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
                         data-owner-id="{{ $client->owner_id }}"
@@ -175,19 +129,15 @@
                         <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                         </svg>
-
                     </button>
                 </td>
-
-
-
             </tr>
+            @endforeach
             @endforeach
         </tbody>
     </table>
 </div>
 
-<!-- Pagination -->
 <div class="mt-4">
     {{ $clients->links() }}
 </div>
@@ -219,7 +169,7 @@
             <div class="flex justify-between text-sm text-gray-700 items-center">
                 <span class="font-medium">Current Status:</span>
                 <span id="modalCurrentStatus"
-                    class="font-semibold text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-800 inline-block">
+                    class="font-semibold text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-800 inline-block">
                 </span>
             </div>
         </div>
@@ -282,7 +232,7 @@
 
         function fetchClients() {
             $.ajax({
-                url: "{{ route('clients.sub_search') }}", // Reuse the same route
+                url: "{{ route('clients.sub_search') }}",
                 type: "GET",
                 data: {
                     query: currentQuery,
@@ -318,14 +268,11 @@
                                     textColor = 'text-red-600';
                                 }
                                 return `
-                                <span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-xs leading-5 font-medium rounded-full ${bgColor} ${textColor}">
+                                <span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-sm leading-5 font-medium rounded-full ${bgColor} ${textColor}">
                                     ${status}
                                 </span>
                             `;
                             }
-
-
-
                             const statusBadge = getStatusBadgeHtml(client.subscription.status);
                             const plan = client.subscription?.plan_details?.plan_title ?? '-';
 
@@ -344,7 +291,12 @@
                             if (client.subscription?.subscription_end) {
                                 const endDate = new Date(client.subscription.subscription_end);
                                 const now = new Date();
-                                const diff = Math.floor((endDate - now) / (1000 * 60 * 60 * 24));
+                                const oneDay = 1000 * 60 * 60 * 24;
+                                endDate.setHours(0, 0, 0, 0);
+                                now.setHours(0, 0, 0, 0);
+                                const diff = Math.floor((endDate.getTime() - now.getTime()) / oneDay);
+
+
                                 if (diff < 0) {
                                     daysLeftText = '<span class="text-red-500">Expired</span>';
                                 } else {
@@ -356,20 +308,20 @@
                             const planInfo = planMap[planId];
 
                             const planBadge = planInfo ?
-                                `<span class="w-24 text-center px-2 py-1 inline-flex items-center justify-center text-xs font-medium leading-5 rounded-full ${planInfo.color}">
+                                `<span class="w-24 text-center px-2 py-1 inline-flex items-center justify-center text-sm font-medium leading-5 rounded-full ${planInfo.color}">
                                     ${planInfo.title}
                                 </span>` : '-';
 
                             tbody += `
-                                <tr class="border-b hover:bg-gray-50">
-                                    <td class="px-6 py-4 text-xs text-center">${client.store_name}</td>
-                                    <td class="px-6 py-4 text-xs text-center">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
+                                <tr class="border-b hover:bg-gray-50 text-sm">
+                                    <td class="px-6 py-4  text-center uppercase">${client.store_name}</td>
+                                    <td class="px-6 py-4  text-center uppercase">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
                                     <td class="px-6 py-4 text-sm text-center">${planBadge}</td>
                                     <td class="px-6 py-4">${statusBadge}</td>
-                                    <td class="px-6 py-4 text-xs text-gray-900 text-center">${start}</td>
-                                    <td class="px-6 py-4 text-xs text-gray-900 text-center">${end}</td>
-                                    <td class="px-6 py-4 text-xs text-center">${daysLeftText}</td>
-                                    <td class="px-6 py-4 text-xs text-center">
+                                    <td class="px-6 py-4  text-gray-900 text-center">${start}</td>
+                                    <td class="px-6 py-4  text-gray-900 text-center">${end}</td>
+                                    <td class="px-6 py-4  text-center">${daysLeftText}</td>
+                                    <td class="px-6 py-4  text-center">
                                         <button type="button"
                                             class="edit-status-btn text-blue-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
                                             data-owner-id="{{ $client->owner_id }}"
@@ -386,7 +338,7 @@
                     } else {
                         tbody = `
                             <tr>
-                                <td colspan="8" class="text-center px-6 py-4 text-xs text-gray-500">
+                                <td colspan="8" class="text-center px-6 py-4 text-sm text-gray-500">
                                     No results found.
                                 </td>
                             </tr>
@@ -418,7 +370,7 @@
             textColor = 'text-gray-500';
         }
 
-        element.removeClass().addClass(`w-24 text-center px-2 py-1 inline-flex items-center justify-center text-xs font-semibold rounded-full ${bgColor} ${textColor}`).text(newStatus);
+        element.removeClass().addClass(`w-24 text-center px-2 py-1 inline-flex items-center justify-center text-sm font-semibold rounded-full ${bgColor} ${textColor}`).text(newStatus);
     }
 
     // Open Modal
@@ -437,8 +389,8 @@
         const declineLabel = $('#declineBtnLabel');
 
         // Reset buttons
-        approveBtn.prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-        declineBtn.prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+        approveBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
+        declineBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
 
         // Set button labels based on current status
         if (currentStatus === 'paid') {
@@ -502,7 +454,8 @@
                     $('#notification').text('Status updated to ' + response.new_status + ' successfully!').removeClass('bg-red-500 hidden').addClass('bg-green-500 flex');
                     setTimeout(() => {
                         $('#notification').removeClass('flex').addClass('hidden');
-                    }, 3000); // Hide after 3 seconds
+                        location.reload();
+                    }, 2000); // Hide after 3 seconds
 
                 } else {
                     alert('Failed to update status: ' + (response.message || 'Unknown error'));
@@ -510,6 +463,7 @@
                     $('#notification').text('Failed to update status: ' + (response.message || 'Unknown error')).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
                     setTimeout(() => {
                         $('#notification').removeClass('flex').addClass('hidden');
+                        location.reload();
                     }, 5000);
                 }
             },
@@ -521,6 +475,7 @@
                 $('#notification').text(errorMessage).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
                 setTimeout(() => {
                     $('#notification').removeClass('flex').addClass('hidden');
+                    location.reload();
                 }, 5000);
             },
             complete: function() {
