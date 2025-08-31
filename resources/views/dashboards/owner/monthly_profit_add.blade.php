@@ -75,25 +75,76 @@
 
             <div class="bg-blue-100 rounded-md p-4 mt-5 text-xs space-y-1">
                 <p><span class="font-semibold">Current Sales:</span> <span class="text-black float-right">₱{{ number_format($salesTotal->salesTotal, 2) }}</span></p>
-                <p><span class="font-semibold text-gray-700">Total In-Store Expenses:</span> <span class="text-black float-right">₱{{ number_format($expenseTotal->expenseTotal, 2) }}</span></p>
-                <p><span class="font-semibold text-gray-700">Total Revenue Loss:</span> <span class="text-black float-right">₱{{ number_format($lossTotal->lossTotal, 2) }}</span></p>
+                <p><span class="font-semibold text-gray-700">Total In-Store Expenses:</span> <span class="text-gray-700 float-right">₱{{ number_format($expenseTotal->expenseTotal, 2) }}</span></p>
+                <p><span class="font-semibold text-gray-700">Total Revenue Loss:</span> <span class="text-gray-700 float-right">₱{{ number_format($lossTotal->lossTotal, 2) }}</span></p>
                 <p><span class="font-semibold text-red-600 text-sm">Month's Net Profit:</span> <span class="text-red-600 float-right font-bold text-sm">₱{{ number_format($salesTotal->salesTotal - ($expenseTotal->expenseTotal + $lossTotal->lossTotal), 2) }}</span></p>
             </div>
         </div>
 
-        <div class="h-[40rem] bg-white shadow-lg p-4 rounded-lg flex flex-col relative space-y-5">
-            <p class="font-semibold text-sm">Insights</p>
-            <div class="flex flex-1 items-start justify-center">
-                <span class="material-symbols-rounded bg-red-100 p-1">workspace_premium</span>
-                <p class="ml-2 text-xs">{{ $topCategory->category_name }} contributed 40% of your revenue this month.</p>
-            </div>
-            <div class="border-blue-500 border-l-4">
-                <p class="ml-2 text-xs">Compared to August 2024, net profit increased by ₱20,000.</p>
-            </div>
-            <div class="border-blue-500 border-l-4">
-                <p class="ml-2 text-xs">You covered all expenses by the 18th of the month. You covered all expenses by the 18th of the month. You covered all expenses by the 18th of the month.</p>
+
+
+        <div class="h-[40rem] bg-white shadow-lg pl-7 pr-5 py-5 rounded-lg flex flex-col relative space-y-5">
+            <p class="font-semibold text-sm">This Month's Insights</p>
+            <div class="relative flex flex-col space-y-3 items-start justify-center border-l-2 border-gray-200 ">
+
+                <div class="relative pl-8 w-full">
+                    <div class="absolute -left-4 flex items-center justify-center rounded-full bg-blue-500 text-white shadow-md p-1.5">
+                        <span class="material-symbols-rounded text-xs">social_leaderboard</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-1">
+                        <p class="text-sm text-gray-500">Revenue</p>
+                        @if(is_null($topCategory))
+                            <p class="text-gray-800 text-base text-xs">No sales have been made.</p>
+                        @else 
+                            <p class="text-gray-800 text-base text-xs">{{ $topCategory->category_name }} were the
+                                <span class="font-semibold text-blue-600">top category</span>, contributing 
+                                <span class="font-semibold">{{ number_format($topCategory->category_percentage, 0) }}%</span> 
+                                of sales.
+                            </p>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="relative pl-8 w-full">
+                    <div class="absolute -left-4 flex items-center justify-center rounded-full bg-red-500 text-white shadow-md p-1.5">
+                        <span class="material-symbols-rounded text-xs">money_off</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-1">
+                        <p class="text-sm text-gray-500">Expense</p>
+                        @if($topExpense->expense_percentage == 0)
+                            <p class="text-gray-800 text-base text-xs">No expenses have been recorded.</p>
+                        @else 
+                            <p class="text-gray-800 text-base text-xs">{{ ucwords($topExpense->category_name) }} was the 
+                                <span class="font-semibold text-red-600">largest expense</span>, making up 
+                                <span class="font-semibold">{{ number_format($topExpense->expense_percentage, 0) }}%</span> 
+                                of expenses.
+                            </p>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="relative pl-8 w-full">
+                    <div class="absolute -left-4 flex items-center justify-center rounded-full bg-green-500 text-white shadow-md p-1.5">
+                        <span class="material-symbols-rounded text-xs">stat_2</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-1">
+                        <p class="text-sm text-gray-500">Highest Earning Day</p>
+                        @if(is_null($highestEarn))
+                            <p class="text-gray-800 text-base text-xs">No data to show.</p>
+                        @else 
+                            <p class="text-gray-800 text-base text-xs">The {{ date('jS', strtotime($highestEarn->dayTotal)) }} was your 
+                                <span class="font-semibold text-green-600">peak sales day</span>, with
+                                <span class="font-semibold">₱{{ number_format($highestEarn->salesTotal, 2) }}</span> 
+                                earned.
+                            </p>
+                        @endif
+                    </div>
+                </div>
+
             </div>
         </div>
+
+
 
     </div>
 

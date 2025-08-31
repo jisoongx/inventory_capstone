@@ -10,18 +10,22 @@
 
                 <div class="flex gap-3 mb-3 w-full">
                     <div class="bg-white border-t-4 border-red-900 p-4 shadow-lg rounded flex-[2] text-center">
-                        <p class="text-red-700 text-xl font-bold">₱14,500</p>
+                        <p class="text-red-800 text-xl font-bold">₱{{ number_format($dailySales->dailySales, 2) }}</p>
                         <span class="text-gray-600 text-xs font-bold">Daily Sales</span>
                     </div>
 
-                    <div class="bg-white border-t-4 border-red-700 p-4 shadow-lg rounded flex-[1] text-center">
-                        <p class="text-red-600 text-xl font-bold">₱20,000</p>
-                        <span class="text-gray-600 text-xs">Weekly Sales</span>
+                    <div class="bg-white border-t-4 border-red-700 p-4 shadow-lg rounded flex-[1] text-center" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
+                        <p class="text-red-600 text-xl font-bold" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
+                            ₱{{ $weeklySales->weeklySales >= 1000 ? number_format($weeklySales->weeklySales / 1000, 1) . 'k' : number_format($weeklySales->weeklySales, 2) }}
+                        </p>
+                        <span class="text-gray-600 text-xs">Last 7 days</span>
                     </div>
 
-                    <div class="bg-white border-t-4 border-red-500 p-4 shadow-lg rounded flex-[1] text-center">
-                        <p class="text-red-400 text-xl font-bold">₱154,000</p>
-                        <span class="text-gray-600 text-xs">Monthly Sales</span>
+                    <div class="bg-white border-t-4 border-red-500 p-4 shadow-lg rounded flex-[1] text-center" title="₱{{ number_format($monthSales->monthSales, 2) }}">
+                        <p class="text-red-400 text-xl font-bold" title="₱{{ number_format($monthSales->monthSales, 2) }}">
+                            ₱{{ $monthSales->monthSales >= 1000 ? number_format($monthSales->monthSales / 1000, 1) . 'k' : number_format($monthSales->monthSales, 2) }}
+                        </p>
+                        <span class="text-gray-600 text-xs">This Month's Sales</span>
                     </div>
                 </div>
 
