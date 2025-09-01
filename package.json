@@ -24,6 +24,7 @@
         "test": "tests"
     },
     "dependencies": {
+        "alpinejs": "^3.14.9",
         "ansi-regex": "^5.0.1",
         "ansi-styles": "^4.3.0",
         "apexcharts": "^5.3.4",

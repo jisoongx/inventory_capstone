@@ -76,7 +76,8 @@ class MonthlyController extends Controller
             AND YEAR(r.receipt_date) = ?
             AND MONTH(r.receipt_date) = ?
             GROUP BY c.category
-            ORDER BY category_percentage DESC", [$owner_id, $year, $month, $owner_id, $year, $month]))->first(); 
+            ORDER BY category_percentage DESC
+            LIMIT 3", [$owner_id, $year, $month, $owner_id, $year, $month]))->toArray(); 
 
         $topExpense = collect(DB::select(
             "SELECT 
@@ -96,14 +97,11 @@ class MonthlyController extends Controller
             AND YEAR(e.expense_created) = ?
             AND MONTH(e.expense_created) = ?
             GROUP BY e.expense_category
-            ORDER BY expense_percentage DESC", [$owner_id, $year, $month, $owner_id, $year, $month]))->first(); 
+            ORDER BY expense_percentage DESC
+            LIMIT 3", [$owner_id, $year, $month, $owner_id, $year, $month]))->toArray(); 
             
-        if (!$topExpense) {
-            $topExpense = (object)[
-                'category_name' => null,
-                'expense_total' => 0,
-                'expense_percentage' => 0,
-            ];
+        if (empty($topExpense)) {
+            $topExpense = []; 
         }
 
         $highestEarn = collect(DB::select('SELECT 
@@ -117,7 +115,8 @@ class MonthlyController extends Controller
             AND YEAR(r.receipt_date) = ?
             AND MONTH(r.receipt_date) = ?
             GROUP BY DATE(r.receipt_date)
-            ORDER BY DATE(r.receipt_date) DESC', [$owner_id, $year, $month]))->first(); 
+            ORDER BY DATE(r.receipt_date) DESC
+            LIMIT 3', [$owner_id, $year, $month]))->toArray(); 
 
         $dateDisplay = Carbon::now('Asia/Manila');
 

@@ -87,58 +87,175 @@
             <p class="font-semibold text-sm">This Month's Insights</p>
             <div class="relative flex flex-col space-y-3 items-start justify-center border-l-2 border-gray-200 ">
 
-                <div class="relative pl-8 w-full">
-                    <div class="absolute -left-4 flex items-center justify-center rounded-full bg-blue-500 text-white shadow-md p-1.5">
-                        <span class="material-symbols-rounded text-xs">social_leaderboard</span>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-1">
-                        <p class="text-sm text-gray-500">Revenue</p>
-                        @if(is_null($topCategory))
-                            <p class="text-gray-800 text-base text-xs">No sales have been made.</p>
-                        @else 
-                            <p class="text-gray-800 text-base text-xs">{{ $topCategory->category_name }} were the
-                                <span class="font-semibold text-blue-600">top category</span>, contributing 
-                                <span class="font-semibold">{{ number_format($topCategory->category_percentage, 0) }}%</span> 
-                                of sales.
-                            </p>
-                        @endif
-                    </div>
-                </div>
+                <div x-data="{ active: 1 }" class="space-y-4">
+                    <!-- category -->
+                    <div class="relative pl-8 w-full">
+                        <div class="absolute -left-4 flex items-center justify-center rounded-full bg-blue-500 text-white shadow-md p-1.5">
+                            <span class="material-symbols-rounded text-xs">social_leaderboard</span>
+                        </div>
 
-                <div class="relative pl-8 w-full">
-                    <div class="absolute -left-4 flex items-center justify-center rounded-full bg-red-500 text-white shadow-md p-1.5">
-                        <span class="material-symbols-rounded text-xs">money_off</span>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-1">
-                        <p class="text-sm text-gray-500">Expense</p>
-                        @if($topExpense->expense_percentage == 0)
-                            <p class="text-gray-800 text-base text-xs">No expenses have been recorded.</p>
-                        @else 
-                            <p class="text-gray-800 text-base text-xs">{{ ucwords($topExpense->category_name) }} was the 
-                                <span class="font-semibold text-red-600">largest expense</span>, making up 
-                                <span class="font-semibold">{{ number_format($topExpense->expense_percentage, 0) }}%</span> 
-                                of expenses.
-                            </p>
-                        @endif
-                    </div>
-                </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-2">
+                            <p class="text-sm text-gray-500">Revenue</p>
+                            @if(empty($topCategory))
+                                <p class="text-gray-800 text-base text-xs">No sales have been made.</p>
+                            @else 
+                                <p class="text-gray-800 text-base text-xs">{{ $topCategory[0]->category_name }} were the 
+                                    <span class="font-semibold text-blue-600">top category</span>, contributing 
+                                    <span class="font-semibold">{{ number_format($topCategory[0]->category_percentage, 0) }}%</span> 
+                                    of sales. 
+                                </p>
+                                <button 
+                                    @click="active = active === 1 ? null : 1" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                                    <span x-show="active !== 1">Show Leading Categories</span>
+                                    <span x-show="active === 1">Hide Leading Categories</span>
+                                    <span class="material-symbols-rounded text-xs" :class="{ 'rotate-180': active === 1 }">expand_more</span>
+                                </button>
 
-                <div class="relative pl-8 w-full">
-                    <div class="absolute -left-4 flex items-center justify-center rounded-full bg-green-500 text-white shadow-md p-1.5">
-                        <span class="material-symbols-rounded text-xs">stat_2</span>
+                                <div 
+                                    x-show="active === 1" 
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-300" 
+                                    x-transition:enter-start="max-h-0 opacity-0" 
+                                    x-transition:enter-end="max-h-96 opacity-100" 
+                                    x-transition:leave="transition ease-in duration-200" 
+                                    x-transition:leave-start="max-h-96 opacity-100" 
+                                    x-transition:leave-end="max-h-0 opacity-0" 
+                                    class="overflow-hidden">
+                                    <ul class="mt-2 space-y-1 text-xs">
+                                        @foreach($topCategory as $topCat)
+                                            <li class="flex justify-between items-center p-2 rounded bg-gray-50">
+                                                <span class="flex items-center gap-2">
+                                                    <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px] font-bold
+                                                        @if($loop->iteration==1) bg-yellow-500
+                                                        @elseif($loop->iteration==2) bg-gray-400
+                                                        @elseif($loop->iteration==3) bg-amber-700
+                                                        @else bg-blue-500 @endif">
+                                                        {{ $loop->iteration }}
+                                                    </span>
+                                                    {{ $topCat->category_name }}
+                                                </span>
+                                                <span class="font-semibold">{{ number_format($topCat->category_percentage,0) }}%</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-1">
-                        <p class="text-sm text-gray-500">Highest Earning Day</p>
-                        @if(is_null($highestEarn))
-                            <p class="text-gray-800 text-base text-xs">No data to show.</p>
-                        @else 
-                            <p class="text-gray-800 text-base text-xs">The {{ date('jS', strtotime($highestEarn->dayTotal)) }} was your 
-                                <span class="font-semibold text-green-600">peak sales day</span>, with
-                                <span class="font-semibold">₱{{ number_format($highestEarn->salesTotal, 2) }}</span> 
-                                earned.
-                            </p>
-                        @endif
+
+                    <!-- expense -->
+                    <div class="relative pl-8 w-full">
+                        <div class="absolute -left-4 flex items-center justify-center rounded-full bg-red-500 text-white shadow-md p-1.5">
+                            <span class="material-symbols-rounded text-xs">money_off</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-2">
+                            <p class="text-sm text-gray-500">Expenses</p>
+                            @if(empty($topExpense))
+                                <p class="text-gray-800 text-base text-xs">No expenses have been recorded.</p>
+                            @else 
+                                <p class="text-gray-800 text-base text-xs">{{ ucwords($topExpense[0]->category_name) }} was the 
+                                    <span class="font-semibold text-red-600">largest expense</span>, making up 
+                                    <span class="font-semibold">{{ number_format($topExpense[0]->expense_percentage, 0) }}%</span> 
+                                    of expenses.
+                                </p>
+                                <button 
+                                    @click="active = active === 2 ? null : 2" 
+                                    class="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1">
+                                    <span x-show="active !== 2">Show Leading Expenses</span>
+                                    <span x-show="active === 2">Hide Leading Expenses</span>
+                                    <span class="material-symbols-rounded text-xs" :class="{ 'rotate-180': active === 2 }">expand_more</span>
+                                </button>
+
+                                <div 
+                                    x-show="active === 2" 
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-300" 
+                                    x-transition:enter-start="max-h-0 opacity-0" 
+                                    x-transition:enter-end="max-h-96 opacity-100" 
+                                    x-transition:leave="transition ease-in duration-200" 
+                                    x-transition:leave-start="max-h-96 opacity-100" 
+                                    x-transition:leave-end="max-h-0 opacity-0" 
+                                    class="overflow-hidden">
+                                    <ul class="mt-2 space-y-1 text-xs">
+                                        @foreach($topExpense as $topExp)
+                                            <li class="flex justify-between items-center p-2 rounded bg-gray-50">
+                                                <span class="flex items-center gap-2">
+                                                    <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px] font-bold
+                                                        @if($loop->iteration==1) bg-yellow-500
+                                                        @elseif($loop->iteration==2) bg-gray-400
+                                                        @elseif($loop->iteration==3) bg-amber-700
+                                                        @else bg-blue-500 @endif">
+                                                        {{ $loop->iteration }}
+                                                    </span>
+                                                    {{ ucwords($topExp->category_name) }}
+                                                </span>
+                                                <span class="font-semibold">{{ number_format($topExp->expense_percentage,0) }}%</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
                     </div>
+                    
+                    <!-- earned -->
+                    <div class="relative pl-8 w-full">
+                        <div class="absolute -left-4 flex items-center justify-center rounded-full bg-green-500 text-white shadow-md p-1.5">
+                            <span class="material-symbols-rounded text-xs">stat_2</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-2">
+                            <p class="text-sm text-gray-500">Expenses</p>
+                            @if(empty($highestEarn))
+                                <p class="text-gray-800 text-base text-xs">No data to show.</p>
+                            @else 
+                                <p class="text-gray-800 text-base text-xs">The {{ date('jS', strtotime($highestEarn[0]->dayTotal)) }} was your 
+                                    <span class="font-semibold text-green-600">peak sales day</span>, with
+                                    <span class="font-semibold">₱{{ number_format($highestEarn[0]->salesTotal, 2) }}</span> 
+                                    earned.
+                                </p>
+                                <button 
+                                    @click="active = active === 3 ? null : 3" 
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium flex items-center gap-1">
+                                    <span x-show="active !== 3">Show Days</span>
+                                    <span x-show="active === 3">Hide Days</span>
+                                    <span class="material-symbols-rounded text-xs" :class="{ 'rotate-180': active === 3 }">expand_more</span>
+                                </button>
+
+                                <div 
+                                    x-show="active === 3" 
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-300" 
+                                    x-transition:enter-start="max-h-0 opacity-0" 
+                                    x-transition:enter-end="max-h-96 opacity-100" 
+                                    x-transition:leave="transition ease-in duration-200" 
+                                    x-transition:leave-start="max-h-96 opacity-100" 
+                                    x-transition:leave-end="max-h-0 opacity-0" 
+                                    class="overflow-hidden">
+                                    <ul class="mt-2 space-y-1 text-xs">
+                                        @foreach($highestEarn as $topEarn)
+                                            <li class="flex justify-between items-center p-2 rounded bg-gray-50">
+                                                <span class="flex items-center gap-2">
+                                                    <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px] font-bold
+                                                        @if($loop->iteration==1) bg-yellow-500
+                                                        @elseif($loop->iteration==2) bg-gray-400
+                                                        @elseif($loop->iteration==3) bg-amber-700
+                                                        @else bg-blue-500 @endif">
+                                                        {{ $loop->iteration }}
+                                                    </span>
+                                                    {{ date('F j', strtotime($topEarn->dayTotal)) }}
+                                                </span>
+                                                <span class="font-semibold">{{ number_format($topEarn->salesTotal,0) }}%</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
