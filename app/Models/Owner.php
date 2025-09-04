@@ -64,7 +64,6 @@ class Owner extends Authenticatable
     public function latestSubscription()
     {
         return $this->hasOne(Subscription::class, 'owner_id', 'owner_id')
-            ->where('status', 'pending')
             ->latest('subscription_start');
     }
 }

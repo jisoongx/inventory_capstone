@@ -64,15 +64,12 @@ Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('das
 Route::get('/staff/dashboard', fn() => view('dashboards.staff.staff'))->name('staff.dashboard');
 
 //clients management
-Route::get('/clients', [ClientController::class, 'showClients'])->name('clients.index');
-Route::get('/clients/search', [ClientController::class, 'search'])->name('clients.search');
-Route::put('/clients/{owner_id}/status', [ClientController::class, 'updateStatus'])->name('clients.updateStatus');
 
 //subscription plan management
 Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');
 Route::put('/subs/{owner_id}/status', [SubscriptionController::class, 'updateSubStatus'])->name('subs.updateStatus');
 Route::get('/clients/sub-search', [SubscriptionController::class, 'sub_search'])->name('clients.sub_search');
-
+Route::get('/billing-history', [SubscriptionController::class, 'showExpiredSubscribers'])->name('billing.history');
 // activity logs
 Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('actLogs');
 Route::get('/staff-logs', [ActivityLogController::class, 'staffLogs'])->name('staffLogs');

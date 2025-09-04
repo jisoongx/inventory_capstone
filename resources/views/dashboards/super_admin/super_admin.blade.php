@@ -26,13 +26,14 @@
                 </div>
 
                 <nav class="space-y-2">
-                    <a href="{{ route('clients.index') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                        <span class="material-symbols-rounded">group</span>
-                        <span class="nav-label">Client</span>
-                    </a>
+
                     <a href="{{ route('subscription') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                         <span class="material-symbols-rounded">credit_card</span>
                         <span class="nav-label">Subscription</span>
+                    </a>
+                    <a href="{{ route('billing.history') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+                        <span class="material-symbols-rounded">receipt_long</span>
+                        <span class="nav-label">Billing History</span>
                     </a>
                     <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                         <span class="material-symbols-rounded">notifications</span>
@@ -73,7 +74,6 @@
         </main>
     </div>
     <script>
-
         // User dropdown toggle
         const userButton = document.getElementById('userButton');
         const dropdownMenu = document.getElementById('dropdownMenu');

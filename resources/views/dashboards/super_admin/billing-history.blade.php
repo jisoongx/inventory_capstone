@@ -5,7 +5,7 @@
 <div class="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4 mx-6">
     <!-- Left Column: Title, Search & Dropdown -->
     <div class="flex-1">
-        <h1 class="text-2xl font-bold text-gray-800 mb-4">Subscription Plan Management</h1>
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">Billing History</h1>
 
         <div class="flex flex-col sm:flex-row gap-4">
             <!-- Search -->
@@ -14,6 +14,20 @@
                 class="w-full sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out"
                 style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;" />
 
+            <!-- Status Filter -->
+            <div class="relative w-full sm:w-[220px]">
+                <select id="statusFilter"
+                    class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out">
+                    <option disabled selected value="">Select Status</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
 
             <!-- Date Filter -->
             <div class="relative w-full sm:w-[180px]">
@@ -43,14 +57,14 @@
     <table class="min-w-full table-auto border-collapse">
         <thead class="bg-green-200 text-sm font-medium text-gray-700 tracking-wider text-center">
             <tr>
-                <th class="px-6 py-3">Store Name</th>
                 <th class="px-6 py-3">Owner Name</th>
-                <th class="px-6 py-3">Subscription Plan</th>
-                <th class="px-6 py-3 text-center">Status</th>
-                <th class="px-6 py-3">Start Date</th>
-                <th class="px-6 py-3">Expiry Date</th>
-                <th class="px-6 py-3">Days Left</th>
-                <th class="px-6 py-3">Actions</th>
+                <th class="px-6 py-3">Payment Date</th>
+                <th class="px-6 py-3 text-center">Subscription Plan</th>
+                <th class="px-6 py-3">Status</th>
+                <th class="px-6 py-3">Paid Amount</th>
+
+
+
             </tr>
         </thead>
         <tbody class="text-sm text-gray-800 text-center">
@@ -76,9 +90,8 @@
             };
             @endphp
             <tr class="border-b hover:bg-gray-50">
-                <td class="px-6 py-4 uppercase">{{ $client->store_name }}</td>
                 <td class="px-6 py-4 uppercase">{{ $client->firstname }} {{ $client->middlename ?? '' }} {{ $client->lastname }}</td>
-
+                <td class="px-6 py-4">{{ $client->subscription->subscription_start ? \Carbon\Carbon::parse($client->subscription->subscription_start)->format('M j, Y') : '-' }}</td>
                 <td class="px-6 py-4">
                     @if ($planTitle !== '-')
                     <span class="w-24 px-2 py-1 inline-flex items-center justify-center font-medium leading-5 rounded-full {{ $planClass }}">
@@ -95,28 +108,8 @@
                     </span>
                 </td>
 
-                <td class="px-6 py-4">{{ $subscription->subscription_start ? \Carbon\Carbon::parse($subscription->subscription_start)->format('M j, Y') : '-' }}</td>
-                <td class="px-6 py-4">{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('M j, Y') : '-' }}</td>
+                <td class="px-6 py-4 uppercase">{{ $client->subscription->planDetails->plan_price }}</td>
 
-                <td class="px-6 py-4">
-                    @if ($daysLeft < 0)
-                        <span class="text-red-500">Expired</span>
-                        @else
-                        {{ floor($daysLeft) }} day{{ floor($daysLeft) !== 1 ? 's' : '' }}
-                        @endif
-                </td>
-
-
-                <td class="px-6 py-4">
-                    <button type="button"
-                        class="edit-status-btn text-blue-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
-                        data-owner-id="{{ $client->owner_id }}"
-                        data-current-status="{{ $subscription->status }}">
-                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                    </button>
-                </td>
             </tr>
             @endforeach
             @endforeach
@@ -146,36 +139,8 @@
         </div>
 
 
-        <!-- Client Info -->
-        <div class="space-y-4 mb-6">
-            <div class="flex justify-between text-sm text-gray-700">
-                <span class="font-medium">Client ID:</span>
-                <span id="modalClientId" class="font-semibold text-gray-900"></span>
-            </div>
-            <div class="flex justify-between text-sm text-gray-700 items-center">
-                <span class="font-medium">Current Status:</span>
-                <span id="modalCurrentStatus"
-                    class="font-semibold text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-800 inline-block">
-                </span>
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex flex-col gap-3">
-            <!-- Approve / Activate Button -->
-            <button id="approveStatusBtn" data-new-status="active"
-                class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition duration-200 ease-in-out">
-                <span id="approveBtnLabel">Activate</span>
-            </button>
-
-            <!-- Decline / Deactivate Button -->
-            <button id="declineStatusBtn" data-new-status="expired"
-                class="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition duration-200 ease-in-out">
-                <span id="declineBtnLabel">Expired</span>
-            </button>
 
 
-        </div>
     </div>
 </div>
 
@@ -257,7 +222,7 @@
                                 <span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-sm leading-5 font-medium rounded-full ${bgColor} ${textColor}">
                                     ${status}
                                 </span>
-                                `;
+                            `;
                             }
                             const statusBadge = getStatusBadgeHtml(client.subscription.status);
                             const plan = client.subscription?.plan_details?.plan_title ?? '-';
@@ -300,24 +265,13 @@
 
                             tbody += `
                                 <tr class="border-b hover:bg-gray-50 text-sm">
-                                    <td class="px-6 py-4   text-center uppercase">${client.store_name}</td>
-                                    <td class="px-6 py-4   text-center uppercase">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
+                                    <td class="px-6 py-4  text-center uppercase">${client.store_name}</td>
+                                    <td class="px-6 py-4  text-center uppercase">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
                                     <td class="px-6 py-4 text-sm text-center">${planBadge}</td>
                                     <td class="px-6 py-4">${statusBadge}</td>
-                                    <td class="px-6 py-4   text-gray-900 text-center">${start}</td>
-                                    <td class="px-6 py-4   text-gray-900 text-center">${end}</td>
-                                    <td class="px-6 py-4   text-center">${daysLeftText}</td>
-                                    <td class="px-6 py-4   text-center">
-                                        <button type="button"
-                                            class="edit-status-btn text-blue-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
-                                            data-owner-id="${client.owner_id}"
-                                            data-current-status="${client.subscription.status}">
-                                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                            </svg>
-
-                                        </button>
-                                    </td>
+                                    <td class="px-6 py-4">{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('M j, Y') : '-' }}</td>
+                                    <td class="px-6 py-4">{{ $client->subscription->planDetails->plan_price }}</td>
+                                    
                                 </tr>
                             `;
                         });
@@ -335,140 +289,6 @@
                 }
             });
         }
-    });
-
-    // --- New Status Update Logic ---
-    let currentOwnerId = null; // Store the ID of the client being edited
-
-    // Function to update status badge styling
-    function updateStatusBadge(element, newStatus) {
-        let bgColor = '';
-        let textColor = '';
-
-        if (newStatus === 'Active') {
-            bgColor = 'border border-green-600';
-            textColor = 'text-green-600';
-        } else if (newStatus === 'Expired') {
-            bgColor = 'border border-red-600';
-            textColor = 'text-red-600';
-        } else {
-            bgColor = 'border border-gray-500';
-            textColor = 'text-gray-500';
-        }
-
-        element.removeClass().addClass(`w-24 text-center px-2 py-1 inline-flex items-center justify-center text-sm font-semibold rounded-full ${bgColor} ${textColor}`).text(newStatus);
-    }
-
-    // Open Modal
-    $(document).on('click', '.edit-status-btn', function() {
-        currentOwnerId = $(this).data('owner-id');
-        let currentStatus = $(this).data('current-status');
-
-        $('#modalClientId').text(currentOwnerId);
-        $('#modalCurrentStatus').text(currentStatus);
-        updateStatusBadge($('#modalCurrentStatus'), currentStatus);
-
-        // Buttons and labels
-        const approveBtn = $('#approveStatusBtn');
-        const declineBtn = $('#declineStatusBtn');
-        const approveLabel = $('#approveBtnLabel');
-        const declineLabel = $('#declineBtnLabel');
-
-        // Reset buttons
-        approveBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
-        declineBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
-
-        // Set button labels based on current status
-        if (currentStatus === 'active') {
-            approveLabel.text('Activate');
-            declineLabel.text('Expired');
-            approveBtn.attr('data-new-status', 'active');
-            declineBtn.attr('data-new-status', 'expired');
-            // Already active, disable approve
-            approveBtn.prop('disabled', true).addClass('opacity-30 cursor-not-allowed');
-        } else if (currentStatus === 'expired') {
-            approveLabel.text('Activate');
-            declineLabel.text('Expired');
-            approveBtn.attr('data-new-status', 'active');
-            declineBtn.attr('data-new-status', 'expired');
-            // Already deactivated, disable decline
-            declineBtn.prop('disabled', true).addClass('opacity-30 cursor-not-allowed');
-        }
-
-        $('#statusUpdateModal').removeClass('hidden').addClass('flex');
-    });
-
-
-    // Close Modal
-    $('#cancelStatusBtn').on('click', function() {
-        $('#statusUpdateModal').removeClass('flex').addClass('hidden');
-        currentOwnerId = null; // Clear current ID
-    });
-
-    // Handle Status Update (Approve/Decline)
-    $('#approveStatusBtn, #declineStatusBtn').on('click', function() {
-        const newStatus = $(this).data('new-status');
-
-        if (!currentOwnerId) {
-            alert('Error: No client selected.');
-            return;
-        }
-
-        // Show a loading indicator if desired
-        // For example, disable buttons and change text
-
-        $.ajax({
-            url: `/subs/${currentOwnerId}/status`, // Laravel route for status update
-            type: "PUT", // Use PUT method for updating a resource
-            data: {
-                _token: '{{ csrf_token() }}', // Include CSRF token for PUT/POST requests
-                status: newStatus
-            },
-            success: function(response) {
-                if (response.success) {
-                    $('#statusUpdateModal').removeClass('flex').addClass('hidden'); // Close modal
-
-                    // Find the specific row and update its status badge
-                    const $row = $(`tr[data-owner-id="${currentOwnerId}"]`);
-                    const $statusCell = $row.find('.status-badge');
-
-                    if ($statusCell.length) {
-                        updateStatusBadge($statusCell, response.new_status);
-                    }
-
-                    // Show success notification
-                    $('#notification').text('Status updated to ' + response.new_status + ' successfully!').removeClass('bg-red-500 hidden').addClass('bg-green-500 flex');
-                    setTimeout(() => {
-                        $('#notification').removeClass('flex').addClass('hidden');
-                        location.reload();
-                    }, 2000); // Hide after 3 seconds
-
-                } else {
-                    alert('Failed to update status: ' + (response.message || 'Unknown error'));
-                    // Show error notification
-                    $('#notification').text('Failed to update status: ' + (response.message || 'Unknown error')).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
-                    setTimeout(() => {
-                        $('#notification').removeClass('flex').addClass('hidden');
-                        location.reload();
-                    }, 5000);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX Error:', error, xhr.responseText);
-                const errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'An error occurred during status update.';
-                alert(errorMessage);
-                // Show error notification
-                $('#notification').text(errorMessage).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
-                setTimeout(() => {
-                    $('#notification').removeClass('flex').addClass('hidden');
-                    location.reload();
-                }, 5000);
-            },
-            complete: function() {
-                // Re-enable buttons, hide loading indicator
-                currentOwnerId = null; // Clear current ID
-            }
-        });
     });
 </script>
 
