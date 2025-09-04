@@ -25,7 +25,7 @@
             @php
             $progressWidth = 'w-1/3'; // default: only Sign Up done
 
-            if ($subscription) {
+            if ($subscription->status != 'expired') {
             $progressWidth = 'w-full'; // once a plan is chosen, everything is complete
             }
             @endphp
@@ -99,21 +99,37 @@
                 <!-- Step 2: Verification -->
                 <div class="relative">
                     <!-- Dot -->
-                    <div class="absolute top-0 left-0 w-4 h-4 rounded-full {{ $subscription->status === 'verified' ? 'bg-blue-500' : 'bg-blue-400' }} border-2 border-white shadow-md"></div>
+                    <div class="absolute top-0 left-0 w-4 h-4 rounded-full {{ $subscription->status === 'verified' ? 'bg-blue-500' : ($subscription->status === 'expired' ? 'bg-red-500' : 'bg-blue-400') }} border-2 border-white shadow-md"></div>
 
                     <!-- Text container -->
                     <div class="ml-6">
                         <p class="text-sm text-gray-800 font-semibold">
                             Admin is currently verifying your subscription:
-                            <span class="{{ $subscription->status === 'active' ? 'text-green-600' : 'text-yellow-500' }}">
-                                {{ $subscription->status === 'active' ? 'Verified' : ucfirst($subscription->status) }}
+                            <span class="
+                @if($subscription->status === 'active') text-green-600
+                @elseif($subscription->status === 'expired') text-red-600
+                @else text-yellow-500
+                @endif">
+                                {{ ucfirst($subscription->status) }}
                             </span>
                         </p>
+
                         <span class="text-xs text-gray-500">
                             {{ $subscription->subscription_start ? \Carbon\Carbon::parse($subscription->subscription_start)->format('F j, Y') : 'Not started yet' }}
                         </span>
+
+                        {{-- Renewal link if expired --}}
+                        @if($subscription->status === 'expired')
+                        <div class="mt-2">
+                            <a href="{{ route('subscription.selection') }}"
+                                class="text-sm text-blue-600 hover:underline font-medium">
+                                Renew your subscription →
+                            </a>
+                        </div>
+                        @endif
                     </div>
                 </div>
+
 
                 <!-- Step 3: Completed -->
                 @if ($subscription->status === 'active')

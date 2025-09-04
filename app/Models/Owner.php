@@ -66,4 +66,8 @@ class Owner extends Authenticatable
         return $this->hasOne(Subscription::class, 'owner_id', 'owner_id')
             ->latest('subscription_start');
     }
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'owner_id');
+    }
 }

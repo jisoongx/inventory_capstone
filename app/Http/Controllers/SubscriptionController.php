@@ -51,15 +51,11 @@ class SubscriptionController extends Controller
             }
         }
 
-        $clients = Owner::whereHas('subscriptions', function ($query) {
-            // Filter for owners that have a subscription with a status that is either 'expired' or 'paid'.
-            $query->whereIn('status', ['expired', 'active']);
-        })
-            ->with(['subscriptions' => function ($query) {
-                // Eager load only the expired and paid subscriptions for this owner.
-                $query->whereIn('status', ['expired', 'active'])
-                    ->with('planDetails');
-            }])
+        $clients = Owner::with([
+            'subscriptions.planDetails',   // include subscription + plan
+            'subscriptions.payments',      // include all payments under each subscription
+        ])
+            ->withCount('subscriptions')       // optional: count subs
             ->orderBy('created_on', 'desc')
             ->paginate(10);
 
@@ -75,8 +71,15 @@ class SubscriptionController extends Controller
         $status = $request->input('status');
         $date = $request->input('date');
 
-        $clients = Owner::with(['subscription.planDetails'])
-            ->where('status', '!=', 'Declined')
+        $clients = Owner::with(['subscription' => function ($q) {
+            // Only load active subscriptions
+            $q->where('status', 'Active')
+                ->with('planDetails');
+        }])
+            ->whereHas('subscription', function ($q) {
+                // Ensure owner has at least one active subscription
+                $q->where('status', 'Active');
+            })
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {
                     $sub->where('store_name', 'like', "%{$query}%")
@@ -88,7 +91,8 @@ class SubscriptionController extends Controller
             })
             ->when($plan, function ($q) use ($plan) {
                 $q->whereHas('subscription', function ($sub) use ($plan) {
-                    $sub->where('plan_id', $plan);
+                    $sub->where('plan_id', $plan)
+                        ->where('status', 'Active');
                 });
             })
             ->when($status, function ($q) use ($status) {
@@ -98,7 +102,8 @@ class SubscriptionController extends Controller
             })
             ->when($date, function ($q) use ($date) {
                 $q->whereHas('subscription', function ($sub) use ($date) {
-                    $sub->whereDate('created_on', $date);
+                    $sub->whereDate('created_on', $date)
+                        ->where('status', 'Active');
                 });
             })
             ->orderBy('created_on', 'desc')
@@ -183,7 +188,6 @@ class SubscriptionController extends Controller
     public function store(Request $request, $planId)
     {
         $owner = Auth::guard('owner')->user();
-
         $request->validate([
             'paymentMethod' => 'required|in:gcash,debit',
             'paymentAccNum' => 'nullable|string|max:20', // VALIDATE THE UNIFIED NAME
@@ -211,7 +215,6 @@ class SubscriptionController extends Controller
         }
 
         try {
-
             $subscription = Subscription::create([
                 'owner_id' => $owner->owner_id,
                 'plan_id' => $plan->plan_id,
@@ -220,6 +223,9 @@ class SubscriptionController extends Controller
                 'status' => 'active', // This status is for the subscription itself
             ]);
 
+            $owner->update([
+                'status' => 'Active'
+            ]);
            
             $paymentAccNumber = $request->input('paymentAccNum');
             $paymentData = [

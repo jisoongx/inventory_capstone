@@ -41,16 +41,16 @@
 @if($clients->count())
 <div class="overflow-x-auto bg-white shadow-md rounded-lg mx-6">
     <table class="min-w-full table-auto border-collapse">
-        <thead class="bg-green-200 text-sm font-medium text-gray-700 tracking-wider text-center">
+        <thead class="bg-emerald-100 text-sm text-center text-gray-500  tracking-wider">
             <tr>
-                <th class="px-6 py-3">Store Name</th>
-                <th class="px-6 py-3">Owner Name</th>
-                <th class="px-6 py-3">Subscription Plan</th>
-                <th class="px-6 py-3 text-center">Status</th>
-                <th class="px-6 py-3">Start Date</th>
-                <th class="px-6 py-3">Expiry Date</th>
-                <th class="px-6 py-3">Days Left</th>
-                <th class="px-6 py-3">Actions</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider text-left">Store Name</th>
+                <th class="px-6 py-3   font-semibold tracking-wider">Owner Name</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Subscription Plan</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Status</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Start Date</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Expiry Date</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Days Left</th>
+                <th class="px-6 py-3   font-semibold tracking-wider">Actions</th>
             </tr>
         </thead>
         <tbody class="text-sm text-gray-800 text-center">
@@ -76,8 +76,8 @@
             };
             @endphp
             <tr class="border-b hover:bg-gray-50">
-                <td class="px-6 py-4 uppercase">{{ $client->store_name }}</td>
-                <td class="px-6 py-4 uppercase">{{ $client->firstname }} {{ $client->middlename ?? '' }} {{ $client->lastname }}</td>
+                <td class="px-6 py-4 uppercase text-left">{{ $client->store_name }}</td>
+                <td class="px-6 py-4 uppercase text-left">{{ $client->firstname }} {{ $client->middlename ?? '' }} {{ $client->lastname }}</td>
 
                 <td class="px-6 py-4">
                     @if ($planTitle !== '-')

@@ -42,4 +42,10 @@ class Subscription extends Model
     {
         return $this->belongsTo(Plan::class, 'plan_id', 'plan_id');
     }
+
+    public function payments()
+    {
+        return $this->hasOne(Payment::class, 'subscription_id', 'subscription_id');
+        // if your PK in subscriptions is subscription_id, use that instead of 'id'
+    }
 }

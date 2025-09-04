@@ -32,7 +32,7 @@
         </div>
         <h2 class="text-2xl font-bold text-gray-900 mb-3">Subscription Expired</h2>
         <p class="text-gray-700 mb-6">
-            Your account has been deactivated because your subscription has expired.
+           
             Please subscribe again to continue using your account.
         </p>
         <a href="{{ route('subscription.selection') }}"
