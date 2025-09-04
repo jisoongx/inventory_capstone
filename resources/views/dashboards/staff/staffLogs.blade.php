@@ -1,4 +1,4 @@
-@extends('dashboards.staff.staff')
+@extends('dashboards.owner.owner')
 
 @section('content')
 &nbsp;
