@@ -42,6 +42,7 @@ class RegisterController extends Controller
             'email'         => $request->email,
             'contact'       => $request->contact,
             'owner_pass'    => Hash::make($request->password),
+            'status' => 'Active',
             'created_on'    => now(),
         ]);
 
