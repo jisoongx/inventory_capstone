@@ -36,12 +36,12 @@
 </div>
 <div class="overflow-x-auto bg-white shadow-md rounded-xl mx-6">
     <table class="min-w-full text-sm text-center text-gray-700">
-        <thead class="bg-green-200 font-semibold">
+        <thead class="bg-emerald-100 text-sm text-center text-gray-700  tracking-wider">
             <tr>
-                <th class="px-6 py-3">Date</th>
-                <th class="px-6 py-3">Time</th>
-                <th class="px-6 py-3">Location</th>
-                <th class="px-6 py-3">Activity</th>
+                <th class="px-6 py-3 font-semibold tracking-wider ">Date</th>
+                <th class="px-6 py-3 font-semibold tracking-wider">Time</th>
+                <th class="px-6 py-3 font-semibold tracking-wider">Location</th>
+                <th class="px-6 py-3 font-semibold tracking-wider">Activity</th>
             </tr>
         </thead>
         <tbody id="logs-table-body" class="divide-y divide-gray-200">

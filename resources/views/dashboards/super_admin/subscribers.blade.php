@@ -41,7 +41,7 @@
 @if($clients->count())
 <div class="overflow-x-auto bg-white shadow-md rounded-lg mx-6">
     <table class="min-w-full table-auto border-collapse">
-        <thead class="bg-emerald-100 text-sm text-center text-gray-500  tracking-wider">
+        <thead class="bg-emerald-100 text-sm text-center text-gray-700  tracking-wider">
             <tr>
                 <th class="px-6 py-3   font-semibold  tracking-wider text-left">Store Name</th>
                 <th class="px-6 py-3   font-semibold tracking-wider">Owner Name</th>
