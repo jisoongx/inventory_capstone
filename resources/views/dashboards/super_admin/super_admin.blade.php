@@ -6,12 +6,8 @@
     <title>Dashboard</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-        }
-
         .nav-label {
-            font-size: 0.875rem;
+            font-size: 0.85rem;
         }
     </style>
 </head>
@@ -31,11 +27,15 @@
                         <span class="material-symbols-rounded">credit_card</span>
                         <span class="nav-label">Subscription</span>
                     </a>
+<<<<<<< Updated upstream
                     <a href="{{ route('billing.history') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                         <span class="material-symbols-rounded">receipt_long</span>
                         <span class="nav-label">Billing History</span>
                     </a>
                     <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+=======
+                    <a href="{{ route('dashboards.super_admin.notification') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+>>>>>>> Stashed changes
                         <span class="material-symbols-rounded">notifications</span>
                         <span class="nav-label">Notification</span>
                     </a>
@@ -43,7 +43,7 @@
                         <span class="material-symbols-rounded">history</span>
                         <span class="nav-label">Activity Log</span>
                     </a>
-                    <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+                    <a href="{{ route('dashboards.super_admin.technical_resolve') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                         <span class="material-symbols-rounded">support_agent</span>
                         <span class="nav-label">Tech Support</span>
                     </a>

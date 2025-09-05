@@ -120,7 +120,7 @@ class MonthlyController extends Controller
 
         $dateDisplay = Carbon::now('Asia/Manila');
 
-        return view('dashboards.owner.monthly_profit_add', 
+        return view('dashboards.owner.expense_record_add', 
         [
             'month' => $month,
             'year' => $year,
@@ -132,6 +132,8 @@ class MonthlyController extends Controller
             'topCategory' => $topCategory,
             'topExpense' => $topExpense,
             'highestEarn' => $highestEarn,
+            // 'notifs' => $this->getNotifs(),
+            // 'countNotifs' => $this->countNotifs(),
         ]);
 
     }

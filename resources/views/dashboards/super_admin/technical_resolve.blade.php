@@ -1,4 +1,4 @@
-@extends('dashboards.owner.owner') 
+@extends('dashboards.super_admin.super_admin') 
 
 @section('content')
 
@@ -24,9 +24,9 @@
                 </div>
             </div>
                 
-            <div class="overflow-y-auto mt-3 -z-1">
+            <div class="overflow-y-auto mt-3">
                 @forelse ($requests as $req)
-                    <a href="{{ route('dashboards.owner.technical_request', ['req_id' => $req->req_id]) }}"
+                    <a href="{{ route('dashboards.super_admin.technical_show', ['req_id' => $req->req_id]) }}"
                     class="flex items-center py-5 gap-3 hover:bg-slate-100 p-2 rounded-lg">
                         <div class="relative">
                             <span class="material-symbols-rounded text-red-800 bg-red-100 p-3 rounded-full">confirmation_number</span>
@@ -69,7 +69,7 @@
 
             <div id="chat-container" class="flex-1 overflow-y-auto flex flex-col space-y-2 mt-2 p-3">
                 @forelse($convos as $msg)
-                    @if($msg->sender_type === 'owner')
+                    @if($msg->sender_type === 'super')
                         <div class="self-end flex flex-col items-end max-w-[60%]">
                             <div class="bg-red-500 text-white px-4 py-2 rounded-2xl rounded-br-none shadow text-sm">
                                 {{ $msg->message }}
@@ -121,7 +121,7 @@
             @if ($recentreq && $recentreq->req_status != "Resolved")
                 <div class="absolute bottom-2 left-0 w-full px-4">
                     <div class="relative">
-                        <form action="{{ route('dashboards.owner.technical_insert', ['req_id' => $recentreq->req_id]) }}" method="POST">
+                        <form action="{{ route('dashboards.super_admin.technical_insert', ['req_id' => $recentreq->req_id]) }}" method="POST">
                             @csrf
                             <textarea name="message" class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none bg-white text-sm" placeholder="Enter message here..." rows="3"></textarea>
                             <button type="submit" class="absolute right-2 bottom-2">
@@ -135,43 +135,6 @@
                     <textarea class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none text-sm" placeholder="Enter message here..." rows="3" disabled></textarea>
                 </div>
             @endif
-        </div>
-    </div>
-
-    <div id="add-modal" tabindex="-1" aria-hidden="true" class="hidden fixed inset-0 z-50 flex justify-center items-center">
-        <div class="relative p-4 w-full max-w-md max-h-full">
-            <div class="relative bg-white rounded shadow-sm pt-12">
-                
-                <div class="absolute -top-6 left-1/2 transform -translate-x-1/2">
-                    <img src="{{ asset('assets/technical.png') }}" class="w-20 h-20 rounded-full border-4 border-white">
-                </div>
-
-                <div class="flex items-center justify-center p-3">
-                    <h3 class="text-sm font-semibold">Technical Request Ticket</h3>
-                </div>
-
-                <div class="px-5">
-                    <form action="{{ route('dashboards.owner.technical_add') }}" method="POST" class="space-y-3">
-                        @csrf
-                        <div>
-                            <label for="title" class="block text-xs font-medium text-gray-700 mb-2">Title</label>
-                            <input type="text" id="title" name="title" 
-                                class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" 
-                                placeholder="Enter message title" required>
-                        </div>
-                        <div>
-                            <label for="body" class="block text-xs font-medium text-gray-700 mb-2">Message</label>
-                            <textarea id="body" name="body" rows="7" class="w-full border border-gray-300 rounded px-3 py-2 text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your message..." required></textarea>
-                        </div>
-                        <div class="flex justify-center pb-4">
-                            <button type="submit" 
-                                class="bg-red-700 text-white text-sm px-10 py-2 rounded shadow hover:bg-red-800 focus:ring-2 focus:ring-red-400 w-full">
-                                Send
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
         </div>
     </div>
 

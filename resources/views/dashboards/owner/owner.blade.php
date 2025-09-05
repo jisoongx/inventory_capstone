@@ -5,8 +5,10 @@
     <meta charset="UTF-8">
     <title></title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="stylesheet" href="/build/assets/dataTables.dataTables.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    @livewireStyles
+
+    <!-- <link rel="stylesheet" href="/build/assets/dataTables.dataTables.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> -->
     <style>
         .nav-label {
             font-size: 0.85rem;
@@ -65,10 +67,18 @@
 
     <main id="mainContent" class="ml-64 flex-1 p-3 transition-all duration-300">
         <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 relative pb-2">
-            <div class="relative">
-                <button id="userButton" class="focus:outline-none">
-                    <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
-                </button>
+            <div class="relative space-x-5">
+
+                <div class="flex items-center gap-4">
+                    
+                    @livewire('notifications')
+
+                    <button id="userButton" class="focus:outline-none">
+                        <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
+                    </button>
+                </div>
+
+
                 <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
                     <form method="GET" action="{{ route('owner.profile') }}">
                         {{-- Removed @csrf as it's not needed for GET requests --}}
@@ -81,6 +91,8 @@
                 </div>
             </div>
         </div>
+        
+        @livewireScripts
         @yield('content')
     </main>
 
@@ -125,6 +137,12 @@
         // }
         // }
     </script>
+
+    <script>
+    window.addEventListener('debug-console', event => {
+        console.log(event.detail.message);
+    });
+</script>
 
 </body>
 

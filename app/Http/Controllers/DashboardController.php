@@ -119,8 +119,6 @@ class DashboardController extends Controller
             $netProfits[$month] = $sale - ($expense + $loss);
         }
 
-
-
         $GraphExpenses = collect(DB::select("
             SELECT 
                 m.month,
@@ -246,14 +244,14 @@ class DashboardController extends Controller
 
         $dateDisplay = Carbon::now('Asia/Manila');
 
-        $day = now()->day;
+        $day = now()->format('Y-m-d');
 
         $dailySales = collect(DB::select('
             select ifnull(sum(p.selling_price * ri.item_quantity), 0) as dailySales
             from receipt r
             join receipt_item ri on r.receipt_id = ri.receipt_id
             join products p on ri.prod_code = p.prod_code
-            where day(receipt_date) = ?
+            where date(receipt_date) = ?
             and r.owner_id = ?
         ', [$day, $owner_id]))->first();
 
@@ -277,9 +275,6 @@ class DashboardController extends Controller
         ', [$currentMonth, $owner_id, $latestYear]))->first();
 
 
-
-
-
         return view('dashboards.owner.dashboard', [
             'owner_name' => $owner_name,
             'months' => $months,
@@ -300,8 +295,10 @@ class DashboardController extends Controller
             'dailySales' => $dailySales,
             'weeklySales' => $weeklySales,
             'monthSales' => $monthSales,
+            // 'notifs' => $this->getNotifs(),
+            // 'countNotifs' => $this->countNotifs(),
         ]);
-    }
+    }   
 }
 
 

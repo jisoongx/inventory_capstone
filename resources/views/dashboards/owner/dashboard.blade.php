@@ -73,7 +73,7 @@
                     </div>
 
                     <div>
-                        <a href="{{ route('dashboards.owner.monthly_profit') }}"
+                        <a href="{{ route('dashboards.owner.expense_record') }}"
                         class="bg-red-100 border border-red-900 px-6 py-2.5 rounded text-xs mr-3 text-black inline-block text-center">
                             View
                         </a>
@@ -89,7 +89,7 @@
                                     {{ $y }}
                                 </option>
                             @empty
-                                <option disabled></option>
+                                <option class="text-black" value="{{ $latestYear }}">{{ $latestYear }}</option>
                             @endforelse
                         </select>
                     </form>

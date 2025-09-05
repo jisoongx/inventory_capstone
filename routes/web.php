@@ -12,8 +12,12 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
 use App\Http\Controllers\TechnicalController;
 use App\Http\Controllers\InventoryOwnerController;
+<<<<<<< Updated upstream
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\RestockController;
+=======
+use App\Http\Controllers\NotificationController;
+>>>>>>> Stashed changes
 
 
 
@@ -22,9 +26,9 @@ Route::get('/', function () {
 });
 
 
-Route::get('/monthly_profit', [MonthlyController::class, 'index'])->name('dashboards.owner.monthly_profit');
-Route::post('/monthly_profit/add', [MonthlyController::class, 'add'])->name('dashboards.owner.monthly_profit_add');
-Route::post('/monthly_profit/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.monthly_profit_edit');
+Route::get('/expense_record', [MonthlyController::class, 'index'])->name('dashboards.owner.expense_record');
+Route::post('/expense_record/add', [MonthlyController::class, 'add'])->name('dashboards.owner.expense_record_add');
+Route::post('/expense_record/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.expense_record_edit');
 Route::get('/expenses/attachment/{expense_id?}', [MonthlyController::class, 'viewAttachment'])->name('expenses.attachment');
 
 
@@ -38,6 +42,19 @@ Route::get('/staff/technical-request', [TechnicalController::class, 'index'])->n
 Route::get('/dashboard/staff/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.staff.technical_request');
 Route::post('/dashboard/staff/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.staff.technical_insert');
 Route::post('/dashboard/staff/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.staff.technical_add');
+
+
+Route::get('/super/technical-support', [TechnicalController::class, 'index'])->name('dashboards.super_admin.technical_resolve');
+Route::get('/super/technical-support/chat/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.super_admin.technical_show');
+Route::post('super/technical-support/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.super_admin.technical_insert');
+
+
+Route::get('/super/notification', [NotificationController::class, 'index'])->name('dashboards.super_admin.notification');
+Route::post('/super/notification/create', [NotificationController::class, 'send_notification'])->name('dashboards.notification.send');
+
+// Route::post('/notifications/mark-seen', [NotificationController::class, 'markSeen'])->name('notifications.markSeen');
+
+
 
 
 

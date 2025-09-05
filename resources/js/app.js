@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 {
                     label: year[1] || "",
                     data: productsPrev,
-                    backgroundColor: 'rgba(234, 132, 109, 1)',
+                    backgroundColor: 'rgba(67, 102, 209, 1)',
                     borderRadius: Number.MAX_VALUE,
                     fill: true
                 }
