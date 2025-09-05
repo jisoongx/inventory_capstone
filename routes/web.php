@@ -15,6 +15,7 @@ use App\Http\Controllers\InventoryOwnerController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\StoreController;
 
 
 
@@ -118,3 +119,14 @@ Route::get('/restock-suggestions', [RestockController::class, 'lowStock'])->name
 Route::post('/restock/finalize', [RestockController::class, 'finalize'])->name('restock.finalize');
 Route::get('/restock/list', [RestockController::class, 'list'])->name('restock.list');
 Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name('seasonal_trends');
+
+
+// Store: Transaction
+// Main transactions routes
+Route::get('/store_starttransaction', [StoreController::class, 'index'])->name('store_starttransaction');
+Route::post('/start-transaction', [StoreController::class, 'startTransaction']);
+Route::post('/add-to-receipt', [StoreController::class, 'addToReceipt']);
+Route::get('/get-product', [StoreController::class, 'getProduct']);
+
+
+
