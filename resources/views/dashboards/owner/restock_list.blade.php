@@ -63,7 +63,7 @@
             </div>
             @else
             <div class="flex items-center gap-2 text-gray-500 bg-gray-50 border border-gray-200 p-4 rounded-md text-sm">
-                <span>📦</span> No restock has been finalized yet.
+                <span></span> No restock has been finalized yet.
             </div>
             @endif
         </div>
@@ -121,7 +121,7 @@
             @endforeach
         </ul>
         @else
-        <p class="text-sm text-gray-500">No restock history found.</p>
+        <p class="text-xs text-gray-500">No restock history found.</p>
         @endif
     </div>
 </div>

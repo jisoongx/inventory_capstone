@@ -47,7 +47,7 @@
             <div class="flex-1 min-w-0">
                 <h2 class="text-gray-800 text-base md:text-lg font-semibold">Spot the Season’s Must-Have Products</h2>
                 <p class="text-gray-600 mt-1 text-xs md:text-sm leading-relaxed">Discover trending items and see what’s in high demand this season.</p>
-                <a href="{{ route('restock_suggestion') }}"
+                <a href="{{ route('seasonal_trends') }}"
                     class="mt-3 inline-block bg-blue-500 text-white px-4 py-2 rounded-lg font-medium text-sm shadow hover:bg-blue-600 hover:shadow-md transition-all">
                     View Seasonal Trends
                 </a>
