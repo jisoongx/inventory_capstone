@@ -14,6 +14,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
 use App\Http\Controllers\TechnicalController;
 use App\Http\Controllers\InventoryOwnerController;
+use App\Http\Controllers\BillingController;
 
 
 
@@ -95,3 +96,8 @@ Route::get('/inventory-owner/search', [InventoryOwnerController::class, 'index']
 Route::get('/inventory-owner/suggest', [InventoryOwnerController::class, 'suggest']);
 Route::post('/check-barcode', [InventoryOwnerController::class, 'checkBarcode']);
 Route::post('/register-product', [InventoryOwnerController::class, 'registerProduct']);
+
+
+
+Route::get('/billing/search', [BillingController::class, 'search'])->name('billing.search');
+Route::get('/reports',  fn() => view('dashboards.owner.reports'))->name('reports');

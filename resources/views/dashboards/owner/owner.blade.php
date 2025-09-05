@@ -32,19 +32,21 @@
                     <span class="material-symbols-rounded">shopping_cart</span>
                     <span class="nav-label">Inventory</span>
                 </a>
-                <div class="group">
-                    <button id="reportsToggle" class="w-full flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Reports">
+                <div class="group relative">
+                    <!-- Reports link styled as button -->
+                    <a href="{{ route('reports') }}" id="reportsToggle" class="w-full flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Reports">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-rounded">stacked_line_chart</span>
                             <span class="nav-label">Reports</span>
                         </div>
                         <span class="nav-label material-symbols-rounded">keyboard_arrow_down</span>
-                    </button>
+                    </a>
 
-                    <div id="reportsDropdown" class="ml-3 mt-2 space-y-1 border-l-4 border-gray-600 hidden">
+                    <!-- Dropdown -->
+                    <div id="reportsDropdown" class="ml-3 mt-1 space-y-1 border-l-4 border-gray-600 hidden">
                         <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Activity Log">
                             <span class="nav-label material-symbols-rounded">history_toggle_off</span>
-                            <span class="nav-label">Activty Log</span>
+                            <span class="nav-label">Activity Log</span>
                         </a>
                         <a href="{{ route('dashboards.owner.technical_request') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Technical Support">
                             <span class="nav-label material-symbols-rounded">support_agent</span>
@@ -52,6 +54,7 @@
                         </a>
                     </div>
                 </div>
+
                 <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Store">
                     <span class="material-symbols-rounded">local_mall</span>
                     <span class="nav-label">Store</span>
