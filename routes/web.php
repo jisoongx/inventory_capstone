@@ -2,12 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MonthlyController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\ClientController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProfileController;
@@ -15,6 +13,7 @@ use App\Http\Controllers\OwnerStaffController;
 use App\Http\Controllers\TechnicalController;
 use App\Http\Controllers\InventoryOwnerController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\RestockController;
 
 
 
@@ -101,3 +100,6 @@ Route::post('/register-product', [InventoryOwnerController::class, 'registerProd
 
 Route::get('/billing/search', [BillingController::class, 'search'])->name('billing.search');
 Route::get('/reports',  fn() => view('dashboards.owner.reports'))->name('reports');
+Route::get('/restock-suggestions', [RestockController::class, 'lowStock'])->name('restock_suggestion');
+Route::post('/restock/finalize', [RestockController::class, 'finalize'])->name('restock.finalize');
+Route::get('/restock/list', [RestockController::class, 'list'])->name('restock.list');
