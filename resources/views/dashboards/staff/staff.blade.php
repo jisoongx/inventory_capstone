@@ -8,13 +8,8 @@
     <script src="https://unpkg.com/flowbite@latest/dist/flowbite.min.js"></script>
     <link href='https://fonts.googleapis.com/css?family=Poppins' rel='stylesheet'>
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            /* Removed 'flex' from body as sidebar is now fixed */
-        }
-
         .nav-label {
-            font-size: 0.875rem;
+            font-size: 0.85rem;
         }
     </style>
 </head>
@@ -55,10 +50,15 @@
 
     <main id="mainContent" class="flex-1 p-3 ml-64 transition-all duration-300"> {{-- Added ID and dynamic ml- --}}
         <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 pb-2 relative">
-            <div class="relative">
-                <button id="userButton" class="focus:outline-none">
-                    <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
-                </button>
+            <div class="relative space-x-5">
+                <div class="flex items-center gap-4">
+                    
+                    @livewire('notifications')
+
+                    <button id="userButton" class="focus:outline-none">
+                        <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
+                    </button>
+                </div>
                 <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
                     <form method="GET" action="{{ route('staff.profile') }}">
                         <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</button>

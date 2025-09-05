@@ -7,6 +7,11 @@ import zoomPlugin from 'chartjs-plugin-zoom';
 import 'datatables.net-dt/css/dataTables.dataTables.css';
 import DataTable from 'datatables.net-dt';
 
+import Alpine from 'alpinejs'
+
+window.Alpine = Alpine
+Alpine.start()
+
 Chart.register(...registerables, zoomPlugin);
 
 //sa charts ni
@@ -69,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 {
                     label: year[1] || "",
                     data: productsPrev,
-                    backgroundColor: 'rgba(234, 132, 109, 1)',
+                    backgroundColor: 'rgba(67, 102, 209, 1)',
                     borderRadius: Number.MAX_VALUE,
                     fill: true
                 }

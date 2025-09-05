@@ -5,8 +5,10 @@
     <meta charset="UTF-8">
     <title></title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="stylesheet" href="/build/assets/dataTables.dataTables.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    @livewireStyles
+
+    <!-- <link rel="stylesheet" href="/build/assets/dataTables.dataTables.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> -->
     <style>
         .nav-label {
             font-size: 0.85rem;
@@ -32,27 +34,31 @@
                     <span class="material-symbols-rounded">shopping_cart</span>
                     <span class="nav-label">Inventory</span>
                 </a>
-                <div class="group">
-                    <button id="reportsToggle" class="w-full flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Reports">
+                <div class="relative">
+                    <a href="{{ route('reports') }}" class="flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-rounded">stacked_line_chart</span>
                             <span class="nav-label">Reports</span>
                         </div>
-                        <span class="nav-label material-symbols-rounded">keyboard_arrow_down</span>
-                    </button>
+                        <!-- Only this arrow toggles submenu -->
+                        <span id="reportsArrow" class="material-symbols-rounded cursor-pointer">keyboard_arrow_down</span>
+                    </a>
 
-                    <div id="reportsDropdown" class="ml-3 mt-2 space-y-1 border-l-4 border-gray-600 hidden">
-                        <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Activity Log">
+                    <!-- Dropdown -->
+                    <div id="reportsDropdown" class="ml-3 mt-1 space-y-1 border-l-4 border-gray-600 hidden">
+                        <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="nav-label material-symbols-rounded">history_toggle_off</span>
-                            <span class="nav-label">Activty Log</span>
+                            <span class="nav-label">Activity Log</span>
                         </a>
-                        <a href="{{ route('dashboards.owner.technical_request') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Technical Support">
+                        <a href="{{ route('dashboards.owner.technical_request') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="nav-label material-symbols-rounded">support_agent</span>
                             <span class="nav-label">Technical Support</span>
                         </a>
                     </div>
                 </div>
-                <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Store">
+
+                <!-- Store Menu Path -->
+                <a href="{{ route('store_starttransaction') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Store">
                     <span class="material-symbols-rounded">local_mall</span>
                     <span class="nav-label">Store</span>
                 </a>
@@ -62,10 +68,18 @@
 
     <main id="mainContent" class="ml-64 flex-1 p-3 transition-all duration-300">
         <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 relative pb-2">
-            <div class="relative">
-                <button id="userButton" class="focus:outline-none">
-                    <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
-                </button>
+            <div class="relative space-x-5">
+
+                <div class="flex items-center gap-4">
+                    
+                    @livewire('notifications')
+
+                    <button id="userButton" class="focus:outline-none">
+                        <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
+                    </button>
+                </div>
+
+
                 <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
                     <form method="GET" action="{{ route('owner.profile') }}">
                         {{-- Removed @csrf as it's not needed for GET requests --}}
@@ -78,17 +92,22 @@
                 </div>
             </div>
         </div>
+        
+        @livewireScripts
         @yield('content')
     </main>
 
     <script>
         const sidebar = document.getElementById('sidebar');
-        const reportsToggle = document.getElementById('reportsToggle');
+        const reportsArrow = document.getElementById('reportsArrow');
         const reportsDropdown = document.getElementById('reportsDropdown');
 
-        reportsToggle.addEventListener('click', () => {
+        reportsArrow.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // stops the Reports link from being triggered
             reportsDropdown.classList.toggle('hidden');
         });
+
 
         const userButton = document.getElementById('userButton');
         const dropdownMenu = document.getElementById('dropdownMenu');
@@ -119,6 +138,12 @@
         // }
         // }
     </script>
+
+    <script>
+    window.addEventListener('debug-console', event => {
+        console.log(event.detail.message);
+    });
+</script>
 
 </body>
 

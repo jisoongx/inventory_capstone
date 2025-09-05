@@ -14,20 +14,6 @@
                 class="w-full sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out"
                 style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;" />
 
-            <!-- Status Filter -->
-            <div class="relative w-full sm:w-[220px]">
-                <select id="statusFilter"
-                    class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-600 focus:border-blue-600 shadow-md transition-all duration-200 ease-in-out">
-                    <option disabled selected value="">Select Status</option>
-                    <option value="paid">Paid</option>
-                    <option value="expired">Expired</option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-500">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </div>
-            </div>
 
             <!-- Date Filter -->
             <div class="relative w-full sm:w-[180px]">
@@ -55,16 +41,16 @@
 @if($clients->count())
 <div class="overflow-x-auto bg-white shadow-md rounded-lg mx-6">
     <table class="min-w-full table-auto border-collapse">
-        <thead class="bg-green-200 text-sm font-medium text-gray-700 tracking-wider text-center">
+        <thead class="bg-emerald-100 text-sm text-center text-gray-700  tracking-wider">
             <tr>
-                <th class="px-6 py-3">Store Name</th>
-                <th class="px-6 py-3">Owner Name</th>
-                <th class="px-6 py-3">Subscription Plan</th>
-                <th class="px-6 py-3 text-center">Status</th>
-                <th class="px-6 py-3">Start Date</th>
-                <th class="px-6 py-3">Expiry Date</th>
-                <th class="px-6 py-3">Days Left</th>
-                <th class="px-6 py-3">Actions</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider text-left">Store Name</th>
+                <th class="px-6 py-3   font-semibold tracking-wider">Owner Name</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Subscription Plan</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Status</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Start Date</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Expiry Date</th>
+                <th class="px-6 py-3   font-semibold  tracking-wider">Days Left</th>
+                <th class="px-6 py-3   font-semibold tracking-wider">Actions</th>
             </tr>
         </thead>
         <tbody class="text-sm text-gray-800 text-center">
@@ -84,14 +70,14 @@
 
             $subStatus = $subscription->status;
             $statusClass = match($subStatus) {
-            'paid' => 'border border-green-600 text-green-600',
+            'active' => 'border border-green-600 text-green-600',
             'expired' => 'border border-red-600 text-red-600',
             default => 'bg-gray-100 border border-gray-400 text-gray-600'
             };
             @endphp
             <tr class="border-b hover:bg-gray-50">
-                <td class="px-6 py-4 uppercase">{{ $client->store_name }}</td>
-                <td class="px-6 py-4 uppercase">{{ $client->firstname }} {{ $client->middlename ?? '' }} {{ $client->lastname }}</td>
+                <td class="px-6 py-4 uppercase text-left">{{ $client->store_name }}</td>
+                <td class="px-6 py-4 uppercase text-left">{{ $client->firstname }} {{ $client->middlename ?? '' }} {{ $client->lastname }}</td>
 
                 <td class="px-6 py-4">
                     @if ($planTitle !== '-')
@@ -177,9 +163,9 @@
         <!-- Action Buttons -->
         <div class="flex flex-col gap-3">
             <!-- Approve / Activate Button -->
-            <button id="approveStatusBtn" data-new-status="paid"
+            <button id="approveStatusBtn" data-new-status="active"
                 class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition duration-200 ease-in-out">
-                <span id="approveBtnLabel">Paid</span>
+                <span id="approveBtnLabel">Activate</span>
             </button>
 
             <!-- Decline / Deactivate Button -->
@@ -260,7 +246,7 @@
                             function getStatusBadgeHtml(status) {
                                 let bgColor = 'border border-gray-500';
                                 let textColor = 'text-gray-500';
-                                if (status === 'paid') {
+                                if (status === 'active') {
                                     bgColor = 'border border-green-600';
                                     textColor = 'text-green-600';
                                 } else if (status === 'expired') {
@@ -271,7 +257,7 @@
                                 <span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-sm leading-5 font-medium rounded-full ${bgColor} ${textColor}">
                                     ${status}
                                 </span>
-                            `;
+                                `;
                             }
                             const statusBadge = getStatusBadgeHtml(client.subscription.status);
                             const plan = client.subscription?.plan_details?.plan_title ?? '-';
@@ -314,18 +300,18 @@
 
                             tbody += `
                                 <tr class="border-b hover:bg-gray-50 text-sm">
-                                    <td class="px-6 py-4  text-center uppercase">${client.store_name}</td>
-                                    <td class="px-6 py-4  text-center uppercase">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
+                                    <td class="px-6 py-4   text-center uppercase">${client.store_name}</td>
+                                    <td class="px-6 py-4   text-center uppercase">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
                                     <td class="px-6 py-4 text-sm text-center">${planBadge}</td>
                                     <td class="px-6 py-4">${statusBadge}</td>
-                                    <td class="px-6 py-4  text-gray-900 text-center">${start}</td>
-                                    <td class="px-6 py-4  text-gray-900 text-center">${end}</td>
-                                    <td class="px-6 py-4  text-center">${daysLeftText}</td>
-                                    <td class="px-6 py-4  text-center">
+                                    <td class="px-6 py-4   text-gray-900 text-center">${start}</td>
+                                    <td class="px-6 py-4   text-gray-900 text-center">${end}</td>
+                                    <td class="px-6 py-4   text-center">${daysLeftText}</td>
+                                    <td class="px-6 py-4   text-center">
                                         <button type="button"
                                             class="edit-status-btn text-blue-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
-                                            data-owner-id="{{ $client->owner_id }}"
-                                            data-current-status="{{ $subscription->status }}">
+                                            data-owner-id="${client.owner_id}"
+                                            data-current-status="${client.subscription.status}">
                                             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                             </svg>
@@ -359,7 +345,7 @@
         let bgColor = '';
         let textColor = '';
 
-        if (newStatus === 'Paid') {
+        if (newStatus === 'Active') {
             bgColor = 'border border-green-600';
             textColor = 'text-green-600';
         } else if (newStatus === 'Expired') {
@@ -393,17 +379,17 @@
         declineBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
 
         // Set button labels based on current status
-        if (currentStatus === 'paid') {
-            approveLabel.text('Paid');
+        if (currentStatus === 'active') {
+            approveLabel.text('Activate');
             declineLabel.text('Expired');
-            approveBtn.attr('data-new-status', 'paid');
+            approveBtn.attr('data-new-status', 'active');
             declineBtn.attr('data-new-status', 'expired');
             // Already active, disable approve
             approveBtn.prop('disabled', true).addClass('opacity-30 cursor-not-allowed');
         } else if (currentStatus === 'expired') {
-            approveLabel.text('Paid');
+            approveLabel.text('Activate');
             declineLabel.text('Expired');
-            approveBtn.attr('data-new-status', 'paid');
+            approveBtn.attr('data-new-status', 'active');
             declineBtn.attr('data-new-status', 'expired');
             // Already deactivated, disable decline
             declineBtn.prop('disabled', true).addClass('opacity-30 cursor-not-allowed');

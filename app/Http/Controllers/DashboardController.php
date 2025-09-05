@@ -119,8 +119,6 @@ class DashboardController extends Controller
             $netProfits[$month] = $sale - ($expense + $loss);
         }
 
-
-
         $GraphExpenses = collect(DB::select("
             SELECT 
                 m.month,
@@ -246,17 +244,36 @@ class DashboardController extends Controller
 
         $dateDisplay = Carbon::now('Asia/Manila');
 
-        $day = now()->day;
+        $day = now()->format('Y-m-d');
 
-        // $dailySales = collect(DB::select("
-        //     select sum(p.selling_price * ri.quantity), DAY(r.receipt_date) as dailySales
-        //     from receipt r
-        //     join receipt_item on r.receipt_id = ri.receipt_id
-        //     join products p on ri.prod_code = p.prod_code
-        //     where day(receipt_date) = ?
-        //     and owner_id = ?
-        //     group by DAY(r.receipt_date)
-        // ", [$day, $owner_id]))->first();
+        $dailySales = collect(DB::select('
+            select ifnull(sum(p.selling_price * ri.item_quantity), 0) as dailySales
+            from receipt r
+            join receipt_item ri on r.receipt_id = ri.receipt_id
+            join products p on ri.prod_code = p.prod_code
+            where date(receipt_date) = ?
+            and r.owner_id = ?
+        ', [$day, $owner_id]))->first();
+
+        $weeklySales = collect(DB::select('
+            SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS weeklySales
+            FROM receipt r
+            JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+            JOIN products p ON ri.prod_code = p.prod_code
+            WHERE r.receipt_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
+            AND r.owner_id = ?
+        ', [$owner_id]))->first();
+
+        $monthSales = collect(DB::select('
+            SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS monthSales
+            FROM receipt r
+            JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+            join products p on ri.prod_code = p.prod_code
+            where month(receipt_date) = ?
+            AND r.owner_id = ?
+            AND year(receipt_date) = ?
+        ', [$currentMonth, $owner_id, $latestYear]))->first();
+
 
         return view('dashboards.owner.dashboard', [
             'owner_name' => $owner_name,
@@ -275,9 +292,13 @@ class DashboardController extends Controller
             'currentMonth' => $currentMonth,
             'latestYear' => $latestYear,
             'tableMonthNames' => $tableMonthNames,
-            // 'dailySales' => $dailySales,
+            'dailySales' => $dailySales,
+            'weeklySales' => $weeklySales,
+            'monthSales' => $monthSales,
+            // 'notifs' => $this->getNotifs(),
+            // 'countNotifs' => $this->countNotifs(),
         ]);
-    }
+    }   
 }
 
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Subscription;
 use App\Models\Owner;
 use App\Models\Plan;
+use Carbon\Carbon;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,9 +16,28 @@ class SubscriptionController extends Controller
 
     public function subscribers()
     {
+       
+        $clients = Owner::whereHas('subscriptions', function ($query) {
+            // Filter the subscriptions to only include those with a 'paid' status.
+            $query->where('status', 'active');
+        })
+            // Use `with` to eager load the filtered subscriptions for each owner.
+            // This prevents the N+1 query problem.
+            ->with(['subscriptions' => function ($query) {
+                $query->where('status', 'active')
+                    ->with('planDetails');
+            }])
+            ->orderBy('created_on', 'desc') // Assuming the column is 'created_at' in the table
+            ->paginate(10);
+
+        return view('dashboards.super_admin.subscribers', compact('clients'));
+    }
+
+    public function showExpiredSubscribers()
+    {
         $today = now()->startOfDay();
         $subscriptions = Subscription::where('subscription_end', '<=', $today)
-            ->where('status', '!=', 'expired')
+            ->where('status', ['expired', 'active'])
             ->get();
 
         foreach ($subscriptions as $sub) {
@@ -31,15 +51,16 @@ class SubscriptionController extends Controller
             }
         }
 
-        $clients = Owner::with(['subscriptions' => function ($query) {
-            $query->where('status', '!=', 'pending') // exclude pending
-                ->with('planDetails');
-        }])
-            ->whereIn('status', ['Active', 'Deactivated'])
+        $clients = Owner::with([
+            'subscriptions.planDetails',   // include subscription + plan
+            'subscriptions.payments',      // include all payments under each subscription
+        ])
+            ->withCount('subscriptions')       // optional: count subs
             ->orderBy('created_on', 'desc')
             ->paginate(10);
 
-        return view('dashboards.super_admin.subscribers', compact('clients'));
+        // Pass the collection of owners to the view, which can now display their names.
+        return view('dashboards.super_admin.billing-history', compact('clients'));
     }
 
 
@@ -50,8 +71,15 @@ class SubscriptionController extends Controller
         $status = $request->input('status');
         $date = $request->input('date');
 
-        $clients = Owner::with(['subscription.planDetails'])
-            ->where('status', '!=', 'Declined')
+        $clients = Owner::with(['subscription' => function ($q) {
+            // Only load active subscriptions
+            $q->where('status', 'Active')
+                ->with('planDetails');
+        }])
+            ->whereHas('subscription', function ($q) {
+                // Ensure owner has at least one active subscription
+                $q->where('status', 'Active');
+            })
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {
                     $sub->where('store_name', 'like', "%{$query}%")
@@ -63,7 +91,8 @@ class SubscriptionController extends Controller
             })
             ->when($plan, function ($q) use ($plan) {
                 $q->whereHas('subscription', function ($sub) use ($plan) {
-                    $sub->where('plan_id', $plan);
+                    $sub->where('plan_id', $plan)
+                        ->where('status', 'Active');
                 });
             })
             ->when($status, function ($q) use ($status) {
@@ -73,7 +102,8 @@ class SubscriptionController extends Controller
             })
             ->when($date, function ($q) use ($date) {
                 $q->whereHas('subscription', function ($sub) use ($date) {
-                    $sub->whereDate('created_on', $date);
+                    $sub->whereDate('created_on', $date)
+                        ->where('status', 'Active');
                 });
             })
             ->orderBy('created_on', 'desc')
@@ -101,11 +131,17 @@ class SubscriptionController extends Controller
         $requestedStatus = $request->input('status');
 
         if ($requestedStatus === 'expired') {
+            // Set the subscription's status to 'expired'
             $subscription->status = 'expired';
+
+            // Set the subscription's expiry date to the current date and time
+            $subscription->subscription_end = Carbon::now();
+
             $subscription->save();
 
             $owner = Owner::find($owner_id);
             if ($owner) {
+                // Deactivate the owner if they exist
                 $owner->status = 'Deactivated';
                 $owner->save();
             }
@@ -143,13 +179,6 @@ class SubscriptionController extends Controller
         ]);
     }
 
-
-    // public function __construct()
-    // {
-    //     $this->middleware('auth:owner')->except(['create']);
-    // }
-
-
     public function create()
     {
         $plans = Plan::all();
@@ -159,7 +188,6 @@ class SubscriptionController extends Controller
     public function store(Request $request, $planId)
     {
         $owner = Auth::guard('owner')->user();
-
         $request->validate([
             'paymentMethod' => 'required|in:gcash,debit',
             'paymentAccNum' => 'nullable|string|max:20', // VALIDATE THE UNIFIED NAME
@@ -187,20 +215,18 @@ class SubscriptionController extends Controller
         }
 
         try {
-
             $subscription = Subscription::create([
                 'owner_id' => $owner->owner_id,
                 'plan_id' => $plan->plan_id,
                 'subscription_start' => now(),
                 'subscription_end' => now()->addMonths($plan->plan_duration_months),
-                'status' => 'pending', // This status is for the subscription itself
+                'status' => 'active', // This status is for the subscription itself
             ]);
 
-            if ($owner->status === 'Deactivated') {
-                $owner->status = 'Pending';
-                $owner->save();
-            }
-
+            $owner->update([
+                'status' => 'Active'
+            ]);
+           
             $paymentAccNumber = $request->input('paymentAccNum');
             $paymentData = [
                 'owner_id' => $owner->owner_id,

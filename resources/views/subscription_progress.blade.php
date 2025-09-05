@@ -23,16 +23,13 @@
             <div class="absolute top-8 left-0 right-0 h-1 bg-gray-200 rounded-lg -z-10"></div>
 
             @php
-            $progressWidth = 'w-1/3'; // default if null or any other case
+            $progressWidth = 'w-1/3'; // default: only Sign Up done
 
-            if ($subscription) {
-            if ($subscription->status === 'paid') {
-            $progressWidth = 'w-full';
-            } elseif ($subscription->status === 'pending') {
-            $progressWidth = 'w-2/3';
-            }
+            if ($subscription->status != 'expired') {
+            $progressWidth = 'w-full'; // once a plan is chosen, everything is complete
             }
             @endphp
+
 
             <div class="absolute top-8 left-0 {{ $progressWidth }} h-1 bg-gradient-to-r from-blue-500 to-blue-400 rounded-lg -z-10 shadow"></div>
 
@@ -52,7 +49,8 @@
                             : 'bg-gradient-to-b from-white to-green-100 border-blue-500 text-gray-800 shadow-md' }} 
                         border-2">
                     <span class="text-blue-600">
-                        {{ in_array(optional($subscription)->status, ['pending', 'paid']) ? '✔' : '' }}
+                        {{ optional($subscription)->status === 'active' ? '✔' : '' }}
+                    </span>
                     </span>
                 </div>
                 <p class="mt-3 text-sm font-semibold">Choose Plan</p>
@@ -67,7 +65,7 @@
                             : 'bg-gradient-to-b from-white to-green-100 border-blue-500 text-gray-800 shadow-md' }} 
                         border-2">
                     <span class="text-blue-600">
-                        {{ optional($subscription)->status === 'paid' ? '✔' : '' }}
+                        {{ optional($subscription)->status === 'active' ? '✔' : '' }}
                     </span>
                 </div>
 
@@ -101,24 +99,40 @@
                 <!-- Step 2: Verification -->
                 <div class="relative">
                     <!-- Dot -->
-                    <div class="absolute top-0 left-0 w-4 h-4 rounded-full {{ $subscription->status === 'verified' ? 'bg-blue-500' : 'bg-blue-400' }} border-2 border-white shadow-md"></div>
+                    <div class="absolute top-0 left-0 w-4 h-4 rounded-full {{ $subscription->status === 'verified' ? 'bg-blue-500' : ($subscription->status === 'expired' ? 'bg-red-500' : 'bg-blue-400') }} border-2 border-white shadow-md"></div>
 
                     <!-- Text container -->
                     <div class="ml-6">
                         <p class="text-sm text-gray-800 font-semibold">
                             Admin is currently verifying your subscription:
-                            <span class="{{ $subscription->status === 'paid' ? 'text-green-600' : 'text-yellow-500' }}">
-                                {{ $subscription->status === 'paid' ? 'Verified' : ucfirst($subscription->status) }}
+                            <span class="
+                @if($subscription->status === 'active') text-green-600
+                @elseif($subscription->status === 'expired') text-red-600
+                @else text-yellow-500
+                @endif">
+                                {{ ucfirst($subscription->status) }}
                             </span>
                         </p>
+
                         <span class="text-xs text-gray-500">
                             {{ $subscription->subscription_start ? \Carbon\Carbon::parse($subscription->subscription_start)->format('F j, Y') : 'Not started yet' }}
                         </span>
+
+                        {{-- Renewal link if expired --}}
+                        @if($subscription->status === 'expired')
+                        <div class="mt-2">
+                            <a href="{{ route('subscription.selection') }}"
+                                class="text-sm text-blue-600 hover:underline font-medium">
+                                Renew your subscription →
+                            </a>
+                        </div>
+                        @endif
                     </div>
                 </div>
 
+
                 <!-- Step 3: Completed -->
-                @if ($subscription->status === 'paid')
+                @if ($subscription->status === 'active')
                 <div class="relative">
                     <!-- Dot -->
                     <div class="absolute top-0 left-0 w-4 h-4 rounded-full bg-blue-400 border-2 border-white shadow-md"></div>
@@ -151,7 +165,7 @@
                 @endif
 
                 <!-- Logout Button (inside the card) -->
-                @if(optional($subscription)->status !== 'paid')
+                @if(optional($subscription)->status !== 'active')
                 <div class="flex justify-center mt-6">
                     <a href="{{ route('login') }}"
                         class="flex items-center justify-center px-6 py-2 rounded-lg bg-red-500 text-white font-semibold shadow hover:bg-red-600">

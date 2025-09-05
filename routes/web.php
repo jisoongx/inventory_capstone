@@ -2,18 +2,20 @@
 
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MonthlyController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\ClientController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
 use App\Http\Controllers\TechnicalController;
 use App\Http\Controllers\InventoryOwnerController;
+use App\Http\Controllers\BillingController;
+use App\Http\Controllers\RestockController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\StoreController;
 
 
 
@@ -22,9 +24,9 @@ Route::get('/', function () {
 });
 
 
-Route::get('/monthly_profit', [MonthlyController::class, 'index'])->name('dashboards.owner.monthly_profit');
-Route::post('/monthly_profit/add', [MonthlyController::class, 'add'])->name('dashboards.owner.monthly_profit_add');
-Route::post('/monthly_profit/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.monthly_profit_edit');
+Route::get('/expense_record', [MonthlyController::class, 'index'])->name('dashboards.owner.expense_record');
+Route::post('/expense_record/add', [MonthlyController::class, 'add'])->name('dashboards.owner.expense_record_add');
+Route::post('/expense_record/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.expense_record_edit');
 Route::get('/expenses/attachment/{expense_id?}', [MonthlyController::class, 'viewAttachment'])->name('expenses.attachment');
 
 
@@ -38,6 +40,19 @@ Route::get('/staff/technical-request', [TechnicalController::class, 'index'])->n
 Route::get('/dashboard/staff/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.staff.technical_request');
 Route::post('/dashboard/staff/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.staff.technical_insert');
 Route::post('/dashboard/staff/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.staff.technical_add');
+
+
+Route::get('/super/technical-support', [TechnicalController::class, 'index'])->name('dashboards.super_admin.technical_resolve');
+Route::get('/super/technical-support/chat/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.super_admin.technical_show');
+Route::post('super/technical-support/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.super_admin.technical_insert');
+
+
+Route::get('/super/notification', [NotificationController::class, 'index'])->name('dashboards.super_admin.notification');
+Route::post('/super/notification/create', [NotificationController::class, 'send_notification'])->name('dashboards.notification.send');
+
+// Route::post('/notifications/mark-seen', [NotificationController::class, 'markSeen'])->name('notifications.markSeen');
+
+
 
 
 
@@ -64,15 +79,12 @@ Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('das
 Route::get('/staff/dashboard', fn() => view('dashboards.staff.staff'))->name('staff.dashboard');
 
 //clients management
-Route::get('/clients', [ClientController::class, 'showClients'])->name('clients.index');
-Route::get('/clients/search', [ClientController::class, 'search'])->name('clients.search');
-Route::put('/clients/{owner_id}/status', [ClientController::class, 'updateStatus'])->name('clients.updateStatus');
 
 //subscription plan management
 Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');
 Route::put('/subs/{owner_id}/status', [SubscriptionController::class, 'updateSubStatus'])->name('subs.updateStatus');
 Route::get('/clients/sub-search', [SubscriptionController::class, 'sub_search'])->name('clients.sub_search');
-
+Route::get('/billing-history', [SubscriptionController::class, 'showExpiredSubscribers'])->name('billing.history');
 // activity logs
 Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('actLogs');
 Route::get('/staff-logs', [ActivityLogController::class, 'staffLogs'])->name('staffLogs');
@@ -98,4 +110,25 @@ Route::get('/inventory-owner/search', [InventoryOwnerController::class, 'index']
 Route::get('/inventory-owner/suggest', [InventoryOwnerController::class, 'suggest']);
 Route::post('/check-barcode', [InventoryOwnerController::class, 'checkBarcode']);
 Route::post('/register-product', [InventoryOwnerController::class, 'registerProduct']);
+
+
+
+Route::get('/billing/search', [BillingController::class, 'search'])->name('billing.search');
+Route::get('/reports',  fn() => view('dashboards.owner.reports'))->name('reports');
+Route::get('/restock-suggestions', [RestockController::class, 'lowStock'])->name('restock_suggestion');
+Route::post('/restock/finalize', [RestockController::class, 'finalize'])->name('restock.finalize');
+Route::get('/restock/list', [RestockController::class, 'list'])->name('restock.list');
+Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name('seasonal_trends');
+
+
+// Store: Transaction
+// Main transactions routes
+Route::get('/store_starttransaction', [StoreController::class, 'index'])->name('store_starttransaction');
+Route::post('/start-transaction', [StoreController::class, 'startTransaction']);
+Route::post('/add-to-receipt', [StoreController::class, 'addToReceipt']);
+Route::get('/get-product', [StoreController::class, 'getProduct']);
+
+
+
+
 Route::post('/inventory/restock', [InventoryOwnerController::class, 'restock'])->name('inventory.restock');

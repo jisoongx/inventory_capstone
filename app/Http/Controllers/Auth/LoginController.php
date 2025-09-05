@@ -66,32 +66,33 @@ class LoginController extends Controller
             ActivityLogController::log('Login', $guardUsed, $authenticatedUser, $request->ip());
             switch ($guardUsed) {
                 case 'super_admin':
-                    return redirect()->route('clients.index');
+                    return redirect()->route('subscription');
+                    break;
                 case 'owner':
                     $owner = $authenticatedUser;
                     $subscribe = $owner->subscription()->first();
 
-                    if ($owner->status === 'Active') {
+                    if (!$subscribe) {
+                        return redirect()->route('subscription.selection')
+                            ->with('info', 'No active subscription.');
+                    }
+                    elseif ($owner->status === 'Active') {
                         $subscription = $owner->subscription;
-                        if (!$subscription->progress_view) {
+                        if ($subscription->progress_view = 0  ) {
                             $subscription->progress_view = true;
                             $subscription->save();
                             return redirect()->route('subscription.progress');
                         }
-
                         return redirect()->route('dashboards.owner.dashboard');
-                    } elseif ($subscribe && $owner->status === 'Pending') {
-                        return redirect()->route('subscription.progress');
-                    } elseif ($owner->status === 'Deactivated') {
+                    }  elseif ($owner->status === 'Deactivated') {
                         return redirect()->route('subscription.expired')
                             ->with('info', 'Your subscription has expired. Please renew to continue enjoying our services.');
-                    } else {
-                        return redirect()->route('subscription.selection')
-                            ->with('info', 'No active subscription.');
-                    }
+                    } 
+                    break;
 
                 case 'staff':
                     return redirect()->route('staff.dashboard');
+                    break;
             }
         }
 

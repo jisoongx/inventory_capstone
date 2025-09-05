@@ -13,7 +13,7 @@ class TechnicalController extends Controller
     public function index()
     {
         
-        if (!Auth::guard('owner')->check() && !Auth::guard('staff')->check()) {
+        if (!Auth::guard('owner')->check() && !Auth::guard('staff')->check() && !Auth::guard('super_admin')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
         }
 
@@ -21,39 +21,49 @@ class TechnicalController extends Controller
             $owner = Auth::guard('owner')->user();
             $owner_id = $owner->owner_id;
 
-            $requests = collect(DB::select("
-                SELECT *
-                FROM technical_request
-                WHERE owner_id = ?
-                ORDER BY req_id DESC
-            ", [$owner_id]));
+            // $requests = collect(DB::select("
+            //     SELECT tr.*, cm_max.last_message_id
+            // FROM technical_request tr
+            // JOIN (
+            //     SELECT req_id, MAX(msg_id) as last_message_id
+            //     FROM conversation_message
+            //     GROUP BY req_id
+            // ) cm_max ON tr.req_id = cm_max.req_id
+            // WHERE tr.owner_id = ?
+            // ORDER BY cm_max.last_message_id DESC
+            // ", [$owner_id]));
 
-            $recentreq = $requests->first();
+            // $recentreq = $requests->first();
+            // dd($requests);
 
             return view('dashboards.owner.technical_request', [
-                'requests' => $requests,
-                'recentreq' => $recentreq,
+                'notifs' => $this->getNotifs(),
             ]);
         }
 
-        // If logged in as Staff
         if (Auth::guard('staff')->check()) {
             $staff = Auth::guard('staff')->user();
             $staff_id = $staff->staff_id;
 
-            $requests = collect(DB::select("
-                SELECT *
-                FROM technical_request
-                WHERE staff_id = ?
-                ORDER BY req_id DESC
-            ", [$staff_id]));
+            // $requests = collect(DB::select("
+            //     SELECT *
+            //     FROM technical_request
+            //     WHERE staff_id = ?
+            //     ORDER BY req_id DESC
+            // ", [$staff_id]));
 
-            $recentreq = $requests->first();
+            // $recentreq = $requests->first();
 
             return view('dashboards.staff.technical_request', [
-                'requests' => $requests,
-                'recentreq' => $recentreq,
+                'notifs' => $this->getNotifs(),
             ]);
+        }
+
+        if (Auth::guard('super_admin')->check()) {
+            $super_admin = Auth::guard('super_admin')->user();
+            $super_admin = $super_admin->super_admin;
+
+            return view('dashboards.super_admin.technical_resolve');
         }
     }
 
@@ -61,7 +71,7 @@ class TechnicalController extends Controller
     public function show($req_id = null)
     {
         
-        if (!Auth::guard('owner')->check() && !Auth::guard('staff')->check()) {
+        if (!Auth::guard('owner')->check() && !Auth::guard('staff')->check() && !Auth::guard('super_admin')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
         }
 
@@ -74,10 +84,15 @@ class TechnicalController extends Controller
             $owner_id = $owner->owner_id;
 
             $requests = collect(DB::select("
-                SELECT *
-                FROM technical_request
-                WHERE owner_id = ?
-                ORDER BY req_id DESC
+                SELECT tr.*, cm_max.last_message_id
+                FROM technical_request tr
+                JOIN (
+                    SELECT req_id, MAX(msg_id) as last_message_id
+                    FROM conversation_message
+                    GROUP BY req_id
+                ) cm_max ON tr.req_id = cm_max.req_id
+                WHERE tr.owner_id = ?
+                ORDER BY cm_max.last_message_id DESC
             ", [$owner_id]));
 
             if ($req_id === null && $requests->isNotEmpty()) {
@@ -102,6 +117,8 @@ class TechnicalController extends Controller
                 'requests' => $requests,
                 'recentreq' => $recentreq,
                 'convos' => $convos,
+                // 'notifs' => $this->getNotifs(),
+                // 'countNotifs' => $this->countNotifs(),
             ]);
         }
 
@@ -111,10 +128,15 @@ class TechnicalController extends Controller
             $staff_id = $staff->staff_id;
 
             $requests = collect(DB::select("
-                SELECT *
-                FROM technical_request
-                WHERE staff_id = ?
-                ORDER BY req_id DESC
+                SELECT tr.*, cm_max.last_message_id
+                FROM technical_request tr
+                JOIN (
+                    SELECT req_id, MAX(msg_id) as last_message_id
+                    FROM conversation_message
+                    GROUP BY req_id
+                ) cm_max ON tr.req_id = cm_max.req_id
+                WHERE tr.staff_id = ?
+                ORDER BY cm_max.last_message_id DESC
             ", [$staff_id]));
 
             if ($req_id === null && $requests->isNotEmpty()) {
@@ -136,6 +158,47 @@ class TechnicalController extends Controller
             }
 
             return view('dashboards.staff.technical_request', [
+                'requests' => $requests,
+                'recentreq' => $recentreq,
+                'convos' => $convos,
+                // 'notifs' => $this->getNotifs(),
+                // 'countNotifs' => $this->countNotifs(),
+            ]);
+        }
+
+        if (Auth::guard('super_admin')->check()) {
+            $super_admin = Auth::guard('super_admin')->user();
+            $super_id = $super_admin->super_id;
+
+            $requests = collect(DB::select("
+                SELECT tr.*, cm_max.last_message_id
+                FROM technical_request tr
+                JOIN (
+                    SELECT req_id, MAX(msg_id) as last_message_id
+                    FROM conversation_message
+                    GROUP BY req_id
+                ) cm_max ON tr.req_id = cm_max.req_id
+                ORDER BY cm_max.last_message_id DESC
+            "));
+
+            if ($req_id === null && $requests->isNotEmpty()) {
+                $recentreq = $requests->first();
+            } else {
+                $recentreq = $requests->where('req_id', $req_id)->first();
+            }
+
+            if ($recentreq) {
+                $convos = collect(DB::select("
+                    SELECT cm.*, tr.req_title, tr.req_status
+                    FROM technical_request tr
+                    LEFT JOIN conversation_message cm
+                        ON tr.req_id = cm.req_id
+                    WHERE tr.req_id = ?
+                    ORDER BY cm.msg_date ASC
+                ", [$recentreq->req_id]));
+            }
+
+            return view('dashboards.super_admin.technical_resolve', [
                 'requests' => $requests,
                 'recentreq' => $recentreq,
                 'convos' => $convos,
@@ -165,7 +228,6 @@ class TechnicalController extends Controller
             return redirect()->route('dashboards.owner.technical_request', ['req_id' => $req_id]);
         }
 
-        // If logged in as staff
         if (Auth::guard('staff')->check()) {
             $staff = Auth::guard('staff')->user();
             $staff_id = $staff->staff_id;
@@ -182,6 +244,24 @@ class TechnicalController extends Controller
             ", [$req_id, $staff_id, $request->message, $msg_date]);
 
             return redirect()->route('dashboards.staff.technical_request', ['req_id' => $req_id]);
+        }
+
+        if (Auth::guard('super_admin')->check()) {
+            $super_admin = Auth::guard('super_admin')->user();
+            $super_id = $super_admin->super_id;
+
+            $request->validate([
+                'message' => 'required|string|max:1000',
+            ]);
+
+            $msg_date = Carbon::now('Asia/Manila')->format('Y-m-d H:i:s');
+
+            DB::insert("
+                INSERT INTO conversation_message (req_id, sender_type, sender_id, message, msg_date)
+                VALUES (?, 'super', ?, ?, ?)
+            ", [$req_id, $super_id, $request->message, $msg_date]);
+
+            return redirect()->route('dashboards.super_admin.technical_show', ['req_id' => $req_id]);
         }
 
         return redirect()->route('login')->with('error', 'Please login first.');
