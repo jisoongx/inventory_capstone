@@ -12,12 +12,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
 use App\Http\Controllers\TechnicalController;
 use App\Http\Controllers\InventoryOwnerController;
-<<<<<<< Updated upstream
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\RestockController;
-=======
 use App\Http\Controllers\NotificationController;
->>>>>>> Stashed changes
 
 
 
