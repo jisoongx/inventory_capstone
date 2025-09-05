@@ -110,7 +110,7 @@ Route::get('/inventory-owner/search', [InventoryOwnerController::class, 'index']
 Route::get('/inventory-owner/suggest', [InventoryOwnerController::class, 'suggest']);
 Route::post('/check-barcode', [InventoryOwnerController::class, 'checkBarcode']);
 Route::post('/register-product', [InventoryOwnerController::class, 'registerProduct']);
-
+Route::post('/inventory/restock', [InventoryOwnerController::class, 'restock'])->name('inventory.restock');
 
 
 Route::get('/billing/search', [BillingController::class, 'search'])->name('billing.search');
@@ -131,4 +131,4 @@ Route::get('/get-product', [StoreController::class, 'getProduct']);
 
 
 
-Route::post('/inventory/restock', [InventoryOwnerController::class, 'restock'])->name('inventory.restock');
+
