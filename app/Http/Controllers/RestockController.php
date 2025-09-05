@@ -86,9 +86,15 @@ class RestockController extends Controller
         $currentMonthStart = $now->copy()->startOfMonth();
         $currentMonthEnd = $now->copy()->endOfMonth();
 
+<<<<<<< Updated upstream
         $lastYear = $now->copy()->subYear();
         $lastYearMonthStart = $lastYear->copy()->startOfMonth();
         $lastYearMonthEnd = $lastYear->copy()->endOfMonth();
+=======
+        // Last year same month
+        $lastYearMonthStart = $now->copy()->subYear()->startOfMonth();
+        $lastYearMonthEnd = $now->copy()->subYear()->endOfMonth();
+>>>>>>> Stashed changes
 
         // Current month sales
         $currentMonthQuery = DB::table('receipt_item')
@@ -134,7 +140,16 @@ class RestockController extends Controller
             ->mergeBindings($currentMonthSales)
             ->leftJoin(DB::raw("({$lastYearQuery->toSql()}) as ly"), 'curr.prod_code', '=', 'ly.prod_code')
             ->mergeBindings($lastYearQuery)
+<<<<<<< Updated upstream
             ->select('curr.prod_code', 'curr.name', 'curr.current_month_sold', DB::raw('COALESCE(ly.last_year_sold, 0) as last_year_sold'))
+=======
+            ->select(
+                'curr.prod_code',
+                'curr.name',
+                'curr.current_month_sold',
+                DB::raw('COALESCE(ly.last_year_sold, 0) as last_year_sold')
+            )
+>>>>>>> Stashed changes
             ->orderByDesc('curr.current_month_sold')
             ->limit(10)
             ->get();
@@ -144,10 +159,17 @@ class RestockController extends Controller
             $current = $item->current_month_sold;
             $last = $item->last_year_sold;
 
+<<<<<<< Updated upstream
             // Growth rate calculation (%)
             $growth = $last > 0 ? (($current - $last) / $last) * 100 : 100;
 
             // Expected demand (simple forecast: current + growth difference)
+=======
+            // Growth rate (%)
+            $growth = $last > 0 ? (($current - $last) / $last) * 100 : 100;
+
+            // Expected demand (simple forecast)
+>>>>>>> Stashed changes
             $expected = $current + ($current - $last);
 
             return (object) [
