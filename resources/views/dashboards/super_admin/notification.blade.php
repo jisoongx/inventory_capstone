@@ -5,7 +5,7 @@
 
     <div class="flex-1 grid grid-cols-2 gap-4 p-2">
 
-        <div x-data="{ mode: 'custom', selected: '', title: '', message: '' }" 
+        <div x-data="{ mode: 'custom', title: '', message: '', selected: '' }"
             class="h-[40rem] bg-white shadow-lg p-6 rounded-lg space-y-5">
 
             <h2 class="text-sm font-semibold border-b pb-3">Create Notification</h2>
@@ -40,11 +40,13 @@
                     <div>
                         <label for="title" class="block text-xs font-medium text-gray-700 mb-2">Title</label>
                         <input id="title" name="title" type="text" placeholder="Enter notification title"
+                            x-model="title"
                             class="w-full border-b rounded p-3 text-xs focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label for="message" class="block text-xs font-medium text-gray-700 mb-2">Message</label>
                         <textarea id="message" name="message" placeholder="Enter your message" rows="13"
+                            x-model="message"
                             class="w-full border rounded p-3 text-xs focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
 
@@ -58,7 +60,6 @@
                 </div>
 
                 <div x-show="mode === 'template'" class="space-y-3" x-cloak>
-
                     <div x-show="!selected" class="space-y-2" x-cloak>
                         <h3 class="text-xs font-medium text-gray-700 mb-2 mt-5">Choose a System Notice</h3>
                             <div class="grid gap-3">
@@ -133,9 +134,33 @@
                     </div>
                 </div>
             </form>
+            @if(session('success'))
+                <div 
+                    x-data="{ show: true }" 
+                    x-init="setTimeout(() => show = false, 4000)" 
+                    x-show="show"
+                    x-transition:enter="transition transform ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-2"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    x-transition:leave="transition transform ease-in duration-300"
+                    x-transition:leave-start="opacity-100 translate-y-0"
+                    x-transition:leave-end="opacity-0 translate-y-2"
+                    class="fixed bottom-24 right-5 w-94 bg-white shadow-lg rounded-lg px-4 py-3 flex items-center space-x-3 z-50"
+                >
+                    <div class="flex-shrink-0">
+                        <span class="material-symbols-rounded-full bg-green-200 p-2 rounded-lg text-green-600 text-lg">check_circle</span>
+                    </div>
+                    
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-800">{{ session('success') }}</p>
+                    </div>
+                    
+                    <button @click="show = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+                        <span class="material-symbols-rounded">close_small</span>
+                    </button>
+                </div>
+            @endif
         </div>
-
-
 
     </div>
 

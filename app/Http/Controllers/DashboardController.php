@@ -200,39 +200,61 @@ class DashboardController extends Controller
 
 
         $productCategory = collect(DB::select("
-            SELECT 
-                p.prod_code, 
-                SUM(p.selling_price * ri.item_quantity) AS total_amount, 
-                p.category_id
-            FROM products p 
-            JOIN receipt_item ri ON p.prod_code = ri.prod_code
-            JOIN receipt r ON ri.receipt_id = r.receipt_id
-            WHERE YEAR(r.receipt_date) = ? AND r.owner_id = ?
-            GROUP BY p.category_id, p.prod_code
+            SELECT
+            c.category,
+            COALESCE(
+                SUM(
+                CASE 
+                    WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
+                    THEN p.selling_price * ri.item_quantity
+                    ELSE 0
+                END
+                ), 0
+            ) AS total_amount,
+            c.category_id
+            FROM categories c
+            LEFT JOIN products p ON c.category_id = p.category_id
+            LEFT JOIN receipt_item ri ON p.prod_code = ri.prod_code
+            LEFT JOIN receipt r ON ri.receipt_id = r.receipt_id
+            WHERE c.owner_id = ?
+            GROUP BY c.category_id, c.category
+            ORDER BY c.category_id;
         ", [
-            $latestYear, $owner_id
+            $latestYear, $owner_id, $owner_id
         ]))->toArray();
-        $productData = array_map(fn($row) => (float) $row->total_amount, $productCategory);
+        $categories = array_map(fn($row) => $row->category, $productCategory);
+        $productData = array_map(fn($row) => (float) $row->total_amount , $productCategory);
 
         $productCategoryPrev = collect(DB::select("
-            SELECT 
-                p.prod_code, 
-                SUM(p.selling_price * ri.item_quantity) AS total_amount, 
-                p.category_id
-            FROM products p 
-            JOIN receipt_item ri ON p.prod_code = ri.prod_code
-            JOIN receipt r ON ri.receipt_id = r.receipt_id
-            WHERE YEAR(r.receipt_date) = ? AND r.owner_id = ?
-            GROUP BY p.category_id, p.prod_code
+            SELECT
+            c.category,
+            COALESCE(
+                SUM(
+                CASE 
+                    WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
+                    THEN p.selling_price * ri.item_quantity
+                    ELSE 0
+                END
+                ), 0
+            ) AS total_amount,
+            c.category_id
+            FROM categories c
+            LEFT JOIN products p ON c.category_id = p.category_id
+            LEFT JOIN receipt_item ri ON p.prod_code = ri.prod_code
+            LEFT JOIN receipt r ON ri.receipt_id = r.receipt_id
+            WHERE c.owner_id = ?
+            GROUP BY c.category_id, c.category
+            ORDER BY c.category_id;
         ", [
-            $latestYear-1,$owner_id 
+            $latestYear-1, $owner_id, $owner_id
         ]))->toArray();
         $productPrevData = array_map(fn($row) => (float) $row->total_amount, $productCategoryPrev);
 
 
-        $categories = collect(DB::select(
-            "select category from categories"
-        ))->pluck('category')->toArray();
+        // $categories = collect(DB::select(
+        //     "select category from categories
+        //     where owner_id = ? ", [$owner_id,]
+        // ))->pluck('category')->toArray();
 
 
         $year = collect(DB::select("

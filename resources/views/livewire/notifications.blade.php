@@ -11,7 +11,7 @@
     </button>
 
     <div @if(!$active) style="display: none;" @endif
-        class="absolute right-0 mt-2 w-96 bg-white border rounded shadow-xl h-96 overflow-y-auto transition-all duration-300">
+        class="absolute right-0 mt-2 w-96 bg-white border rounded shadow shadow-black h-96 overflow-y-auto transition-all duration-300">
 
         <div class="flex items-center justify-between p-4 border-b">
             <span class="text-sm font-semibold">Notifications</span>

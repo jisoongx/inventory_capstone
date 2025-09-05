@@ -27,15 +27,11 @@
                         <span class="material-symbols-rounded">credit_card</span>
                         <span class="nav-label">Subscription</span>
                     </a>
-<<<<<<< Updated upstream
                     <a href="{{ route('billing.history') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                         <span class="material-symbols-rounded">receipt_long</span>
                         <span class="nav-label">Billing History</span>
                     </a>
-                    <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-=======
                     <a href="{{ route('dashboards.super_admin.notification') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
->>>>>>> Stashed changes
                         <span class="material-symbols-rounded">notifications</span>
                         <span class="nav-label">Notification</span>
                     </a>
