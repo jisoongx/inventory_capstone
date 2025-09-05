@@ -21,22 +21,25 @@ class InventoryOwnerController extends Controller
 
         session(['owner_id' => $owner_id]);
 
-        $search = $request->input('search');
+        $search   = $request->input('search');
         $category = $request->input('category');
 
         $query = "
-            SELECT 
+            SELECT
                 p.prod_code,
-                p.barcode, 
-                p.name, 
-                p.cost_price, 
-                p.selling_price, 
-                p.quantity, 
-                u.unit,
-                c.category
+                p.category_id,
+                MIN(p.barcode)       AS barcode,
+                MIN(p.name)          AS name,
+                MIN(p.cost_price)    AS cost_price,
+                MIN(p.selling_price) AS selling_price,
+                MIN(p.prod_image)    AS prod_image,
+                MIN(u.unit)          AS unit,
+                MIN(c.category)      AS category,
+                COALESCE(SUM(i.stock), 0) AS stock
             FROM products p
-            JOIN units u ON p.unit_id = u.unit_id
-            JOIN categories c ON p.category_id = c.category_id
+            JOIN units u       ON p.unit_id = u.unit_id
+            JOIN categories c  ON p.category_id = c.category_id
+            LEFT JOIN inventory i ON i.prod_code = p.prod_code
             WHERE p.owner_id = :owner_id
         ";
 
@@ -45,24 +48,27 @@ class InventoryOwnerController extends Controller
         // Case-insensitive search
         if (!empty($search)) {
             $query .= " AND (LOWER(p.name) LIKE :search_name OR LOWER(p.barcode) LIKE :search_barcode)";
-            $params['search_name'] = '%' . strtolower($search) . '%';
+            $params['search_name']    = '%' . strtolower($search) . '%';
             $params['search_barcode'] = '%' . strtolower($search) . '%';
         }
 
+        // Category filter
         if (!empty($category)) {
             $query .= " AND p.category_id = :category_id";
             $params['category_id'] = $category;
         }
 
-        $query .= " ORDER BY p.prod_code ASC";
+        // include p.category_id in GROUP BY
+        $query .= " GROUP BY p.prod_code, p.category_id ORDER BY p.prod_code ASC";
 
-        $products = DB::select($query, $params);
-
+        $products   = DB::select($query, $params);
         $categories = DB::select("SELECT category_id, category FROM categories ORDER BY category ASC");
-        $units = DB::select("SELECT unit_id, unit FROM units ORDER BY unit ASC"); // ✅ added this
+        $units      = DB::select("SELECT unit_id, unit FROM units ORDER BY unit ASC");
 
         return view('inventory-owner', compact('owner_name', 'products', 'categories', 'units', 'search', 'category'));
     }
+
+
 
 
 
@@ -98,19 +104,29 @@ class InventoryOwnerController extends Controller
     public function checkBarcode(Request $request)
     {
         $barcode = $request->input('barcode');
+        $ownerId = session('owner_id');
 
-        // Replace `products` with your actual table name
         $product = DB::table('products')
             ->where('barcode', $barcode)
-            ->where('owner_id', session('owner_id')) // adjust if you're using different session key
+            ->where('owner_id', $ownerId)
             ->first();
 
         if ($product) {
-            return response()->json(['exists' => true]);
+            return response()->json([
+                'exists' => true,
+                'product' => [
+                    'prod_code'   => $product->prod_code,
+                    'name'        => $product->name,
+                    'prod_image'  => $product->prod_image,
+                    'category_id' => $product->category_id,
+                    'barcode'     => $product->barcode,
+                ]
+            ]);
         } else {
             return response()->json(['exists' => false]);
         }
     }
+
 
 
     public function registerProduct(Request $request)
@@ -124,29 +140,86 @@ class InventoryOwnerController extends Controller
             'selling_price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'category_id' => 'required|integer',
-            'unit_id' => 'required|integer', // ✅ now expect unit_id instead of free text
+            'unit_id' => 'required|integer',
             'quantity' => 'required|integer|min:1',
-            'photo' => 'nullable|image|max:2048'
+            'photo' => 'nullable|image|max:2048',
+            // Product-specific field now
+            'stock_limit' => 'required|integer|min:0',
+            // Inventory-specific
+            'expiration_date' => 'nullable|date',
+            'batch_number' => 'nullable|string|max:50'
         ]);
 
-        // Handle photo
+        // Handle photo upload
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('product_images', 'public');
         }
 
-        DB::table('products')->insert([
-            'barcode' => $validated['barcode'],
-            'name' => $validated['name'],
-            'cost_price' => $validated['cost_price'],
-            'selling_price' => $validated['selling_price'],
-            'description' => $validated['description'] ?? null,
+        // ✅ Check if product already exists
+        $product = DB::table('products')
+            ->where('barcode', $validated['barcode'])
+            ->where('owner_id', $ownerId)
+            ->first();
+
+        if ($product) {
+            $prodCode = $product->prod_code;
+        } else {
+            // Insert into products with stock_limit
+            $prodCode = DB::table('products')->insertGetId([
+                'barcode' => $validated['barcode'],
+                'name' => $validated['name'],
+                'cost_price' => $validated['cost_price'],
+                'selling_price' => $validated['selling_price'],
+                'description' => $validated['description'] ?? null,
+                'owner_id' => $ownerId,
+                'staff_id' => null,
+                'category_id' => $validated['category_id'],
+                'unit_id' => $validated['unit_id'],
+                'prod_image' => $photoPath,
+                'stock_limit' => $validated['stock_limit'], // ✅ moved here
+            ]);
+        }
+
+        // ✅ Insert inventory record (no stock_limit anymore)
+        DB::table('inventory')->insert([
+            'prod_code' => $prodCode,
             'owner_id' => $ownerId,
-            'staff_id' => null,
             'category_id' => $validated['category_id'],
-            'unit_id' => $validated['unit_id'], // ✅ store directly
-            'quantity' => $validated['quantity'],
-            'prod_image' => $photoPath,
+            'stock' => $validated['quantity'],
+            'date_added' => now(),
+            'expiration_date' => $validated['expiration_date'] ?? null,
+            'last_updated' => now(),
+            'batch_number' => $validated['batch_number'] ?? null,
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+
+
+    public function restockProduct(Request $request)
+    {
+        $ownerId = session('owner_id');
+
+        $validated = $request->validate([
+            'prod_code' => 'required|integer|exists:products,prod_code',
+            'category_id' => 'required|integer',
+            'stock' => 'required|integer|min:1',
+            'date_added' => 'required|date',
+            'expiration_date' => 'nullable|date',
+            'batch_number' => 'nullable|string|max:100',
+        ]);
+
+        DB::table('inventory')->insert([
+            'prod_code' => $validated['prod_code'],
+            'category_id' => $validated['category_id'],
+            'owner_id' => $ownerId,
+            'stock' => $validated['stock'],
+            'date_added' => $validated['date_added'],
+            'expiration_date' => $validated['expiration_date'] ?? null,
+            'batch_number' => $validated['batch_number'] ?? null,
+            'last_updated' => now(),
         ]);
 
         return response()->json(['success' => true]);
