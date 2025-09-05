@@ -80,18 +80,30 @@ class RestockController extends Controller
     public function topProducts(Request $request)
     {
         $ownerId = auth()->guard('owner')->id();
+<<<<<<< Updated upstream
         $categoryId = $request->input('category_id'); // optional filter
+=======
+        $categoryId = $request->input('category_id'); // optional filter from dropdown
+>>>>>>> Stashed changes
 
         $now = Carbon::now();
         $currentMonthStart = $now->copy()->startOfMonth();
         $currentMonthEnd = $now->copy()->endOfMonth();
 
+<<<<<<< Updated upstream
         // Last year same month for growth comparison
+=======
+        // Last year same month
+>>>>>>> Stashed changes
         $lastYearMonthStart = $now->copy()->subYear()->startOfMonth();
         $lastYearMonthEnd = $now->copy()->subYear()->endOfMonth();
 
         // Current month sales
+<<<<<<< Updated upstream
         $currentMonthSales = DB::table('receipt_item')
+=======
+        $currentMonthQuery = DB::table('receipt_item')
+>>>>>>> Stashed changes
             ->select(
                 'receipt_item.prod_code',
                 'products.name',
@@ -100,6 +112,7 @@ class RestockController extends Controller
             ->join('receipt', 'receipt_item.receipt_id', '=', 'receipt.receipt_id')
             ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
             ->where('receipt.owner_id', $ownerId)
+<<<<<<< Updated upstream
             ->whereBetween('receipt.receipt_date', [$currentMonthStart, $currentMonthEnd])
             ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
             ->groupBy('receipt_item.prod_code', 'products.name')
@@ -107,6 +120,22 @@ class RestockController extends Controller
 
         // Last year same month sales
         $lastYearSales = DB::table('receipt_item')
+=======
+            ->whereBetween('receipt.receipt_date', [$currentMonthStart, $currentMonthEnd]);
+
+        if ($categoryId) {
+            $currentMonthQuery->where('products.category_id', $categoryId);
+        }
+
+        $currentMonthQuery->groupBy('receipt_item.prod_code', 'products.name');
+
+        $currentMonthSales = DB::table(DB::raw("({$currentMonthQuery->toSql()}) as cm"))
+            ->mergeBindings($currentMonthQuery)
+            ->select('cm.prod_code', 'cm.name', 'cm.current_month_sold');
+
+        // Last year same month sales
+        $lastYearQuery = DB::table('receipt_item')
+>>>>>>> Stashed changes
             ->select(
                 'receipt_item.prod_code',
                 DB::raw('SUM(receipt_item.item_quantity) as last_year_sold')
@@ -114,6 +143,7 @@ class RestockController extends Controller
             ->join('receipt', 'receipt_item.receipt_id', '=', 'receipt.receipt_id')
             ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
             ->where('receipt.owner_id', $ownerId)
+<<<<<<< Updated upstream
             ->whereBetween('receipt.receipt_date', [$lastYearMonthStart, $lastYearMonthEnd])
             ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
             ->groupBy('receipt_item.prod_code')
@@ -150,11 +180,47 @@ class RestockController extends Controller
                     $forecast = $alpha * $monthData->monthly_sold + (1 - $alpha) * $forecast;
                 }
             }
+=======
+            ->whereBetween('receipt.receipt_date', [$lastYearMonthStart, $lastYearMonthEnd]);
+
+        if ($categoryId) {
+            $lastYearQuery->where('products.category_id', $categoryId);
+        }
+
+        $lastYearQuery->groupBy('receipt_item.prod_code');
+
+        // Merge current and last year sales
+        $merged = DB::table(DB::raw("({$currentMonthSales->toSql()}) as curr"))
+            ->mergeBindings($currentMonthSales)
+            ->leftJoin(DB::raw("({$lastYearQuery->toSql()}) as ly"), 'curr.prod_code', '=', 'ly.prod_code')
+            ->mergeBindings($lastYearQuery)
+            ->select(
+                'curr.prod_code',
+                'curr.name',
+                'curr.current_month_sold',
+                DB::raw('COALESCE(ly.last_year_sold, 0) as last_year_sold')
+            )
+            ->orderByDesc('curr.current_month_sold')
+            ->limit(10)
+            ->get();
+
+        // Map to add growth_rate and expected_demand
+        $topProducts = $merged->map(function ($item) {
+            $current = $item->current_month_sold;
+            $last = $item->last_year_sold;
+
+            // Growth rate (%)
+            $growth = $last > 0 ? (($current - $last) / $last) * 100 : 100;
+
+            // Expected demand (simple forecast)
+            $expected = $current + ($current - $last);
+>>>>>>> Stashed changes
 
             return (object) [
                 'prod_code' => $item->prod_code,
                 'name' => $item->name,
                 'current_month_sold' => $current,
+<<<<<<< Updated upstream
                 'last_year_sold' => $lastYear,
                 'growth_rate' => round($growth, 2),
                 'expected_demand' => round($forecast, 0),
@@ -162,6 +228,15 @@ class RestockController extends Controller
         });
 
         // Get categories
+=======
+                'last_year_sold' => $last,
+                'growth_rate' => round($growth, 2),
+                'expected_demand' => round($expected, 0),
+            ];
+        });
+
+        // Get categories for dropdown
+>>>>>>> Stashed changes
         $categories = DB::table('categories')->get();
 
         return view('dashboards.owner.seasonal_trends', [
