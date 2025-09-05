@@ -80,24 +80,18 @@ class RestockController extends Controller
     public function topProducts(Request $request)
     {
         $ownerId = auth()->guard('owner')->id();
-        $categoryId = $request->input('category_id'); // optional filter from dropdown
+        $categoryId = $request->input('category_id'); // optional filter
 
         $now = Carbon::now();
         $currentMonthStart = $now->copy()->startOfMonth();
         $currentMonthEnd = $now->copy()->endOfMonth();
 
-<<<<<<< Updated upstream
-        $lastYear = $now->copy()->subYear();
-        $lastYearMonthStart = $lastYear->copy()->startOfMonth();
-        $lastYearMonthEnd = $lastYear->copy()->endOfMonth();
-=======
-        // Last year same month
+        // Last year same month for growth comparison
         $lastYearMonthStart = $now->copy()->subYear()->startOfMonth();
         $lastYearMonthEnd = $now->copy()->subYear()->endOfMonth();
->>>>>>> Stashed changes
 
         // Current month sales
-        $currentMonthQuery = DB::table('receipt_item')
+        $currentMonthSales = DB::table('receipt_item')
             ->select(
                 'receipt_item.prod_code',
                 'products.name',
@@ -106,20 +100,13 @@ class RestockController extends Controller
             ->join('receipt', 'receipt_item.receipt_id', '=', 'receipt.receipt_id')
             ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
             ->where('receipt.owner_id', $ownerId)
-            ->whereBetween('receipt.receipt_date', [$currentMonthStart, $currentMonthEnd]);
-
-        if ($categoryId) {
-            $currentMonthQuery->where('products.category_id', $categoryId);
-        }
-
-        $currentMonthQuery->groupBy('receipt_item.prod_code', 'products.name');
-
-        $currentMonthSales = DB::table(DB::raw("({$currentMonthQuery->toSql()}) as cm"))
-            ->mergeBindings($currentMonthQuery)
-            ->select('cm.prod_code', 'cm.name', 'cm.current_month_sold');
+            ->whereBetween('receipt.receipt_date', [$currentMonthStart, $currentMonthEnd])
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->groupBy('receipt_item.prod_code', 'products.name')
+            ->get();
 
         // Last year same month sales
-        $lastYearQuery = DB::table('receipt_item')
+        $lastYearSales = DB::table('receipt_item')
             ->select(
                 'receipt_item.prod_code',
                 DB::raw('SUM(receipt_item.item_quantity) as last_year_sold')
@@ -127,62 +114,54 @@ class RestockController extends Controller
             ->join('receipt', 'receipt_item.receipt_id', '=', 'receipt.receipt_id')
             ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
             ->where('receipt.owner_id', $ownerId)
-            ->whereBetween('receipt.receipt_date', [$lastYearMonthStart, $lastYearMonthEnd]);
+            ->whereBetween('receipt.receipt_date', [$lastYearMonthStart, $lastYearMonthEnd])
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->groupBy('receipt_item.prod_code')
+            ->pluck('last_year_sold', 'prod_code');
 
-        if ($categoryId) {
-            $lastYearQuery->where('products.category_id', $categoryId);
-        }
-
-        $lastYearQuery->groupBy('receipt_item.prod_code');
-
-        // Merge current and last year sales
-        $merged = DB::table(DB::raw("({$currentMonthSales->toSql()}) as curr"))
-            ->mergeBindings($currentMonthSales)
-            ->leftJoin(DB::raw("({$lastYearQuery->toSql()}) as ly"), 'curr.prod_code', '=', 'ly.prod_code')
-            ->mergeBindings($lastYearQuery)
-<<<<<<< Updated upstream
-            ->select('curr.prod_code', 'curr.name', 'curr.current_month_sold', DB::raw('COALESCE(ly.last_year_sold, 0) as last_year_sold'))
-=======
+        // Historical sales for exponential smoothing
+        $historicalSales = DB::table('receipt_item')
             ->select(
-                'curr.prod_code',
-                'curr.name',
-                'curr.current_month_sold',
-                DB::raw('COALESCE(ly.last_year_sold, 0) as last_year_sold')
+                'receipt_item.prod_code',
+                DB::raw('DATE_FORMAT(receipt.receipt_date, "%Y-%m") as month'),
+                DB::raw('SUM(receipt_item.item_quantity) as monthly_sold')
             )
->>>>>>> Stashed changes
-            ->orderByDesc('curr.current_month_sold')
-            ->limit(10)
-            ->get();
+            ->join('receipt', 'receipt_item.receipt_id', '=', 'receipt.receipt_id')
+            ->where('receipt.owner_id', $ownerId)
+            ->when($categoryId, fn($q) => $q->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
+                ->where('products.category_id', $categoryId))
+            ->groupBy('receipt_item.prod_code', 'month')
+            ->orderBy('month')
+            ->get()
+            ->groupBy('prod_code');
 
-        // Map to add growth_rate and expected_demand
-        $topProducts = $merged->map(function ($item) {
+        $alpha = 0.5; // smoothing factor
+        $topProducts = $currentMonthSales->map(function ($item) use ($lastYearSales, $historicalSales, $alpha) {
             $current = $item->current_month_sold;
-            $last = $item->last_year_sold;
+            $lastYear = $lastYearSales[$item->prod_code] ?? 0;
 
-<<<<<<< Updated upstream
-            // Growth rate calculation (%)
-            $growth = $last > 0 ? (($current - $last) / $last) * 100 : 100;
+            // Growth rate relative to last year same month
+            $growth = $lastYear > 0 ? (($current - $lastYear) / $lastYear) * 100 : 100;
 
-            // Expected demand (simple forecast: current + growth difference)
-=======
-            // Growth rate (%)
-            $growth = $last > 0 ? (($current - $last) / $last) * 100 : 100;
-
-            // Expected demand (simple forecast)
->>>>>>> Stashed changes
-            $expected = $current + ($current - $last);
+            // Exponential smoothing forecast
+            $forecast = 0;
+            if (isset($historicalSales[$item->prod_code])) {
+                foreach ($historicalSales[$item->prod_code] as $monthData) {
+                    $forecast = $alpha * $monthData->monthly_sold + (1 - $alpha) * $forecast;
+                }
+            }
 
             return (object) [
                 'prod_code' => $item->prod_code,
                 'name' => $item->name,
                 'current_month_sold' => $current,
-                'last_year_sold' => $last,
+                'last_year_sold' => $lastYear,
                 'growth_rate' => round($growth, 2),
-                'expected_demand' => round($expected, 0),
+                'expected_demand' => round($forecast, 0),
             ];
         });
 
-        // Get categories for dropdown
+        // Get categories
         $categories = DB::table('categories')->get();
 
         return view('dashboards.owner.seasonal_trends', [
