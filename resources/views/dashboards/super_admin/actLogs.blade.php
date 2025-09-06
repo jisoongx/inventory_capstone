@@ -11,7 +11,7 @@
             id="search"
             placeholder="Search by location or activity"
             autocomplete="off"
-            class="w-full p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg  focus:ring-blue-600 focus:border-blue-600 shadow-sm transition-all duration-200 ease-in-out"
+            class="w-full p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg  focus:ring-gray-300 focus:border-gray-500 shadow-sm transition-all duration-200 ease-in-out"
             style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;">
     </div>
     <div class="relative w-full sm:w-[180px]">
@@ -19,7 +19,7 @@
             type="time"
             id="timeFilter"
             name="timeFilter"
-            class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-lg  focus:ring-blue-600 focus:border-blue-600 shadow-sm transition-all duration-200 ease-in-out" />
+            class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-lg  focus:ring-gray-300 focus:border-gray-500 shadow-sm transition-all duration-200 ease-in-out" />
 
     </div>
 
@@ -29,7 +29,7 @@
             type="date"
             id="dateFilter"
             name="dateFilter"
-            class="appearance-none w-full p-3 pl-4 pr-4 text-sm text-gray-600 border border-gray-300 rounded-lg focus:ring-blue-600 focus:border-blue-600 shadow-sm transition-all duration-200 ease-in-out" />
+            class="appearance-none w-full p-3 pl-4 pr-4 text-sm text-gray-600 border border-gray-300 rounded-lg focus:ring-gray-300 focus:border-gray-500 shadow-sm transition-all duration-200 ease-in-out" />
     </div>
 
 

@@ -7,7 +7,7 @@
         <div class="lg:w-1/3 flex flex-col gap-6">
             <!-- Latest Bill Card -->
             <div class="bg-white shadow-md rounded-lg p-6 border-t-4 border-red-500">
-                <h2 class="text-lg font-semibold text-red-700">Latest Billing</h2>
+                <h2 class="text-md font-semibold text-red-700">Latest Billing</h2>
 
                 @php
                 $latestOwner = $clients->first();
@@ -20,11 +20,11 @@
 
                 @if($latestOwner && $latestSubscription)
                 <div class="flex items-center gap-4 mt-5">
-                    <div class="w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                    <div class="w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-md">
                         {{ $ownerInitials }}
                     </div>
                     <div>
-                        <p class="font-semibold text-gray-900">
+                        <p class="font-semibold text-sm text-gray-900">
                             {{ $latestOwner->firstname }} {{ $latestOwner->middlename ?? '' }} {{ $latestOwner->lastname }}
                         </p>
                         <p class="text-gray-500 text-sm">
@@ -34,10 +34,10 @@
                 </div>
 
                 <div class="mt-4 space-y-2 text-sm">
-                    <p class="text-gray-700">Payment Date: <span class="font-medium">{{ $latestPayment?->payment_date ?? 'N/A' }}</span></p>
-                    <p class="text-gray-700">Payment Mode: <span class="font-medium">{{ ucfirst($latestPayment?->payment_mode ?? 'N/A') }}</span></p>
-                    <p class="text-gray-700">Amount: <span class="font-medium">₱{{ number_format($latestPayment?->payment_amount ?? 0, 2) }}</span></p>
-                    <p class="text-gray-700">Status:
+                    <p class="text-gray-700">Payment Date:&nbsp;<span class="font-medium">{{ $latestPayment?->payment_date ?? 'N/A' }}</span></p>
+                    <p class="text-gray-700">Payment Method:&nbsp; <span class="font-medium">{{ ucfirst($latestPayment?->payment_mode ?? 'N/A') }}</span></p>
+                    <p class="text-gray-700">Amount:&nbsp; <span class="font-medium">₱{{ number_format($latestPayment?->payment_amount ?? 0, 2) }}</span></p>
+                    <p class="text-gray-700">Status:&nbsp;
                         <span class="px-3 py-1 rounded-full text-xs font-semibold 
                                 {{ $latestSubscription->status == 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700' }}">
                             {{ ucfirst($latestSubscription->status) }}
@@ -51,7 +51,7 @@
 
             <!-- Subscription Revenue Card -->
             <div class="bg-white shadow-md rounded-lg p-6 border-t-4 border-orange-500">
-                <h2 class="text-lg font-semibold text-orange-700">Subscription Revenue</h2>
+                <h2 class="text-md font-semibold text-orange-700">Subscription Revenue</h2>
 
                 @php
                 $basicRevenue = 0;
@@ -107,11 +107,11 @@
             <div class="flex flex-col sm:flex-row gap-4">
                 <input type="text" id="search" placeholder="Search by owner name"
                     autocomplete="off"
-                    class="w-full  sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-red-500 focus:border-red-500 shadow-sm transition-all duration-200 ease-in-out"
+                    class="w-full  sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-gray-300 focus:border-gray-500 shadow-sm transition-all duration-200 ease-in-out"
                     style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'%236B7280\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;" />
-                
+
                 <input type="date" id="dateFilter" name="dateFilter"
-                    class="w-full  sm:w-[180px] p-3 text-sm border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-gray-400 focus:border-gray-400" />
+                    class="w-full  sm:w-[180px] p-3 text-sm border border-gray-300 rounded-lg shadow-sm  focus:ring-gray-300 focus:border-gray-500" />
             </div>
 
             <!-- Responsive Billing Table -->
