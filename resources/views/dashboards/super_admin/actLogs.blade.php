@@ -34,7 +34,7 @@
 
 
 </div>
-<div class="overflow-x-auto bg-white shadow-md rounded-lg mx-6">
+<div class="overflow-x-auto bg-white shadow-md rounded-md mx-6">
     <table class="min-w-full text-sm text-center text-gray-700">
         <thead class="bg-gray-100 text-sm text-center text-gray-700 uppercase tracking-wider">
             <tr>

@@ -4,7 +4,7 @@
 <div class="container mx-auto px-4 py-6 sm:px-6 lg:px-8"> {{-- Adjusted padding for better responsiveness --}}
     <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Welcome, {{ $owner->firstname }}!</h1> {{-- Smaller greeting --}}
     <p class="text-base text-gray-600 mb-6">{{ \Carbon\Carbon::now()->format('l, F d, Y') }}</p> {{-- Smaller date --}}
-    <div class="bg-white shadow-xl rounded-xl p-6 max-w-3xl mx-auto space-y-6 border border-gray-100">
+    <div class="bg-white shadow-md rounded-lg p-6 max-w-3xl mx-auto space-y-6 border border-gray-100">
 
         {{-- Success and error message display --}}
         @if (session('success'))

@@ -115,7 +115,7 @@
             </div>
 
             <!-- Responsive Billing Table -->
-            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <div class="bg-white shadow-md rounded-md overflow-hidden">
                 <!-- Desktop Table -->
                 <table class="min-w-full hidden md:table divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-100 text-gray-700 font-semibold uppercase tracking-wide">

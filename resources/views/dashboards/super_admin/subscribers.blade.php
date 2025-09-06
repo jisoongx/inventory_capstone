@@ -48,7 +48,7 @@
 
     <!-- Table -->
     @if($clients->count())
-    <div class="overflow-x-auto bg-white shadow-md rounded-lg border border-gray-200">
+    <div class="overflow-x-auto bg-white shadow-md rounded-md ">
         <table class="min-w-full table-auto border-collapse">
             <thead class="bg-gray-100 text-sm text-gray-700 tracking-wider uppercase">
                 <tr>
