@@ -45,7 +45,7 @@ class Subscription extends Model
 
     public function payments()
     {
-        return $this->hasOne(Payment::class, 'subscription_id', 'subscription_id');
+        return $this->hasMany(Payment::class, 'subscription_id', 'subscription_id');
         // if your PK in subscriptions is subscription_id, use that instead of 'id'
     }
 }

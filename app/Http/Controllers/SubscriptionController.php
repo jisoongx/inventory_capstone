@@ -220,16 +220,14 @@ class SubscriptionController extends Controller
                 'plan_id' => $plan->plan_id,
                 'subscription_start' => now(),
                 'subscription_end' => now()->addMonths($plan->plan_duration_months),
-                'status' => 'active', // This status is for the subscription itself
+                'status' => 'active',
             ]);
 
-            $owner->update([
-                'status' => 'Active'
-            ]);
-           
             $paymentAccNumber = $request->input('paymentAccNum');
+
             $paymentData = [
                 'owner_id' => $owner->owner_id,
+                'subscription_id' => $subscription->subscription_id, // ✅ Link payment to subscription
                 'payment_mode' => $request->paymentMethod,
                 'payment_acc_number' => $paymentAccNumber,
                 'payment_amount' => $plan->plan_price,
@@ -237,6 +235,11 @@ class SubscriptionController extends Controller
             ];
 
             $payment = Payment::create($paymentData);
+
+            $owner->update([
+                'status' => 'Active'
+            ]);
+
             return redirect()->route('subscription.progress');
         } catch (\Exception $e) {
             Log::error('Subscription or Payment creation failed: ' . $e->getMessage(), ['exception' => $e]);
