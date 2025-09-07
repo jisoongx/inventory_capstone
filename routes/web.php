@@ -19,6 +19,7 @@ use App\Http\Controllers\StoreController;
 
 
 
+
 Route::get('/', function () {
     return view('login');
 });
@@ -123,15 +124,11 @@ Route::post('/restock/finalize', [RestockController::class, 'finalize'])->name('
 Route::get('/restock/list', [RestockController::class, 'list'])->name('restock.list');
 Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name('seasonal_trends');
 
-
 // Store: Transaction
 // Main transactions routes
-Route::get('/store_starttransaction', [StoreController::class, 'index'])->name('store_starttransaction');
-Route::post('/start-transaction', [StoreController::class, 'startTransaction']);
-Route::post('/add-to-receipt', [StoreController::class, 'addToReceipt']);
-Route::get('/get-product', [StoreController::class, 'getProduct']);
-
-
-
-
-
+Route::get('/store_transactions', [StoreController::class, 'index'])->name('store_transactions');
+// New routes for the enhanced functionality
+Route::post('/search_product', [StoreController::class, 'searchProduct'])->name('search_product');
+Route::post('/start_transaction', [StoreController::class, 'startTransaction'])->name('start_transaction');
+Route::get('/store_start_transaction', [StoreController::class, 'showStartTransaction'])->name('store_start_transaction');
+Route::post('/process_payment', [StoreController::class, 'processPayment'])->name('process_payment');

@@ -57,8 +57,7 @@
                     </div>
                 </div>
 
-                <!-- Store Menu Path -->
-                <a href="{{ route('store_starttransaction') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Store">
+                <a href="{{ route('store_transactions') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Store">
                     <span class="material-symbols-rounded">local_mall</span>
                     <span class="nav-label">Store</span>
                 </a>
