@@ -40,10 +40,10 @@
 </div>
 
 <div class="overflow-x-auto bg-white shadow-md rounded-md mx-6">
-    <table class="min-w-full text-xs text-center text-gray-700">
-        <thead class="bg-gray-100 font-semibold">
+    <table class="min-w-full text-sm text-center text-gray-700">
+        <thead class="bg-gray-100 uppercase font-semibold">
             <tr>
-                <th class="px-6 py-3">Date</th>
+                <th class="px-6 py-3 text-left">Date</th>
                 <th class="px-4 py-3">Time</th>
                 <th class="px-4 py-3">Location</th>
                 <th class="px-4 py-3">Staff Name</th>
@@ -53,11 +53,24 @@
         <tbody id="logs-table-body" class="divide-y divide-gray-200">
             @forelse ($logs as $log)
             <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-4">
-                    {{ \Carbon\Carbon::parse($log->log_timestamp)->format('F j, Y') }}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4 text-left">
+                    {{ \Carbon\Carbon::parse($log->log_timestamp)->format('M j, Y') }}
                 </td>
-                <td class="px-4 py-4">
-                    {{ \Carbon\Carbon::parse($log->log_timestamp)->format('g:i A') }}
+                <td class="px-6 py-4">
+                    @php
+                    $time = \Carbon\Carbon::parse($log->log_timestamp);
+                    $period = $time->format('A'); // AM or PM
+                    @endphp
+
+                    <span class="rounded-full px-3 py-1 inline-block font-medium
+        @if($period === 'AM')
+            border border-amber-500 text-amber-500
+        @elseif($period === 'PM')
+            border border-blue-600 text-blue-700
+        @endif">
+                        {{ $time->format('g:i A') }}
+                    </span>
                 </td>
                 <td class="px-4 py-4 text-gray-600">
                     {{ $log->log_location ?? 'N/A' }}
@@ -128,18 +141,35 @@
                                 day: 'numeric'
                             }) : '-';
 
+                            const timeObj = new Date(logs.log_timestamp);
+                            const formattedTime = timeObj.toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+
+                            const hours = timeObj.getHours();
+                            const period = hours < 12 ? 'AM' : 'PM';
+
+                            const timeColor = period === 'AM' ?
+                                'border border-amber-500 text-amber-500' :
+                                'border border-blue-500 text-blue-600';
 
 
 
                             html += `
                            <tr class="hover:bg-gray-50 transition duration-150 ease-in-out" data-log-id="${logs.log_id}">
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">${formattedDate}</td>
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">${new Date(logs.log_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</td>
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">${logs.log_location ?? 'N/A'}</td>
-                                <td class="px-6 py-4 text-xs text-gray-900 text-center">
+                                <td class="px-6 py-4 text-sm text-gray-900 text-left">${formattedDate}</td>
+                                 <td class="px-6 py-4 text-sm text-gray-900 text-center">
+                                    <span class="rounded-full px-3 py-1 inline-block ${timeColor}">
+                                        ${formattedTime}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900 text-center">${logs.log_location ?? 'N/A'}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900 text-center">
                                     ${logs.staff ? logs.staff.firstname : 'N/A'} ${logs.staff ? logs.staff.lastname : 'N/A'}
                                 </td>
-                                <td class="px-6 py-4 text-xs text-gray-900 text-left">${logs.log_type}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900 text-left">${logs.log_type}</td>
                             </tr>
 
                         `;

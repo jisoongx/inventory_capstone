@@ -118,7 +118,7 @@ Route::get('/inventory/latest-batch/{prodCode}', [InventoryOwnerController::clas
 
 Route::get('/billing/search', [BillingController::class, 'search'])->name('billing.search');
 Route::get('/reports',  fn() => view('dashboards.owner.reports'))->name('reports');
-Route::get('/restock-suggestions', [RestockController::class, 'lowStock'])->name('restock_suggestion');
+Route::get('/restock-suggestions', [RestockController::class, 'restockSuggestion'])->name('restock_suggestion');
 Route::post('/restock/finalize', [RestockController::class, 'finalize'])->name('restock.finalize');
 Route::get('/restock/list', [RestockController::class, 'list'])->name('restock.list');
 Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name('seasonal_trends');

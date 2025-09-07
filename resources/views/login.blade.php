@@ -38,12 +38,12 @@
             <div class="relative w-full max-w-[280px]">
                 <i class="fas fa-user absolute left-5 top-1/2 -translate-y-1/2 text-black"></i>
                 <input type="email" name="email" placeholder="User" required
-                    class="w-full pl-12 pr-4 py-4 text-sm border border-black rounded-full shadow font-medium placeholder-gray-600" />
+                    class="w-full pl-12 pr-4 py-4 text-sm border border-black rounded-full shadow font-medium  focus:ring-gray-700  placeholder-gray-600" />
             </div>
             <div class="relative w-full max-w-[280px]">
                 <i class="fas fa-lock absolute left-5 top-1/2 -translate-y-1/2 text-black"></i>
                 <input type="password" id="password" name="password" placeholder="Password" required
-                    class="w-full pl-12 pr-10 py-4 text-sm border border-black rounded-full shadow font-medium placeholder-gray-600" />
+                    class="w-full pl-12 pr-10 py-4 text-sm border border-black rounded-full shadow font-medium  focus:ring-gray-700  placeholder-gray-600" />
                 <i id="togglePasswordIcon"
                     class="fas fa-eye-slash absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hidden"></i>
             </div>

@@ -5,7 +5,7 @@
     <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Welcome!</h1> {{-- Smaller greeting --}}
     <p class="text-base text-gray-600 mb-6">{{ \Carbon\Carbon::now()->format('l, F d, Y') }}</p> {{-- Smaller date --}}
 
-    <div class="bg-white shadow-xl rounded-xl p-6 max-w-3xl mx-auto space-y-6 border border-gray-100">
+    <div class="bg-white shadow-md rounded-lg p-6 max-w-3xl mx-auto space-y-6 border border-gray-100">
         {{-- Success and error message display --}}
         @if (session('success'))
         <div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
@@ -34,7 +34,7 @@
                     </div>
                     <div class="flex flex-col space-y-2 ml-4"> {{-- New flex container for stacking buttons --}}
 
-                        <button type="button" id="togglePasswordSection" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105">
+                        <button type="button" id="togglePasswordSection" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105">
                             Change Password
                         </button>
 
@@ -55,7 +55,7 @@
                         <label for="current_password" class="block text-sm font-medium text-gray-700 mb-0.5">Current Password</label>
                         <div class="relative">
                             <input type="password" name="current_password" id="current_password"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 pr-10 password-input-field text-base">
                             <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="current_password">
                                 <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
                             </button>
@@ -67,7 +67,7 @@
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-0.5">New Password</label>
                         <div class="relative">
                             <input type="password" name="password" id="password"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 pr-10 password-input-field text-base">
                             <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="password">
                                 <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
                             </button>
@@ -79,7 +79,7 @@
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-0.5">Confirm New Password</label>
                         <div class="relative">
                             <input type="password" name="password_confirmation" id="password_confirmation"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 pr-10 password-input-field text-base">
                             <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="password_confirmation">
                                 <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
                             </button>
@@ -89,7 +89,7 @@
                 </div>
 
                 <div class="text-right pt-3">
-                    <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105">
+                    <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105">
                         Save Changes
                     </button>
                 </div>

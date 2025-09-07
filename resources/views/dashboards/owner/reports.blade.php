@@ -6,7 +6,7 @@
     <div class="flex flex-col md:flex-row gap-4 md:gap-3">
 
         <!-- Restock Card -->
-        <div class="relative bg-white rounded-md p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
+        <div class="relative bg-white rounded-lg p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
 
             <!-- Top Green Bar -->
             <div class="absolute top-0 left-0 w-full h-1 bg-gray-700 rounded-t-2xl"></div>
@@ -33,7 +33,7 @@
         </div>
 
         <!-- Seasonal Trends Card -->
-        <div class="relative bg-white rounded-md p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
+        <div class="relative bg-white rounded-lg p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
 
             <!-- Top Blue Bar -->
             <div class="absolute top-0 left-0 w-full h-1 bg-gray-700 rounded-t-2xl"></div>

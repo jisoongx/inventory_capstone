@@ -107,25 +107,25 @@
             <div class="flex flex-col sm:flex-row gap-4">
                 <input type="text" id="search" placeholder="Search by owner name"
                     autocomplete="off"
-                    class="w-full  sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-gray-300 focus:border-gray-500 shadow-sm transition-all duration-200 ease-in-out"
+                    class="w-full  sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-gray-300 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out"
                     style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'%236B7280\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;" />
 
                 <input type="date" id="dateFilter" name="dateFilter"
-                    class="w-full  sm:w-[180px] p-3 text-sm border border-gray-300 rounded-lg shadow-sm  focus:ring-gray-300 focus:border-gray-500" />
+                    class="w-full  sm:w-[180px] p-3 text-sm border border-gray-300 rounded-lg shadow-md  focus:ring-gray-300 focus:border-gray-500" />
             </div>
 
             <!-- Responsive Billing Table -->
             <div class="bg-white shadow-md rounded-md overflow-hidden">
                 <!-- Desktop Table -->
                 <table class="min-w-full hidden md:table divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-100 text-gray-700 font-semibold uppercase tracking-wide">
+                    <thead class="bg-gray-100 text-gray-700  uppercase tracking-wide">
                         <tr>
-                            <th class="px-6 py-3 text-left">Owner Name</th>
-                            <th class="px-6 py-3 text-center">Date</th>
-                            <th class="px-6 py-3 text-center">Method</th>
-                            <th class="px-6 py-3 text-center">Amount</th>
-                            <th class="px-6 py-3 text-center">Plan</th>
-                            <th class="px-6 py-3 text-center">Status</th>
+                            <th class="px-6 py-3 text-left font-semibold">Owner Name</th>
+                            <th class="px-6 py-3 text-center font-semibold">Date</th>
+                            <th class="px-6 py-3 text-center font-semibold">Method</th>
+                            <th class="px-6 py-3 text-center font-semibold">Amount</th>
+                            <th class="px-6 py-3 text-center font-semibold">Plan</th>
+                            <th class="px-6 py-3 text-center font-semibold">Status</th>
                         </tr>
                     </thead>
                     <tbody id="billingTableBody" class="divide-y divide-gray-100">

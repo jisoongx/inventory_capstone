@@ -4,7 +4,7 @@
 <div class="p-6 flex flex-col lg:flex-row gap-6">
 
     <!-- 📄 Current Restock (Main Content) -->
-    <div class="flex-1 bg-white shadow rounded-xl p-6">
+    <div class="flex-1 bg-white border-t-4 border-gray-700 shadow rounded-md p-6">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h1 class="text-lg font-semibold text-gray-800">Restock Details</h1>
@@ -47,7 +47,7 @@
                         <tr>
                             <th class="px-4 py-2 text-left font-medium">Product</th>
                             <th class="px-4 py-2 text-center font-medium">Quantity</th>
-                           
+
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -55,7 +55,7 @@
                         <tr class="hover:bg-gray-50 transition">
                             <td class="px-4 py-2 text-gray-800">{{ $item->name }}</td>
                             <td class="px-4 py-2 text-center">{{ $item->item_quantity }}</td>
-                            
+
                         </tr>
                         @endforeach
                     </tbody>
@@ -70,7 +70,7 @@
     </div>
 
     <!-- 📜 Restock History (Sidebar) -->
-    <div class="w-full lg:w-80 bg-white shadow rounded-xl p-6">
+    <div class="w-full lg:w-80 bg-white border-t-4 border-gray-700 shadow rounded-md p-6">
         <h2 class="text-md font-semibold text-gray-800 mb-3">History</h2>
         <p class="text-xs text-gray-500 mb-4">Click a record to view details</p>
 
@@ -102,7 +102,7 @@
                                 <tr>
                                     <th class="px-4 py-2 text-left font-medium">Product</th>
                                     <th class="px-4 py-2 text-center font-medium">Quantity</th>
-                                   
+
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
@@ -110,7 +110,7 @@
                                 <tr class="hover:bg-gray-50 transition">
                                     <td class="px-4 py-2 text-gray-800">{{ $item->name }}</td>
                                     <td class="px-4 py-2 text-center">{{ $item->item_quantity }}</td>
-                                   
+
                                 </tr>
                                 @endforeach
                             </tbody>

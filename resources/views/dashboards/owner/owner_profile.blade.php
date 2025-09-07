@@ -35,13 +35,13 @@
                         <a href="{{ route('owner.show.staff') }}" class="text-green-600 hover:text-green-800 underline text-sm mt-1 inline-block">View Staff List</a>
                     </div>
                     <div class="flex flex-col space-y-2 ml-4"> {{-- New flex container for stacking buttons --}}
-                        <button type="button" id="editProfileButton" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105">
+                        <button type="button" id="editProfileButton" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105">
                             Edit Profile
                         </button>
-                        <button type="button" id="togglePasswordSection" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105">
+                        <button type="button" id="togglePasswordSection" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105">
                             Change Password
                         </button>
-                        <button type="button" id="toggleStaffCreationSection" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                        <button type="button" id="toggleStaffCreationSection" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105">
                             Create Staff Account
                         </button>
                     </div>
@@ -77,7 +77,7 @@
                     {{-- Removed Status and Email Verified At fields --}}
                 </div>
                 <div class="text-right pt-4">
-                    <button type="submit" id="saveProfileDetailsButton" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105 hidden">
+                    <button type="submit" id="saveProfileDetailsButton" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105 hidden">
                         Save Profile Details
                     </button>
                 </div>
@@ -95,7 +95,7 @@
                         <label for="current_password" class="block text-sm font-medium text-gray-700 mb-0.5">Current Password</label>
                         <div class="relative">
                             <input type="password" name="current_password" id="current_password"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-gray-200 p-2 pr-10 password-input-field text-base">
                             <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="current_password">
                                 <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
                             </button>
@@ -107,7 +107,7 @@
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-0.5">New Password</label>
                         <div class="relative">
                             <input type="password" name="password" id="password"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
+                                class="block w-full rounded-md border-gray-300 shadow-sm  focus:ring-gray-200 p-2 pr-10 password-input-field text-base">
                             <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="password">
                                 <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
                             </button>
@@ -119,7 +119,7 @@
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-0.5">Confirm New Password</label>
                         <div class="relative">
                             <input type="password" name="password_confirmation" id="password_confirmation"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-gray-200 p-2 pr-10 password-input-field text-base">
                             <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="password_confirmation">
                                 <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
                             </button>
@@ -129,7 +129,7 @@
                 </div>
 
                 <div class="text-right pt-3">
-                    <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105">
+                    <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105">
                         Save Changes
                     </button>
                 </div>
@@ -145,38 +145,38 @@
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="staff_firstname" class="block text-sm font-medium text-gray-700 mb-0.5">First Name</label>
                         <input type="text" name="firstname" id="staff_firstname" value="{{ old('firstname') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base">
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 text-base">
                         @error('firstname') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="staff_middlename" class="block text-sm font-medium text-gray-700 mb-0.5">Middle Name</label>
                         <input type="text" name="middlename" id="staff_middlename" value="{{ old('middlename') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base">
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 text-base">
                         @error('middlename') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="staff_lastname" class="block text-sm font-medium text-gray-700 mb-0.5">Last Name</label>
                         <input type="text" name="lastname" id="staff_lastname" value="{{ old('lastname') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base">
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 text-base">
                         @error('lastname') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="staff_email" class="block text-sm font-medium text-gray-700 mb-0.5">Email Address</label>
                         <input type="email" name="email" id="staff_email" value="{{ old('email') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base">
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 text-base">
                         @error('email') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="staff_contact" class="block text-sm font-medium text-gray-700 mb-0.5">Contact Number</label>
                         <input type="text" name="contact" id="staff_contact" value="{{ old('contact') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base">
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 text-base">
                         @error('contact') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="staff_password" class="block text-sm font-medium text-gray-700 mb-0.5">Password</label>
                         <div class="relative">
                             <input type="password" name="password" id="staff_password"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-300 p-2 pr-10 password-input-field text-base">
                             <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="staff_password">
                                 <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
                             </button>
@@ -197,7 +197,7 @@
                 </div>
 
                 <div class="text-right pt-3">
-                    <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                    <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 focus:ring-gray-300 transition-all duration-200 transform hover:scale-105">
                         Create Staff
                     </button>
                 </div>
