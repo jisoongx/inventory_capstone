@@ -112,6 +112,8 @@ Route::get('/inventory-owner/suggest', [InventoryOwnerController::class, 'sugges
 Route::post('/check-barcode', [InventoryOwnerController::class, 'checkBarcode']);
 Route::post('/register-product', [InventoryOwnerController::class, 'registerProduct']);
 Route::post('/inventory/restock', [InventoryOwnerController::class, 'restock'])->name('inventory.restock');
+Route::get('/inventory/latest-batch/{prodCode}', [InventoryOwnerController::class, 'getLatestBatch']);
+
 
 
 Route::get('/billing/search', [BillingController::class, 'search'])->name('billing.search');

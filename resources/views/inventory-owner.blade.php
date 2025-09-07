@@ -18,7 +18,7 @@
                             type="button" 
                             class="flex items-center border border-[#FF8A00] text-[#FF8A00] bg-transparent px-4 py-2 mb-4 rounded hover:bg-orange-50 transition"
                         >
-                            <i class="fas fa-filter mr-2"></i> Filter
+                            <span class="material-symbols-outlined mr-2 text-[#FF8A00]">filter_alt</span> Filter
                         </button>
 
                         <div id="categoryDropdown" 
@@ -67,7 +67,7 @@
                             type="submit" 
                             class="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#FF8A00] hover:text-orange-600"
                         >
-                            <i class="fas fa-search"></i>
+                            <span class="material-symbols-outlined text-[#FF8A00]">search</span>
                         </button>
                     </form>
                 </div>
@@ -96,7 +96,7 @@
                         </tr>
                     </thead>
                     <tbody class="text-sm text-gray-800">
-                        @foreach ($products as $product)
+                        @forelse ($products as $product)
                             <tr class="hover:bg-blue-50">
                                 <!-- Product Image -->
                                 <td class="px-4 py-2 border text-center">
@@ -116,48 +116,54 @@
                                 <td class="px-4 py-2 border">{{ $product->name }}</td>
 
                                 <!-- Cost Price -->
-                                <td class="px-4 py-2 border text-right">₱{{ number_format($product->cost_price, 2) }}</td>
+                                <td class="px-4 py-2 border text-right">
+                                    ₱{{ number_format($product->cost_price, 2) }}
+                                </td>
 
                                 <!-- Selling Price -->
-                                <td class="px-4 py-2 border text-right">₱{{ number_format($product->selling_price, 2) }}</td>
+                                <td class="px-4 py-2 border text-right">
+                                    ₱{{ number_format($product->selling_price, 2) }}
+                                </td>
 
                                 <!-- Unit -->
                                 <td class="px-4 py-2 border text-center">{{ $product->unit ?? '—' }}</td>
 
-                                <!-- Stock (from inventory) -->
+                                <!-- Stock -->
                                 <td class="px-4 py-2 border text-center">{{ $product->stock }}</td>
 
-                                <!-- Action Icons -->
+                                <!-- Actions -->
                                 <td class="px-4 py-2 border text-center space-x-2">
-                                    <!-- Information Icon -->
+                                    <!-- Info -->
                                     <a href="#" title="Info" class="text-blue-500 hover:text-blue-700">
-                                        <i class="fas fa-info-circle"></i>
+                                        <span class="material-symbols-outlined">info</span>
                                     </a>
-                                    <!-- Edit Icon -->
+                                    <!-- Edit -->
                                     <a href="#" title="Edit" class="text-green-500 hover:text-green-700">
-                                        <i class="fas fa-edit"></i>
+                                        <span class="material-symbols-outlined">edit</span>
                                     </a>
-                                    <!-- Delete Icon -->
+                                    <!-- Delete -->
                                     <form action="#" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" title="Delete" class="text-red-500 hover:text-red-700" onclick="return confirm('Are you sure you want to delete this product?')">
-                                            <i class="fas fa-trash-alt"></i>
+                                        <button type="submit" title="Delete"
+                                            class="text-red-500 hover:text-red-700"
+                                            onclick="return confirm('Are you sure you want to delete this product?')">
+                                            <span class="material-symbols-outlined">delete</span>
                                         </button>
                                     </form>
                                 </td>
                             </tr>
-                        @endforeach
-
-                        @if (count($products) === 0)
+                        @empty
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-gray-500">No products available.</td>
+                                <td colspan="8" class="text-center py-4 text-gray-500">
+                                    No products available.
+                                </td>
                             </tr>
-                        @endif
+                        @endforelse
                     </tbody>
-
                 </table>
             </div>
+
 
         </div>
 
@@ -167,7 +173,7 @@
         <div class="bg-white rounded-lg p-8 w-[90%] max-w-md min-h-[550px] shadow-lg relative">
             <!-- Close Button -->
             <button id="closeAddProductModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
-                <i class="fas fa-times"></i>
+                <span class="material-symbols-outlined text-gray-500">close</span>
             </button>
 
             <h2 class="text-xl font-semibold mb-6 text-center text-[#B50612]">Choose Action</h2>
@@ -202,7 +208,7 @@
             <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
                 <h2 class="text-white text-lg font-medium">Enter Product Barcode</h2>
                 <button onclick="closeTypeModal()" class="text-white hover:text-gray-200">
-                    <i class="fas fa-times text-xl"></i>
+                    <span class="material-symbols-outlined text-white">close</span>
                 </button>
             </div>
 
@@ -242,7 +248,7 @@
             <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
                 <h2 class="text-white text-lg font-medium">Barcode Already Exists</h2>
                 <button onclick="closeAllModals()" class="text-white hover:text-gray-200">
-                    <i class="fas fa-times text-xl"></i>
+                    <span class="material-symbols-outlined text-white">close</span>
                 </button>
             </div>
 
@@ -257,22 +263,15 @@
                 </p>
 
                 <div class="flex justify-center gap-6">
+                    <!-- Restock Button (no $product here, JS will handle it) -->
                     <button 
-                        onclick="openRestockModal(
-                            '{{ $product->prod_code }}',
-                            '{{ addslashes($product->name) }}',
-                            '{{ $product->prod_image }}',
-                            '{{ $product->category_id }}',
-                            '{{ $product->barcode }}'
-                        )" 
+                        id="barcodeExistsRestockBtn"
                         class="w-32 bg-[#F18301] text-white text-sm py-3 rounded-3xl hover:bg-[#cc6900] transition-all duration-200 transform hover:scale-105"
                     >
                         Restock
                     </button>
 
-                        Add Stock
-                    </button>
-
+                    <!-- Enter New Barcode -->
                     <button 
                         onclick="reopenTypeModal()" 
                         class="w-48 bg-black text-white text-sm py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
@@ -286,6 +285,7 @@
 
 
 
+
     <!-- Modal for barcode not exists -->
     <div id="barcodeNotFoundModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
         <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
@@ -294,7 +294,7 @@
             <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
                 <h2 class="text-white text-lg font-medium">Barcode Not Found</h2>
                 <button onclick="closeAllModals()" class="text-white hover:text-gray-200">
-                    <i class="fas fa-times text-xl"></i>
+                    <span class="material-symbols-outlined text-white">close</span>
                 </button>
             </div>
 
@@ -336,12 +336,12 @@
             <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
                 <h2 class="text-white text-lg font-medium">REGISTER NEW PRODUCT</h2>
                 <button onclick="closeRegisterModal()" class="text-white hover:text-gray-200">
-                    <i class="fas fa-times text-xl"></i>
+                    <span class="material-symbols-outlined text-white">close</span>
                 </button>
             </div>
 
             <!-- Scrollable Modal Content Center -->
-            <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 overflow-y-auto space-x-6">
+            <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
 
                 <!-- Left Side (Form Fields) -->
                 <form id="registerProductForm" class="w-1/2 space-y-3">
@@ -359,7 +359,7 @@
                         <select name="category_id"
                             class="w-1/2 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm"
                             style="position: relative; z-index: 50;" required>
-                            <option value="">Select Category</option>
+                            <option value="">Category</option>
                             @foreach($categories as $cat)
                                 <option value="{{ $cat->category_id }}">{{ $cat->category }}</option>
                             @endforeach
@@ -368,14 +368,15 @@
                         <select name="unit_id"
                             class="w-1/2 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm"
                             style="position: relative; z-index: 50;" required>
-                            <option value="">Select Unit</option>
+                            <option value="">Unit</option>
                             @foreach($units as $unit)
                                 <option value="{{ $unit->unit_id }}">{{ $unit->unit }}</option>
                             @endforeach
                         </select>
                     </div>
 
-                    <!-- Quantity to Add -->
+                    <!-- Quantity -->
+                    <label for="quantityInput" class="block text-sm text-center font-semibold text-gray-800">Quantity</label>
                     <div class="flex items-center border border-gray-300 rounded px-2 py-1">
                         <button type="button" onclick="decreaseQuantity()" class="px-2 text-base font-bold">−</button>
                         <input type="number" name="quantity" id="quantityInput" value="1" min="1"
@@ -384,16 +385,15 @@
                     </div>
 
                     <!-- Stock Limit -->
-                    <input type="number" name="stock_limit" placeholder="Stock Limit"
+                    <input type="number" name="stock_limit" placeholder="Stock Limit" min="0" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
                         class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
 
-
                     <!-- Pricing -->
-                    <div class="border rounded-lg p-3">
-                        <h3 class="font-semibold text-sm mb-2">Pricing</h3>
+                    <div class="border rounded-lg p-3 bg-gray-100">
+                        <h3 class="font-semibold text-sm text-center mb-2">Pricing</h3>
 
                         <!-- Cost Price -->
-                        <input type="number" step="0.01" name="cost_price" id="costPrice" placeholder="Cost Price"
+                        <input type="number" step="0.01" min="0" name="cost_price" id="costPrice" placeholder="Cost Price" 
                             class="w-full px-3 py-2 mb-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm" required>
 
                         <!-- Markup Type -->
@@ -402,108 +402,134 @@
                                 <option value="percentage">Percentage</option>
                                 <option value="fixed">Fixed</option>
                             </select>
-                            <input type="number" id="markupValue" placeholder="Markup Value"
+                            <input type="number" id="markupValue" placeholder="Markup Value" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
                                 class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
                         </div>
 
                         <!-- Selling Price (auto-calculated) -->
                         <input type="number" step="0.01" name="selling_price" id="sellingPrice" placeholder="Selling Price"
-                            class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-sm" readonly>
+                            class="w-full px-3 py-2 border border-gray-300 rounded text-sm" readonly>
                     </div>
                 </form>
 
-                <!-- Right Side (Photo Upload & Barcode Display) -->
-                <div class="flex flex-col items-center w-1/2 space-y-3">
-                    <!-- Upload Photo -->
-                    <label for="productPhoto" 
-                        class="w-32 h-32 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg cursor-pointer hover:bg-gray-50 relative overflow-hidden">
-                        <i class="fas fa-plus text-red-600 text-2xl" id="uploadIcon"></i>
-                        <img id="previewImage" class="absolute inset-0 w-full h-full object-cover hidden rounded-lg" />
-                        <input type="file" id="productPhoto" name="photo" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
-                    </label>
-                    <span class="text-xs text-gray-500" id="fileName">Upload Photo</span>
+               <!-- Right Side (Photo Upload & Barcode Display) -->
+                <div class="flex flex-col items-center w-1/2 space-y-16">
 
-                    <!-- Auto-filled Barcode -->
-                    <div id="autoFilledBarcode" class="text-base font-semibold text-gray-800"></div>
-                    <span class="text-xs text-gray-500">(auto-filled from typed barcode)</span>
+                    <!-- Upload Photo Group -->
+                    <div class="flex flex-col items-center space-y-2.5">
+                        <label for="productPhoto" 
+                            class="w-32 h-32 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg cursor-pointer hover:bg-gray-50 relative overflow-hidden">
+                            <span class="material-symbols-outlined text-red-500 text-xl" id="uploadIcon">add_a_photo</span>
+                            <img id="previewImage" class="absolute inset-0 w-full h-full object-cover hidden rounded-lg" />
+                            <input type="file" id="productPhoto" name="photo" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
+                        </label>
+                        <span class="text-xs text-red-500" id="fileName">Upload Photo</span>
+                    </div>
 
-                    <!-- Submit Button -->
+                    <!-- Barcode Group -->
+                    <div class="flex flex-col items-center space-y-1">
+                        <!-- Barcode Image -->
+                        <img id="barcodeImage" src="{{ asset('assets/barcode.png') }}" 
+                            alt="Barcode Preview" class="w-48 object-contain">
+
+                        <!-- Barcode Number Styled -->
+                        <div id="autoFilledBarcode" 
+                            class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest">
+                        </div>
+                        <span class="text-xs text-gray-500">(auto-filled from typed barcode)</span>
+                    </div>
+
+                    <!-- Submit Button with bigger margin -->
                     <button type="submit" form="registerProductForm"
-                        class="w-32 bg-green-500 text-white py-2 rounded-3xl hover:bg-green-600 transition-all duration-200 transform hover:scale-105 text-sm">
+                        class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
                         Submit
                     </button>
                 </div>
+
             </div>
         </div>
     </div>
 
 
+
     <!-- Restock Product Modal -->
-    <div id="restockModal" 
+    <div id="restockProductModal" 
         class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
 
         <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
 
-            <!-- Orange Top Bar -->
-            <div class="bg-[#F18301] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
+            <!-- Red Top Bar -->
+            <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
                 <h2 class="text-white text-lg font-medium">RESTOCK PRODUCT</h2>
                 <button onclick="closeRestockModal()" class="text-white hover:text-gray-200">
-                    <i class="fas fa-times text-xl"></i>
+                    <span class="material-symbols-outlined text-white">close</span>
                 </button>
             </div>
 
-            <!-- Scrollable Modal Content Center -->
-            <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 overflow-y-auto space-x-6">
+            <!-- Scrollable Modal Content -->
+            <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
 
                 <!-- Left Side (Form Fields) -->
                 <form id="restockForm" class="w-1/2 space-y-3">
-                    @csrf
+
+                    <!-- Hidden Inputs for Product Info -->
                     <input type="hidden" name="prod_code" id="restockProdCode">
                     <input type="hidden" name="category_id" id="restockCategoryId">
 
-                    <!-- Quantity to Add -->
+                    <!-- Batch Number -->
+                    <label for="batch_number" class="block text-sm font-semibold text-gray-800">Batch Number</label>
+                    <input type="text" name="batch_number" id="batch_number"
+                        value="BATCH-001" readonly
+                        class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-sm font-mono tracking-widest">
+
+                    <!-- Quantity -->
+                    <label for="restockQuantityInput" class="block text-sm font-semibold text-gray-800">Quantity</label>
                     <div class="flex items-center border border-gray-300 rounded px-2 py-1">
                         <button type="button" onclick="decreaseRestockQuantity()" class="px-2 text-base font-bold">−</button>
-                        <input type="number" name="stock" id="restockQuantityInput" value="1" min="1"
+                        <input type="number" name="quantity" id="restockQuantityInput" value="1" min="1"
                             class="w-full text-center outline-none border-0 text-sm">
                         <button type="button" onclick="increaseRestockQuantity()" class="px-2 text-base font-bold">+</button>
                     </div>
 
                     <!-- Date Added -->
-                    <input type="date" name="date_added"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-orange-500 placeholder:text-sm text-sm" required>
+                    <label for="date_added" class="block text-sm font-semibold text-gray-800">Date Added</label>
+                    <input type="date" name="date_added" id="date_added"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm" required>
 
                     <!-- Expiration Date -->
-                    <input type="date" name="expiration_date"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-orange-500 placeholder:text-sm text-sm">
-
-                    <!-- Batch Number -->
-                    <input type="text" name="batch_number" placeholder="Batch Number"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-orange-500 placeholder:text-sm text-sm">
-
-                    <!-- Submit Button -->
-                    <button type="submit"
-                        class="w-32 bg-[#F18301] text-white py-2 rounded-3xl hover:bg-[#d96f00] transition-all duration-200 transform hover:scale-105 text-sm">
-                        Add Stock
-                    </button>
+                    <label for="expiration_date" class="block text-sm font-semibold text-gray-800">Expiration Date</label>
+                    <input type="date" name="expiration_date" id="expiration_date"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm">
                 </form>
 
-                <!-- Right Side (Product Preview & Barcode) -->
-                <div class="flex flex-col items-center w-1/2 space-y-3">
-                    <!-- Product Image -->
-                    <img id="restockProdImage" src="" alt="Product Image"
-                        class="w-32 h-32 object-cover rounded-lg border">
+                <!-- Right Side (Preview & Submit) -->
+                <div class="flex flex-col items-center w-1/2 space-y-16">
 
-                    <!-- Product Name -->
-                    <h3 id="restockProdName" class="text-lg font-semibold text-gray-800"></h3>
+                    <!-- Product Image Preview -->
+                    <div class="flex flex-col items-center space-y-2.5">
+                        <img id="restockProdImage" class="w-32 h-32 object-cover rounded-lg" />
+                        <span class="text-xs text-gray-500">Product Preview</span>
+                    </div>
 
-                    <!-- Auto-filled Barcode -->
-                    <div id="restockBarcode" class="text-base font-semibold text-gray-800"></div>
-                    <span class="text-xs text-gray-500">(auto-filled from selected product)</span>
+                    <!-- Barcode Display -->
+                    <div class="flex flex-col items-center space-y-1">
+                        <img id="restockBarcodeImage" src="{{ asset('assets/barcode.png') }}" 
+                            alt="Barcode Preview" class="w-48 object-contain">
+                        <div id="restockBarcode" class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest"></div>
+                        <span class="text-xs text-gray-500">(auto-filled from typed barcode)</span>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" form="restockForm"
+                        class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                        Restock
+                    </button>
                 </div>
+
             </div>
         </div>
     </div>
+
 
 
 
@@ -676,14 +702,24 @@
                 closeAllModals();
 
                 if (data.exists === true && data.product) {
-                    // ✅ Instead of just opening the "exists" modal, go directly to restock modal
-                    openRestockModal(
-                        data.product.prod_code,
-                        data.product.name,
-                        data.product.prod_image,
-                        data.product.category_id,
-                        data.product.barcode
-                    );
+                    // ✅ Show the "Barcode Exists" modal
+                    const existsModal = document.getElementById('barcodeExistsModal');
+                    if (existsModal) existsModal.classList.remove('hidden');
+
+                    // ✅ Attach the product info dynamically to the Restock button
+                    const restockBtn = document.getElementById('barcodeExistsRestockBtn');
+                    if (restockBtn) {
+                        restockBtn.onclick = function () {
+                            closeAllModals();
+                            openRestockModal(
+                                data.product.prod_code,
+                                data.product.name,
+                                data.product.prod_image,
+                                data.product.category_id,
+                                data.product.barcode
+                            );
+                        };
+                    }
                 } else if (data.exists === false) {
                     const notFoundModal = document.getElementById('barcodeNotFoundModal');
                     if (notFoundModal) notFoundModal.classList.remove('hidden');
@@ -853,61 +889,59 @@
         });
     </script>
 
-    <!-- Add Stock Modal JavaScript -->
+    <!-- JavaScript for Restock Modal
     <script>
-        function openRestockModal(prodCode, prodName, prodImage, categoryId, barcode) {
+        function openRestockModal(prodCode, prodName, prodImage, categoryId, barcode, lastBatchNumber) {
             // Fill hidden inputs
             document.getElementById('restockProdCode').value = prodCode;
             document.getElementById('restockCategoryId').value = categoryId;
 
-            // Display product details
-            document.getElementById('restockProdName').textContent = prodName || '';
-            document.getElementById('restockProdImage').src = prodImage 
-                ? `/storage/${prodImage}` 
-                : '/assets/no-image.png';
+            // Product Image Preview
+            document.getElementById('restockProdImage').src = prodImage ? prodImage : '/assets/no-image.png';
 
-            // Auto-fill barcode display
-            const barcodeElement = document.getElementById('restockBarcode');
-            if (barcodeElement) {
-                barcodeElement.textContent = barcode || prodCode || '';
+            // Barcode image (static or dynamic if needed)
+            document.getElementById('restockBarcodeImage').src = '/assets/barcode.png';
+
+            // Auto-filled barcode number
+            document.getElementById('restockBarcode').textContent = barcode || prodCode || '';
+
+            // Compute next batch number if provided
+            let nextBatch = 'BATCH-001';
+            if (lastBatchNumber && /^BATCH-(\d+)$/.test(lastBatchNumber)) {
+                const num = parseInt(lastBatchNumber.split('-')[1]) + 1;
+                nextBatch = 'BATCH-' + num.toString().padStart(3, '0');
             }
+            document.getElementById('batch_number').value = nextBatch;
 
-            // Reset quantity to 1 when opening modal
+            // Reset quantity
             document.getElementById('restockQuantityInput').value = 1;
 
             // Show modal
-            document.getElementById('restockModal').classList.remove('hidden');
+            document.getElementById('restockProductModal').classList.remove('hidden');
         }
 
-        // Close modal
         function closeRestockModal() {
-            document.getElementById('restockModal').classList.add('hidden');
+            document.getElementById('restockProductModal').classList.add('hidden');
         }
 
-        // Quantity increment/decrement
         function increaseRestockQuantity() {
             const input = document.getElementById('restockQuantityInput');
             if (input) input.value = parseInt(input.value || 0) + 1;
         }
         function decreaseRestockQuantity() {
             const input = document.getElementById('restockQuantityInput');
-            if (input && parseInt(input.value) > 1) {
-                input.value = parseInt(input.value) - 1;
-            }
+            if (input && parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
         }
 
         // Handle form submission
         document.getElementById('restockForm').addEventListener('submit', function(e) {
             e.preventDefault();
-
             const formData = new FormData(this);
 
             fetch('/owner/restock', {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('input[name=_token]').value
-                }
+                headers: { 'X-CSRF-TOKEN': document.querySelector('input[name=_token]').value }
             })
             .then(res => res.json())
             .then(data => {
@@ -921,10 +955,78 @@
             })
             .catch(err => console.error(err));
         });
-        </script>
+    </script> -->
 
+<script>
+    function openRestockModal(prodCode, prodName, prodImage, categoryId, barcode) {
+        // Fill hidden inputs
+        document.getElementById('restockProdCode').value = prodCode;
+        document.getElementById('restockCategoryId').value = categoryId;
 
+        // Product Image Preview
+        document.getElementById('restockProdImage').src = prodImage ? prodImage : '/assets/no-image.png';
 
+        // Barcode image (static or dynamic if needed)
+        document.getElementById('restockBarcodeImage').src = '/assets/barcode.png';
+
+        // Auto-filled barcode number
+        document.getElementById('restockBarcode').textContent = barcode || prodCode || '';
+
+        // Reset quantity
+        document.getElementById('restockQuantityInput').value = 1;
+
+        // Fetch latest batch number from server
+        fetch(`/inventory/latest-batch/${prodCode}`)
+            .then(res => res.json())
+            .then(data => {
+                const nextBatch = data.next_batch_number || 'BATCH-001';
+                document.getElementById('batch_number').value = nextBatch;
+            })
+            .catch(err => {
+                console.error('Error fetching latest batch:', err);
+                document.getElementById('batch_number').value = 'BATCH-001';
+            });
+
+        // Show modal
+        document.getElementById('restockProductModal').classList.remove('hidden');
+    }
+
+    function closeRestockModal() {
+        document.getElementById('restockProductModal').classList.add('hidden');
+    }
+
+    function increaseRestockQuantity() {
+        const input = document.getElementById('restockQuantityInput');
+        if (input) input.value = parseInt(input.value || 0) + 1;
+    }
+    function decreaseRestockQuantity() {
+        const input = document.getElementById('restockQuantityInput');
+        if (input && parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
+    }
+
+    // Handle form submission
+    document.getElementById('restockForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        fetch('/owner/restock', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRF-TOKEN': document.querySelector('input[name=_token]').value }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Stock added successfully!');
+                closeRestockModal();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Something went wrong.'));
+            }
+        })
+        .catch(err => console.error(err));
+    });
+</script>
 
 
 
