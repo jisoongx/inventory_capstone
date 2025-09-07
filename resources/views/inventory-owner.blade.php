@@ -453,82 +453,86 @@
 
 
     <!-- Restock Product Modal -->
-    <div id="restockProductModal" 
-        class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+<div id="restockProductModal" 
+    class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
 
-        <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
+    <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
 
-            <!-- Red Top Bar -->
-            <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-                <h2 class="text-white text-lg font-medium">RESTOCK PRODUCT</h2>
-                <button onclick="closeRestockModal()" class="text-white hover:text-gray-200">
-                    <span class="material-symbols-outlined text-white">close</span>
-                </button>
-            </div>
+        <!-- Red Top Bar -->
+        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
+            <h2 class="text-white text-lg font-medium">RESTOCK PRODUCT</h2>
+            <button onclick="closeRestockModal()" class="text-white hover:text-gray-200">
+                <span class="material-symbols-outlined text-white">close</span>
+            </button>
+        </div>
 
-            <!-- Scrollable Modal Content -->
-            <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
+        <!-- Scrollable Modal Content -->
+        <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
 
-                <!-- Left Side (Form Fields) -->
-                <form id="restockForm" class="w-1/2 space-y-3">
+            <!-- Left Side (Form Fields) -->
+            <form id="restockForm" class="w-1/2 space-y-3">
+                @csrf
+                <!-- Hidden Inputs for Product Info -->
+                <input type="hidden" name="prod_code" id="restockProdCode">
+                <input type="hidden" name="category_id" id="restockCategoryId">
 
-                    <!-- Hidden Inputs for Product Info -->
-                    <input type="hidden" name="prod_code" id="restockProdCode">
-                    <input type="hidden" name="category_id" id="restockCategoryId">
+                <!-- Last Batch Number -->
+                <label class="block text-sm font-semibold text-gray-800">Last Batch No.</label>
+                <input type="text" id="last_batch_number" readonly
+                    class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-sm font-mono tracking-widest">
 
-                    <!-- Batch Number -->
-                    <label for="batch_number" class="block text-sm font-semibold text-gray-800">Batch Number</label>
-                    <input type="text" name="batch_number" id="batch_number"
-                        value="BATCH-001" readonly
-                        class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-sm font-mono tracking-widest">
+                <!-- Next Batch Number -->
+                <label for="batch_number" class="block text-sm font-semibold text-gray-800">New Batch No.</label>
+                <input type="text" name="batch_number" id="batch_number" readonly
+                    class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-sm font-mono tracking-widest">
 
-                    <!-- Quantity -->
-                    <label for="restockQuantityInput" class="block text-sm font-semibold text-gray-800">Quantity</label>
-                    <div class="flex items-center border border-gray-300 rounded px-2 py-1">
-                        <button type="button" onclick="decreaseRestockQuantity()" class="px-2 text-base font-bold">−</button>
-                        <input type="number" name="quantity" id="restockQuantityInput" value="1" min="1"
-                            class="w-full text-center outline-none border-0 text-sm">
-                        <button type="button" onclick="increaseRestockQuantity()" class="px-2 text-base font-bold">+</button>
-                    </div>
 
-                    <!-- Date Added -->
-                    <label for="date_added" class="block text-sm font-semibold text-gray-800">Date Added</label>
-                    <input type="date" name="date_added" id="date_added"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm" required>
-
-                    <!-- Expiration Date -->
-                    <label for="expiration_date" class="block text-sm font-semibold text-gray-800">Expiration Date</label>
-                    <input type="date" name="expiration_date" id="expiration_date"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm">
-                </form>
-
-                <!-- Right Side (Preview & Submit) -->
-                <div class="flex flex-col items-center w-1/2 space-y-16">
-
-                    <!-- Product Image Preview -->
-                    <div class="flex flex-col items-center space-y-2.5">
-                        <img id="restockProdImage" class="w-32 h-32 object-cover rounded-lg" />
-                        <span class="text-xs text-gray-500">Product Preview</span>
-                    </div>
-
-                    <!-- Barcode Display -->
-                    <div class="flex flex-col items-center space-y-1">
-                        <img id="restockBarcodeImage" src="{{ asset('assets/barcode.png') }}" 
-                            alt="Barcode Preview" class="w-48 object-contain">
-                        <div id="restockBarcode" class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest"></div>
-                        <span class="text-xs text-gray-500">(auto-filled from typed barcode)</span>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button type="submit" form="restockForm"
-                        class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
-                        Restock
-                    </button>
+                <!-- Quantity -->
+                <label for="restockQuantityInput" class="block text-sm font-semibold text-gray-800">Quantity</label>
+                <div class="flex items-center border border-gray-300 rounded px-2 py-1">
+                    <button type="button" onclick="decreaseRestockQuantity()" class="px-2 text-base font-bold">−</button>
+                    <input type="number" name="stock" id="restockQuantityInput" value="1" min="1"
+                        class="w-full text-center outline-none border-0 text-sm">
+                    <button type="button" onclick="increaseRestockQuantity()" class="px-2 text-base font-bold">+</button>
                 </div>
 
+                <!-- Date Added -->
+                <label for="date_added" class="block text-sm font-semibold text-gray-800">Date Added</label>
+                <input type="date" name="date_added" id="date_added"
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-xs" required>
+
+                <!-- Expiration Date -->
+                <label for="expiration_date" class="block text-sm font-semibold text-gray-800">Expiration Date</label>
+                <input type="date" name="expiration_date" id="expiration_date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-xs">
+            </form>
+
+            <!-- Right Side (Preview & Submit) -->
+            <div class="flex flex-col items-center w-1/2 space-y-10">
+
+                <!-- Product Image Preview -->
+                <div class="flex flex-col items-center space-y-2.5">
+                    <img id="restockProdImage" class="w-32 h-32 object-cover rounded-lg" />
+                    <!-- <span class="text-xs text-gray-500">Product Preview</span> -->
+                </div>
+
+                <!-- Barcode Display -->
+                <div class="flex flex-col items-center space-y-1">
+                    <img id="restockBarcodeImage" src="{{ asset('assets/barcode.png') }}" 
+                        alt="Barcode Preview" class="w-48 object-contain">
+                    <div id="restockBarcode" class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest"></div>
+                    <span class="text-xs text-gray-500">(auto-filled from product barcode)</span>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" form="restockForm"
+                    class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                    Restock
+                </button>
             </div>
         </div>
     </div>
+</div>
 
 
 
@@ -889,73 +893,6 @@
         });
     </script>
 
-    <!-- JavaScript for Restock Modal
-    <script>
-        function openRestockModal(prodCode, prodName, prodImage, categoryId, barcode, lastBatchNumber) {
-            // Fill hidden inputs
-            document.getElementById('restockProdCode').value = prodCode;
-            document.getElementById('restockCategoryId').value = categoryId;
-
-            // Product Image Preview
-            document.getElementById('restockProdImage').src = prodImage ? prodImage : '/assets/no-image.png';
-
-            // Barcode image (static or dynamic if needed)
-            document.getElementById('restockBarcodeImage').src = '/assets/barcode.png';
-
-            // Auto-filled barcode number
-            document.getElementById('restockBarcode').textContent = barcode || prodCode || '';
-
-            // Compute next batch number if provided
-            let nextBatch = 'BATCH-001';
-            if (lastBatchNumber && /^BATCH-(\d+)$/.test(lastBatchNumber)) {
-                const num = parseInt(lastBatchNumber.split('-')[1]) + 1;
-                nextBatch = 'BATCH-' + num.toString().padStart(3, '0');
-            }
-            document.getElementById('batch_number').value = nextBatch;
-
-            // Reset quantity
-            document.getElementById('restockQuantityInput').value = 1;
-
-            // Show modal
-            document.getElementById('restockProductModal').classList.remove('hidden');
-        }
-
-        function closeRestockModal() {
-            document.getElementById('restockProductModal').classList.add('hidden');
-        }
-
-        function increaseRestockQuantity() {
-            const input = document.getElementById('restockQuantityInput');
-            if (input) input.value = parseInt(input.value || 0) + 1;
-        }
-        function decreaseRestockQuantity() {
-            const input = document.getElementById('restockQuantityInput');
-            if (input && parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
-        }
-
-        // Handle form submission
-        document.getElementById('restockForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-
-            fetch('/owner/restock', {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-CSRF-TOKEN': document.querySelector('input[name=_token]').value }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message || 'Stock added successfully!');
-                    closeRestockModal();
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Something went wrong.'));
-                }
-            })
-            .catch(err => console.error(err));
-        });
-    </script> -->
 
 <script>
     function openRestockModal(prodCode, prodName, prodImage, categoryId, barcode) {
@@ -964,10 +901,8 @@
         document.getElementById('restockCategoryId').value = categoryId;
 
         // Product Image Preview
-        document.getElementById('restockProdImage').src = prodImage ? prodImage : '/assets/no-image.png';
+        document.getElementById('restockProdImage').src = prodImage ? '/storage/' + prodImage : '/assets/no-image.png';
 
-        // Barcode image (static or dynamic if needed)
-        document.getElementById('restockBarcodeImage').src = '/assets/barcode.png';
 
         // Auto-filled barcode number
         document.getElementById('restockBarcode').textContent = barcode || prodCode || '';
@@ -979,13 +914,15 @@
         fetch(`/inventory/latest-batch/${prodCode}`)
             .then(res => res.json())
             .then(data => {
-                const nextBatch = data.next_batch_number || 'BATCH-001';
-                document.getElementById('batch_number').value = nextBatch;
+                document.getElementById('last_batch_number').value = data.last_batch_number || 'None';
+                document.getElementById('batch_number').value = data.next_batch_number || 'BATCH-1';
             })
             .catch(err => {
                 console.error('Error fetching latest batch:', err);
-                document.getElementById('batch_number').value = 'BATCH-001';
-            });
+                document.getElementById('last_batch_number').value = 'None';
+                document.getElementById('batch_number').value = 'BATCH-1';
+        });
+
 
         // Show modal
         document.getElementById('restockProductModal').classList.remove('hidden');
@@ -1009,7 +946,7 @@
         e.preventDefault();
         const formData = new FormData(this);
 
-        fetch('/owner/restock', {
+        fetch('/inventory/restock', {
             method: 'POST',
             body: formData,
             headers: { 'X-CSRF-TOKEN': document.querySelector('input[name=_token]').value }

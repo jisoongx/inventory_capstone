@@ -194,68 +194,64 @@ class InventoryOwnerController extends Controller
 
 
 
-    public function restockProduct(Request $request)
-    {
-        $ownerId = session('owner_id');
+   public function restockProduct(Request $request)
+{
+    $prodCode = $request->input('prod_code');
+    $quantity = $request->input('stock');          // from modal input
+    $expiryDate = $request->input('expiration_date');     // from modal input
+    $dateAdded = $request->input('date_added');       // from modal input
 
-        $validated = $request->validate([
-            'prod_code' => 'required|integer|exists:products,prod_code',
-            'category_id' => 'required|integer',
-            'stock' => 'required|integer|min:1',
-            'date_added' => 'required|date',
-            'expiration_date' => 'nullable|date',
-        ]);
+    // Get the latest batch
+    $latestBatch = DB::table('inventory')
+        ->where('prod_code', $prodCode)
+        ->orderBy('inven_code', 'desc')
+        ->first();
 
-        // Get latest batch number for this product
-        $lastBatch = DB::table('inventory')
-            ->where('prod_code', $validated['prod_code'])
-            ->orderByDesc('id')
-            ->value('batch_number');
+    $nextBatchNumber = $latestBatch && $latestBatch->batch_number
+        ? 'BATCH-' . (((int) str_replace('BATCH-', '', $latestBatch->batch_number)) + 1)
+        : 'BATCH-1';
 
-        // Compute next batch number
-        if ($lastBatch && preg_match('/BATCH-(\d+)/', $lastBatch, $matches)) {
-            $nextBatchNumber = 'BATCH-' . str_pad(((int)$matches[1]) + 1, 3, '0', STR_PAD_LEFT);
-        } else {
-            $nextBatchNumber = 'BATCH-001';
-        }
+    DB::table('inventory')->insert([
+        'prod_code' => $prodCode,
+        'stock' => $quantity,                 
+        'expiration_date' => $expiryDate,
+        'batch_number' => $nextBatchNumber,
+        'date_added' => $dateAdded,           
+        'last_updated' => now(),               
+        'owner_id' => session('owner_id'),
+        'category_id' => DB::table('products')->where('prod_code', $prodCode)->value('category_id'),
+    ]);
 
-        // Insert new inventory record (restock)
-        DB::table('inventory')->insert([
-            'prod_code'       => $validated['prod_code'],
-            'category_id'     => $validated['category_id'],
-            'owner_id'        => $ownerId,
-            'stock'           => $validated['stock'],
-            'date_added'      => $validated['date_added'],
-            'expiration_date' => $validated['expiration_date'] ?? null,
-            'batch_number'    => $nextBatchNumber,
-            'last_updated'    => now(),
-        ]);
+    return response()->json([
+        'success' => true,
+        'batch_number' => $nextBatchNumber,
+        'message' => "Product restocked successfully under $nextBatchNumber"
+    ]);
+}
 
-        return response()->json([
-            'success' => true,
-            'batch_number' => $nextBatchNumber, // Return the actual batch number inserted
-        ]);
+
+
+public function getLatestBatch($prodCode)
+{
+    $lastBatch = DB::table('inventory')
+        ->where('prod_code', $prodCode)
+        ->orderBy('inven_code', 'desc')
+        ->value('batch_number');
+
+    if ($lastBatch && preg_match('/BATCH-(\d+)/', $lastBatch, $matches)) {
+        $nextBatch = 'BATCH-' . (((int) $matches[1]) + 1);
+    } else {
+        $nextBatch = 'BATCH-1';
     }
 
-    // =================== Return Last Batch Number (for JS) ===================
-    public function getLatestBatch($prodCode)
-    {
-        $lastBatch = DB::table('inventory')
-            ->where('prod_code', $prodCode)
-            ->orderByDesc('id')
-            ->value('batch_number');
+    return response()->json([
+        'success' => true,
+        'last_batch_number' => $lastBatch ?: 'None',
+        'next_batch_number' => $nextBatch,
+    ]);
+}
 
-        if ($lastBatch && preg_match('/BATCH-(\d+)/', $lastBatch, $matches)) {
-            $nextBatch = 'BATCH-' . str_pad(((int)$matches[1] + 1), 3, '0', STR_PAD_LEFT);
-        } else {
-            $nextBatch = 'BATCH-001';
-        }
 
-        return response()->json([
-            'last_batch_number' => $lastBatch,   // the latest batch in DB
-            'next_batch_number' => $nextBatch,   // what JS will use for new restock
-        ]);
-    }
 
 
 

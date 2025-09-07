@@ -112,8 +112,9 @@ Route::get('/inventory-owner/search', [InventoryOwnerController::class, 'index']
 Route::get('/inventory-owner/suggest', [InventoryOwnerController::class, 'suggest']);
 Route::post('/check-barcode', [InventoryOwnerController::class, 'checkBarcode']);
 Route::post('/register-product', [InventoryOwnerController::class, 'registerProduct']);
-Route::post('/inventory/restock', [InventoryOwnerController::class, 'restock'])->name('inventory.restock');
-Route::get('/inventory/latest-batch/{prodCode}', [InventoryOwnerController::class, 'getLatestBatch']);
+Route::post('/inventory/restock', [InventoryOwnerController::class, 'restockProduct'])->name('inventory.restock');
+Route::get('/inventory/latest-batch/{prodCode}', [InventoryOwnerController::class, 'getLatestBatch'])->name('inventory.latestBatch');
+
 
 
 
