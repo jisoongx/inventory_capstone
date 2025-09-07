@@ -76,7 +76,8 @@ Route::get('/subscription/expired', fn() => view('subscription_expired'))->name(
 //Different user dashboards used as layout
 Route::get('/super-admin/dashboard', fn() => view('dashboards.super_admin.super_admin'))->name('super_admin.dashboard');
 Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('dashboards.owner.dashboard');
-Route::get('/staff/dashboard', fn() => view('dashboards.staff.staff'))->name('staff.dashboard');
+Route::get('/staff/dashboard', [DashboardController::class, 'index_staff'])->name('staff.dashboard');
+
 
 //clients management
 

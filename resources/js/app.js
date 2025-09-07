@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const profits = JSON.parse(chartEl.dataset.profits || "[]");
     const months = JSON.parse(chartEl.dataset.months || "[]");
 
-    new Chart(ctx, {
+    const lineChart = new Chart(ctx, {
         type: "line",
         data: {
             labels: months,
@@ -96,8 +96,36 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
+
+    document.querySelector('#zoomIn').addEventListener('click', (e) => {
+        lineChart.zoom(1.2); 
+    })
+
+    document.querySelector('#zoomOut').addEventListener('click', (e) => {
+        lineChart.zoom(0.8); 
+    })
+
+    document.querySelector('#zoomReset').addEventListener('click', (e) => {
+        lineChart.resetZoom();
+    })
     
 });
+
+
+// const AnalysisTable = new DataTable('#productAnalysisTable', {
+//     pageLength: 5,
+//     ordering: true,
+//     searching: true,
+//     order: [[0, 'desc']],
+//     lengthChange: false,
+//     dom: 't<"flex justify-between items-center mt-2 text-xs"ip>'
+// });
+
+// document.querySelector('#customSearchBox').addEventListener('keyup', function() {
+//     AnalysisTable.search(this.value).draw();
+// });
+
+
 
 //sa monthly nga table
 const table = new DataTable('#expensesTable', {
@@ -105,11 +133,12 @@ const table = new DataTable('#expensesTable', {
     ordering: true,
     searching: true,
     order: [[2, 'desc']],
-    buttons: 'print',
     lengthChange: false,
     dom: `<"flex justify-between items-center mb-2 text-xs"f>t<"flex justify-between items-center mt-2 text-xs"ip>`
 
 });
+
+
 
 //sa monthly nga buttons
 document.querySelector('#expensesTable').addEventListener('click', (e) => {
@@ -135,3 +164,5 @@ document.querySelector('#expensesTable').addEventListener('click', (e) => {
         row.querySelector('.editBtn').classList.remove('hidden');
     }
 });
+
+

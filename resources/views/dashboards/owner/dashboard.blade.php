@@ -95,21 +95,21 @@
                     </form>
                 </div>
                 <div class="flex space-x-1 mt-2">
-                    <button onclick="zoomIn()">
-                        <span class="material-symbols-rounded text-sm" title="Zoom In">add_circle</span>
+                    <button onclick="zoomIn()" id="zoomIn" title="Zoom In">
+                        <span class="material-symbols-rounded-small text-sm" title="Zoom In">add_circle</span>
                     </button>
-                    <button onclick="zoomOut()"> 
-                        <span class="material-symbols-rounded text-sm" title="Zoom Out">do_not_disturb_on</span>
+                    <button onclick="zoomOut()" id="zoomOut" title="Zoom Out"> 
+                        <span class="material-symbols-rounded-small text-sm" title="Zoom Out">do_not_disturb_on</span>
                     </button>
-                    <button onclick="resetZoom()">
-                        <span class="material-symbols-rounded text-sm" title="Reset">reset_settings</span>
+                    <button onclick="resetZoom()" id="zoomReset" title="Reset">
+                        <span class="material-symbols-rounded-small text-sm" title="Reset">reset_settings</span>
                     </button>
                 </div>
                 <div class="w-full overflow-x-auto mt-3">
                     <div id="profitChart" 
                         data-profits='@json($profits ?? [])' 
                         data-months='@json($months ?? [])'
-                        style="height: 380px; width: 1200px;">
+                        style="height: 380px; width: 800px;">
                         <canvas></canvas>
                     </div>
                 </div>
@@ -331,21 +331,19 @@
         </div>
 
 
-    <script>
+    <!-- <script>
 
-        // function zoomIn() {
-        //     profitChart.zoom(1.2); // 1.2 = 20% zoom in
-        // }
+        function zoomIn() {
+            profitChart.zoom(1.2); 
+        }
 
-        // // Zoom Out function
-        // function zoomOut() {
-        //     profitChart.zoom(0.8); // 0.8 = 20% zoom out
-        // }
+        function zoomOut() {
+            profitChart.zoom(0.8);
+        }
 
-        // // Reset Zoom function
-        // function resetZoom() {
-        //     profitChart.resetZoom();
-        // }
-    </script>
+        function resetZoom() {
+            profitChart.resetZoom();
+        }
+    </script> -->
 
 @endsection

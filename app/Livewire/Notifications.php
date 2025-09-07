@@ -6,95 +6,6 @@ use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-// class Notifications extends Component
-// {
-//     public $notifs = [];
-//     public $count = 0;
-//     public $active = false;
-
-//     public function render()
-//     {
-//         $this->loadNotifs();
-//         return view('livewire.notifications');
-//     }
-
-//     public function loadNotifs()
-//     {
-//         $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
-//         $user_email = Auth::guard('owner')->check() 
-//             ? Auth::guard('owner')->user()->email 
-//             : Auth::user()->email;
-
-//         $this->notifs = DB::select("
-//             SELECT n.*, un.*
-//             FROM notification n
-//             JOIN user_notification un
-//             ON n.notif_id = un.notif_id
-//             WHERE un.usernotif_type IN ('all', ?)
-//               AND un.usernotif_email = ?
-//             ORDER BY n.notif_created_on DESC
-//         ", [$role, $user_email]);
-
-//         $result = DB::select("
-//             SELECT COUNT(*) AS total
-//             FROM user_notification
-//             WHERE usernotif_type IN ('all', ?)
-//               AND usernotif_email = ?
-//               AND usernotif_seen = 0
-//         ", [$role, $user_email]);
-
-//         $this->count = $result[0]->total ?? 0;
-//     }
-
-//     public function togglePanel()
-//     {
-//         $this->active = !$this->active;
-//         if ($this->active) {
-//             $this->markAsSeen();
-//         }
-//     }
-
-//     public function markAsSeen()
-//     {
-//         $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
-//         $user_email = Auth::guard('owner')->check() 
-//             ? Auth::guard('owner')->user()->email 
-//             : Auth::user()->email;
-
-//         DB::update("
-//             UPDATE user_notification
-//             SET usernotif_seen = 1
-//             WHERE usernotif_email = ?
-//             AND usernotif_type IN ('all', ?)
-//         ", [$user_email, $role]);
-
-//         $this->loadNotifs(); 
-//     }
-
-//     public function showUnread()
-//     {
-//         $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
-//         $user_email = Auth::guard('owner')->check() 
-//             ? Auth::guard('owner')->user()->email 
-//             : Auth::user()->email;
-
-//         $this->notifs = collect(DB::select("
-//             select n.notif_title, n.notif_message, n.notif_created_on
-//             from notification n
-//             join user_notification un
-//             on n.notif_id = un.notif_id
-//             WHERE un.usernotif_email = ?
-//             AND un.usernotif_type IN ('all', ?)
-//             AND un.usernotif_is_read = 0
-//             ORDER BY n.notif_created_on DESC
-//         ", [$user_email, $role]));
-//     }
-
-
-
-
-// }
-
 
 class Notifications extends Component
 {
@@ -103,13 +14,18 @@ class Notifications extends Component
     public $count = 0;            // Unread notifications count
     public $filter = 'all';       // Current filter: 'all' or 'unread'
 
-    public function mount()
-    {
+    public $showModal = false;
+    public $notifTitle = '';
+    public $notifMessage = '';
+    public $notifDate = '';
+    public $notifCountRead = null;
+    public $notifID = null;
+
+    public function mount() {
         $this->loadNotifs();
     }
 
-    public function togglePanel()
-    {
+    public function togglePanel() {
         $this->active = !$this->active;
 
         if ($this->active && $this->filter === 'all') {
@@ -117,8 +33,7 @@ class Notifications extends Component
         }
     }
 
-    public function loadNotifs()
-    {
+    public function loadNotifs() {
         $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
         $user_email = Auth::guard('owner')->check() 
             ? Auth::guard('owner')->user()->email 
@@ -127,7 +42,7 @@ class Notifications extends Component
         if ($this->filter === 'all') {
 
             $this->notifs = collect(DB::select("
-                SELECT n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read
+                SELECT n.notif_id, n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read
                 FROM notification n
                 JOIN user_notification un ON n.notif_id = un.notif_id
                 WHERE un.usernotif_email = ?
@@ -138,7 +53,7 @@ class Notifications extends Component
         } elseif ($this->filter === 'unread') {
 
             $this->notifs = collect(DB::select("
-                SELECT n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read
+                SELECT n.notif_id, n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read
                 FROM notification n
                 JOIN user_notification un ON n.notif_id = un.notif_id
                 WHERE un.usernotif_email = ?
@@ -156,20 +71,17 @@ class Notifications extends Component
         ", [$user_email]))->first()->cnt ?? 0;
     }
 
-    public function showAll()
-    {
+    public function showAll() {
         $this->filter = 'all';
         $this->loadNotifs();
     }
 
-    public function showUnread()
-    {
+    public function showUnread() {
         $this->filter = 'unread';
         $this->loadNotifs();
     }
 
-    public function markAsSeen()
-    {
+    public function markAsSeen() {
         $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
         $user_email = Auth::guard('owner')->check() 
             ? Auth::guard('owner')->user()->email 
@@ -182,6 +94,53 @@ class Notifications extends Component
         ", [$user_email]);
 
         $this->count = 0;
+    }
+
+    public function openModal($id, $title, $message, $created) {
+
+        $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
+        $user_email = Auth::guard('owner')->check() 
+            ? Auth::guard('owner')->user()->email 
+            : Auth::guard('staff')->user()->email;
+
+        DB::update('
+            update user_notification
+            set usernotif_is_read = 1, usernotif_read_at = ?
+            where usernotif_email = ?
+            and notif_id = ?
+            ', [now(), $user_email, $id]
+        );
+
+        $countRead = collect(DB::select('
+            select count(un.usernotif_is_read) as countRead,
+            n.notif_id as notif
+            from user_notification un
+            join notification n 
+            on un.notif_id = n.notif_id
+            where un.usernotif_is_read = 1
+            and n.notif_id = ?
+            group by n.notif_id
+        ', [$id]))->first();
+        
+
+        // foreach ($this->notifs as &$notif) {
+        //     if ($notif->notif_id == $id) {
+        //         $notif->usernotif_is_read = 1;
+        //         break;
+        //     }
+        // }
+
+        $this->loadNotifs();
+
+        $this->notifTitle = $title;
+        $this->notifMessage = $message;
+        $this->notifDate = $created;
+        $this->notifCountRead = $countRead;
+        $this->showModal = true;
+    }
+
+    public function closeModal() {
+        $this->showModal = false;
     }
 
     public function render()

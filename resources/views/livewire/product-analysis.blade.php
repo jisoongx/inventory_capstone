@@ -1,0 +1,67 @@
+<div class="flex-grow">
+
+    <p class="font-semibold text-xs mb-4 border-b pb-4">
+        {{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }} Product Performance Analysis
+    </p>
+
+    <div class="flex mb-4 justify-between">
+        
+        <div class="relative text-gray-400">
+            <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <span class="material-symbols-rounded">search</span>
+            </span>
+            <input type="text"
+                   wire:model.debounce.500ms="searchWord"
+                   placeholder="Search..."
+                   class="rounded-full border border-gray-500 p-3 pl-10 text-xs focus:ring focus:ring-blue-200 text-black">
+        </div>
+
+        <div>
+            <select wire:model.live="currentMonth" id="monthFilter" class="border rounded p-3 text-xs">
+                @foreach ($monthNames as $index => $name)
+                    <option value="{{ $index + 1 }}">{{ $name }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+
+    <div>
+        <table class="w-full text-xs text-left text-gray-700 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+            <thead class="uppercase text-xs font-semibold bg-gray-100 text-gray-600">
+                <tr>
+                    <th class="cursor-pointer px-4 py-4 text-left" wire:click="sortBy('product_name')">Product ↓☰↑</th>
+                    <th class="px-4 py-4">Category</th>
+                    <th class="cursor-pointer px-4 py-4" wire:click="sortBy('unit_sold')">Unit Sold ↓☰↑</th>
+                    <th class="cursor-pointer px-4 py-4" wire:click="sortBy('total_sales')">Total Sales ↓☰↑</th>
+                    <th class="cursor-pointer px-4 py-4" wire:click="sortBy('cogs')">COGS ↓☰↑</th>
+                    <th class="cursor-pointer px-4 py-4" wire:click="sortBy('profit')">Profit ↓☰↑</th>
+                    <th class="cursor-pointer px-4 py-4" wire:click="sortBy('profit_margin_percent')">% Profit Margin ↓☰↑</th>
+                    <th class="cursor-pointer px-4 py-4" wire:click="sortBy('contribution_percent')">% Share ↓☰↑</th>
+                </tr>
+            </thead>
+
+            <tbody class="divide-y divide-gray-100">
+                @forelse ($analysis as $analy)
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="py-3 px-4">{{ $analy->product_name }}</td>
+                        <td class="py-3 px-4">{{ $analy->category }}</td>
+                        <td class="py-3 px-4">{{ $analy->unit_sold }}</td>
+                        <td class="py-3 px-4">{{ $analy->total_sales }}</td>
+                        <td class="py-3 px-4">{{ $analy->cogs }}</td>
+                        <td class="py-3 px-4">{{ $analy->profit }}</td>
+                        <td class="py-3 px-4">{{ number_format($analy->profit_margin_percent, 0) }}%</td>
+                        <td class="py-3 px-4">{{ number_format($analy->contribution_percent, 0) }}%</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="8" class="text-center py-4">Nothing to show.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+
+        <div class="mt-4">
+            {{ $analysis->links() }}
+        </div>
+    </div>
+</div>

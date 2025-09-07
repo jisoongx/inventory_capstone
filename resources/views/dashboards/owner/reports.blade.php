@@ -1,9 +1,9 @@
 @extends('dashboards.owner.owner')
 
 @section('content')
-<div class="p-4 md:p-6 space-y-6">
+<div class="p-4 md:p-6 space-y-3">
 
-    <div class="flex flex-col md:flex-row gap-4 md:gap-6">
+    <div class="flex flex-col md:flex-row gap-4 md:gap-3">
 
         <!-- Restock Card -->
         <div class="relative bg-white rounded-md p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
@@ -60,5 +60,9 @@
         </div>
 
     </div>
+
+        <div class="p-5 bg-white rounded shadow">
+            @livewire('product-analysis')
+        </div>
 </div>
 @endsection

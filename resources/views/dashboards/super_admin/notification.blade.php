@@ -16,7 +16,7 @@
                 <div class="space-y-1">
                     <label for="recipients" class="block text-xs font-medium text-gray-700 mb-2">Recipients</label>
                     <select id="recipients" name="recipients" 
-                        class="w-full border rounded-md p-3 text-xs focus:ring-blue-500 focus:border-blue-500">
+                        class="w-full border border-gray-400 rounded-md p-3 text-xs focus:ring-blue-500 focus:border-blue-500">
                         <option value="all">All Users</option>
                         <option value="owner">Owner</option>
                         <option value="staff">Staff</option>
@@ -41,13 +41,13 @@
                         <label for="title" class="block text-xs font-medium text-gray-700 mb-2">Title</label>
                         <input id="title" name="title" type="text" placeholder="Enter notification title"
                             x-model="title"
-                            class="w-full border-b rounded p-3 text-xs focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full border border-gray-400 rounded p-3 text-xs focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label for="message" class="block text-xs font-medium text-gray-700 mb-2">Message</label>
                         <textarea id="message" name="message" placeholder="Enter your message" rows="13"
                             x-model="message"
-                            class="w-full border rounded p-3 text-xs focus:ring-blue-500 focus:border-blue-500"></textarea>
+                            class="w-full border border-gray-400 rounded p-3 text-xs focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
 
                     <div class="flex justify-end">
@@ -61,7 +61,7 @@
 
                 <div x-show="mode === 'template'" class="space-y-3" x-cloak>
                     <div x-show="!selected" class="space-y-2" x-cloak>
-                        <h3 class="text-xs font-medium text-gray-700 mb-2 mt-5">Choose a System Notice</h3>
+                        <h3 class="text-xs font-medium text-gray-700 mb-4 mt-5">Choose a System Notice</h3>
                             <div class="grid gap-3">
 
                                 <button type="button"
