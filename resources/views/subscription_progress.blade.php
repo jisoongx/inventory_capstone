@@ -21,14 +21,15 @@
 
         <div class="flex items-center justify-between w-full max-w-3xl relative">
             <div class="absolute top-8 left-0 right-0 h-1 bg-gray-200 rounded-lg -z-10"></div>
-
+           
             @php
             $progressWidth = 'w-1/3'; // default: only Sign Up done
 
-            if ($subscription->status != 'expired') {
+            if (optional($subscription)->status != 'expired') {
             $progressWidth = 'w-full'; // once a plan is chosen, everything is complete
             }
             @endphp
+
 
 
             <div class="absolute top-8 left-0 {{ $progressWidth }} h-1 bg-gradient-to-r from-blue-500 to-blue-400 rounded-lg -z-10 shadow"></div>
@@ -74,7 +75,7 @@
         </div>
 
         <!-- Timeline Card -->
-        <div class="w-full max-w-2xl bg-white rounded-2xl border border-gray-100 shadow-lg p-8">
+        <div class="w-full max-w-2xl bg-white rounded-xl border border-gray-100 shadow-lg p-8">
             <div class="relative border-l-2 border-gray-200 pl-6 space-y-8">
 
                 @if ($subscription)<!-- Step 1: Subscribed -->
@@ -168,7 +169,7 @@
                 @if(optional($subscription)->status !== 'active')
                 <div class="flex justify-center mt-6">
                     <a href="{{ route('login') }}"
-                        class="flex items-center justify-center px-6 py-2 rounded-lg bg-red-500 text-white font-semibold shadow hover:bg-red-600">
+                        class="flex items-center justify-center px-6 py-2 rounded-md bg-red-500 text-white font-semibold shadow-md hover:bg-red-600">
                         Logout
                     </a>
                 </div>

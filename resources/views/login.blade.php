@@ -22,10 +22,10 @@
         $type = session('success') ? 'success' : 'error';
         @endphp
         <div id="messageModal" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
-            <div class="bg-white rounded-2xl p-4 shadow-lg max-w-xs w-full text-center">
+            <div class="bg-white rounded-xl p-4 shadow-lg max-w-xs w-full text-center">
                 <p class="text-sm text-gray-700 mb-4">{{ $msg }}</p>
                 <button onclick="document.getElementById('messageModal').remove()"
-                    class="px-6 py-2 rounded-full text-white font-medium {{ $type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700' }}">
+                    class="px-6 py-2 rounded-md text-white font-medium {{ $type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700' }}">
                     OK
                 </button>
             </div>
@@ -48,7 +48,7 @@
                     class="fas fa-eye-slash absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hidden"></i>
             </div>
             <button type="submit"
-                class="px-10 py-4 text-sm font-medium text-white bg-black rounded-full hover:bg-gray-800 transition max-w-[160px] w-full">
+                class="px-10 py-4 text-sm font-medium shadow-md text-white bg-black rounded-full hover:bg-gray-800 transition max-w-[160px] w-full">
                 Login
             </button>
         </form>

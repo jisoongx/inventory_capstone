@@ -59,19 +59,19 @@
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="store_name" class="block text-sm font-medium text-gray-500 mb-1">Store Name</label>
                         <input type="text" name="store_name" id="store_name" value="{{ old('store_name', $owner->store_name ?? '') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base" disabled>
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-200 p-2 text-base" disabled>
                         @error('store_name') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="contact" class="block text-sm font-medium text-gray-500 mb-1">Contact Number</label>
                         <input type="text" name="contact" id="contact" value="{{ old('contact', $owner->contact ?? '') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base" disabled>
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-200 p-2 text-base" disabled>
                         @error('contact') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
                         <label for="store_address" class="block text-sm font-medium text-gray-500 mb-1">Store Address</label>
                         <input type="text" name="store_address" id="store_address" value="{{ old('store_address', $owner->store_address ?? '') }}"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-base" disabled>
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-200 p-2 text-base" disabled>
                         @error('store_address') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
                     {{-- Removed Status and Email Verified At fields --}}

@@ -59,10 +59,10 @@
         <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row md:justify-center md:space-x-8 space-y-6 md:space-y-0">
 
             <!-- Features -->
-            <table class="w-[80%] bg-white rounded-2xl shadow-md overflow-hidden">
+            <table class="w-[80%] bg-white rounded-xl shadow-md overflow-hidden">
                 <thead>
                     <tr>
-                        <th class="bg-yellow-300 text-left px-5 py-3 font-semibold text-[15px] rounded-t-2xl">&nbsp;</th>
+                        <th class="bg-yellow-300 text-left px-5 py-3 font-semibold text-[15px] rounded-t-xl">&nbsp;</th>
                     </tr>
                 </thead>
                 <tbody class="text-[15px]">
@@ -95,10 +95,10 @@
 
 
             <!-- Basic Plan -->
-            <table class="min-w-[160px] bg-white rounded-2xl shadow-md overflow-hidden text-center">
+            <table class="min-w-[160px] bg-white rounded-xl shadow-md overflow-hidden text-center">
                 <thead>
                     <tr>
-                        <th class="bg-orange-500 text-white px-3 py-3 font-semibold text-[15px] rounded-t-2xl">Basic</th>
+                        <th class="bg-orange-500 text-white px-3 py-3 font-semibold text-[15px] rounded-t-xl">Basic</th>
                     </tr>
                 </thead>
                 <tbody class="text-[15px]">
@@ -130,10 +130,10 @@
             </table>
 
             <!-- Premium Plan -->
-            <table class="min-w-[160px] bg-white rounded-2xl shadow-md overflow-hidden text-center">
+            <table class="min-w-[160px] bg-white rounded-xl shadow-md overflow-hidden text-center">
                 <thead>
                     <tr>
-                        <th class="bg-red-600 text-white px-3 py-3 font-semibold text-[15px] rounded-t-2xl">Premium</th>
+                        <th class="bg-red-600 text-white px-3 py-3 font-semibold text-[15px] rounded-t-xl">Premium</th>
                     </tr>
                 </thead>
                 <tbody class="text-[15px]">
