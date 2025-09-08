@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use App\Models\Product;
 use App\Models\Receipt;
 use App\Models\ReceiptItem;
+use App\Models\Inventory;
 
 class StoreController extends Controller
 {
@@ -23,7 +24,7 @@ class StoreController extends Controller
                 'receipt.receipt_id',
                 'receipt.receipt_date',
                 DB::raw('SUM(receipt_item.item_quantity) as items_quantity'),
-                DB::raw('SUM(receipt_item.item_quantity * products.cost_price) as total_amount') // Changed to cost_price
+                DB::raw('SUM(receipt_item.item_quantity * products.cost_price) as total_amount')
             )
             ->groupBy('receipt.receipt_id', 'receipt.receipt_date')
             ->orderBy('receipt.receipt_date', 'desc');
@@ -58,12 +59,20 @@ class StoreController extends Controller
             ], 404);
         }
 
-        if ($product->quantity < $request->quantity) {
+        // Get total stock from inventory table
+        $totalStock = Inventory::where('prod_code', $product->prod_code)
+                              ->sum('stock');
+
+        if ($totalStock < $request->quantity) {
             return response()->json([
                 'success' => false,
-                'message' => 'Insufficient stock. Available quantity: ' . $product->quantity
+                'message' => "Insufficient stock. Available quantity: {$totalStock}"
             ], 400);
         }
+
+        // Check if requesting quantity will result in low stock warning
+        $remainingAfterSale = $totalStock - $request->quantity;
+        $lowStockWarning = $remainingAfterSale <= $product->stock_limit;
 
         return response()->json([
             'success' => true,
@@ -71,12 +80,16 @@ class StoreController extends Controller
                 'prod_code' => $product->prod_code,
                 'barcode' => $product->barcode,
                 'name' => $product->name,
-                'cost_price' => $product->cost_price, // Changed from selling_price to cost_price
-                'available_quantity' => $product->quantity,
+                'cost_price' => $product->cost_price,
+                'selling_price' => $product->selling_price,
+                'available_quantity' => $totalStock,
+                'stock_limit' => $product->stock_limit,
                 'description' => $product->description
             ],
             'requested_quantity' => $request->quantity,
-            'total_amount' => $product->cost_price * $request->quantity // Changed to cost_price
+            'total_amount' => $product->cost_price * $request->quantity,
+            'low_stock_warning' => $lowStockWarning,
+            'remaining_after_sale' => $remainingAfterSale
         ]);
     }
 
@@ -87,6 +100,20 @@ class StoreController extends Controller
             'items.*.prod_code' => 'required|exists:products,prod_code',
             'items.*.quantity' => 'required|integer|min:1'
         ]);
+
+        // Additional validation: Check if all items have sufficient inventory stock
+        foreach ($request->items as $item) {
+            $totalStock = Inventory::where('prod_code', $item['prod_code'])
+                                 ->sum('stock');
+            
+            if ($totalStock < $item['quantity']) {
+                $product = Product::find($item['prod_code']);
+                return response()->json([
+                    'success' => false,
+                    'message' => "Insufficient stock for {$product->name}. Available: {$totalStock}"
+                ], 400);
+            }
+        }
 
         // Store items in session for the transaction interface
         session()->put('transaction_items', $request->items);
@@ -112,11 +139,16 @@ class StoreController extends Controller
         foreach ($items as $item) {
             $product = Product::find($item['prod_code']);
             if ($product) {
-                $itemTotal = $product->cost_price * $item['quantity']; // Changed to cost_price
+                // Get current stock from inventory
+                $currentStock = Inventory::where('prod_code', $item['prod_code'])
+                                       ->sum('stock');
+                
+                $itemTotal = $product->cost_price * $item['quantity'];
                 $transactionItems[] = [
                     'product' => $product,
                     'quantity' => $item['quantity'],
-                    'amount' => $itemTotal
+                    'amount' => $itemTotal,
+                    'current_stock' => $currentStock
                 ];
                 $totalAmount += $itemTotal;
                 $totalQuantity += $item['quantity'];
@@ -126,12 +158,9 @@ class StoreController extends Controller
         // Get user firstname based on authentication guard
         $user_firstname = null;
         
-        // Check if user is logged in as owner
         if (Auth::guard('owner')->check()) {
             $user_firstname = Auth::guard('owner')->user()->firstname;
-        } 
-        // Check if user is logged in as staff
-        elseif (Auth::guard('staff')->check()) {
+        } elseif (Auth::guard('staff')->check()) {
             $user_firstname = Auth::guard('staff')->user()->firstname;
         }
 
@@ -171,25 +200,33 @@ class StoreController extends Controller
                 $owner_id = Auth::guard('owner')->user()->owner_id;
             } elseif (Auth::guard('staff')->check()) {
                 $staff_id = Auth::guard('staff')->user()->staff_id;
-                // Get owner_id from staff table
                 $owner_id = Auth::guard('staff')->user()->owner_id;
             }
 
             // Create receipt
             $receipt = Receipt::create([
                 'receipt_date' => now(),
-                'owner_id' => $owner_id ?? 1, // Fallback to 1 if no auth
-                'staff_id' => $staff_id  // Can be null if owner is logged in
+                'owner_id' => $owner_id ?? 1,
+                'staff_id' => $staff_id
             ]);
 
             $totalAmount = 0;
+            $lowStockProducts = [];
 
-            // Create receipt items and update product quantities
+            // Create receipt items and update inventory stock
             foreach ($items as $item) {
                 $product = Product::find($item['prod_code']);
                 
-                if (!$product || $product->quantity < $item['quantity']) {
-                    throw new \Exception("Insufficient stock for product: " . ($product->name ?? 'Unknown'));
+                if (!$product) {
+                    throw new \Exception("Product not found: " . $item['prod_code']);
+                }
+
+                // Check current total available stock in inventory
+                $totalStock = Inventory::where('prod_code', $item['prod_code'])
+                                     ->sum('stock');
+                
+                if ($totalStock < $item['quantity']) {
+                    throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
                 }
 
                 // Create receipt item
@@ -199,10 +236,20 @@ class StoreController extends Controller
                     'receipt_id' => $receipt->receipt_id
                 ]);
 
-                // Update product quantity
-                $product->decrement('quantity', $item['quantity']);
+                // Update inventory stock using FIFO method
+                $this->decrementInventoryStock($item['prod_code'], $item['quantity']);
                 
-                $totalAmount += $product->cost_price * $item['quantity']; // Changed to cost_price
+                // Check if product is now low stock
+                $remainingStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
+                if ($remainingStock <= $product->stock_limit) {
+                    $lowStockProducts[] = [
+                        'name' => $product->name,
+                        'remaining_stock' => $remainingStock,
+                        'stock_limit' => $product->stock_limit
+                    ];
+                }
+                
+                $totalAmount += $product->cost_price * $item['quantity'];
             }
 
             // Clear session
@@ -210,14 +257,21 @@ class StoreController extends Controller
 
             DB::commit();
 
-            return response()->json([
+            $response = [
                 'success' => true,
                 'message' => 'Transaction completed successfully!',
                 'receipt_id' => $receipt->receipt_id,
                 'total_amount' => $totalAmount,
                 'amount_received' => $request->amount_received,
                 'change' => $request->amount_received - $totalAmount
-            ]);
+            ];
+
+            // Add low stock warning if any
+            if (!empty($lowStockProducts)) {
+                $response['low_stock_warning'] = $lowStockProducts;
+            }
+
+            return response()->json($response);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -228,6 +282,46 @@ class StoreController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Decrement inventory stock using FIFO method (First In, First Out)
+     * This ensures older inventory is sold first
+     */
+    private function decrementInventoryStock($prod_code, $quantity)
+{
+    $remainingQuantity = $quantity;
+    
+    // Get inventory records ordered by date_added (FIFO) and then by inven_code for consistency
+    $inventoryItems = Inventory::where('prod_code', $prod_code)
+                             ->where('stock', '>', 0)
+                             ->orderBy('date_added', 'asc')
+                             ->orderBy('inven_code', 'asc')
+                             ->get();
+
+    if ($inventoryItems->isEmpty()) {
+        throw new \Exception("No inventory records found for product code: {$prod_code}");
+    }
+
+    foreach ($inventoryItems as $item) {
+        if ($remainingQuantity <= 0) {
+            break;
+        }
+
+        if ($item->stock >= $remainingQuantity) {
+            // This inventory item has enough stock to fulfill the remaining quantity
+            $item->decrement('stock', $remainingQuantity);
+            $remainingQuantity = 0;
+        } else {
+            // Use all stock from this item and continue to next
+            $remainingQuantity -= $item->stock;
+            $item->update(['stock' => 0]);
+        }
+    }
+
+    if ($remainingQuantity > 0) {
+        throw new \Exception("Not enough inventory stock available. Missing: {$remainingQuantity} units");
+    }
+}
 
     private function generateReceiptNumber()
     {

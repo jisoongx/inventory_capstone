@@ -15,24 +15,42 @@ class Product extends Model
         'name',
         'cost_price',
         'selling_price',
+        'stock_limit',
         'description',
         'owner_id',
         'staff_id',
         'category_id',
         'unit_id',
-        'quantity',
         'prod_image'
     ];
 
     protected $casts = [
         'cost_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
-        'quantity' => 'integer'
+        'stock_limit' => 'integer'
     ];
 
     // Relationships
     public function receiptItems()
     {
         return $this->hasMany(ReceiptItem::class, 'prod_code', 'prod_code');
+    }
+
+    // Relationship with Inventory
+    public function inventories()
+    {
+        return $this->hasMany(Inventory::class, 'prod_code', 'prod_code');
+    }
+
+    // Helper method to get total stock from inventory
+    public function getTotalStockAttribute()
+    {
+        return $this->inventories()->sum('stock');
+    }
+
+    // Helper method to check if stock is below limit
+    public function isLowStockAttribute()
+    {
+        return $this->total_stock <= $this->stock_limit;
     }
 }

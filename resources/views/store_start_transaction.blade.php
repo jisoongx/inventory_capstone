@@ -706,68 +706,69 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper functions
     function addItemToTable(product, quantity, totalAmount) {
-        // Check if product already exists (FIXED: proper quantity accumulation)
-        const existingIndex = currentItems.findIndex(item => item.product.prod_code === product.prod_code);
+    // Check if product already exists
+    const existingIndex = currentItems.findIndex(item => item.product.prod_code === product.prod_code);
+    
+    if (existingIndex !== -1) {
+        // Update existing item - FIXED: Ensure proper integer addition
+        const existingQuantity = parseInt(currentItems[existingIndex].quantity); // Convert to integer
+        const newQuantityToAdd = parseInt(quantity); // Convert to integer
+        const newQuantity = existingQuantity + newQuantityToAdd; // Now this will be mathematical addition
+        const newAmount = parseFloat(product.cost_price) * newQuantity;
         
-        if (existingIndex !== -1) {
-            // Update existing item - ADD to existing quantity, don't replace
-            const existingQuantity = currentItems[existingIndex].quantity;
-            const newQuantity = existingQuantity + quantity;
-            const newAmount = product.cost_price * newQuantity;
-            
-            currentItems[existingIndex].quantity = newQuantity;
-            currentItems[existingIndex].amount = newAmount;
-            
-            // Update table row
-            const row = document.querySelector(`tr[data-index="${existingIndex}"]`);
-            const quantityInput = row.querySelector('.quantity-input');
-            const amountCell = row.querySelector('.amount-cell');
-            
-            quantityInput.value = newQuantity;
-            amountCell.textContent = '₱' + newAmount.toFixed(2);
-        } else {
-            // Add new item
-            const newIndex = currentItems.length;
-            currentItems.push({
-                product: product,
-                quantity: quantity,
-                amount: totalAmount
-            });
-            
-            // Add to table
-            const tableBody = document.getElementById('itemsTableBody');
-            const noItemsRow = document.getElementById('noItemsRow');
-            
-            if (noItemsRow) {
-                noItemsRow.remove();
-            }
-            
-            const newRow = document.createElement('tr');
-            newRow.className = 'border-b hover:bg-gray-50';
-            newRow.setAttribute('data-index', newIndex);
-            newRow.innerHTML = `
-                <td class="py-3 px-4">${product.name}</td>
-                <td class="py-3 px-4 text-center">₱${parseFloat(product.cost_price).toFixed(2)}</td>
-                <td class="py-3 px-4 text-center">
-                    <input type="number" min="1" value="${quantity}" 
-                           class="w-20 px-2 py-1 border border-gray-300 rounded text-center quantity-input"
-                           data-price="${product.cost_price}"
-                           data-index="${newIndex}">
-                </td>
-                <td class="py-3 px-4 text-center amount-cell">₱${parseFloat(totalAmount).toFixed(2)}</td>
-                <td class="py-3 px-4 text-center">
-                    <button type="button" class="text-red-500 hover:text-red-700 remove-item" data-index="${newIndex}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            
-            tableBody.appendChild(newRow);
+        currentItems[existingIndex].quantity = newQuantity;
+        currentItems[existingIndex].amount = newAmount;
+        
+        // Update table row
+        const row = document.querySelector(`tr[data-index="${existingIndex}"]`);
+        const quantityInput = row.querySelector('.quantity-input');
+        const amountCell = row.querySelector('.amount-cell');
+        
+        quantityInput.value = newQuantity;
+        amountCell.textContent = '₱' + newAmount.toFixed(2);
+    } else {
+        // Add new item
+        const newIndex = currentItems.length;
+        currentItems.push({
+            product: product,
+            quantity: parseInt(quantity), // Ensure it's stored as integer
+            amount: parseFloat(totalAmount) // Ensure it's stored as float
+        });
+        
+        // Add to table
+        const tableBody = document.getElementById('itemsTableBody');
+        const noItemsRow = document.getElementById('noItemsRow');
+        
+        if (noItemsRow) {
+            noItemsRow.remove();
         }
         
-        updateTotals();
-        updateButtons();
+        const newRow = document.createElement('tr');
+        newRow.className = 'border-b hover:bg-gray-50';
+        newRow.setAttribute('data-index', newIndex);
+        newRow.innerHTML = `
+            <td class="py-3 px-4">${product.name}</td>
+            <td class="py-3 px-4 text-center">₱${parseFloat(product.cost_price).toFixed(2)}</td>
+            <td class="py-3 px-4 text-center">
+                <input type="number" min="1" value="${parseInt(quantity)}" 
+                       class="w-20 px-2 py-1 border border-gray-300 rounded text-center quantity-input"
+                       data-price="${product.cost_price}"
+                       data-index="${newIndex}">
+            </td>
+            <td class="py-3 px-4 text-center amount-cell">₱${parseFloat(totalAmount).toFixed(2)}</td>
+            <td class="py-3 px-4 text-center">
+                <button type="button" class="text-red-500 hover:text-red-700 remove-item" data-index="${newIndex}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(newRow);
     }
+    
+    updateTotals();
+    updateButtons();
+}
 
     function removeItem(index) {
         // Remove from array

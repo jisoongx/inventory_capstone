@@ -141,13 +141,77 @@
                                required>
                     </div>
 
-                    <button type="submit" id="startTransactionBtn"
+                    <button type="submit" id="submitTransactionBtn"
                             class="w-full mt-6 px-6 py-3 text-white font-medium rounded-lg transition-colors duration-200"
                             style="background-color:#336055;">
                         <i class="fas fa-shopping-cart mr-2"></i>
                         Start Transaction
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Confirmation Modal -->
+<div id="productConfirmModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="width: 550px;">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h5 class="modal-title">CONFIRM PRODUCT DETAILS</h5>
+                <button type="button" class="close-btn" id="closeConfirmModalBtn">&times;</button>
+            </div>
+            <!-- Modal Body -->
+            <div class="modal-body" style="background: white; padding: 2rem;">
+                <div id="productDetails" class="space-y-4">
+                    <!-- Product details will be populated here -->
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button type="button" id="cancelConfirmBtn"
+                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="button" id="proceedTransactionBtn"
+                            class="flex-1 px-4 py-3 text-white font-medium rounded-lg transition-colors duration-200"
+                            style="background-color:#336055;">
+                        Proceed to Transaction
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Warning Modal -->
+<div id="lowStockModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="width: 450px;">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    LOW STOCK WARNING
+                </h5>
+                <button type="button" class="close-btn" id="closeLowStockModalBtn">&times;</button>
+            </div>
+            <!-- Modal Body -->
+            <div class="modal-body" style="background: white; padding: 2rem;">
+                <div id="lowStockDetails">
+                    <!-- Low stock details will be populated here -->
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button type="button" id="cancelLowStockBtn"
+                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
+                        Cancel Transaction
+                    </button>
+                    <button type="button" id="proceedAnywayBtn"
+                            class="flex-1 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition">
+                        Proceed Anyway
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -311,6 +375,47 @@
     color: #16a34a;
 }
 
+.alert-warning {
+    background-color: #fffbeb;
+    border: 1px solid #fed7aa;
+    color: #d97706;
+}
+
+/* Product Details Styles */
+.product-detail-row {
+    display: flex;
+    justify-content: between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.product-detail-row:last-child {
+    border-bottom: none;
+}
+
+.product-detail-label {
+    font-weight: 600;
+    color: #374151;
+    min-width: 140px;
+}
+
+.product-detail-value {
+    color: #6b7280;
+    flex: 1;
+}
+
+.stock-warning {
+    background-color: #fef3c7;
+    border: 1px solid #fbbf24;
+    color: #92400e;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Loading indicator for date filter */
 .date-loading {
     opacity: 0.6;
@@ -432,12 +537,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const startTransactionBtn = document.getElementById('startTransactionBtn');
     const productModal = document.getElementById('productModal');
     const typeProductModal = document.getElementById('typeProductModal');
+    const productConfirmModal = document.getElementById('productConfirmModal');
+    const lowStockModal = document.getElementById('lowStockModal');
+    
     const closeModalBtn = document.getElementById('closeModalBtn');
     const closeTypeModalBtn = document.getElementById('closeTypeModalBtn');
+    const closeConfirmModalBtn = document.getElementById('closeConfirmModalBtn');
+    const closeLowStockModalBtn = document.getElementById('closeLowStockModalBtn');
+    
     const dateFilter = document.getElementById('dateFilter');
     const dateFilterForm = document.getElementById('dateFilterForm');
     const productCodeForm = document.getElementById('productCodeForm');
     const body = document.body;
+
+    let currentProductData = null;
 
     // Auto-submit form when date changes
     if (dateFilter && dateFilterForm) {
@@ -461,15 +574,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideAllModals() {
         hideModal(productModal);
         hideModal(typeProductModal);
+        hideModal(productConfirmModal);
+        hideModal(lowStockModal);
     }
 
     // Event listeners
     if (startTransactionBtn) startTransactionBtn.addEventListener('click', () => showModal(productModal));
     if (closeModalBtn) closeModalBtn.addEventListener('click', () => hideModal(productModal));
     if (closeTypeModalBtn) closeTypeModalBtn.addEventListener('click', () => hideModal(typeProductModal));
+    if (closeConfirmModalBtn) closeConfirmModalBtn.addEventListener('click', () => hideModal(productConfirmModal));
+    if (closeLowStockModalBtn) closeLowStockModalBtn.addEventListener('click', () => hideModal(lowStockModal));
 
     // Close modal when clicking outside
-    [productModal, typeProductModal].forEach(modal => {
+    [productModal, typeProductModal, productConfirmModal, lowStockModal].forEach(modal => {
         if (modal) {
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) hideModal(modal);
@@ -496,13 +613,13 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => document.getElementById('productCode').focus(), 300);
     };
 
-    // Product form submission - First validate product, then start transaction
+    // Product form submission - Enhanced with confirmation
     if (productCodeForm) {
         productCodeForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
-            const btn = this.querySelector('button[type="submit"]');
+            const btn = document.getElementById('submitTransactionBtn');
             
             // Show loading state
             btn.classList.add('btn-loading');
@@ -522,45 +639,15 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Product found, now start transaction
-                    btn.textContent = 'Starting Transaction...';
-                    
-                    const items = [{
-                        prod_code: data.product.prod_code,
-                        quantity: data.requested_quantity
-                    }];
-
-                    return fetch('{{ route("start_transaction") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ items: items })
-                    });
+                    currentProductData = data;
+                    showProductConfirmation(data);
                 } else {
-                    // Product validation failed, show error
                     showAlert(data.message, 'error');
-                    throw new Error('Product validation failed');
-                }
-            })
-            .then(response => {
-                if (response) {
-                    return response.json();
-                }
-            })
-            .then(data => {
-                if (data && data.success) {
-                    window.location.href = data.redirect_url;
-                } else if (data) {
-                    showAlert(data.message || 'Failed to start transaction.', 'error');
                 }
             })
             .catch(error => {
-                if (error.message !== 'Product validation failed') {
-                    console.error('Error:', error);
-                    showAlert('An error occurred. Please try again.', 'error');
-                }
+                console.error('Error:', error);
+                showAlert('An error occurred. Please try again.', 'error');
             })
             .finally(() => {
                 // Remove loading state
@@ -570,6 +657,146 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Product confirmation handlers
+    document.getElementById('cancelConfirmBtn')?.addEventListener('click', () => {
+        hideModal(productConfirmModal);
+        showModal(typeProductModal);
+    });
+
+    document.getElementById('proceedTransactionBtn')?.addEventListener('click', () => {
+        if (currentProductData) {
+            startTransaction(currentProductData);
+        }
+    });
+
+    // Low stock warning handlers
+    document.getElementById('cancelLowStockBtn')?.addEventListener('click', () => {
+        hideModal(lowStockModal);
+        showModal(typeProductModal);
+    });
+
+    document.getElementById('proceedAnywayBtn')?.addEventListener('click', () => {
+        if (currentProductData) {
+            startTransaction(currentProductData, true);
+        }
+    });
+
+    function showProductConfirmation(data) {
+        hideModal(typeProductModal);
+        
+        const productDetails = document.getElementById('productDetails');
+        const lowStockWarning = data.low_stock_warning || false;
+        
+        productDetails.innerHTML = `
+            <div class="product-detail-row">
+                <span class="product-detail-label">Product Name:</span>
+                <span class="product-detail-value font-semibold">${data.product.name}</span>
+            </div>
+            <div class="product-detail-row">
+                <span class="product-detail-label">Product Code:</span>
+                <span class="product-detail-value">${data.product.prod_code}</span>
+            </div>
+            <div class="product-detail-row">
+                <span class="product-detail-label">Barcode:</span>
+                <span class="product-detail-value">${data.product.barcode || 'N/A'}</span>
+            </div>
+            <div class="product-detail-row">
+                <span class="product-detail-label">Unit Price:</span>
+                <span class="product-detail-value font-semibold text-green-600">₱${parseFloat(data.product.cost_price).toFixed(2)}</span>
+            </div>
+            <div class="product-detail-row">
+                <span class="product-detail-label">Available Stock:</span>
+                <span class="product-detail-value font-semibold ${data.product.available_quantity <= data.product.stock_limit ? 'text-red-600' : 'text-blue-600'}">${data.product.available_quantity}</span>
+            </div>
+            <div class="product-detail-row">
+                <span class="product-detail-label">Requested Qty:</span>
+                <span class="product-detail-value font-semibold">${data.requested_quantity}</span>
+            </div>
+            <div class="product-detail-row">
+                <span class="product-detail-label">Total Amount:</span>
+                <span class="product-detail-value font-bold text-lg text-green-600">₱${parseFloat(data.total_amount).toFixed(2)}</span>
+            </div>
+            ${lowStockWarning ? `
+            <div class="stock-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>
+                    <strong>Low Stock Warning!</strong><br>
+                    This transaction will leave only ${data.remaining_after_sale} items in stock (below limit of ${data.product.stock_limit}).
+                </div>
+            </div>
+            ` : ''}
+        `;
+        
+        showModal(productConfirmModal);
+    }
+
+    function startTransaction(data, ignoreLowStock = false) {
+        if (data.low_stock_warning && !ignoreLowStock) {
+            showLowStockWarning(data);
+            return;
+        }
+
+        const btn = document.getElementById('proceedTransactionBtn');
+        btn.classList.add('btn-loading');
+        btn.textContent = 'Starting Transaction...';
+        
+        const items = [{
+            prod_code: data.product.prod_code,
+            quantity: data.requested_quantity
+        }];
+
+        fetch('{{ route("start_transaction") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ items: items })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect_url;
+            } else {
+                showAlert(data.message || 'Failed to start transaction.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('An error occurred. Please try again.', 'error');
+        })
+        .finally(() => {
+            btn.classList.remove('btn-loading');
+            btn.textContent = 'Proceed to Transaction';
+        });
+    }
+
+    function showLowStockWarning(data) {
+        hideModal(productConfirmModal);
+        
+        const lowStockDetails = document.getElementById('lowStockDetails');
+        lowStockDetails.innerHTML = `
+            <div class="text-center mb-4">
+                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-3"></i>
+                <h3 class="text-lg font-semibold text-gray-800">Low Stock Alert</h3>
+            </div>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p class="text-sm text-gray-700 mb-2">
+                    <strong>${data.product.name}</strong> will have low stock after this transaction:
+                </p>
+                <div class="text-sm space-y-1">
+                    <div>Current Stock: <span class="font-semibold">${data.product.available_quantity}</span></div>
+                    <div>Requested Quantity: <span class="font-semibold">${data.requested_quantity}</span></div>
+                    <div>Remaining After Sale: <span class="font-semibold text-red-600">${data.remaining_after_sale}</span></div>
+                    <div>Stock Limit: <span class="font-semibold">${data.product.stock_limit}</span></div>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">Would you like to proceed with this transaction anyway?</p>
+        `;
+        
+        showModal(lowStockModal);
+    }
+
     // Helper functions
     function showAlert(message, type) {
         const alertContainer = document.getElementById('alertContainer');
@@ -577,11 +804,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const alert = alertContainer.querySelector('.alert');
         
         // Remove existing alert classes
-        alert.classList.remove('alert-error', 'alert-success');
+        alert.classList.remove('alert-error', 'alert-success', 'alert-warning');
         
         // Add appropriate class
-        alert.classList.add(type === 'success' ? 'alert-success' : 'alert-error');
+        let alertClass = 'alert-error';
+        if (type === 'success') alertClass = 'alert-success';
+        if (type === 'warning') alertClass = 'alert-warning';
         
+        alert.classList.add(alertClass);
         alertMessage.textContent = message;
         alertContainer.style.display = 'block';
         
@@ -593,7 +823,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function hideAlert() {
         const alertContainer = document.getElementById('alertContainer');
-        if (null !== alertContainer) {
+        if (alertContainer) {
             alertContainer.style.display = 'none';
         }
     }
@@ -603,6 +833,7 @@ document.addEventListener('DOMContentLoaded', function() {
         notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 transition-all duration-300 ${
             type === 'error' ? 'bg-red-500' : 
             type === 'success' ? 'bg-green-500' : 
+            type === 'warning' ? 'bg-yellow-500' :
             'bg-blue-500'
         }`;
         notification.textContent = message;
