@@ -145,13 +145,14 @@
                     x-transition:leave="transition transform ease-in duration-300"
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 translate-y-2"
-                    class="fixed bottom-24 right-5 w-94 bg-white shadow-lg rounded-lg px-4 py-3 flex items-center space-x-3 z-50"
+                    class="fixed right-5 bottom-24 z-50 flex w-94 items-center space-x-3 border-l-4 border-emerald-600 bg-emerald-50 px-4 py-3 shadow-lg"
                 >
-                    <div class="flex-shrink-0">
-                        <span class="material-symbols-rounded-full bg-green-200 p-2 rounded-lg text-green-600 text-lg">check_circle</span>
+                    <div class="">
+                        <span class="material-symbols-rounded-full text-green-600 text-lg">check_circle</span>
                     </div>
                     
                     <div class="flex-1">
+                        <p class="font-semibold text-green-800">Success!</p>
                         <p class="text-sm text-gray-800">{{ session('success') }}</p>
                     </div>
                     
@@ -161,6 +162,51 @@
                 </div>
             @endif
         </div>
+
+        <div class="h-[40rem] bg-white shadow-lg p-6 rounded-lg space-y-2 overflow-y-auto">
+            <div class="max-w-4xl mx-auto">
+                
+                <div class="flex justify-between items-center mb-5">
+                    <h1 class="text-sm font-semibold text-gray-900">Notification History</h1>
+                    <!-- <a href="#"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow transition text-xs">
+                        Clear All
+                    </a> -->
+                    <div>
+                        <button type="button" class="text-xs hover:bg-gray-200 p-1 px-2 rounded">All</button>
+                        <button type="button" class="text-xs hover:bg-gray-200 p-1 px-2 rounded">Specific</button>
+                    </div>
+                </div>
+
+                @if($notification->isEmpty())
+                    <div class="text-center">
+                        <p class="text-gray-400 text-lg">No notifications sent yet.</p>
+                    </div>
+                @else
+                    <div class="relative">
+                        <div class="border-l-2 border-gray-300 absolute h-full left-4 top-1"></div>
+                            <div class="space-y-3">
+                                @foreach($notification as $notif)
+                                    <div class="flex items-start relative">
+                                        <div class="flex flex-col items-center mr-6">
+                                            <div class="w-5 h-5 bg-gray-300 rounded-full mt-1 ml-2"></div>
+                                        </div>
+                                        <div class="bg-white shadow-lg rounded-xl p-6 w-full hover:shadow-2xl transition">
+                                            <div class="flex justify-between items-center mb-2">
+                                                <h2 class="font-semibold text-gray-900 text-xs">{{ $notif->notif_title }}</h2>
+                                                <span class="text-gray-400 text-xs">{{ date('F d • g:i A', strtotime($notif->notif_created_on)) }}</span>
+                                            </div>
+                                            <p class="text-gray-700 leading-relaxed line-clamp-3 text-xs">{{ $notif->notif_message }}</p>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+
 
     </div>
 

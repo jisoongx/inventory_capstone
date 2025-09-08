@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 label: "Profit",
                 data: profits,
                 borderColor: "rgba(190, 21, 21, 1)",
-                backgroundColor: "rgba(247, 233, 233, 1)",
+                backgroundColor: "rgba(254, 242, 242, 1)",
                 tension: 0.2,
                 fill: true,
                 pointRadius: 5,
@@ -50,6 +50,20 @@ document.addEventListener("DOMContentLoaded", () => {
             scales: { y: { beginAtZero: true, display: true } }
         },
     });
+
+    document.querySelector('#zoomIn').addEventListener('click', (e) => {
+        lineChart.zoom(1.2); 
+    })
+
+    document.querySelector('#zoomOut').addEventListener('click', (e) => {
+        lineChart.zoom(0.8); 
+    })
+
+    document.querySelector('#zoomReset').addEventListener('click', (e) => {
+        lineChart.resetZoom();
+    })
+
+
 
     const chartEle = document.getElementById("productChart");
     const ctz = chartEle.querySelector("canvas").getContext("2d");
@@ -96,18 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
-
-    document.querySelector('#zoomIn').addEventListener('click', (e) => {
-        lineChart.zoom(1.2); 
-    })
-
-    document.querySelector('#zoomOut').addEventListener('click', (e) => {
-        lineChart.zoom(0.8); 
-    })
-
-    document.querySelector('#zoomReset').addEventListener('click', (e) => {
-        lineChart.resetZoom();
-    })
     
 });
 

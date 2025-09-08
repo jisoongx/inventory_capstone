@@ -39,7 +39,7 @@
                             data-products-prev='@json($productsPrev ?? [])' 
                             data-year='@json($year ?? [])'
                             style="height: 350px;">
-                            <canvas></canvas>
+                            <canvas>.</canvas>
                         </div>
                     </div>
                 </div>

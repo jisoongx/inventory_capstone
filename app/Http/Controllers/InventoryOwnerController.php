@@ -59,7 +59,7 @@ class InventoryOwnerController extends Controller
         }
 
         // include p.category_id in GROUP BY
-        $query .= " GROUP BY p.prod_code, p.category_id ORDER BY p.prod_code ASC";
+        $query .= " GROUP BY p.prod_code, p.category_id ORDER BY p.prod_code DESC";
 
         $products   = DB::select($query, $params);
         $categories = DB::select("SELECT category_id, category FROM categories ORDER BY category ASC");
