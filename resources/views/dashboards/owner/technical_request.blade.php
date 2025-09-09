@@ -61,7 +61,7 @@
                     @if(empty($recentreq))
                         <p class="text-sm">No request ticket to show</p>
                     @else
-                        <p class="text-sm font-semibold text-gray-800">{{ ucwords($req->req_title) }}</p>
+                        <p class="text-sm font-semibold text-gray-800">{{ ucwords($recentreq->req_title) }}</p>
                         <p class="text-xs text-gray-400">{{ $recentreq->req_ticket }}</p>
                     @endif
                 </div>

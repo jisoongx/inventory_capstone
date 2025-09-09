@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>Dashboard</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
     <style>
         .nav-label {
             font-size: 0.85rem;
@@ -39,7 +40,7 @@
                         <span class="material-symbols-rounded">history</span>
                         <span class="nav-label">Activity Log</span>
                     </a>
-                    <a href="{{ route('dashboards.super_admin.technical_resolve') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+                    <a href="{{ route('dashboards.super_admin.technical') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                         <span class="material-symbols-rounded">support_agent</span>
                         <span class="nav-label">Tech Support</span>
                     </a>
@@ -64,13 +65,13 @@
                     </div>
                 </div>
             </div>
-
             @yield('content')
 
         </main>
     </div>
+    
+     @livewireScripts
     <script>
-        // User dropdown toggle
         const userButton = document.getElementById('userButton');
         const dropdownMenu = document.getElementById('dropdownMenu');
 

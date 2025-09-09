@@ -43,7 +43,7 @@ Route::post('/dashboard/staff/technical_request/message/{req_id?}', [TechnicalCo
 Route::post('/dashboard/staff/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.staff.technical_add');
 
 
-Route::get('/super/technical-support', [TechnicalController::class, 'index'])->name('dashboards.super_admin.technical_resolve');
+Route::get('/super/technical-support', [TechnicalController::class, 'index'])->name('dashboards.super_admin.technical');
 Route::get('/super/technical-support/chat/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.super_admin.technical_show');
 Route::post('super/technical-support/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.super_admin.technical_insert');
 

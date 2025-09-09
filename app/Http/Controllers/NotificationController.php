@@ -11,8 +11,16 @@ use Illuminate\Support\Str;
 class NotificationController extends Controller
 { 
     public function index() {
+
+        $notification = collect(DB::select('
+            select notif_title, notif_message, notif_created_on, notif_target, notif_type
+            from notification
+            order by notif_created_on desc;
+        '));
         
-        return view('dashboards.super_admin.notification');
+        return view('dashboards.super_admin.notification', [
+            'notification' => $notification,
+        ]);
         
     }
 
@@ -28,8 +36,8 @@ class NotificationController extends Controller
             ]);
 
             DB::insert("
-                INSERT INTO notification (notif_title, notif_message, notif_target, notif_created_on, super_id)
-                VALUES (?, ?, ?, NOW(), ?)
+                INSERT INTO notification (notif_title, notif_message, notif_target, notif_created_on, super_id, notif_type)
+                VALUES (?, ?, ?, NOW(), ?, 'system')
             ", [$request->title, $request->message, $request->recipients, $super_id]);
 
             $notif_id = DB::getPdo()->lastInsertId();

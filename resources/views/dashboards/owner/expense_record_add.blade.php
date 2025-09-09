@@ -216,20 +216,6 @@
                 </div>
             </div>
 
-            <div class="relative w-full">
-                <div class="bg-white p-2 rounded border-l-8 border border-green-900 space-y-2">
-                    @if(empty($highestEarn))
-                        <p class="text-gray-800 text-base text-xs">No data to show.</p>
-                    @else 
-                        <p class="text-gray-800 text-base text-xs">The {{ date('jS', strtotime($highestEarn[0]->dayTotal)) }} was your 
-                            <span class="font-semibold text-green-600">peak sales day</span>, with
-                            <span class="font-semibold">₱{{ number_format($highestEarn[0]->salesTotal, 2) }}</span> 
-                            earned.
-                        </p>
-                    @endif
-                </div>
-            </div>
-
         </div>
 
 

@@ -13,57 +13,17 @@ class TechnicalController extends Controller
     public function index()
     {
         
-        if (!Auth::guard('owner')->check() && !Auth::guard('staff')->check() && !Auth::guard('super_admin')->check()) {
-            return redirect()->route('login')->with('error', 'Please login first.');
-        }
-
-        if (Auth::guard('owner')->check()) {
-            $owner = Auth::guard('owner')->user();
-            $owner_id = $owner->owner_id;
-
-            // $requests = collect(DB::select("
-            //     SELECT tr.*, cm_max.last_message_id
-            // FROM technical_request tr
-            // JOIN (
-            //     SELECT req_id, MAX(msg_id) as last_message_id
-            //     FROM conversation_message
-            //     GROUP BY req_id
-            // ) cm_max ON tr.req_id = cm_max.req_id
-            // WHERE tr.owner_id = ?
-            // ORDER BY cm_max.last_message_id DESC
-            // ", [$owner_id]));
-
-            // $recentreq = $requests->first();
-            // dd($requests);
-
-            return view('dashboards.owner.technical_request', [
-                'notifs' => $this->getNotifs(),
-            ]);
-        }
-
-        if (Auth::guard('staff')->check()) {
-            $staff = Auth::guard('staff')->user();
-            $staff_id = $staff->staff_id;
-
-            // $requests = collect(DB::select("
-            //     SELECT *
-            //     FROM technical_request
-            //     WHERE staff_id = ?
-            //     ORDER BY req_id DESC
-            // ", [$staff_id]));
-
-            // $recentreq = $requests->first();
-
-            return view('dashboards.staff.technical_request', [
-                'notifs' => $this->getNotifs(),
-            ]);
-        }
-
         if (Auth::guard('super_admin')->check()) {
             $super_admin = Auth::guard('super_admin')->user();
-            $super_admin = $super_admin->super_admin;
+            $staff_id = $super_admin->super_id;
 
-            return view('dashboards.super_admin.technical_resolve');
+            return view('dashboards.super_admin.technical');
+
+        } elseif (Auth::guard('owner')->check()) {
+            return view('dashboards.owner.technical_request');
+            
+        } elseif (Auth::guard('staff')->check()) {
+            return view('dashboards.staff.technical_request');
         }
     }
 
@@ -117,8 +77,6 @@ class TechnicalController extends Controller
                 'requests' => $requests,
                 'recentreq' => $recentreq,
                 'convos' => $convos,
-                // 'notifs' => $this->getNotifs(),
-                // 'countNotifs' => $this->countNotifs(),
             ]);
         }
 
@@ -158,47 +116,6 @@ class TechnicalController extends Controller
             }
 
             return view('dashboards.staff.technical_request', [
-                'requests' => $requests,
-                'recentreq' => $recentreq,
-                'convos' => $convos,
-                // 'notifs' => $this->getNotifs(),
-                // 'countNotifs' => $this->countNotifs(),
-            ]);
-        }
-
-        if (Auth::guard('super_admin')->check()) {
-            $super_admin = Auth::guard('super_admin')->user();
-            $super_id = $super_admin->super_id;
-
-            $requests = collect(DB::select("
-                SELECT tr.*, cm_max.last_message_id
-                FROM technical_request tr
-                JOIN (
-                    SELECT req_id, MAX(msg_id) as last_message_id
-                    FROM conversation_message
-                    GROUP BY req_id
-                ) cm_max ON tr.req_id = cm_max.req_id
-                ORDER BY cm_max.last_message_id DESC
-            "));
-
-            if ($req_id === null && $requests->isNotEmpty()) {
-                $recentreq = $requests->first();
-            } else {
-                $recentreq = $requests->where('req_id', $req_id)->first();
-            }
-
-            if ($recentreq) {
-                $convos = collect(DB::select("
-                    SELECT cm.*, tr.req_title, tr.req_status
-                    FROM technical_request tr
-                    LEFT JOIN conversation_message cm
-                        ON tr.req_id = cm.req_id
-                    WHERE tr.req_id = ?
-                    ORDER BY cm.msg_date ASC
-                ", [$recentreq->req_id]));
-            }
-
-            return view('dashboards.super_admin.technical_resolve', [
                 'requests' => $requests,
                 'recentreq' => $recentreq,
                 'convos' => $convos,
