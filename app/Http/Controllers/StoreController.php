@@ -173,114 +173,133 @@ class StoreController extends Controller
         ]);
     }
 
+    public function updateTransactionItems(Request $request)
+    {
+    $request->validate([
+        'items' => 'required|array',
+        'items.*.prod_code' => 'required|exists:products,prod_code',
+        'items.*.quantity' => 'required|integer|min:1'
+    ]);
+
+    // Update session with current items
+    session()->put('transaction_items', $request->items);
+    
+    return response()->json(['success' => true]);
+    }
+
+    // Update your existing processPayment method - replace the existing one
     public function processPayment(Request $request)
     {
-        $request->validate([
-            'payment_method' => 'required|string',
-            'amount_received' => 'required|numeric|min:0'
+    $request->validate([
+        'payment_method' => 'required|string',
+        'amount_received' => 'required|numeric|min:0',
+        'items' => 'sometimes|array', // Make it optional - can come from request or session
+        'items.*.prod_code' => 'required_with:items|exists:products,prod_code',
+        'items.*.quantity' => 'required_with:items|integer|min:1'
+    ]);
+
+    // Use items from request if provided, otherwise fall back to session
+    $items = $request->has('items') ? $request->items : session()->get('transaction_items', []);
+    
+    if (empty($items)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No items found for transaction.'
+        ], 400);
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // Get proper user IDs based on authentication guards
+        $owner_id = null;
+        $staff_id = null;
+        
+        if (Auth::guard('owner')->check()) {
+            $owner_id = Auth::guard('owner')->user()->owner_id;
+        } elseif (Auth::guard('staff')->check()) {
+            $staff_id = Auth::guard('staff')->user()->staff_id;
+            $owner_id = Auth::guard('staff')->user()->owner_id;
+        }
+
+        // Create receipt
+        $receipt = Receipt::create([
+            'receipt_date' => now(),
+            'owner_id' => $owner_id ?? 1,
+            'staff_id' => $staff_id
         ]);
 
-        $items = session()->get('transaction_items', []);
-        
-        if (empty($items)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No items found for transaction.'
-            ], 400);
-        }
+        $totalAmount = 0;
+        $lowStockProducts = [];
 
-        DB::beginTransaction();
-
-        try {
-            // Get proper user IDs based on authentication guards
-            $owner_id = null;
-            $staff_id = null;
+        // Create receipt items and update inventory stock
+        foreach ($items as $item) {
+            $product = Product::find($item['prod_code']);
             
-            if (Auth::guard('owner')->check()) {
-                $owner_id = Auth::guard('owner')->user()->owner_id;
-            } elseif (Auth::guard('staff')->check()) {
-                $staff_id = Auth::guard('staff')->user()->staff_id;
-                $owner_id = Auth::guard('staff')->user()->owner_id;
+            if (!$product) {
+                throw new \Exception("Product not found: " . $item['prod_code']);
             }
 
-            // Create receipt
-            $receipt = Receipt::create([
-                'receipt_date' => now(),
-                'owner_id' => $owner_id ?? 1,
-                'staff_id' => $staff_id
+            // Check current total available stock in inventory
+            $totalStock = Inventory::where('prod_code', $item['prod_code'])
+                                 ->sum('stock');
+            
+            if ($totalStock < $item['quantity']) {
+                throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
+            }
+
+            // Create receipt item
+            ReceiptItem::create([
+                'item_quantity' => $item['quantity'],
+                'prod_code' => $item['prod_code'],
+                'receipt_id' => $receipt->receipt_id
             ]);
 
-            $totalAmount = 0;
-            $lowStockProducts = [];
-
-            // Create receipt items and update inventory stock
-            foreach ($items as $item) {
-                $product = Product::find($item['prod_code']);
-                
-                if (!$product) {
-                    throw new \Exception("Product not found: " . $item['prod_code']);
-                }
-
-                // Check current total available stock in inventory
-                $totalStock = Inventory::where('prod_code', $item['prod_code'])
-                                     ->sum('stock');
-                
-                if ($totalStock < $item['quantity']) {
-                    throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
-                }
-
-                // Create receipt item
-                ReceiptItem::create([
-                    'item_quantity' => $item['quantity'],
-                    'prod_code' => $item['prod_code'],
-                    'receipt_id' => $receipt->receipt_id
-                ]);
-
-                // Update inventory stock using FIFO method
-                $this->decrementInventoryStock($item['prod_code'], $item['quantity']);
-                
-                // Check if product is now low stock
-                $remainingStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
-                if ($remainingStock <= $product->stock_limit) {
-                    $lowStockProducts[] = [
-                        'name' => $product->name,
-                        'remaining_stock' => $remainingStock,
-                        'stock_limit' => $product->stock_limit
-                    ];
-                }
-                
-                $totalAmount += $product->cost_price * $item['quantity'];
-            }
-
-            // Clear session
-            session()->forget('transaction_items');
-
-            DB::commit();
-
-            $response = [
-                'success' => true,
-                'message' => 'Transaction completed successfully!',
-                'receipt_id' => $receipt->receipt_id,
-                'total_amount' => $totalAmount,
-                'amount_received' => $request->amount_received,
-                'change' => $request->amount_received - $totalAmount
-            ];
-
-            // Add low stock warning if any
-            if (!empty($lowStockProducts)) {
-                $response['low_stock_warning'] = $lowStockProducts;
-            }
-
-            return response()->json($response);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
+            // Update inventory stock using FIFO method
+            $this->decrementInventoryStock($item['prod_code'], $item['quantity']);
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Transaction failed: ' . $e->getMessage()
-            ], 500);
+            // Check if product is now low stock
+            $remainingStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
+            if ($remainingStock <= $product->stock_limit) {
+                $lowStockProducts[] = [
+                    'name' => $product->name,
+                    'remaining_stock' => $remainingStock,
+                    'stock_limit' => $product->stock_limit
+                ];
+            }
+            
+            $totalAmount += $product->cost_price * $item['quantity'];
         }
+
+        // Clear session
+        session()->forget('transaction_items');
+
+        DB::commit();
+
+        $response = [
+            'success' => true,
+            'message' => 'Transaction completed successfully!',
+            'receipt_id' => $receipt->receipt_id,
+            'total_amount' => $totalAmount,
+            'amount_received' => $request->amount_received,
+            'change' => $request->amount_received - $totalAmount
+        ];
+
+        // Add low stock warning if any
+        if (!empty($lowStockProducts)) {
+            $response['low_stock_warning'] = $lowStockProducts;
+        }
+
+        return response()->json($response);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Transaction failed: ' . $e->getMessage()
+        ], 500);
+    }
     }
 
     /**

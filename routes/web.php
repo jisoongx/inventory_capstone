@@ -132,4 +132,6 @@ Route::get('/store_transactions', [StoreController::class, 'index'])->name('stor
 Route::post('/search_product', [StoreController::class, 'searchProduct'])->name('search_product');
 Route::post('/start_transaction', [StoreController::class, 'startTransaction'])->name('start_transaction');
 Route::get('/store_start_transaction', [StoreController::class, 'showStartTransaction'])->name('store_start_transaction');
+Route::post('/update_transaction_items', [StoreController::class, 'updateTransactionItems'])->name('update_transaction_items');
 Route::post('/process_payment', [StoreController::class, 'processPayment'])->name('process_payment');
+

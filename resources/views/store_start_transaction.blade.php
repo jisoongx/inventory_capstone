@@ -488,6 +488,28 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentTotal = parseFloat('{{ $total_amount ?? 0 }}');
     let currentQuantity = parseInt('{{ $total_quantity ?? 0 }}');
 
+    // Function to sync frontend data with backend session
+    function syncItemsWithBackend() {
+        if (currentItems.length === 0) return; // Don't sync if no items
+        
+        const items = currentItems.map(item => ({
+            prod_code: item.product.prod_code,
+            quantity: parseInt(item.quantity)
+        }));
+        
+        fetch('{{ route("update_transaction_items") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ items: items })
+        })
+        .catch(error => {
+            console.error('Error syncing items:', error);
+        });
+    }
+
     // Modal functions
     function showModal(modal) {
         modal.style.display = 'flex';
@@ -594,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Payment form submission
+    // Payment form submission - UPDATED to send current items directly
     if (paymentForm) {
         paymentForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -612,15 +634,25 @@ document.addEventListener('DOMContentLoaded', function() {
             completeBtn.classList.add('btn-loading');
             completeBtn.textContent = 'Processing...';
             
-            // Add payment method as cash since it's removed from UI
-            formData.append('payment_method', 'cash');
+            // Prepare payment data with current items
+            const itemsData = currentItems.map(item => ({
+                prod_code: item.product.prod_code,
+                quantity: parseInt(item.quantity)
+            }));
+
+            const paymentData = {
+                payment_method: 'cash',
+                amount_received: parseFloat(formData.get('amount_received')),
+                items: itemsData // Send current items directly
+            };
             
             fetch('{{ route("process_payment") }}', {
                 method: 'POST',
-                body: formData,
                 headers: {
+                    'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
+                },
+                body: JSON.stringify(paymentData)
             })
             .then(response => response.json())
             .then(data => {
@@ -630,12 +662,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.location.href = '{{ route("store_transactions") }}';
                     }, 2000);
                 } else {
-                    showNotification(data.message || 'Payment failed. Please try again.', 'error');
+                    showPaymentAlert(data.message || 'Payment failed. Please try again.', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('An error occurred during payment processing.', 'error');
+                showPaymentAlert('An error occurred during payment processing.', 'error');
             })
             .finally(() => {
                 completeBtn.classList.remove('btn-loading');
@@ -671,7 +703,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Quantity input change events
+    // Quantity input change events - UPDATED to sync with backend
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('quantity-input')) {
             const index = parseInt(e.target.getAttribute('data-index'));
@@ -693,6 +725,7 @@ document.addEventListener('DOMContentLoaded', function() {
             amountCell.textContent = '₱' + (price * newQuantity).toFixed(2);
             
             updateTotals();
+            syncItemsWithBackend(); // SYNC WITH BACKEND
         }
     });
 
@@ -706,69 +739,70 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper functions
     function addItemToTable(product, quantity, totalAmount) {
-    // Check if product already exists
-    const existingIndex = currentItems.findIndex(item => item.product.prod_code === product.prod_code);
-    
-    if (existingIndex !== -1) {
-        // Update existing item - FIXED: Ensure proper integer addition
-        const existingQuantity = parseInt(currentItems[existingIndex].quantity); // Convert to integer
-        const newQuantityToAdd = parseInt(quantity); // Convert to integer
-        const newQuantity = existingQuantity + newQuantityToAdd; // Now this will be mathematical addition
-        const newAmount = parseFloat(product.cost_price) * newQuantity;
+        // Check if product already exists
+        const existingIndex = currentItems.findIndex(item => item.product.prod_code === product.prod_code);
         
-        currentItems[existingIndex].quantity = newQuantity;
-        currentItems[existingIndex].amount = newAmount;
-        
-        // Update table row
-        const row = document.querySelector(`tr[data-index="${existingIndex}"]`);
-        const quantityInput = row.querySelector('.quantity-input');
-        const amountCell = row.querySelector('.amount-cell');
-        
-        quantityInput.value = newQuantity;
-        amountCell.textContent = '₱' + newAmount.toFixed(2);
-    } else {
-        // Add new item
-        const newIndex = currentItems.length;
-        currentItems.push({
-            product: product,
-            quantity: parseInt(quantity), // Ensure it's stored as integer
-            amount: parseFloat(totalAmount) // Ensure it's stored as float
-        });
-        
-        // Add to table
-        const tableBody = document.getElementById('itemsTableBody');
-        const noItemsRow = document.getElementById('noItemsRow');
-        
-        if (noItemsRow) {
-            noItemsRow.remove();
+        if (existingIndex !== -1) {
+            // Update existing item - FIXED: Ensure proper integer addition
+            const existingQuantity = parseInt(currentItems[existingIndex].quantity); // Convert to integer
+            const newQuantityToAdd = parseInt(quantity); // Convert to integer
+            const newQuantity = existingQuantity + newQuantityToAdd; // Now this will be mathematical addition
+            const newAmount = parseFloat(product.cost_price) * newQuantity;
+            
+            currentItems[existingIndex].quantity = newQuantity;
+            currentItems[existingIndex].amount = newAmount;
+            
+            // Update table row
+            const row = document.querySelector(`tr[data-index="${existingIndex}"]`);
+            const quantityInput = row.querySelector('.quantity-input');
+            const amountCell = row.querySelector('.amount-cell');
+            
+            quantityInput.value = newQuantity;
+            amountCell.textContent = '₱' + newAmount.toFixed(2);
+        } else {
+            // Add new item
+            const newIndex = currentItems.length;
+            currentItems.push({
+                product: product,
+                quantity: parseInt(quantity), // Ensure it's stored as integer
+                amount: parseFloat(totalAmount) // Ensure it's stored as float
+            });
+            
+            // Add to table
+            const tableBody = document.getElementById('itemsTableBody');
+            const noItemsRow = document.getElementById('noItemsRow');
+            
+            if (noItemsRow) {
+                noItemsRow.remove();
+            }
+            
+            const newRow = document.createElement('tr');
+            newRow.className = 'border-b hover:bg-gray-50';
+            newRow.setAttribute('data-index', newIndex);
+            newRow.innerHTML = `
+                <td class="py-3 px-4">${product.name}</td>
+                <td class="py-3 px-4 text-center">₱${parseFloat(product.cost_price).toFixed(2)}</td>
+                <td class="py-3 px-4 text-center">
+                    <input type="number" min="1" value="${parseInt(quantity)}" 
+                           class="w-20 px-2 py-1 border border-gray-300 rounded text-center quantity-input"
+                           data-price="${product.cost_price}"
+                           data-index="${newIndex}">
+                </td>
+                <td class="py-3 px-4 text-center amount-cell">₱${parseFloat(totalAmount).toFixed(2)}</td>
+                <td class="py-3 px-4 text-center">
+                    <button type="button" class="text-red-500 hover:text-red-700 remove-item" data-index="${newIndex}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            tableBody.appendChild(newRow);
         }
         
-        const newRow = document.createElement('tr');
-        newRow.className = 'border-b hover:bg-gray-50';
-        newRow.setAttribute('data-index', newIndex);
-        newRow.innerHTML = `
-            <td class="py-3 px-4">${product.name}</td>
-            <td class="py-3 px-4 text-center">₱${parseFloat(product.cost_price).toFixed(2)}</td>
-            <td class="py-3 px-4 text-center">
-                <input type="number" min="1" value="${parseInt(quantity)}" 
-                       class="w-20 px-2 py-1 border border-gray-300 rounded text-center quantity-input"
-                       data-price="${product.cost_price}"
-                       data-index="${newIndex}">
-            </td>
-            <td class="py-3 px-4 text-center amount-cell">₱${parseFloat(totalAmount).toFixed(2)}</td>
-            <td class="py-3 px-4 text-center">
-                <button type="button" class="text-red-500 hover:text-red-700 remove-item" data-index="${newIndex}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-        
-        tableBody.appendChild(newRow);
+        updateTotals();
+        updateButtons();
+        syncItemsWithBackend(); // SYNC WITH BACKEND
     }
-    
-    updateTotals();
-    updateButtons();
-}
 
     function removeItem(index) {
         // Remove from array
@@ -821,6 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         updateTotals();
         updateButtons();
+        syncItemsWithBackend(); // SYNC WITH BACKEND
     }
 
     function clearAllItems() {
@@ -966,6 +1001,11 @@ document.addEventListener('DOMContentLoaded', function() {
     window.clearAddItemForm = clearAddItemForm;
     window.clearPaymentForm = clearPaymentForm;
     window.clearAllItems = clearAllItems;
+});
+
+// Error handling
+window.addEventListener('error', function(e) {
+    console.error('JavaScript Error:', e.error);
 });
 </script>
 
