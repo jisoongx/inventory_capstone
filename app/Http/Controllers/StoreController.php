@@ -187,7 +187,6 @@ class StoreController extends Controller
     return response()->json(['success' => true]);
     }
 
-    // Update your existing processPayment method - replace the existing one
     public function processPayment(Request $request)
     {
     $request->validate([
