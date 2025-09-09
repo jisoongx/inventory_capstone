@@ -2,117 +2,149 @@
 @section('content')
 <div class="p-4">
     <!-- Start Transaction Button -->
-<div class="flex justify-end mb-6">
-    <button type="button" id="startTransactionBtn"
-        class="px-6 py-4 text-white font-medium rounded-lg shadow-md transition-colors duration-200"
-        style="background-color:#336055;">
-        Start Transaction
-    </button>
-</div>
-
-<!-- Transactions Card -->
-<div class="bg-white rounded-xl shadow-lg overflow-hidden">
-    <!-- Header with filter -->
-    <div class="flex flex-col md:flex-row justify-between md:items-center px-6 py-4 border-b bg-gray-50">
-        <h2 class="text-lg font-semibold text-gray-700">Transactions</h2>
-        
-        <form method="GET" action="{{ route('store_transactions') }}" id="dateFilterForm"
-              class="flex flex-wrap gap-2 mt-3 md:mt-0">
-            <input type="date" name="date" value="{{ $date }}" id="dateFilter"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#336055] focus:border-[#336055]">
-            <a href="{{ route('store_transactions') }}"
-               class="px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition">
-                Clear
-            </a>
-            <button type="submit" name="date" value="{{ now()->toDateString() }}"
-                class="px-4 py-2 text-sm text-white rounded-lg transition-colors duration-200"
-                style="background-color:#336055;">
-                Today
-            </button>
-        </form>
+    <div class="flex justify-end mb-6">
+        <button type="button" id="startTransactionBtn"
+            class="px-6 py-4 text-white font-medium rounded-lg shadow-md transition-colors duration-200"
+            style="background-color:#336055;">
+            Start Transaction
+        </button>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left">
-            <thead class="bg-gray-100 text-gray-700 uppercase text-xs border-b">
-                <tr>
-                    <th class="py-3 px-4">Receipt No</th>
-                    <th class="py-3 px-4">Items Quantity</th>
-                    <th class="py-3 px-4">Total Amount</th>
-                    <th class="py-3 px-4">Time</th>
-                    <th class="py-3 px-4">Date</th>
-                    <th class="py-3 px-4 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($transactions as $trx)
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="py-3 px-4 font-medium text-gray-800">{{ $trx->receipt_id }}</td>
-                        <td class="py-3 px-4">{{ $trx->items_quantity }}</td>
-                        <td class="py-3 px-4 font-semibold text-green-600">₱{{ number_format($trx->total_amount, 2) }}</td>
-                        <td class="py-3 px-4">{{ \Carbon\Carbon::parse($trx->receipt_date)->format('h:i A') }}</td>
-                        <td class="py-3 px-4">{{ \Carbon\Carbon::parse($trx->receipt_date)->format('Y-m-d') }}</td>
-                        <td class="py-3 px-4 text-center">
-                            <button class="text-[#336055] font-medium hover:underline">View</button>
-                        </td>
-                    </tr>
-                @empty
+    <!-- Transactions Card -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Header with filters -->
+        <div class="flex flex-col md:flex-row justify-between md:items-center px-6 py-4 border-b bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-700">Transactions</h2>
+            
+            <!-- Date Filter Options -->
+            <div class="flex flex-wrap gap-3 mt-3 md:mt-0">
+                <!-- Single Date Filter -->
+                <form method="GET" action="{{ route('store_transactions') }}" id="dateFilterForm" class="flex gap-2">
+                    <input type="date" name="date" value="{{ $date }}" id="dateFilter"
+                           class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#336055] focus:border-[#336055]">
+                    <button type="submit" name="date" value="{{ now()->toDateString() }}"
+                        class="px-4 py-2 text-sm text-white rounded-lg transition-colors duration-200"
+                        style="background-color:#336055;">
+                        Today
+                    </button>
+                </form>
+                
+                <!-- Date Range Toggle Button -->
+                <button type="button" id="dateRangeToggle"
+                    class="px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition">
+                    <i class="fas fa-calendar-alt mr-2"></i>Date Range
+                </button>
+                
+                <!-- Clear Filter -->
+                <a href="{{ route('store_transactions') }}"
+                   class="px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+            </div>
+        </div>
+
+        <!-- Date Range Filter Panel (Hidden by default) -->
+        <div id="dateRangePanel" class="px-6 py-4 border-b bg-blue-50" style="display: none;">
+            <form method="GET" action="{{ route('store_transactions') }}" class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-48">
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                    <input type="date" name="start_date" id="start_date" value="{{ $start_date }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#336055] focus:border-[#336055]">
+                </div>
+                
+                <div class="flex-1 min-w-48">
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                    <input type="date" name="end_date" id="end_date" value="{{ $end_date }}"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#336055] focus:border-[#336055]">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="submit"
+                        class="px-4 py-2 text-sm text-white rounded-lg transition-colors duration-200"
+                        style="background-color:#336055;">
+                        <i class="fas fa-search mr-2"></i>Filter
+                    </button>
+                    
+                    <button type="button" id="quickRangeBtn"
+                        class="px-4 py-2 text-sm border border-gray-400 rounded-lg bg-white hover:bg-gray-100 transition">
+                        <i class="fas fa-bolt mr-2"></i>Quick Range
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Active Filter Display -->
+        @if($date || ($start_date && $end_date))
+        <div class="px-6 py-3 bg-green-50 border-b border-green-200">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-green-800">
+                    <i class="fas fa-filter mr-2"></i>
+                    <span class="font-medium">Active Filter:</span>
+                    @if($date)
+                        {{ \Carbon\Carbon::parse($date)->format('F d, Y') }}
+                    @elseif($start_date && $end_date)
+                        {{ \Carbon\Carbon::parse($start_date)->format('F d, Y') }} to {{ \Carbon\Carbon::parse($end_date)->format('F d, Y') }}
+                    @endif
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100 text-gray-700 uppercase text-xs border-b">
                     <tr>
-                        <td colspan="6" class="text-center py-10 text-gray-500">
-                            <i class="fas fa-file-alt text-3xl mb-3"></i>
-                            <p class="font-medium">No transactions found</p>
-                            <p class="text-sm">Start your first transaction to see it here.</p>
-                        </td>
+                        <th class="py-3 px-4">Receipt No</th>
+                        <th class="py-3 px-4">Items Quantity</th>
+                        <th class="py-3 px-4">Total Amount</th>
+                        <th class="py-3 px-4">Time</th>
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4 text-center">Actions</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse($transactions as $trx)
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-3 px-4 font-medium text-gray-800">{{ $trx->receipt_id }}</td>
+                            <td class="py-3 px-4">{{ $trx->items_quantity }}</td>
+                            <td class="py-3 px-4 font-semibold text-green-600">₱{{ number_format($trx->total_amount, 2) }}</td>
+                            <td class="py-3 px-4">{{ \Carbon\Carbon::parse($trx->receipt_date)->format('h:i A') }}</td>
+                            <td class="py-3 px-4">{{ \Carbon\Carbon::parse($trx->receipt_date)->format('Y-m-d') }}</td>
+                            <td class="py-3 px-4 text-center">
+                                <button class="text-[#336055] font-medium hover:underline">View</button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="text-center py-10 text-gray-500">
+                                <i class="fas fa-file-alt text-3xl mb-3"></i>
+                                <p class="font-medium">No transactions found</p>
+                                @if($date || ($start_date && $end_date))
+                                    <p class="text-sm">No transactions found for the selected date range.</p>
+                                @else
+                                    <p class="text-sm">Start your first transaction to see it here.</p>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-</div>
 
-<!-- Product Code Options Modal -->
+<!-- Product Code Modal (Simplified) -->
 <div id="productModal" class="modal-overlay" style="display: none;">
     <div class="modal-container">
         <div class="modal-content">
             <!-- Modal Header -->
             <div class="modal-header">
-                <h5 class="modal-title">PRODUCT CODE OPTIONS</h5>
+                <h5 class="modal-title">START NEW TRANSACTION</h5>
                 <button type="button" class="close-btn" id="closeModalBtn">&times;</button>
             </div>
             <!-- Modal Body -->
             <div class="modal-body">
-                <div class="option-container">
-                    <div class="option-item" onclick="handleScanProduct()">
-                        <div class="option-icon">
-                            <i class="fas fa-barcode"></i>
-                        </div>
-                        <p>Scan Product Code</p>
-                    </div>
-                    <div class="option-item" onclick="handleTypeProduct()">
-                        <div class="option-icon">
-                            <i class="fas fa-keyboard"></i>
-                        </div>
-                        <p>Type Product Code</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Type Product Code Modal -->
-<div id="typeProductModal" class="modal-overlay" style="display: none;">
-    <div class="modal-container" style="width: 500px;">
-        <div class="modal-content">
-            <!-- Modal Header -->
-            <div class="modal-header">
-                <h5 class="modal-title">ENTER PRODUCT CODE</h5>
-                <button type="button" class="close-btn" id="closeTypeModalBtn">&times;</button>
-            </div>
-            <!-- Modal Body -->
-            <div class="modal-body" style="background: white; padding: 2rem;">
                 <!-- Alert Container for Errors -->
                 <div id="alertContainer" style="display: none;">
                     <div class="alert alert-error">
@@ -123,6 +155,7 @@
 
                 <!-- Product Input Form -->
                 <form id="productCodeForm" class="space-y-4">
+                    @csrf
                     <div>
                         <label for="productCode" class="block text-sm font-medium text-gray-700 mb-2">
                             Product Code or Barcode
@@ -153,64 +186,30 @@
     </div>
 </div>
 
-<!-- Product Confirmation Modal -->
-<div id="productConfirmModal" class="modal-overlay" style="display: none;">
-    <div class="modal-container" style="width: 550px;">
+<!-- Quick Date Range Modal -->
+<div id="quickRangeModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="width: 400px;">
         <div class="modal-content">
             <!-- Modal Header -->
             <div class="modal-header">
-                <h5 class="modal-title">CONFIRM PRODUCT DETAILS</h5>
-                <button type="button" class="close-btn" id="closeConfirmModalBtn">&times;</button>
+                <h5 class="modal-title">QUICK DATE RANGES</h5>
+                <button type="button" class="close-btn" id="closeQuickRangeModalBtn">&times;</button>
             </div>
             <!-- Modal Body -->
-            <div class="modal-body" style="background: white; padding: 2rem;">
-                <div id="productDetails" class="space-y-4">
-                    <!-- Product details will be populated here -->
-                </div>
-                
-                <div class="flex gap-3 mt-6">
-                    <button type="button" id="cancelConfirmBtn"
-                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
-                        Cancel
-                    </button>
-                    <button type="button" id="proceedTransactionBtn"
-                            class="flex-1 px-4 py-3 text-white font-medium rounded-lg transition-colors duration-200"
-                            style="background-color:#336055;">
-                        Proceed to Transaction
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Low Stock Warning Modal -->
-<div id="lowStockModal" class="modal-overlay" style="display: none;">
-    <div class="modal-container" style="width: 450px;">
-        <div class="modal-content">
-            <!-- Modal Header -->
-            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>
-                    LOW STOCK WARNING
-                </h5>
-                <button type="button" class="close-btn" id="closeLowStockModalBtn">&times;</button>
-            </div>
-            <!-- Modal Body -->
-            <div class="modal-body" style="background: white; padding: 2rem;">
-                <div id="lowStockDetails">
-                    <!-- Low stock details will be populated here -->
-                </div>
-                
-                <div class="flex gap-3 mt-6">
-                    <button type="button" id="cancelLowStockBtn"
-                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
-                        Cancel Transaction
-                    </button>
-                    <button type="button" id="proceedAnywayBtn"
-                            class="flex-1 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition">
-                        Proceed Anyway
-                    </button>
+            <div class="modal-body" style="background: white; padding: 1.5rem;">
+                <div class="space-y-2">
+                    <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                            data-days="7">Last 7 Days</button>
+                    <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                            data-days="30">Last 30 Days</button>
+                    <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                            data-days="90">Last 3 Months</button>
+                    <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                            data-days="365">Last Year</button>
+                    <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                            data-range="month">This Month</button>
+                    <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                            data-range="year">This Year</button>
                 </div>
             </div>
         </div>
@@ -293,66 +292,6 @@
     background: #fafafa;
 }
 
-/* Option Container */
-.option-container {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    flex-wrap: wrap;
-}
-
-/* Option Items */
-.option-item {
-    text-align: center;
-    cursor: pointer;
-    padding: 1rem;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    flex: 1;
-    min-width: 120px;
-    background: white;
-    border: 2px solid #e5e7eb;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.option-item:hover {
-    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-    border-color: #336055;
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(51, 96, 85, 0.15);
-}
-
-.option-item:active {
-    transform: translateY(-2px);
-}
-
-/* Option Icons */
-.option-icon {
-    margin-bottom: 1rem;
-}
-
-.option-item i {
-    font-size: 5rem;
-    color: #374151;
-    transition: color 0.3s ease;
-}
-
-.option-item:hover i {
-    color: #336055;
-}
-
-.option-item p {
-    margin: 0;
-    color: #374151;
-    font-weight: 600;
-    font-size: 1rem;
-    transition: color 0.3s ease;
-}
-
-.option-item:hover p {
-    color: #336055;
-}
-
 /* Alert Styles */
 .alert {
     padding: 1rem;
@@ -379,41 +318,6 @@
     background-color: #fffbeb;
     border: 1px solid #fed7aa;
     color: #d97706;
-}
-
-/* Product Details Styles */
-.product-detail-row {
-    display: flex;
-    justify-content: between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.product-detail-row:last-child {
-    border-bottom: none;
-}
-
-.product-detail-label {
-    font-weight: 600;
-    color: #374151;
-    min-width: 140px;
-}
-
-.product-detail-value {
-    color: #6b7280;
-    flex: 1;
-}
-
-.stock-warning {
-    background-color: #fef3c7;
-    border: 1px solid #fbbf24;
-    color: #92400e;
-    padding: 0.75rem;
-    border-radius: 6px;
-    margin-top: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 /* Loading indicator for date filter */
@@ -457,7 +361,7 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to { transform: rotate(360deg);     }
 }
 
 /* Animations */
@@ -498,15 +402,6 @@
         margin: 10px;
     }
     
-    .option-container {
-        flex-direction: column;
-        gap: 0.8rem;
-    }
-    
-    .option-item {
-        min-width: auto;
-    }
-    
     .modal-body {
         padding: 1rem 0.8rem;
     }
@@ -529,6 +424,26 @@ body.modal-open {
 .space-y-4 > * + * {
     margin-top: 1rem;
 }
+
+.space-y-2 > * + * {
+    margin-top: 0.5rem;
+}
+
+/* Quick range option hover effect */
+.quick-range-option:hover {
+    background-color: #f9fafb;
+    border-color: #336055;
+}
+
+/* Date range panel styles */
+#dateRangePanel {
+    border-left: 4px solid #336055;
+}
+
+/* Active filter highlight */
+.bg-green-50 {
+    background-color: #f0fdf4;
+}
 </style>
 
 <!-- JavaScript for Modal Functionality -->
@@ -536,29 +451,91 @@ body.modal-open {
 document.addEventListener('DOMContentLoaded', function() {
     const startTransactionBtn = document.getElementById('startTransactionBtn');
     const productModal = document.getElementById('productModal');
-    const typeProductModal = document.getElementById('typeProductModal');
-    const productConfirmModal = document.getElementById('productConfirmModal');
-    const lowStockModal = document.getElementById('lowStockModal');
-    
+    const quickRangeModal = document.getElementById('quickRangeModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
-    const closeTypeModalBtn = document.getElementById('closeTypeModalBtn');
-    const closeConfirmModalBtn = document.getElementById('closeConfirmModalBtn');
-    const closeLowStockModalBtn = document.getElementById('closeLowStockModalBtn');
+    const closeQuickRangeModalBtn = document.getElementById('closeQuickRangeModalBtn');
     
     const dateFilter = document.getElementById('dateFilter');
     const dateFilterForm = document.getElementById('dateFilterForm');
     const productCodeForm = document.getElementById('productCodeForm');
+    const dateRangeToggle = document.getElementById('dateRangeToggle');
+    const dateRangePanel = document.getElementById('dateRangePanel');
+    const quickRangeBtn = document.getElementById('quickRangeBtn');
     const body = document.body;
-
-    let currentProductData = null;
 
     // Auto-submit form when date changes
     if (dateFilter && dateFilterForm) {
         dateFilter.addEventListener('change', function() {
-            dateFilter.classList.add('date-loading');
-            setTimeout(() => dateFilterForm.submit(), 100);
+            if (this.value) {
+                dateFilter.classList.add('date-loading');
+                setTimeout(() => dateFilterForm.submit(), 100);
+            }
         });
     }
+
+    // Date range toggle functionality
+    if (dateRangeToggle && dateRangePanel) {
+        dateRangeToggle.addEventListener('click', function() {
+            const isVisible = dateRangePanel.style.display !== 'none';
+            dateRangePanel.style.display = isVisible ? 'none' : 'block';
+            this.textContent = isVisible ? 'Date Range' : 'Hide Range';
+            
+            // Update icon
+            const icon = this.querySelector('i');
+            if (icon) {
+                icon.className = isVisible ? 'fas fa-calendar-alt mr-2' : 'fas fa-times mr-2';
+            }
+        });
+    }
+
+    // Quick range button functionality
+    if (quickRangeBtn && quickRangeModal) {
+        quickRangeBtn.addEventListener('click', function() {
+            showModal(quickRangeModal);
+        });
+    }
+
+    // Quick range options
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('quick-range-option')) {
+            const button = e.target;
+            const days = button.getAttribute('data-days');
+            const range = button.getAttribute('data-range');
+            
+            let startDate, endDate;
+            const today = new Date();
+            
+            if (days) {
+                endDate = new Date();
+                startDate = new Date();
+                startDate.setDate(today.getDate() - parseInt(days));
+            } else if (range === 'month') {
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            } else if (range === 'year') {
+                startDate = new Date(today.getFullYear(), 0, 1);
+                endDate = new Date(today.getFullYear(), 11, 31);
+            }
+            
+            // Format dates for input fields
+            const formatDate = (date) => {
+                return date.toISOString().split('T')[0];
+            };
+            
+            document.getElementById('start_date').value = formatDate(startDate);
+            document.getElementById('end_date').value = formatDate(endDate);
+            
+            hideModal(quickRangeModal);
+            
+            // Show the date range panel if it's hidden
+            if (dateRangePanel.style.display === 'none') {
+                dateRangePanel.style.display = 'block';
+                if (dateRangeToggle) {
+                    dateRangeToggle.innerHTML = '<i class="fas fa-times mr-2"></i>Hide Range';
+                }
+            }
+        }
+    });
 
     // Modal functions
     function showModal(modal) {
@@ -573,20 +550,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function hideAllModals() {
         hideModal(productModal);
-        hideModal(typeProductModal);
-        hideModal(productConfirmModal);
-        hideModal(lowStockModal);
+        hideModal(quickRangeModal);
     }
 
     // Event listeners
-    if (startTransactionBtn) startTransactionBtn.addEventListener('click', () => showModal(productModal));
+    if (startTransactionBtn) {
+    startTransactionBtn.addEventListener('click', () => {
+        // Show loading state
+        startTransactionBtn.classList.add('btn-loading');
+        startTransactionBtn.textContent = 'Starting...';
+        
+        // Redirect directly to start transaction page
+        window.location.href = '{{ route("store_start_transaction") }}';
+    });
+    }
     if (closeModalBtn) closeModalBtn.addEventListener('click', () => hideModal(productModal));
-    if (closeTypeModalBtn) closeTypeModalBtn.addEventListener('click', () => hideModal(typeProductModal));
-    if (closeConfirmModalBtn) closeConfirmModalBtn.addEventListener('click', () => hideModal(productConfirmModal));
-    if (closeLowStockModalBtn) closeLowStockModalBtn.addEventListener('click', () => hideModal(lowStockModal));
+    if (closeQuickRangeModalBtn) closeQuickRangeModalBtn.addEventListener('click', () => hideModal(quickRangeModal));
 
     // Close modal when clicking outside
-    [productModal, typeProductModal, productConfirmModal, lowStockModal].forEach(modal => {
+    [productModal, quickRangeModal].forEach(modal => {
         if (modal) {
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) hideModal(modal);
@@ -601,19 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Global functions for modal options
-    window.handleScanProduct = function() {
-        showNotification('Scan feature coming soon!', 'info');
-        return false;
-    };
-
-    window.handleTypeProduct = function() {
-        hideModal(productModal);
-        showModal(typeProductModal);
-        setTimeout(() => document.getElementById('productCode').focus(), 300);
-    };
-
-    // Product form submission - Enhanced with confirmation
+    // Product form submission - SIMPLIFIED to redirect directly
     if (productCodeForm) {
         productCodeForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -628,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide any previous alerts
             hideAlert();
             
-            // First validate the product
+            // Validate product and start transaction directly
             fetch('{{ route("search_product") }}', {
                 method: 'POST',
                 body: formData,
@@ -639,15 +609,36 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    currentProductData = data;
-                    showProductConfirmation(data);
+                    // If product is valid, start transaction immediately
+                    const items = [{
+                        prod_code: data.product.prod_code,
+                        quantity: data.requested_quantity
+                    }];
+                    
+                    return fetch('{{ route("start_transaction") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ items: items })
+                    });
                 } else {
-                    showAlert(data.message, 'error');
+                    throw new Error(data.message);
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Redirect directly to transaction page
+                    window.location.href = data.redirect_url;
+                } else {
+                    throw new Error(data.message || 'Failed to start transaction.');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showAlert('An error occurred. Please try again.', 'error');
+                showAlert(error.message || 'An error occurred. Please try again.', 'error');
             })
             .finally(() => {
                 // Remove loading state
@@ -655,146 +646,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i>Start Transaction';
             });
         });
-    }
-
-    // Product confirmation handlers
-    document.getElementById('cancelConfirmBtn')?.addEventListener('click', () => {
-        hideModal(productConfirmModal);
-        showModal(typeProductModal);
-    });
-
-    document.getElementById('proceedTransactionBtn')?.addEventListener('click', () => {
-        if (currentProductData) {
-            startTransaction(currentProductData);
-        }
-    });
-
-    // Low stock warning handlers
-    document.getElementById('cancelLowStockBtn')?.addEventListener('click', () => {
-        hideModal(lowStockModal);
-        showModal(typeProductModal);
-    });
-
-    document.getElementById('proceedAnywayBtn')?.addEventListener('click', () => {
-        if (currentProductData) {
-            startTransaction(currentProductData, true);
-        }
-    });
-
-    function showProductConfirmation(data) {
-        hideModal(typeProductModal);
-        
-        const productDetails = document.getElementById('productDetails');
-        const lowStockWarning = data.low_stock_warning || false;
-        
-        productDetails.innerHTML = `
-            <div class="product-detail-row">
-                <span class="product-detail-label">Product Name:</span>
-                <span class="product-detail-value font-semibold">${data.product.name}</span>
-            </div>
-            <div class="product-detail-row">
-                <span class="product-detail-label">Product Code:</span>
-                <span class="product-detail-value">${data.product.prod_code}</span>
-            </div>
-            <div class="product-detail-row">
-                <span class="product-detail-label">Barcode:</span>
-                <span class="product-detail-value">${data.product.barcode || 'N/A'}</span>
-            </div>
-            <div class="product-detail-row">
-                <span class="product-detail-label">Unit Price:</span>
-                <span class="product-detail-value font-semibold text-green-600">₱${parseFloat(data.product.cost_price).toFixed(2)}</span>
-            </div>
-            <div class="product-detail-row">
-                <span class="product-detail-label">Available Stock:</span>
-                <span class="product-detail-value font-semibold ${data.product.available_quantity <= data.product.stock_limit ? 'text-red-600' : 'text-blue-600'}">${data.product.available_quantity}</span>
-            </div>
-            <div class="product-detail-row">
-                <span class="product-detail-label">Requested Qty:</span>
-                <span class="product-detail-value font-semibold">${data.requested_quantity}</span>
-            </div>
-            <div class="product-detail-row">
-                <span class="product-detail-label">Total Amount:</span>
-                <span class="product-detail-value font-bold text-lg text-green-600">₱${parseFloat(data.total_amount).toFixed(2)}</span>
-            </div>
-            ${lowStockWarning ? `
-            <div class="stock-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                    <strong>Low Stock Warning!</strong><br>
-                    This transaction will leave only ${data.remaining_after_sale} items in stock (below limit of ${data.product.stock_limit}).
-                </div>
-            </div>
-            ` : ''}
-        `;
-        
-        showModal(productConfirmModal);
-    }
-
-    function startTransaction(data, ignoreLowStock = false) {
-        if (data.low_stock_warning && !ignoreLowStock) {
-            showLowStockWarning(data);
-            return;
-        }
-
-        const btn = document.getElementById('proceedTransactionBtn');
-        btn.classList.add('btn-loading');
-        btn.textContent = 'Starting Transaction...';
-        
-        const items = [{
-            prod_code: data.product.prod_code,
-            quantity: data.requested_quantity
-        }];
-
-        fetch('{{ route("start_transaction") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({ items: items })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = data.redirect_url;
-            } else {
-                showAlert(data.message || 'Failed to start transaction.', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showAlert('An error occurred. Please try again.', 'error');
-        })
-        .finally(() => {
-            btn.classList.remove('btn-loading');
-            btn.textContent = 'Proceed to Transaction';
-        });
-    }
-
-    function showLowStockWarning(data) {
-        hideModal(productConfirmModal);
-        
-        const lowStockDetails = document.getElementById('lowStockDetails');
-        lowStockDetails.innerHTML = `
-            <div class="text-center mb-4">
-                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-3"></i>
-                <h3 class="text-lg font-semibold text-gray-800">Low Stock Alert</h3>
-            </div>
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <p class="text-sm text-gray-700 mb-2">
-                    <strong>${data.product.name}</strong> will have low stock after this transaction:
-                </p>
-                <div class="text-sm space-y-1">
-                    <div>Current Stock: <span class="font-semibold">${data.product.available_quantity}</span></div>
-                    <div>Requested Quantity: <span class="font-semibold">${data.requested_quantity}</span></div>
-                    <div>Remaining After Sale: <span class="font-semibold text-red-600">${data.remaining_after_sale}</span></div>
-                    <div>Stock Limit: <span class="font-semibold">${data.product.stock_limit}</span></div>
-                </div>
-            </div>
-            <p class="text-sm text-gray-600">Would you like to proceed with this transaction anyway?</p>
-        `;
-        
-        showModal(lowStockModal);
     }
 
     // Helper functions
