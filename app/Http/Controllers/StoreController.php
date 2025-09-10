@@ -31,12 +31,10 @@ class StoreController extends Controller
             ->groupBy('receipt.receipt_id', 'receipt.receipt_date')
             ->orderBy('receipt.receipt_date', 'desc');
    
-        // Handle single date filter
         if ($date) {
             $query->whereDate('receipt.receipt_date', $date);
         }
         
-        // Handle date range filter
         if ($startDate && $endDate) {
             $query->whereBetween('receipt.receipt_date', [
                 Carbon::parse($startDate)->startOfDay(),
@@ -54,179 +52,369 @@ class StoreController extends Controller
         ]);
     }
 
-    public function searchProduct(Request $request)
+    // Show the kiosk-style transaction interface
+    public function showKioskTransaction()
+    {
+        session()->forget('transaction_items');
+        
+        $user_firstname = null;
+        
+        if (Auth::guard('owner')->check()) {
+            $user_firstname = Auth::guard('owner')->user()->firstname;
+        } elseif (Auth::guard('staff')->check()) {
+            $user_firstname = Auth::guard('staff')->user()->firstname;
+        }
+
+        return view('store_start_transaction', [
+            'receipt_no' => $this->generateReceiptNumber(),
+            'user_firstname' => $user_firstname
+        ]);
+    }
+
+    // Get all categories for the dropdown filter
+    public function getCategories()
+    {
+        try {
+            $categories = DB::table('categories')
+                ->select('category_id', 'category')
+                ->orderBy('category')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'categories' => $categories
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading categories: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Get products with inventory for kiosk display
+    public function getKioskProducts(Request $request)
+    {
+        try {
+            $categoryId = $request->get('category_id');
+            $search = $request->get('search');
+            
+            $query = DB::table('products')
+                ->join('categories', 'products.category_id', '=', 'categories.category_id')
+                ->leftJoin('inventory', 'products.prod_code', '=', 'inventory.prod_code')
+                ->select(
+                    'products.prod_code',
+                    'products.name',
+                    'products.cost_price',
+                    'products.stock_limit',
+                    'products.barcode',
+                    'products.prod_image',
+                    'products.category_id',
+                    'categories.category as category_name',
+                    DB::raw('COALESCE(SUM(inventory.stock), 0) as stock')
+                )
+                ->groupBy(
+                    'products.prod_code',
+                    'products.name',
+                    'products.cost_price',
+                    'products.stock_limit',
+                    'products.barcode',
+                    'products.prod_image',
+                    'products.category_id',
+                    'categories.category'
+                )
+                ->orderBy('products.name');
+
+            if ($categoryId) {
+                $query->where('products.category_id', $categoryId);
+            }
+
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('products.name', 'LIKE', "%{$search}%")
+                      ->orWhere('products.barcode', 'LIKE', "%{$search}%");
+                });
+            }
+
+            $products = $query->get();
+
+            return response()->json([
+                'success' => true,
+                'products' => $products
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading products: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Add item to kiosk cart
+    public function addToKioskCart(Request $request)
     {
         $request->validate([
-            'prod_code' => 'required|string',
+            'prod_code' => 'required|exists:products,prod_code',
             'quantity' => 'required|integer|min:1'
         ]);
 
-        $product = Product::where('prod_code', $request->prod_code)
-                         ->orWhere('barcode', $request->prod_code)
-                         ->first();
-
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found. Please check the product code or barcode.'
-            ], 404);
-        }
-
-        // Get total stock from inventory table
-        $totalStock = Inventory::where('prod_code', $product->prod_code)
-                              ->sum('stock');
-
-        if ($totalStock < $request->quantity) {
-            return response()->json([
-                'success' => false,
-                'message' => "Insufficient stock. Available quantity: {$totalStock}"
-            ], 400);
-        }
-
-        // Check if requesting quantity will result in low stock warning
-        $remainingAfterSale = $totalStock - $request->quantity;
-        $lowStockWarning = $remainingAfterSale <= $product->stock_limit;
-
-        return response()->json([
-            'success' => true,
-            'product' => [
-                'prod_code' => $product->prod_code,
-                'barcode' => $product->barcode,
-                'name' => $product->name,
-                'cost_price' => $product->cost_price,
-                'selling_price' => $product->selling_price,
-                'available_quantity' => $totalStock,
-                'stock_limit' => $product->stock_limit,
-                'description' => $product->description
-            ],
-            'requested_quantity' => $request->quantity,
-            'total_amount' => $product->cost_price * $request->quantity,
-            'low_stock_warning' => $lowStockWarning,
-            'remaining_after_sale' => $remainingAfterSale
-        ]);
-    }
-
-    public function showStartTransaction()
-    {
-    // Clear any existing transaction items from session when starting fresh
-    session()->forget('transaction_items');
-    
-    // Start with empty transaction
-    $transactionItems = [];
-    $totalAmount = 0;
-    $totalQuantity = 0;
-
-    // Get user firstname based on authentication guard
-    $user_firstname = null;
-    
-    if (Auth::guard('owner')->check()) {
-        $user_firstname = Auth::guard('owner')->user()->firstname;
-    } elseif (Auth::guard('staff')->check()) {
-        $user_firstname = Auth::guard('staff')->user()->firstname;
-    }
-
-    return view('store_start_transaction', [
-        'items' => $transactionItems, // Always empty when starting fresh
-        'total_amount' => $totalAmount, // Always 0 when starting fresh
-        'total_quantity' => $totalQuantity, // Always 0 when starting fresh
-        'receipt_no' => $this->generateReceiptNumber(),
-        'user_firstname' => $user_firstname
-    ]);
-    }
-
-    // Updated startTransaction method (for when adding items from the initial modal)
-    public function startTransaction(Request $request)
-    {
-    $request->validate([
-        'items' => 'required|array|min:1',
-        'items.*.prod_code' => 'required|exists:products,prod_code',
-        'items.*.quantity' => 'required|integer|min:1'
-    ]);
-
-    // Additional validation: Check if all items have sufficient inventory stock
-    foreach ($request->items as $item) {
-        $totalStock = Inventory::where('prod_code', $item['prod_code'])
-                             ->sum('stock');
-        
-        if ($totalStock < $item['quantity']) {
-            $product = Product::find($item['prod_code']);
-            return response()->json([
-                'success' => false,
-                'message' => "Insufficient stock for {$product->name}. Available: {$totalStock}"
-            ], 400);
-        }
-    }
-
-    // Store items in session for the transaction interface
-    session()->put('transaction_items', $request->items);
-    
-    return response()->json([
-        'success' => true,
-        'redirect_url' => route('store_start_transaction')
-    ]);
-    }
-
-    // Add a new method to load items when they exist in session (for page refreshes)
-    public function loadTransactionItems()
-    {
-    $items = session()->get('transaction_items', []);
-    
-    $transactionItems = [];
-    $totalAmount = 0;
-    $totalQuantity = 0;
-
-    foreach ($items as $item) {
-        $product = Product::find($item['prod_code']);
-        if ($product) {
-            // Get current stock from inventory
-            $currentStock = Inventory::where('prod_code', $item['prod_code'])
-                                   ->sum('stock');
+        try {
+            $product = Product::find($request->prod_code);
             
-            $itemTotal = $product->cost_price * $item['quantity'];
-            $transactionItems[] = [
-                'product' => $product,
-                'quantity' => $item['quantity'],
-                'amount' => $itemTotal,
-                'current_stock' => $currentStock
-            ];
-            $totalAmount += $itemTotal;
-            $totalQuantity += $item['quantity'];
+            if (!$product) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found.'
+                ], 404);
+            }
+
+            $totalStock = Inventory::where('prod_code', $product->prod_code)->sum('stock');
+
+            $currentItems = session()->get('transaction_items', []);
+            $currentQuantity = 0;
+            
+            // Check if item already exists in cart
+            foreach ($currentItems as $item) {
+                if ($item['prod_code'] == $request->prod_code) {
+                    $currentQuantity = $item['quantity'];
+                    break;
+                }
+            }
+
+            $newTotalQuantity = $currentQuantity + $request->quantity;
+
+            if ($totalStock < $newTotalQuantity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Insufficient stock. Available: {$totalStock}, In cart: {$currentQuantity}"
+                ], 400);
+            }
+
+            // Update or add item to session
+            $itemFound = false;
+            foreach ($currentItems as &$item) {
+                if ($item['prod_code'] == $request->prod_code) {
+                    $item['quantity'] = $newTotalQuantity;
+                    $itemFound = true;
+                    break;
+                }
+            }
+
+            if (!$itemFound) {
+                $currentItems[] = [
+                    'prod_code' => $request->prod_code,
+                    'quantity' => $request->quantity
+                ];
+            }
+
+            session()->put('transaction_items', $currentItems);
+
+            // Prepare response data
+            $cartItems = $this->getFormattedCartItems($currentItems);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item added to cart successfully!',
+                'cart_items' => $cartItems['items'],
+                'cart_summary' => [
+                    'total_quantity' => $cartItems['total_quantity'],
+                    'total_amount' => $cartItems['total_amount']
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error adding item: ' . $e->getMessage()
+            ], 500);
         }
     }
 
-    return [
-        'items' => $transactionItems,
-        'total_amount' => $totalAmount,
-        'total_quantity' => $totalQuantity
-    ];
-    }
-
-    public function updateTransactionItems(Request $request)
+    // Update cart item quantity
+    public function updateCartItem(Request $request)
     {
         $request->validate([
-            'items' => 'required|array',
-            'items.*.prod_code' => 'required|exists:products,prod_code',
-            'items.*.quantity' => 'required|integer|min:1'
+            'prod_code' => 'required|exists:products,prod_code',
+            'quantity' => 'required|integer|min:0'
         ]);
 
-        // Update session with current items
-        session()->put('transaction_items', $request->items);
-        
-        return response()->json(['success' => true]);
+        try {
+            $currentItems = session()->get('transaction_items', []);
+            
+            if ($request->quantity == 0) {
+                // Remove item from cart
+                $currentItems = array_filter($currentItems, function($item) use ($request) {
+                    return $item['prod_code'] != $request->prod_code;
+                });
+                $currentItems = array_values($currentItems); // Re-index array
+            } else {
+                // Check stock availability
+                $totalStock = Inventory::where('prod_code', $request->prod_code)->sum('stock');
+                
+                if ($totalStock < $request->quantity) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Insufficient stock. Available: {$totalStock}"
+                    ], 400);
+                }
+
+                // Update quantity
+                foreach ($currentItems as &$item) {
+                    if ($item['prod_code'] == $request->prod_code) {
+                        $item['quantity'] = $request->quantity;
+                        break;
+                    }
+                }
+            }
+
+            session()->put('transaction_items', $currentItems);
+            
+            $cartItems = $this->getFormattedCartItems($currentItems);
+
+            return response()->json([
+                'success' => true,
+                'cart_items' => $cartItems['items'],
+                'cart_summary' => [
+                    'total_quantity' => $cartItems['total_quantity'],
+                    'total_amount' => $cartItems['total_amount']
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating cart: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
+    // Remove item from cart with reason
+    public function removeCartItem(Request $request)
+    {
+        $request->validate([
+            'prod_code' => 'required|exists:products,prod_code',
+            'reason' => 'required|in:return,damage,cancel'
+        ]);
+
+        try {
+            $currentItems = session()->get('transaction_items', []);
+            
+            $currentItems = array_filter($currentItems, function($item) use ($request) {
+                return $item['prod_code'] != $request->prod_code;
+            });
+            $currentItems = array_values($currentItems);
+
+            session()->put('transaction_items', $currentItems);
+            
+            $cartItems = $this->getFormattedCartItems($currentItems);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item removed successfully.',
+                'cart_items' => $cartItems['items'],
+                'cart_summary' => [
+                    'total_quantity' => $cartItems['total_quantity'],
+                    'total_amount' => $cartItems['total_amount']
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error removing item: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Clear all cart items
+    public function clearKioskCart()
+    {
+        session()->forget('transaction_items');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Cart cleared successfully.',
+            'cart_items' => [],
+            'cart_summary' => [
+                'total_quantity' => 0,
+                'total_amount' => 0
+            ]
+        ]);
+    }
+
+    // Get current cart items
+    public function getCartItems()
+    {
+        try {
+            $currentItems = session()->get('transaction_items', []);
+            $cartItems = $this->getFormattedCartItems($currentItems);
+
+            return response()->json([
+                'success' => true,
+                'cart_items' => $cartItems['items'],
+                'cart_summary' => [
+                    'total_quantity' => $cartItems['total_quantity'],
+                    'total_amount' => $cartItems['total_amount']
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error getting cart items: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Process barcode search
+    public function processBarcodeSearch(Request $request)
+    {
+        $request->validate([
+            'barcode' => 'required|string'
+        ]);
+
+        try {
+            $product = Product::where('barcode', $request->barcode)->first();
+
+            if (!$product) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found with this barcode.'
+                ], 404);
+            }
+
+            $totalStock = Inventory::where('prod_code', $product->prod_code)->sum('stock');
+
+            return response()->json([
+                'success' => true,
+                'product' => [
+                    'prod_code' => $product->prod_code,
+                    'name' => $product->name,
+                    'cost_price' => $product->cost_price,
+                    'stock_limit' => $product->stock_limit,
+                    'barcode' => $product->barcode,
+                    'prod_image' => $product->prod_image,
+                    'category_id' => $product->category_id,
+                    'stock' => $totalStock
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error processing barcode: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Process payment (reusing existing logic)
     public function processPayment(Request $request)
     {
         $request->validate([
             'payment_method' => 'required|string',
             'amount_received' => 'required|numeric|min:0',
-            'items' => 'sometimes|array', // Make it optional - can come from request or session
-            'items.*.prod_code' => 'required_with:items|exists:products,prod_code',
-            'items.*.quantity' => 'required_with:items|integer|min:1'
         ]);
 
-        // Use items from request if provided, otherwise fall back to session
-        $items = $request->has('items') ? $request->items : session()->get('transaction_items', []);
+        $items = session()->get('transaction_items', []);
         
         if (empty($items)) {
             return response()->json([
@@ -238,7 +426,6 @@ class StoreController extends Controller
         DB::beginTransaction();
 
         try {
-            // Get proper user IDs based on authentication guards
             $owner_id = null;
             $staff_id = null;
             
@@ -249,7 +436,6 @@ class StoreController extends Controller
                 $owner_id = Auth::guard('staff')->user()->owner_id;
             }
 
-            // Create receipt
             $receipt = Receipt::create([
                 'receipt_date' => now(),
                 'owner_id' => $owner_id ?? 1,
@@ -259,7 +445,6 @@ class StoreController extends Controller
             $totalAmount = 0;
             $lowStockProducts = [];
 
-            // Create receipt items and update inventory stock
             foreach ($items as $item) {
                 $product = Product::find($item['prod_code']);
                 
@@ -267,25 +452,20 @@ class StoreController extends Controller
                     throw new \Exception("Product not found: " . $item['prod_code']);
                 }
 
-                // Check current total available stock in inventory
-                $totalStock = Inventory::where('prod_code', $item['prod_code'])
-                                     ->sum('stock');
+                $totalStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
                 
                 if ($totalStock < $item['quantity']) {
                     throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
                 }
 
-                // Create receipt item
                 ReceiptItem::create([
                     'item_quantity' => $item['quantity'],
                     'prod_code' => $item['prod_code'],
                     'receipt_id' => $receipt->receipt_id
                 ]);
 
-                // Update inventory stock using FIFO method
                 $this->decrementInventoryStock($item['prod_code'], $item['quantity']);
                 
-                // Check if product is now low stock
                 $remainingStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
                 if ($remainingStock <= $product->stock_limit) {
                     $lowStockProducts[] = [
@@ -298,7 +478,6 @@ class StoreController extends Controller
                 $totalAmount += $product->cost_price * $item['quantity'];
             }
 
-            // Clear session
             session()->forget('transaction_items');
 
             DB::commit();
@@ -312,7 +491,6 @@ class StoreController extends Controller
                 'change' => $request->amount_received - $totalAmount
             ];
 
-            // Add low stock warning if any
             if (!empty($lowStockProducts)) {
                 $response['low_stock_warning'] = $lowStockProducts;
             }
@@ -329,15 +507,42 @@ class StoreController extends Controller
         }
     }
 
-    /**
-     * Decrement inventory stock using FIFO method (First In, First Out)
-     * This ensures older inventory is sold first
-     */
+    // Helper method to format cart items
+    private function getFormattedCartItems($items)
+    {
+        $formattedItems = [];
+        $totalAmount = 0;
+        $totalQuantity = 0;
+
+        foreach ($items as $item) {
+            $product = Product::find($item['prod_code']);
+            if ($product) {
+                $currentStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
+                $itemTotal = $product->cost_price * $item['quantity'];
+                
+                $formattedItems[] = [
+                    'product' => $product,
+                    'quantity' => $item['quantity'],
+                    'amount' => $itemTotal,
+                    'current_stock' => $currentStock
+                ];
+                
+                $totalAmount += $itemTotal;
+                $totalQuantity += $item['quantity'];
+            }
+        }
+
+        return [
+            'items' => $formattedItems,
+            'total_amount' => $totalAmount,
+            'total_quantity' => $totalQuantity
+        ];
+    }
+
     private function decrementInventoryStock($prod_code, $quantity)
     {
         $remainingQuantity = $quantity;
         
-        // Get inventory records ordered by date_added (FIFO) and then by inven_code for consistency
         $inventoryItems = Inventory::where('prod_code', $prod_code)
                                  ->where('stock', '>', 0)
                                  ->orderBy('date_added', 'asc')
@@ -354,11 +559,9 @@ class StoreController extends Controller
             }
 
             if ($item->stock >= $remainingQuantity) {
-                // This inventory item has enough stock to fulfill the remaining quantity
                 $item->decrement('stock', $remainingQuantity);
                 $remainingQuantity = 0;
             } else {
-                // Use all stock from this item and continue to next
                 $remainingQuantity -= $item->stock;
                 $item->update(['stock' => 0]);
             }

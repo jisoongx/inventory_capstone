@@ -583,70 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Product form submission - SIMPLIFIED to redirect directly
-    if (productCodeForm) {
-        productCodeForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const btn = document.getElementById('submitTransactionBtn');
-            
-            // Show loading state
-            btn.classList.add('btn-loading');
-            btn.textContent = 'Validating Product...';
-            
-            // Hide any previous alerts
-            hideAlert();
-            
-            // Validate product and start transaction directly
-            fetch('{{ route("search_product") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // If product is valid, start transaction immediately
-                    const items = [{
-                        prod_code: data.product.prod_code,
-                        quantity: data.requested_quantity
-                    }];
-                    
-                    return fetch('{{ route("start_transaction") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ items: items })
-                    });
-                } else {
-                    throw new Error(data.message);
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Redirect directly to transaction page
-                    window.location.href = data.redirect_url;
-                } else {
-                    throw new Error(data.message || 'Failed to start transaction.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert(error.message || 'An error occurred. Please try again.', 'error');
-            })
-            .finally(() => {
-                // Remove loading state
-                btn.classList.remove('btn-loading');
-                btn.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i>Start Transaction';
-            });
-        });
-    }
+    
 
     // Helper functions
     function showAlert(message, type) {

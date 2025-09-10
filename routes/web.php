@@ -141,9 +141,25 @@ Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name
 // Main transactions routes
 Route::get('/store_transactions', [StoreController::class, 'index'])->name('store_transactions');
 // New routes for the enhanced functionality
-Route::post('/search_product', [StoreController::class, 'searchProduct'])->name('search_product');
+// Route::post('/search_product', [StoreController::class, 'searchProduct'])->name('search_product');
 Route::post('/start_transaction', [StoreController::class, 'startTransaction'])->name('start_transaction');
-Route::get('/store_start_transaction', [StoreController::class, 'showStartTransaction'])->name('store_start_transaction');
-Route::post('/update_transaction_items', [StoreController::class, 'updateTransactionItems'])->name('update_transaction_items');
+Route::get('/store_start_transaction', [StoreController::class, 'showKioskTransaction'])->name('store_start_transaction');
 Route::post('/process_payment', [StoreController::class, 'processPayment'])->name('process_payment');
+
+// Kiosk Transaction Routes
+// API endpoints for kiosk functionality
+Route::get('/api/categories', [StoreController::class, 'getCategories'])->name('get_categories');
+Route::get('/api/kiosk/products', [StoreController::class, 'getKioskProducts'])->name('get_kiosk_products');
+
+// Cart management routes
+Route::post('/api/kiosk/cart/add', [StoreController::class, 'addToKioskCart'])->name('add_to_kiosk_cart');
+Route::post('/api/kiosk/cart/update', [StoreController::class, 'updateCartItem'])->name('update_cart_item');
+Route::post('/api/kiosk/cart/remove', [StoreController::class, 'removeCartItem'])->name('remove_cart_item');
+Route::post('/api/kiosk/cart/clear', [StoreController::class, 'clearKioskCart'])->name('clear_kiosk_cart');
+Route::get('/api/kiosk/cart', [StoreController::class, 'getCartItems'])->name('get_cart_items');
+
+// Barcode and payment routes
+Route::post('/api/barcode/search', [StoreController::class, 'processBarcodeSearch'])->name('process_barcode_search');
+Route::post('/apply-discount-vat', [StoreController::class, 'applyDiscountVat'])->name('apply_discount_vat');
+Route::post('/api/payment/process', [StoreController::class, 'processPayment'])->name('process_payment');
 
