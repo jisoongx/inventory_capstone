@@ -97,6 +97,41 @@ class InventoryOwnerController extends Controller
     }
 
 
+    public function showProductDetails($prodCode)
+    {
+        // Get product info (include stock_limit)
+        $product = DB::table('products')
+            ->join('units', 'products.unit_id', '=', 'units.unit_id')
+            ->select('products.*', 'units.unit as unit')
+            ->where('products.prod_code', $prodCode)
+            ->first();
+
+        if (!$product) {
+            abort(404, 'Product not found');
+        }
+
+        // Get all restock records
+        $restocks = DB::table('inventory')
+            ->where('prod_code', $prodCode)
+            ->whereNotNull('batch_number') // only restocks
+            ->orderBy('date_added', 'desc')
+            ->get();
+
+        // Calculate total stock
+        $totalStock = $restocks->sum('stock');
+
+        // Compute threshold = 20% of stock_limit
+        $lowStockThreshold = $product->stock_limit * 0.2;
+
+        return view('inventory-owner-product-info', compact('product', 'restocks', 'totalStock', 'lowStockThreshold'));
+    }
+
+
+
+
+
+
+
     public function checkBarcode(Request $request)
     {
         $barcode = $request->input('barcode');
@@ -137,7 +172,6 @@ class InventoryOwnerController extends Controller
             'description' => 'nullable|string',
             'category_id' => 'required|integer',
             'unit_id' => 'required|integer',
-            'quantity' => 'required|integer|min:1',
             'photo' => 'nullable|image|max:2048',
             // Product-specific field now
             'stock_limit' => 'required|integer|min:0',
@@ -182,7 +216,6 @@ class InventoryOwnerController extends Controller
             'prod_code' => $prodCode,
             'owner_id' => $ownerId,
             'category_id' => $validated['category_id'],
-            'stock' => $validated['quantity'],
             'date_added' => now(),
             'expiration_date' => $validated['expiration_date'] ?? null,
             'last_updated' => now(),

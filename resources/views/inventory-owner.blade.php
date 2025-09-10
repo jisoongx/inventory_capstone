@@ -134,9 +134,12 @@
                                 <!-- Actions -->
                                 <td class="px-4 py-2 border text-center space-x-2">
                                     <!-- Info -->
-                                    <a href="#" title="Info" class="text-blue-500 hover:text-blue-700">
+                                    <a href="{{ route('inventory-product-info', $product->prod_code) }}" 
+                                    title="Info" 
+                                    class="text-blue-500 hover:text-blue-700">
                                         <span class="material-symbols-outlined">info</span>
                                     </a>
+
                                     <!-- Edit -->
                                     <a href="#" title="Edit" class="text-green-500 hover:text-green-700">
                                         <span class="material-symbols-outlined">edit</span>
@@ -145,10 +148,10 @@
                                     <form action="#" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" title="Delete"
+                                        <button type="submit" title="Archive"
                                             class="text-red-500 hover:text-red-700"
-                                            onclick="return confirm('Are you sure you want to delete this product?')">
-                                            <span class="material-symbols-outlined">delete</span>
+                                            onclick="return confirm('Are you sure you want to archive this product?')">
+                                            <span class="material-symbols-outlined">archive</span>
                                         </button>
                                     </form>
                                 </td>
@@ -268,7 +271,7 @@
                         id="barcodeExistsRestockBtn"
                         class="w-32 bg-[#F18301] text-white text-sm py-3 rounded-3xl hover:bg-[#cc6900] transition-all duration-200 transform hover:scale-105"
                     >
-                        Restock
+                        Add Stock
                     </button>
 
                     <!-- Enter New Barcode -->
@@ -344,7 +347,7 @@
             <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
 
                 <!-- Left Side (Form Fields) -->
-                <form id="registerProductForm" class="w-1/2 space-y-3">
+                <form id="registerProductForm" class="w-1/2 space-y-4">
 
                     <!-- Product Name -->
                     <input type="text" name="name" placeholder="Product Name"
@@ -375,14 +378,6 @@
                         </select>
                     </div>
 
-                    <!-- Quantity -->
-                    <label for="quantityInput" class="block text-sm text-center font-semibold text-gray-800">Quantity</label>
-                    <div class="flex items-center border border-gray-300 rounded px-2 py-1">
-                        <button type="button" onclick="decreaseQuantity()" class="px-2 text-base font-bold">−</button>
-                        <input type="number" name="quantity" id="quantityInput" value="1" min="1"
-                            class="w-full text-center outline-none border-0 text-sm">
-                        <button type="button" onclick="increaseQuantity()" class="px-2 text-base font-bold">+</button>
-                    </div>
 
                     <!-- Stock Limit -->
                     <input type="number" name="stock_limit" placeholder="Stock Limit" min="0" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
@@ -785,17 +780,6 @@
             resetPhotoPreview();
         }
 
-        // Quantity increment/decrement
-        function increaseQuantity() {
-            const input = document.getElementById('quantityInput');
-            if (input) input.value = parseInt(input.value || 0) + 1;
-        }
-        function decreaseQuantity() {
-            const input = document.getElementById('quantityInput');
-            if (input && parseInt(input.value) > 1) {
-                input.value = parseInt(input.value) - 1;
-            }
-        }
 
         // Auto-calc Selling Price
         function calculateSellingPrice() {

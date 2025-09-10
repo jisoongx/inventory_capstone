@@ -143,7 +143,7 @@
         console.log(event.detail.message);
     });
 </script>
-
+@livewireScripts
 </body>
 
 </html>
