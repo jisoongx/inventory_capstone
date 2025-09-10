@@ -2,9 +2,7 @@
 
 @section('content')
 
-
     @livewire('technical-resolve')
-
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {

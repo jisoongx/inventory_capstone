@@ -6,12 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sign Up</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+<<<<<<< Updated upstream
     @livewireStyles
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 </head>
 
 <body class="flex items-center justify-center min-h-screen bg-white font-poppins p-4">
     <div class="w-full max-w-3xl bg-white px-8 sm:px-10 md:px-12 py-8 md:py-10">
+=======
+    <!-- <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script> -->
+</head>
+
+<body class="flex items-center justify-center min-h-screen bg-gray-50 p-6">
+    <div class="w-full max-w-4xl bg-white p-8 rounded-xl shadow-lg">
+>>>>>>> Stashed changes
 
         <!-- Logo -->
         <div class="flex items-center mb-8">

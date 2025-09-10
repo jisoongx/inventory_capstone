@@ -1,14 +1,22 @@
 <div class="relative z-30">
     
-    <button type="button" wire:click="togglePanel" class="relative">
-        <span class="material-symbols-rounded">notifications_active</span>
+<button type="button" wire:click="togglePanel" class="relative">
+    <span class="material-symbols-rounded">notifications_active</span>
 
-        @if ($count > 0)
-            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                {{ $count }}
-            </span>
-        @endif
-    </button>
+    @if ($count == 0)
+        <span wire:poll.keep-alive="refreshNotifs"
+            class="absolute -top-1 -right-1 bg-transparent text-transparent font-bold rounded-full h-4 w-4 flex items-center justify-center">
+            {{ $count }}
+        </span>
+    @else
+        <span 
+            wire:poll.keep-alive="refreshNotifs"
+            class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+            {{ $count }}
+        </span>
+    @endif
+</button>
+
 
     <div @if(!$active) style="display: none;" @endif
         class="absolute right-0 top-full mt-2 w-96 bg-white border rounded-xl shadow-lg h-96 overflow-y-auto z-50 transition-all duration-300">
@@ -23,20 +31,39 @@
 
         <ul class="text-xs">
             @forelse($notifs as $notif)
-                <li class="py-5 px-5 hover:bg-slate-100 transition border-gray-300 border-b select-none"
+                <li class="p-3 hover:bg-slate-100 transition border-gray-300 border-b select-none"
                     wire:click='openModal( {{ $notif->notif_id }}, @json($notif->notif_title), @json($notif->notif_message), @json($notif->notif_created_on))'>
 
                     <div class="flex items-start justify-between">
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-rounded p-3 rounded-full bg-green-100 text-green-500 mt-1 shadow">campaign</span>
+                            @if ($notif->notif_type === 'system') 
+                                <span class="material-symbols-rounded p-3 rounded-full bg-green-100 text-green-500 mt-1 shadow">campaign</span>
+                                <div class="flex-1">
+                                    <span class="font-semibold text-xs text-gray-800">{{ $notif->notif_title }}</span>
+                                    <span class="text-[10px] text-gray-500 ml-2">{{ \Carbon\Carbon::parse($notif->notif_created_on)->diffForHumans() }}</span>
+                                    <p class="text-gray-700 text-xs mt-1 leading-relaxed line-clamp-2">{{ $notif->notif_message }}</p>
+                                </div>
+                            @elseif ($notif->notif_type === 'specific')
+                                <div class="flex-1 items-start justify-between space-x-4">
+                                   
+                                    <div class="flex items-start space-x-3 flex-1">
+                                        <span class="material-symbols-rounded p-3 rounded-full bg-red-100 text-red-500 shadow">priority_high</span>
+                                        <div class="flex-1">
+                                                <span class="font-semibold text-xs text-gray-800">{{ $notif->notif_title }}</span>
+                                                <span class="text-[10px] text-gray-500 ml-2">{{ \Carbon\Carbon::parse($notif->notif_created_on)->diffForHumans() }}</span>
+                                            
+                                            <p class="text-gray-700 text-xs mt-1 leading-relaxed line-clamp-2">{{ $notif->notif_message }}</p>
+                                        </div>
+                                    </div>
 
-                            <div class="flex-1">
-                                <span class="font-semibold text-xs text-gray-800">{{ $notif->notif_title }}</span>
-                                <span class="text-[10px] text-gray-500 ml-2">{{ \Carbon\Carbon::parse($notif->notif_created_on)->diffForHumans() }}</span>
-                                <p class="text-gray-700 text-xs mt-1 leading-relaxed line-clamp-2">{{ $notif->notif_message }}</p>
-                            </div>
+                                    <div class="flex-1 space-x-2 mt-2 float-right">
+                                        <button type="button" class="bg-blue-700 hover:bg-blue-900 p-2 text-white font-semibold rounded text-xs">Renew</button>
+                                        <button type="button" class="bg-slate-200 hover:bg-slate-300 p-2 rounded text-xs">Nevermind</button>
+                                    </div>
+                                </div>
+
+                            @endif
                         </div>
-
 
                         <div class="flex-shrink-0 ml-3 mt-1">
                             <div class="rounded-full h-2 w-2

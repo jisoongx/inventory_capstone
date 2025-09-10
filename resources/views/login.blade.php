@@ -6,6 +6,7 @@
     <title>ShopLytix Login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+<<<<<<< Updated upstream
     @livewireStyles
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 </head>
@@ -18,6 +19,15 @@
             <img src="{{ asset('assets/logo.png') }}" class="w-14 drop-shadow-md" alt="ShopLytix Logo">
             <h1 class="text-2xl font-bold text-red-600 tracking-wide">SHOPLYTIX</h1>
         </div>
+=======
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
+</head>
+
+<body class="bg-white flex items-center justify-center min-h-screen p-6">
+    <div class="w-full max-w-[340px] text-center flex flex-col items-center gap-6">
+        <img src="{{ asset('assets/logo.png') }}" class="w-14 -mb-5 -ml-2" alt="ShopLytix Logo">
+        <h1 class="text-2xl font-bold text-red-600">SHOPLYTIX</h1>
+>>>>>>> Stashed changes
 
         {{-- MODAL --}}
         @if(session('success') || session('login_error') || session('error') || $errors->any())
@@ -44,6 +54,7 @@
         <!-- Login Form -->
         <form method="POST" action="{{ route('login') }}" class="w-full flex flex-col gap-4">
             @csrf
+<<<<<<< Updated upstream
 
             <!-- Email -->
             <div class="relative">
@@ -55,6 +66,12 @@
                            bg-white border border-black rounded-lg 
                            shadow-sm focus:ring-1 focus:ring-black focus:border-black
                            placeholder-gray-700 transition" />
+=======
+            <div class="relative w-full max-w-[280px]">
+                <i class="fas fa-user absolute left-5 top-1/2 -translate-y-1/2 text-black"></i>
+                <input type="email" name="email" placeholder="Email" required
+                    class="w-full pl-12 pr-4 py-4 text-sm border border-black rounded-full shadow font-medium  focus:ring-gray-700  placeholder-gray-600" />
+>>>>>>> Stashed changes
             </div>
 
             <!-- Password -->

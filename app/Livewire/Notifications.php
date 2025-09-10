@@ -42,25 +42,23 @@ class Notifications extends Component
         if ($this->filter === 'all') {
 
             $this->notifs = collect(DB::select("
-                SELECT n.notif_id, n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read
+                SELECT n.notif_id, n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read, n.notif_type
                 FROM notification n
                 JOIN user_notification un ON n.notif_id = un.notif_id
                 WHERE un.usernotif_email = ?
-                AND un.usernotif_type IN ('all', ?)
                 ORDER BY n.notif_created_on DESC
-            ", [$user_email, $role]));
+            ", [$user_email]));
 
         } elseif ($this->filter === 'unread') {
 
             $this->notifs = collect(DB::select("
-                SELECT n.notif_id, n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read
+                SELECT n.notif_id, n.notif_title, n.notif_message, n.notif_created_on, un.usernotif_is_read, n.notif_type
                 FROM notification n
                 JOIN user_notification un ON n.notif_id = un.notif_id
                 WHERE un.usernotif_email = ?
-                AND un.usernotif_type IN ('all', ?)
                 AND un.usernotif_is_read = 0
                 ORDER BY n.notif_created_on DESC
-            ", [$user_email, $role]));
+            ", [$user_email]));
         }
 
         $this->count = collect(DB::select("
@@ -94,6 +92,10 @@ class Notifications extends Component
         ", [$user_email]);
 
         $this->count = 0;
+    }
+
+    public function refreshNotifs() {
+        $this->loadNotifs();
     }
 
     public function openModal($id, $title, $message, $created) {

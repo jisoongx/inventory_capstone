@@ -1,38 +1,27 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\Log;
 
 class Kernel extends ConsoleKernel
 {
-    /**
-     * The Artisan commands provided by your application.
-     *
-     * @var array<int, class-string>
-     */
-    protected $commands = [
-        \App\Console\Commands\SendSubscriptionReminder::class,
-    ];
-
-    /**
-     * Define the application's command schedule.
-     */
-    protected function schedule(Schedule $schedule)
+    
+    protected function schedule(Schedule $schedule): void
     {
-        // Run the subscription reminder daily at 9:51 PM
-        $schedule->command('subscription:reminder')->dailyAt('22:16');
+        
+        $schedule->call(function () {
+            Log::info('Scheduler is working at ' . now());
+        })->everyMinute();
+
+        $schedule->command('check:expiration')->daily();
     }
 
-    /**
-     * Register the commands for the application.
-     */
-    protected function commands()
+    protected function commands(): void
     {
-        $this->load(__DIR__ . '/Commands');
-
-        // Optional: require console routes
-        // require base_path('routes/console.php');
+        $this->load(__DIR__.'/Commands');
+        require base_path('routes/console.php');
     }
 }

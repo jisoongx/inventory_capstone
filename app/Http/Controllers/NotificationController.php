@@ -56,14 +56,13 @@ class NotificationController extends Controller
                 $staff = DB::select("SELECT email AS user_email FROM staff");
 
                 $users = array_merge($owners, $staff);
-                $type = 'all';
             }
 
             foreach ($users as $user) {
                 DB::insert("
-                    INSERT INTO user_notification (usernotif_type, usernotif_email, usernotif_is_read, usernotif_read_at, notif_id)
-                    VALUES (?, ?, 0, NULL, ?)
-                ", [$type, $user->user_email, $notif_id]);
+                    INSERT INTO user_notification (usernotif_email, usernotif_is_read, usernotif_read_at, notif_id)
+                    VALUES ( ?, 0, NULL, ?)
+                ", [$user->user_email, $notif_id]);
             }
 
             return redirect()->route('dashboards.super_admin.notification')->with('success', 'Notification sent successfully.');

@@ -44,7 +44,7 @@ class TechnicalController extends Controller
             $owner_id = $owner->owner_id;
 
             $requests = collect(DB::select("
-                SELECT tr.*, cm_max.last_message_id
+                SELECT tr.*, cm_max.last_message_id, tr.req_id
                 FROM technical_request tr
                 JOIN (
                     SELECT req_id, MAX(msg_id) as last_message_id
@@ -273,26 +273,3 @@ class TechnicalController extends Controller
 
 
 ?>
-
-<!-- 
-$requests = collect(DB::select("
-            SELECT 
-                tr.req_id,
-                tr.req_ticket,
-                tr.req_title,
-                tr.req_status,
-                tr.req_date,
-                cr.convo_id,
-                cm.msg_id,
-                cm.sender_type,
-                cm.sender_id,
-                cm.message,
-                cm.msg_date
-            FROM technical_request tr
-            JOIN conversation_request cr 
-                ON tr.req_id = cr.req_id
-            LEFT JOIN conversation_message cm 
-                ON cr.convo_id = cm.convo_id
-            WHERE tr.owner_id = ?
-            ORDER BY tr.req_id DESC, cm.msg_date ASC
-        ", [$owner_id])); -->

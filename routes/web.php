@@ -49,6 +49,7 @@ Route::get('/super/technical-support/chat/{req_id?}', [TechnicalController::clas
 Route::post('super/technical-support/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.super_admin.technical_insert');
 
 
+
 Route::get('/super/notification', [NotificationController::class, 'index'])->name('dashboards.super_admin.notification');
 Route::post('/super/notification/create', [NotificationController::class, 'send_notification'])->name('dashboards.notification.send');
 
