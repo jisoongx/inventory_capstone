@@ -116,18 +116,24 @@ return [
     */
 
     'passwords' => [
-        // If you need password reset for SuperAdmins, Owners, or Staff,
-        // you should define separate password brokers for each,
-        // pointing to their respective providers.
-        // For example:
         'super_admins' => [
             'provider' => 'super_admins',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'), // You'll need this table
+            'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],
-        // You can add 'owners' and 'staff' password brokers similarly if needed.
-        // Removed the default 'users' password broker as it's not used.
+        'owners' => [
+            'provider' => 'owners',
+            'table' => 'password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        'staff' => [
+            'provider' => 'staff',
+            'table' => 'password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
     ],
 
     /*

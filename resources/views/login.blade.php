@@ -5,15 +5,19 @@
     <meta charset="UTF-8" />
     <title>ShopLytix Login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 </head>
 
-<body class="bg-white font-[Inter] flex items-center justify-center min-h-screen p-6">
-    <div class="w-full max-w-[340px] text-center flex flex-col items-center gap-6">
-        <img src="{{ asset('assets/logo.png') }}" class="w-14 -mb-5 -ml-2" alt="ShopLytix Logo">
-        <h1 class="text-2xl font-bold text-red-600">SHOPLYTIX</h1>
+<body class="min-h-screen flex items-center justify-center bg-white font-poppins p-4">
+
+    <div class="w-full max-w-sm bg-white p-8 flex flex-col items-center gap-6">
+        <!-- Logo + Title -->
+        <div class="flex flex-col items-center gap-2">
+            <img src="{{ asset('assets/logo.png') }}" class="w-14 drop-shadow-md" alt="ShopLytix Logo">
+            <h1 class="text-2xl font-bold text-red-600 tracking-wide">SHOPLYTIX</h1>
+        </div>
 
         {{-- MODAL --}}
         @if(session('success') || session('login_error') || session('error') || $errors->any())
@@ -22,10 +26,15 @@
         $type = session('success') ? 'success' : 'error';
         @endphp
         <div id="messageModal" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
-            <div class="bg-white rounded-xl p-4 shadow-lg max-w-xs w-full text-center">
-                <p class="text-sm text-gray-700 mb-4">{{ $msg }}</p>
+            <div class="bg-white rounded-xl p-5 shadow-lg max-w-xs w-full text-center">
+                <div class="flex justify-center mb-2">
+                    <span class="material-symbols-rounded text-3xl {{ $type === 'success' ? 'text-green-500' : 'text-red-500' }}">
+                        {{ $type === 'success' ? 'check_circle' : 'error' }}
+                    </span>
+                </div>
+                <p class="text-sm text-gray-700 mb-3">{{ $msg }}</p>
                 <button onclick="document.getElementById('messageModal').remove()"
-                    class="px-6 py-2 rounded-md text-white font-medium {{ $type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700' }}">
+                    class="px-6 py-2 rounded-lg text-white font-medium shadow {{ $type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700' }} transition">
                     OK
                 </button>
             </div>
@@ -33,29 +42,52 @@
         @endif
 
         <!-- Login Form -->
-        <form method="POST" action="{{ route('login') }}" class="w-full flex flex-col gap-5 items-center">
+        <form method="POST" action="{{ route('login') }}" class="w-full flex flex-col gap-4">
             @csrf
-            <div class="relative w-full max-w-[280px]">
-                <i class="fas fa-user absolute left-5 top-1/2 -translate-y-1/2 text-black"></i>
-                <input type="email" name="email" placeholder="User" required
-                    class="w-full pl-12 pr-4 py-4 text-sm border border-black rounded-full shadow font-medium  focus:ring-gray-700  placeholder-gray-600" />
+
+            <!-- Email -->
+            <div class="relative">
+                <span class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-900">
+                    person
+                </span>
+                <input type="email" name="email" placeholder="Email" required
+                    class="w-full pl-12 pr-4 py-2.5 text-sm 
+                           bg-white border border-black rounded-lg 
+                           shadow-sm focus:ring-1 focus:ring-black focus:border-black
+                           placeholder-gray-700 transition" />
             </div>
-            <div class="relative w-full max-w-[280px]">
-                <i class="fas fa-lock absolute left-5 top-1/2 -translate-y-1/2 text-black"></i>
+
+            <!-- Password -->
+            <div class="relative">
+                <span class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-900">
+                    lock
+                </span>
                 <input type="password" id="password" name="password" placeholder="Password" required
-                    class="w-full pl-12 pr-10 py-4 text-sm border border-black rounded-full shadow font-medium  focus:ring-gray-700  placeholder-gray-600" />
-                <i id="togglePasswordIcon"
-                    class="fas fa-eye-slash absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hidden"></i>
+                    class="w-full pl-12 pr-10 py-2.5 text-sm 
+                           bg-white border border-black rounded-lg 
+                           shadow-sm focus:ring-1 focus:ring-black focus:border-black
+                           placeholder-gray-700 transition" />
+                <span id="togglePasswordIcon"
+                    class="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 cursor-pointer hidden">
+                </span>
             </div>
+
+            <!-- Forgot Password -->
+            <div class="text-center">
+                <a href="{{route('password.request')}}" class="text-xs text-gray-600 hover:text-red-600 transition">Forgot password?</a>
+            </div>
+
+            <!-- Login Button -->
             <button type="submit"
-                class="px-10 py-4 text-sm font-medium shadow-md text-white bg-black rounded-full hover:bg-gray-800 transition max-w-[160px] w-full">
+                class="w-full py-2.5 text-sm font-medium shadow-md text-white bg-red-600 rounded-lg hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] transition transform">
                 Login
             </button>
         </form>
 
-        <p class="text-sm text-black">
+        <!-- Sign Up Link -->
+        <p class="text-xs text-gray-700">
             Don’t have an account?
-            <a href="{{ route('signup') }}" class="text-red-600 font-bold underline">Sign up</a>
+            <a href="{{ route('signup') }}" class="text-red-600 font-medium hover:underline">Sign up</a>
         </p>
     </div>
 
@@ -63,11 +95,20 @@
         const pwd = document.getElementById("password");
         const icon = document.getElementById("togglePasswordIcon");
 
-        pwd.addEventListener("input", () => icon.style.display = pwd.value ? "block" : "none");
+        pwd.addEventListener("input", () => {
+            if (pwd.value) {
+                icon.classList.remove("hidden");
+                icon.textContent = "visibility_off"; // default when typing starts
+            } else {
+                icon.classList.add("hidden");
+                icon.textContent = "";
+            }
+        });
+
         icon.addEventListener("click", () => {
-            pwd.type = pwd.type === "password" ? "text" : "password";
-            icon.classList.toggle("fa-eye");
-            icon.classList.toggle("fa-eye-slash");
+            const isHidden = pwd.type === "password";
+            pwd.type = isHidden ? "text" : "password";
+            icon.textContent = isHidden ? "visibility" : "visibility_off";
         });
     </script>
 </body>

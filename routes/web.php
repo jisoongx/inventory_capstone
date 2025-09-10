@@ -16,6 +16,7 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\Auth\PasswordResetController;
 
 
 
@@ -67,6 +68,17 @@ Route::get('/signup',  fn() => view('signup'))->name('signup');
 Route::post('/signup', [RegisterController::class, 'register'])->name('signup.submit');
 Route::get('/term-of-service',  fn() => view('terms_of_service'))->name('terms.of.service');
 Route::get('/privacy-policy',  fn() => view('privacy_policy'))->name('privacy.');
+
+
+//forgot password
+Route::get('/forgot-password', fn() => view('forgot-password'))->name('password.request');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])->name('password.email');
+Route::get('/reset-password/{token}', function (string $token) {
+    return view('reset-password', ['token' => $token]);
+})->name('password.reset');
+Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
+
+
 //Subscription
 Route::get('/subscription/select', [SubscriptionController::class, 'create'])->name('subscription.selection');
 Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store');
@@ -78,9 +90,6 @@ Route::get('/subscription/expired', fn() => view('subscription_expired'))->name(
 Route::get('/super-admin/dashboard', fn() => view('dashboards.super_admin.super_admin'))->name('super_admin.dashboard');
 Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('dashboards.owner.dashboard');
 Route::get('/staff/dashboard', [DashboardController::class, 'index_staff'])->name('staff.dashboard');
-
-
-//clients management
 
 //subscription plan management
 Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');

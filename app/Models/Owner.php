@@ -70,4 +70,9 @@ class Owner extends Authenticatable
     {
         return $this->hasMany(Payment::class, 'owner_id');
     }
+
+    public function getEmailForPasswordReset()
+    {
+        return $this->email; // your email column
+    }
 }

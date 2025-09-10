@@ -44,4 +44,9 @@ class Staff extends Authenticatable
     {
         return $this->belongsTo(Owner::class, 'owner_id', 'owner_id');
     }
+
+    public function getEmailForPasswordReset()
+    {
+        return $this->email; // your email column
+    }
 }

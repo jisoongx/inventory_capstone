@@ -35,4 +35,9 @@ class SuperAdmin extends Authenticatable
     {
         return 'super_pass';
     }
+
+    public function getEmailForPasswordReset()
+    {
+        return $this->email; // your email column
+    }
 }
