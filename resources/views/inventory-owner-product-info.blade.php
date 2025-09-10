@@ -11,7 +11,7 @@
         <a href="{{ route('inventory-owner') }}" 
            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg shadow-sm hover:bg-blue-300 transition">
             <span class="material-symbols-outlined text-base mr-1">arrow_back</span>
-            Back to Inventory
+            Inventory
         </a>
     </div>
 
