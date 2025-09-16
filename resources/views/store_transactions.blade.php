@@ -45,7 +45,7 @@
 
         <!-- Date Range Filter Panel (Hidden by default) -->
         <div id="dateRangePanel" class="px-6 py-4 border-b bg-blue-50" style="display: none;">
-            <form method="GET" action="{{ route('store_transactions') }}" class="flex flex-wrap gap-3 items-end">
+            <form method="GET" action="{{ route('store_transactions') }}" class="flex flex-wrap gap-3 items-end" id="dateRangeForm">
                 <div class="flex-1 min-w-48">
                     <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
                     <input type="date" name="start_date" id="start_date" value="{{ $start_date }}"
@@ -112,13 +112,19 @@
                             <td class="py-3 px-4">{{ \Carbon\Carbon::parse($trx->receipt_date)->format('h:i A') }}</td>
                             <td class="py-3 px-4">{{ \Carbon\Carbon::parse($trx->receipt_date)->format('Y-m-d') }}</td>
                             <td class="py-3 px-4 text-center">
-                                <button class="text-[#336055] font-medium hover:underline">View</button>
+                                <button onclick="viewReceipt({{ $trx->receipt_id }})" 
+                                        class="text-[#336055] font-medium hover:underline view-receipt-btn">
+                                    View
+                                </button>
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="6" class="text-center py-10 text-gray-500">
-                                <i class="fas fa-file-alt text-3xl mb-3"></i>
+                                <!-- Modern Document Icon -->
+                                <svg class="mx-auto mb-4 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
                                 <p class="font-medium">No transactions found</p>
                                 @if($date || ($start_date && $end_date))
                                     <p class="text-sm">No transactions found for the selected date range.</p>
@@ -130,6 +136,99 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt View Modal -->
+<div id="receiptViewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col">
+        <!-- Receipt Header -->
+        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg flex-shrink-0">
+            <div class="text-center">
+                <h3 class="text-xl font-bold mb-2">Payment Successful!</h3>
+                <p class="text-sm text-red-100">Transaction completed successfully</p>
+            </div>
+        </div>
+
+        <!-- Receipt Content - Scrollable -->
+        <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
+            <div class="p-6">
+                <!-- Loading State -->
+                <div id="receiptLoading" class="text-center py-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#336055] mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading receipt details...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="receiptError" class="hidden text-center py-8">
+                    <svg class="mx-auto mb-4 w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <p class="text-red-600 text-lg font-medium">Error loading receipt</p>
+                    <p class="text-gray-500 text-sm" id="receiptErrorMessage">Please try again later.</p>
+                </div>
+
+                <!-- Receipt Details Content -->
+                <div id="receiptContent" class="hidden">
+                    <!-- Store Info -->
+                    <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
+                        <h2 id="storeNameReceipt" class="text-xl font-bold text-gray-800">Store Name</h2>
+                    </div>
+
+                    <!-- Transaction Details -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
+                            <span id="receiptNumber" class="text-sm font-bold text-gray-900">-</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Date & Time:</span>
+                            <span id="receiptTransactionDate" class="text-sm text-gray-900">-</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-medium text-gray-700">Cashier:</span>
+                            <span id="receiptCashier" class="text-sm text-gray-900">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
+                        <div id="receiptItemsList" class="space-y-2">
+                            <!-- Items will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="border-t-2 border-gray-300 pt-4 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700">Total Items:</span>
+                            <span id="receiptTotalItems" class="text-sm font-bold text-gray-900">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold text-gray-900">Total Amount:</span>
+                            <span id="receiptTotalAmount" class="text-lg font-bold text-[#336055]">₱0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Footer Message -->
+                    <div class="text-center mt-6 pt-4 border-t border-gray-200">
+                        <p class="text-xs text-gray-500">Thank you for your purchase!</p>
+                        <p class="text-xs text-gray-500">Please keep this receipt for your records.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons - Fixed at bottom -->
+        <div class="p-4 border-t bg-gray-50 flex gap-3 rounded-b-lg flex-shrink-0">
+            <button id="returnItemBtn" class="flex-1 text-white py-3 px-4 rounded-lg font-bold transition-colors" style="background-color: #336055;" onmouseover="this.style.backgroundColor='#2d5449'" onmouseout="this.style.backgroundColor='#336055'">
+                Return Item
+            </button>
+            <button id="closeReceiptModalBtn" class="flex-1 bg-gray-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-gray-700 transition-colors">
+                Close
+            </button>
         </div>
     </div>
 </div>
@@ -203,13 +302,13 @@
                     <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
                             data-days="30">Last 30 Days</button>
                     <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
-                            data-days="90">Last 3 Months</button>
+                            data-range="last-3-months">Last 3 Months</button>
                     <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
-                            data-days="365">Last Year</button>
+                            data-range="last-year">Last Year</button>
                     <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
-                            data-range="month">This Month</button>
+                            data-range="this-month">This Month</button>
                     <button type="button" class="quick-range-option w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
-                            data-range="year">This Year</button>
+                            data-range="this-year">This Year</button>
                 </div>
             </div>
         </div>
@@ -444,6 +543,48 @@ body.modal-open {
 .bg-green-50 {
     background-color: #f0fdf4;
 }
+
+/* Receipt Modal Specific Scrolling */
+#receiptViewModal .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+#receiptViewModal .overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+}
+
+#receiptViewModal .overflow-y-auto::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 4px;
+    margin: 8px 0;
+}
+
+#receiptViewModal .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+    border: 2px solid #f8fafc;
+}
+
+#receiptViewModal .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Loading animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* View Receipt Button Hover */
+.view-receipt-btn:hover {
+    color: #2d5449 !important;
+    text-decoration: underline;
+    cursor: pointer;
+}
 </style>
 
 <!-- JavaScript for Modal Functionality -->
@@ -452,14 +593,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const startTransactionBtn = document.getElementById('startTransactionBtn');
     const productModal = document.getElementById('productModal');
     const quickRangeModal = document.getElementById('quickRangeModal');
+    const receiptViewModal = document.getElementById('receiptViewModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
     const closeQuickRangeModalBtn = document.getElementById('closeQuickRangeModalBtn');
+    const closeReceiptModalBtn = document.getElementById('closeReceiptModalBtn');
     
     const dateFilter = document.getElementById('dateFilter');
     const dateFilterForm = document.getElementById('dateFilterForm');
     const productCodeForm = document.getElementById('productCodeForm');
     const dateRangeToggle = document.getElementById('dateRangeToggle');
     const dateRangePanel = document.getElementById('dateRangePanel');
+    const dateRangeForm = document.getElementById('dateRangeForm');
     const quickRangeBtn = document.getElementById('quickRangeBtn');
     const body = document.body;
 
@@ -506,13 +650,28 @@ document.addEventListener('DOMContentLoaded', function() {
             const today = new Date();
             
             if (days) {
-                endDate = new Date();
-                startDate = new Date();
+                // For "Last X Days" - go back X days from today
+                endDate = new Date(today);
+                startDate = new Date(today);
                 startDate.setDate(today.getDate() - parseInt(days));
-            } else if (range === 'month') {
+            } else if (range === 'last-3-months') {
+                // Last 3 months means 3 months ago
+                // If today is September 2025, 3 months ago is June 2025
+                endDate = new Date(today);
+                startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() - 3 + 1, 0); // Last day of 3 months ago
+            } else if (range === 'last-year') {
+                // Last year means the entire previous year
+                // If current year is 2025, last year is 2024 (Jan 1 to Dec 31, 2024)
+                const lastYear = today.getFullYear() - 1;
+                startDate = new Date(lastYear, 0, 1); // January 1 of last year
+                endDate = new Date(lastYear, 11, 31); // December 31 of last year
+            } else if (range === 'this-month') {
+                // This month - from 1st to last day of current month
                 startDate = new Date(today.getFullYear(), today.getMonth(), 1);
                 endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-            } else if (range === 'year') {
+            } else if (range === 'this-year') {
+                // This year - from Jan 1 to Dec 31 of current year
                 startDate = new Date(today.getFullYear(), 0, 1);
                 endDate = new Date(today.getFullYear(), 11, 31);
             }
@@ -522,9 +681,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return date.toISOString().split('T')[0];
             };
             
+            // Set the date inputs
             document.getElementById('start_date').value = formatDate(startDate);
             document.getElementById('end_date').value = formatDate(endDate);
             
+            // Close the quick range modal
             hideModal(quickRangeModal);
             
             // Show the date range panel if it's hidden
@@ -534,41 +695,63 @@ document.addEventListener('DOMContentLoaded', function() {
                     dateRangeToggle.innerHTML = '<i class="fas fa-times mr-2"></i>Hide Range';
                 }
             }
+            
+            // Automatically submit the form to show results immediately
+            if (dateRangeForm) {
+                // Add loading state
+                button.classList.add('btn-loading');
+                button.textContent = 'Loading...';
+                
+                // Submit the form
+                setTimeout(() => {
+                    dateRangeForm.submit();
+                }, 100);
+            }
         }
     });
 
     // Modal functions
     function showModal(modal) {
         modal.style.display = 'flex';
+        modal.classList.remove('hidden');
         body.classList.add('modal-open');
     }
 
     function hideModal(modal) {
         modal.style.display = 'none';
+        modal.classList.add('hidden');
         body.classList.remove('modal-open');
+        
+        // Reset receipt modal state when closing
+        if (modal.id === 'receiptViewModal') {
+            resetReceiptModal();
+        }
     }
 
     function hideAllModals() {
         hideModal(productModal);
         hideModal(quickRangeModal);
+        hideModal(receiptViewModal);
     }
 
     // Event listeners
     if (startTransactionBtn) {
-    startTransactionBtn.addEventListener('click', () => {
-        // Show loading state
-        startTransactionBtn.classList.add('btn-loading');
-        startTransactionBtn.textContent = 'Starting...';
-        
-        // Redirect directly to start transaction page
-        window.location.href = '{{ route("store_start_transaction") }}';
-    });
+        startTransactionBtn.addEventListener('click', () => {
+            // Show loading state
+            startTransactionBtn.classList.add('btn-loading');
+            startTransactionBtn.textContent = 'Starting...';
+            
+            // Redirect directly to start transaction page
+            window.location.href = '{{ route("store_start_transaction") }}';
+        });
     }
+    
     if (closeModalBtn) closeModalBtn.addEventListener('click', () => hideModal(productModal));
     if (closeQuickRangeModalBtn) closeQuickRangeModalBtn.addEventListener('click', () => hideModal(quickRangeModal));
+    if (closeReceiptModalBtn) closeReceiptModalBtn.addEventListener('click', () => hideModal(receiptViewModal));
 
     // Close modal when clicking outside
-    [productModal, quickRangeModal].forEach(modal => {
+    [productModal, quickRangeModal, receiptViewModal].forEach(modal => {
         if (modal) {
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) hideModal(modal);
@@ -583,7 +766,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    
+    // Event delegation for View Receipt buttons (ensures they work after DOM changes)
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('view-receipt-btn')) {
+            e.preventDefault();
+            const receiptId = e.target.getAttribute('data-receipt-id') || 
+                              e.target.getAttribute('onclick')?.match(/viewReceipt\((\d+)\)/)?.[1];
+            if (receiptId) {
+                window.viewReceipt(parseInt(receiptId));
+            }
+        }
+    });
+
+    // Return Item button functionality
+    document.getElementById('returnItemBtn').addEventListener('click', function() {
+        // Get the current receipt ID
+        const receiptId = document.getElementById('receiptNumber').textContent;
+        
+        // Show notification - you can implement actual return functionality later
+        showNotification(`Return item functionality for receipt ${receiptId} will be implemented soon`, 'info');
+    });
+
+    // Reset receipt modal function
+    function resetReceiptModal() {
+        const receiptContent = document.getElementById('receiptContent');
+        const receiptLoading = document.getElementById('receiptLoading');
+        const receiptError = document.getElementById('receiptError');
+        
+        // Reset all states
+        receiptContent.classList.add('hidden');
+        receiptError.classList.add('hidden');
+        receiptLoading.classList.remove('hidden');
+        
+        // Clear content
+        document.getElementById('receiptNumber').textContent = '-';
+        document.getElementById('receiptTransactionDate').textContent = '-';
+        document.getElementById('receiptCashier').textContent = '-';
+        document.getElementById('receiptItemsList').innerHTML = '';
+        document.getElementById('receiptTotalItems').textContent = '0';
+        document.getElementById('receiptTotalAmount').textContent = '₱0.00';
+    }
 
     // Helper functions
     function showAlert(message, type) {
@@ -640,6 +862,125 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 });
+
+// Global function to view receipt
+window.viewReceipt = async function(receiptId) {
+    console.log('ViewReceipt called with ID:', receiptId); // Debug log
+    
+    const receiptViewModal = document.getElementById('receiptViewModal');
+    const receiptContent = document.getElementById('receiptContent');
+    const receiptLoading = document.getElementById('receiptLoading');
+    const receiptError = document.getElementById('receiptError');
+    const receiptErrorMessage = document.getElementById('receiptErrorMessage');
+    
+    // Show modal and loading state
+    receiptViewModal.style.display = 'flex';
+    receiptViewModal.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    
+    receiptContent.classList.add('hidden');
+    receiptError.classList.add('hidden');
+    receiptLoading.classList.remove('hidden');
+    
+    try {
+        // Fetch receipt details from server
+        const response = await fetch(`/api/receipt/${receiptId}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            populateReceiptModal(data.receipt, data.items, data.store_info);
+        } else {
+            throw new Error(data.message || 'Failed to load receipt details');
+        }
+        
+    } catch (error) {
+        console.error('Error fetching receipt:', error);
+        receiptLoading.classList.add('hidden');
+        receiptError.classList.remove('hidden');
+        receiptErrorMessage.textContent = error.message || 'Unable to load receipt details. Please try again.';
+    }
+};
+
+function populateReceiptModal(receipt, items, storeInfo) {
+    const receiptContent = document.getElementById('receiptContent');
+    const receiptLoading = document.getElementById('receiptLoading');
+    const receiptError = document.getElementById('receiptError');
+    
+    // Hide loading and error states
+    receiptLoading.classList.add('hidden');
+    receiptError.classList.add('hidden');
+    
+    // Populate store information
+    if (storeInfo) {
+        document.getElementById('storeNameReceipt').textContent = storeInfo.store_name || 'Store Name';
+    }
+    
+    // Populate receipt details
+    document.getElementById('receiptNumber').textContent = receipt.receipt_id || '-';
+    
+    // Format date and time
+    if (receipt.receipt_date) {
+        const date = new Date(receipt.receipt_date);
+        const options = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+        document.getElementById('receiptTransactionDate').textContent = date.toLocaleString('en-US', options);
+    }
+    
+    // Populate cashier information
+    const cashierName = receipt.owner_name || receipt.staff_name || 'Cashier';
+    document.getElementById('receiptCashier').textContent = cashierName;
+    
+    // Populate items list
+    const itemsList = document.getElementById('receiptItemsList');
+    let totalItems = 0;
+    let totalAmount = 0;
+    
+    if (items && items.length > 0) {
+        itemsList.innerHTML = items.map(item => {
+            const itemTotal = parseFloat(item.item_quantity) * parseFloat(item.selling_price);
+            totalItems += parseInt(item.item_quantity);
+            totalAmount += itemTotal;
+            
+            return `
+                <div class="flex justify-between items-start py-2 border-b border-gray-100 last:border-b-0">
+                    <div class="flex-1 pr-2">
+                        <div class="text-sm font-medium text-gray-900">${item.product_name}</div>
+                        <div class="text-xs text-gray-500">${item.item_quantity} × ₱${parseFloat(item.selling_price).toFixed(2)}</div>
+                    </div>
+                    <div class="text-sm font-bold text-gray-900">₱${itemTotal.toFixed(2)}</div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        itemsList.innerHTML = '<div class="text-center py-4 text-gray-500">No items found</div>';
+    }
+    
+    // Populate totals
+    document.getElementById('receiptTotalItems').textContent = totalItems;
+    document.getElementById('receiptTotalAmount').textContent = `₱${totalAmount.toFixed(2)}`;
+    
+    // Show content
+    receiptContent.classList.remove('hidden');
+}
 
 // Error handling
 window.addEventListener('error', function(e) {

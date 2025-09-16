@@ -26,7 +26,7 @@ class StoreController extends Controller
                 'receipt.receipt_id',
                 'receipt.receipt_date',
                 DB::raw('SUM(receipt_item.item_quantity) as items_quantity'),
-                DB::raw('SUM(receipt_item.item_quantity * products.cost_price) as total_amount')
+                DB::raw('SUM(receipt_item.item_quantity * products.selling_price) as total_amount')
             )
             ->groupBy('receipt.receipt_id', 'receipt.receipt_date')
             ->orderBy('receipt.receipt_date', 'desc');
@@ -52,22 +52,82 @@ class StoreController extends Controller
         ]);
     }
 
+    // View receipt details
+    public function getReceiptDetails($receiptId)
+    {
+    try {
+        $receipt = DB::table('receipt')
+            ->leftJoin('owners', 'receipt.owner_id', '=', 'owners.owner_id')
+            ->leftJoin('staff', 'receipt.staff_id', '=', 'staff.staff_id')
+            ->select('receipt.*', 'owners.firstname as owner_name', 'staff.firstname as staff_name')
+            ->where('receipt.receipt_id', $receiptId)
+            ->first();
+
+        if (!$receipt) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Receipt not found'
+            ], 404);
+        }
+
+        $items = DB::table('receipt_item')
+            ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
+            ->select('receipt_item.*', 'products.name as product_name', 'products.selling_price')
+            ->where('receipt_item.receipt_id', $receiptId)
+            ->get();
+
+        $storeInfo = null;
+        if ($receipt->owner_id) {
+            $storeInfo = DB::table('owners')
+                ->select('store_name', 'store_address', 'contact')
+                ->where('owner_id', $receipt->owner_id)
+                ->first();
+        }
+
+        return response()->json([
+            'success' => true,
+            'receipt' => $receipt,
+            'items' => $items,
+            'store_info' => $storeInfo
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error loading receipt: ' . $e->getMessage()
+        ], 500);
+    }
+    }
+
     // Show the kiosk-style transaction interface
     public function showKioskTransaction()
     {
         session()->forget('transaction_items');
         
         $user_firstname = null;
+        $owner_id = null;
+        $store_info = null;
         
         if (Auth::guard('owner')->check()) {
             $user_firstname = Auth::guard('owner')->user()->firstname;
+            $owner_id = Auth::guard('owner')->user()->owner_id;
         } elseif (Auth::guard('staff')->check()) {
             $user_firstname = Auth::guard('staff')->user()->firstname;
+            $owner_id = Auth::guard('staff')->user()->owner_id;
+        }
+        
+        // Get store information
+        if ($owner_id) {
+            $store_info = DB::table('owners')
+                ->select('store_name', 'store_address', 'contact')
+                ->where('owner_id', $owner_id)
+                ->first();
         }
 
         return view('store_start_transaction', [
             'receipt_no' => $this->generateReceiptNumber(),
-            'user_firstname' => $user_firstname
+            'user_firstname' => $user_firstname,
+            'store_info' => $store_info
         ]);
     }
 
@@ -105,7 +165,7 @@ class StoreController extends Controller
                 ->select(
                     'products.prod_code',
                     'products.name',
-                    'products.cost_price',
+                    'products.selling_price',
                     'products.stock_limit',
                     'products.barcode',
                     'products.prod_image',
@@ -116,7 +176,7 @@ class StoreController extends Controller
                 ->groupBy(
                     'products.prod_code',
                     'products.name',
-                    'products.cost_price',
+                    'products.selling_price',
                     'products.stock_limit',
                     'products.barcode',
                     'products.prod_image',
@@ -326,22 +386,6 @@ class StoreController extends Controller
         }
     }
 
-    // Clear all cart items
-    public function clearKioskCart()
-    {
-        session()->forget('transaction_items');
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Cart cleared successfully.',
-            'cart_items' => [],
-            'cart_summary' => [
-                'total_quantity' => 0,
-                'total_amount' => 0
-            ]
-        ]);
-    }
-
     // Get current cart items
     public function getCartItems()
     {
@@ -390,7 +434,7 @@ class StoreController extends Controller
                 'product' => [
                     'prod_code' => $product->prod_code,
                     'name' => $product->name,
-                    'cost_price' => $product->cost_price,
+                    'selling_price' => $product->selling_price,
                     'stock_limit' => $product->stock_limit,
                     'barcode' => $product->barcode,
                     'prod_image' => $product->prod_image,
@@ -444,6 +488,7 @@ class StoreController extends Controller
 
             $totalAmount = 0;
             $lowStockProducts = [];
+            $receiptItems = [];
 
             foreach ($items as $item) {
                 $product = Product::find($item['prod_code']);
@@ -475,7 +520,15 @@ class StoreController extends Controller
                     ];
                 }
                 
-                $totalAmount += $product->cost_price * $item['quantity'];
+                $itemTotal = $product->selling_price * $item['quantity'];
+                $totalAmount += $itemTotal;
+
+                // Store receipt item for response
+                $receiptItems[] = [
+                    'product' => $product,
+                    'quantity' => $item['quantity'],
+                    'amount' => $itemTotal
+                ];
             }
 
             session()->forget('transaction_items');
@@ -488,7 +541,9 @@ class StoreController extends Controller
                 'receipt_id' => $receipt->receipt_id,
                 'total_amount' => $totalAmount,
                 'amount_received' => $request->amount_received,
-                'change' => $request->amount_received - $totalAmount
+                'change' => $request->amount_received - $totalAmount,
+                'receipt_items' => $receiptItems,
+                'total_quantity' => array_sum(array_column($items, 'quantity'))
             ];
 
             if (!empty($lowStockProducts)) {
@@ -518,7 +573,7 @@ class StoreController extends Controller
             $product = Product::find($item['prod_code']);
             if ($product) {
                 $currentStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
-                $itemTotal = $product->cost_price * $item['quantity'];
+                $itemTotal = $product->selling_price * $item['quantity'];
                 
                 $formattedItems[] = [
                     'product' => $product,
