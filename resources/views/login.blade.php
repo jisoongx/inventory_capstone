@@ -82,6 +82,7 @@
                 class="w-full py-2.5 text-sm font-medium shadow-md text-white bg-red-600 rounded-lg hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] transition transform">
                 Login
             </button>
+            
         </form>
 
         <!-- Sign Up Link -->

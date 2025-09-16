@@ -7,12 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 </head>
 
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-black to-gray-900 font-poppins p-4">
+<body class="min-h-screen flex items-center justify-center bg-white font-poppins p-4">
 
-    <div class="w-full max-w-sm bg-white rounded-lg shadow-xl p-8 flex flex-col items-center gap-6">
+    <div class="w-full max-w-sm bg-white rounded-lg  p-8 flex flex-col items-center gap-6">
         <!-- Logo + Title -->
         <div class="flex flex-col items-center gap-2">
             <img src="{{ asset('assets/logo.png') }}" class="w-14 drop-shadow-md" alt="ShopLytix Logo">
