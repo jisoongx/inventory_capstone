@@ -51,7 +51,9 @@
                                 <span class="material-symbols-rounded text-blue-800 bg-blue-100 p-3 rounded-full">confirmation_number</span>
                             </div>
                             <div class="flex flex-col items-start gap-1">
-                                <p class="text-xs font-bold">{{ $req->req_ticket }}</p>
+                                <p class="text-xs {{ ($countUnread[$req->req_id] ?? 0) > 0 ? 'font-bold' : '' }}">
+                                    {{ $req->req_ticket }}
+                                </p>
                             </div>
                         </button>                
                     </td>
@@ -85,94 +87,107 @@
 
 
 
-@if($showModal)
-<div class="fixed bottom-4 right-4 z-50 flex flex-col bg-white border border-gray-800 rounded-xl shadow-xl w-[26rem] h-[32rem]"
-    wire:poll.keep-alive="refreshConversation($ticket->req_id)">
-    <div class="flex justify-between items-center p-5 border-b">
-        <div class="flex flex-col text-left space-y-1">
-            <div class="flex gap-2 text-xs">
-                <span class="font-semibold">Ticket ID:</span>
-                <p>{{ $ticket->req_ticket }}</p>
+    @if($showModal)
+    <div class="fixed bottom-4 right-4 z-50 flex flex-col bg-white border border-gray-800 rounded-xl shadow-xl w-[26rem] h-[32rem]"
+        >
+        <div class="flex justify-between items-center p-5 border-b">
+            <div class="flex flex-col text-left space-y-1">
+                <div class="flex gap-2 text-xs">
+                    <span class="font-semibold">Ticket ID:</span>
+                    <p>{{ $ticket->req_ticket }}</p>
+                </div>
+                <div class="flex gap-2 text-xs">
+                    <span class="font-semibold">Sent by:</span>
+                    <p>{{ ucwords($ticket->firstname) }} {{ ucwords($ticket->lastname) }} of {{ strtoupper($ticket->store_name) }}</p>
+                </div>
+                <div class="flex gap-2 text-xs">
+                    <span class="font-semibold">Concern:</span>
+                    <p>{{ $ticket->req_title }}</p>
+                </div>
             </div>
-            <div class="flex gap-2 text-xs">
-                <span class="font-semibold">Sent by:</span>
-                <p>{{ ucwords($ticket->firstname) }} {{ ucwords($ticket->lastname) }} of {{ strtoupper($ticket->store_name) }}</p>
+
+            <div>
+                <div class="relative inline-block text-left">
+                    <button wire:click="openOption()" class="text-gray-500 hover:text-gray-700">
+                        <span class="material-symbols-rounded-small">more_vert</span>
+                    </button>
+
+                    @if($showOption)
+                        <div class="absolute right-0 mt-2 w-48 bg-white border border-black rounded shadow-lg z-50 hover:bg-gray-100" wire:click.away="closeOption">
+                            <button 
+                                wire:click="markAsResolved('{{ $ticket->req_id }}')"
+                                class="flex items-center w-full px-4 py-2 text-sm text-gray-700 space-x-2"
+                            >
+                                <span class="material-symbols-rounded-small">bookmark_check</span>
+                                <span>Mark as Resolved</span>
+                            </button>
+                        </div>
+                    @endif
+                </div>
+
+                <button wire:click="closeModal" class="text-gray-500 hover:text-gray-700">
+                    <span class="material-symbols-rounded-small">close</span>
+                </button>
             </div>
-            <div class="flex gap-2 text-xs">
-                <span class="font-semibold">Concern:</span>
-                <p>{{ $ticket->req_title }}</p>
-            </div>
-            <!-- <div class="flex gap-2 text-xs">
-                <span class="font-semibold">Status:</span>
-                <p>{{ $ticket->req_status }}</p>
-            </div> -->
         </div>
 
-        <div>
-            <div class="relative inline-block text-left">
-                <button wire:click="openOption()" class="text-gray-500 hover:text-gray-700">
-                    <span class="material-symbols-rounded-small">more_vert</span>
-                </button>
-
-                @if($showOption)
-                    <div class="absolute right-0 mt-2 w-48 bg-white border border-black rounded shadow-lg z-50 hover:bg-gray-100" wire:click.away="closeOption">
-                        <button 
-                            wire:click="" 
-                            class="flex items-center w-full px-4 py-2 text-sm text-gray-700 space-x-2"
-                        >
-                            <span class="material-symbols-rounded-small">bookmark_check</span>
-                            <span>Mark as Resolved</span>
-                        </button>
+        <div class="flex flex-col-reverse overflow-y-auto p-4 space-y-3 h-full" wire:poll.keep-alive="refreshConversation">
+            @forelse($convos as $msg)
+                @if($msg->sender_type === 'super')
+                    <div class="self-end flex flex-col items-end max-w-[50%] ml-auto">
+                        <div class="bg-red-500 text-white px-4 py-2 rounded-2xl rounded-br-none shadow text-xs">
+                            {{ $msg->message }}
+                        </div>
+                        <span class="text-[10px] text-slate-500 mt-1">
+                            {{ date('M j, g:i A', strtotime($msg->msg_date)) }}
+                        </span>
+                    </div>
+                @else
+                    <div class="self-start flex flex-col items-start max-w-[70%] min-w-0">
+                        <div class="bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl rounded-bl-none shadow text-xs break-all">
+                            {{ $msg->message }}
+                        </div>
+                        <span class="text-[10px] text-slate-500 mt-1">
+                            {{ date('M j, g:i A', strtotime($msg->msg_date)) }}
+                        </span>
                     </div>
                 @endif
-            </div>
+            @empty
+                <p class="text-xs text-gray-400 text-center">No messages yet...</p>
+            @endforelse
+        </div>
 
-
-            <button wire:click="closeModal" class="text-gray-500 hover:text-gray-700">
-                <span class="material-symbols-rounded-small">close</span>
-            </button>
+        <div class="border-t p-3 flex gap-2">
+            @if(!($ticket->req_status === 'Resolved'))
+                <textarea wire:model.defer="newMessage" class="flex-1 rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring focus:ring-red-200" placeholder="Type a message..."></textarea>
+                <button wire:click="sendMessage({{ $ticket->req_id }})" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-xs">
+                    Send
+                </button>
+            @else
+                <textarea class="flex-1 rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring focus:ring-red-200" placeholder="Type a message..." disabled></textarea>
+                <button class="bg-red-500 text-white px-4 py-2 rounded-lg text-xs" disabled>
+                    Send
+                </button>
+            @endif
         </div>
     </div>
+    @endif
 
-    <div class="flex-1 overflow-y-auto p-4 space-y-3">
-        @forelse($convos as $msg)
-            @if($msg->sender_type === 'super')
-                <div class="self-end flex flex-col items-end max-w-[80%] ml-auto">
-                    <div class="bg-red-500 text-white px-4 py-2 rounded-2xl rounded-br-none shadow text-xs">
-                        {{ $msg->message }}
-                    </div>
-                    <span class="text-[10px] text-slate-500 mt-1">
-                        {{ date('M j, g:i A', strtotime($msg->msg_date)) }}
-                    </span>
-                </div>
-            @else
-                <div class="self-start flex flex-col items-start max-w-[80%]">
-                    <div class="bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl rounded-bl-none shadow text-xs">
-                        {{ $msg->message }}
-                    </div>
-                    <span class="text-[10px] text-slate-500 mt-1">
-                        {{ date('M j, g:i A', strtotime($msg->msg_date)) }}
-                    </span>
-                </div>
-            @endif
-        @empty
-            <p class="text-xs text-gray-400 text-center">No messages yet...</p>
-        @endforelse
-    </div>
-
-    <div class="border-t p-3 flex gap-2">
-        <textarea 
-            wire:model.defer="newMessage"
-            class="flex-1 rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring focus:ring-red-200" 
-            placeholder="Type a message..."></textarea>
-
-        <button wire:click="sendMessage({{ $ticket->req_id }})"
-            class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-xs">
-            Send
-        </button>
-    </div>
-</div>
-@endif
-
+    @if($showSuccess)
+        <div x-data="{ show: true }" 
+            x-init="setTimeout(() => show = false, 4000)" 
+            x-show="show"
+            x-transition:enter="transition transform ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition transform ease-in duration-300"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 translate-y-2"
+            class="fixed left-5 bottom-24 z-50 flex w-94 items-center bg-blue-600 px-9 py-3 shadow-lg text-white space-x-3"
+        >
+                <span class="material-symbols-rounded-full text-white">check_circle</span>
+                <p class="text-sm text-gray-800 text-white text-xs">The ticket has been marked as resolved.</p>
+        </div>
+    @endif
 
 </div>

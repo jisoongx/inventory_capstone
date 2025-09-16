@@ -892,6 +892,7 @@ class KioskSystem {
                      </svg>`
                 }
             </div>
+<<<<<<< Updated upstream
             <div class="flex-1 flex flex-col justify-between">
                 <h4 class="font-semibold text-sm text-gray-900 mb-2 line-clamp-2" title="${product.name}">
                     ${product.name}
@@ -907,6 +908,18 @@ class KioskSystem {
                         }
                     </div>
                 </div>
+=======
+            <h4 class="font-medium text-sm text-gray-900 mb-2 truncate" title="${product.name}">
+                ${product.name}
+            </h4>
+            <p class="text-lg font-bold text-red-600 mb-2">₱${parseFloat(product.selling_price).toFixed(2)}</p>
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-gray-600">Stock: ${product.stock}</span>
+                ${isOutOfStock ? 
+                    '<span class="text-red-500 font-medium">Out of Stock</span>' :
+                    isLowStock ? '<span class="text-orange-500 font-medium">Low Stock</span>' : ''
+                }
+>>>>>>> Stashed changes
             </div>
         `;
 
@@ -1070,7 +1083,12 @@ class KioskSystem {
                         <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity + 1})">+</button>
                     </div>
                     <div class="text-right">
+<<<<<<< Updated upstream
                         <p class="font-bold text-lg text-red-600">₱${item.amount.toFixed(2)}</p>
+=======
+                        <p class="text-xs text-gray-500">₱${parseFloat(item.product.selling_price).toFixed(2)} each</p>
+                        <p class="font-bold text-red-600">₱${item.amount.toFixed(2)}</p>
+>>>>>>> Stashed changes
                     </div>
                 </div>
             </div>

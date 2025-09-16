@@ -24,25 +24,21 @@
             </div>
 
             <nav class="space-y-2">
-                {{-- Dashboard Link --}}
+                
                 <a href="{{ route('staff.dashboard') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                     <span class="material-symbols-rounded">dashboard</span>
                     <span class="nav-label">Dashboard</span>
                 </a>
-                {{-- Inventory Link --}}
                 <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                     <span class="material-symbols-rounded">shopping_cart</span>
                     <span class="nav-label">Inventory</span>
                 </a>
-                {{-- Removed Reports section HTML as per user's request --}}
-                {{-- Store Link --}}
                 <a href="#" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
                     <span class="material-symbols-rounded">local_mall</span>
                     <span class="nav-label">Store</span>
                 </a>
-                <a href="{{ route('dashboards.staff.technical_request') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
-                    <span class="material-symbols-rounded">support_agent</span>
-                    <span class="nav-label">Technical Support</span>
+                <a href="{{ route('dashboards.staff.technical_request') }}">
+                    @livewire('technical-request-menu')
                 </a>
             </nav>
         </div>

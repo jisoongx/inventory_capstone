@@ -10,13 +10,14 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
-use App\Http\Controllers\TechnicalController;
 use App\Http\Controllers\InventoryOwnerController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\Auth\PasswordResetController;
+
+use App\Livewire\TechnicalRequest;
 
 
 
@@ -32,21 +33,36 @@ Route::post('/expense_record/edit/{expense_id?}', [MonthlyController::class, 'ed
 Route::get('/expenses/attachment/{expense_id?}', [MonthlyController::class, 'viewAttachment'])->name('expenses.attachment');
 
 
-Route::get('/owner/technical-request', [TechnicalController::class, 'index'])->name('dashboards.owner.technical_request');
-Route::get('/dashboard/owner/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.owner.technical_request');
-Route::post('/dashboard/owner/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.owner.technical_insert');
-Route::post('/dashboard/owner/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.owner.technical_add');
+
+Route::view('/staff/technical-request', 'dashboards.staff.technical_request')->name('dashboards.staff.technical_request');
+
+Route::view('/owner/technical-request', 'dashboards.owner.technical_request')->name('dashboards.owner.technical_request');
 
 
-Route::get('/staff/technical-request', [TechnicalController::class, 'index'])->name('dashboards.staff.technical_request');
-Route::get('/dashboard/staff/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.staff.technical_request');
-Route::post('/dashboard/staff/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.staff.technical_insert');
-Route::post('/dashboard/staff/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.staff.technical_add');
 
 
-Route::get('/super/technical-support', [TechnicalController::class, 'index'])->name('dashboards.super_admin.technical');
-Route::get('/super/technical-support/chat/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.super_admin.technical_show');
-Route::post('super/technical-support/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.super_admin.technical_insert');
+// Route::get('/owner/technical-request', [TechnicalController::class, 'index'])->name('dashboards.owner.technical_request');
+// Route::get('/dashboard/owner/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.owner.technical_request');
+// Route::post('/dashboard/owner/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.owner.technical_insert');
+// Route::post('/dashboard/owner/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.owner.technical_add');
+
+
+
+
+// Route::get('/staff/technical-request', TechnicalRequest::class)->name('dashboards.staff.technical_request');
+// Route::get('/dashboard/staff/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.staff.technical_request');
+// Route::post('/dashboard/staff/technical_request/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.staff.technical_insert');
+// Route::post('/dashboard/staff/technical_request/request', [TechnicalController::class, 'add_request'])->name('dashboards.staff.technical_add');
+
+
+
+
+
+Route::view('/super/technical-support', 'dashboards.super_admin.technical')->name('dashboards.super_admin.technical');
+
+// Route::get('/super/technical-support', [TechnicalController::class, 'index'])->name('dashboards.super_admin.technical');
+// Route::get('/super/technical-support/chat/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.super_admin.technical_show');
+// Route::post('super/technical-support/message/{req_id?}', [TechnicalController::class, 'add_message'])->name('dashboards.super_admin.technical_insert');
 
 
 

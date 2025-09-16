@@ -15,7 +15,7 @@ class CheckExpiration extends Command
     {
         $this->info('Running expiration check...');
 
-        $reminderDays = [7, 5, 2, 1];
+        $reminderDays = [7, 6, 2, 1];
 
         $owners = collect(DB::select("
             SELECT o.owner_id, o.email, s.subscription_end

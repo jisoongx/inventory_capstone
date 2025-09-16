@@ -18,7 +18,7 @@
 
 <body class="bg-slate-50 min-h-screen" oncontextmenu="return false;">
 
-    <aside id="sidebar" class="w-64 transition-all duration-300 bg-black text-white h-screen fixed top-0 left-0 p-4 flex flex-col justify-between z-50">
+   <aside id="sidebar" class="w-64 transition-all duration-300 bg-black text-white h-screen fixed top-0 left-0 p-4 flex flex-col justify-between z-50">
         <div>
             <div class="flex flex-col items-center justify-center mb-6 mt-5">
                 <img src="{{ asset('assets/logo.png') }}" class="w-12 h-12 mb-2">
@@ -34,25 +34,20 @@
                     <span class="material-symbols-rounded">shopping_cart</span>
                     <span class="nav-label">Inventory</span>
                 </a>
+                
                 <div class="relative">
                     <a href="{{ route('reports') }}" class="flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-rounded">stacked_line_chart</span>
                             <span class="nav-label">Reports</span>
                         </div>
-                        <!-- Only this arrow toggles submenu -->
                         <span id="reportsArrow" class="material-symbols-rounded cursor-pointer">keyboard_arrow_down</span>
                     </a>
 
-                    <!-- Dropdown -->
                     <div id="reportsDropdown" class="ml-3 mt-1 space-y-1 border-l-4 border-gray-600 hidden">
                         <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="nav-label material-symbols-rounded">history_toggle_off</span>
                             <span class="nav-label">Activity Log</span>
-                        </a>
-                        <a href="{{ route('dashboards.owner.technical_request') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
-                            <span class="nav-label material-symbols-rounded">support_agent</span>
-                            <span class="nav-label">Technical Support</span>
                         </a>
                     </div>
                 </div>
@@ -63,7 +58,12 @@
                 </a>
             </nav>
         </div>
+
+            <a href="{{ route('dashboards.owner.technical_request') }}">
+                @livewire('technical-request-menu')
+            </a>
     </aside>
+
 
     <main id="mainContent" class="ml-64 flex-1 p-3 transition-all duration-300">
         <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 relative pb-2">

@@ -10,9 +10,13 @@ class TechnicalResolve extends Component
 {
     public $statusFilter = null;
     public $request = [];
+    public $countUnread = null;
+
     public $searchWord = null;
 
     public $convos = [];
+
+    public $currentConvoId = null;
 
     public $showModal = false;
     public $newMessage = '';
@@ -20,10 +24,16 @@ class TechnicalResolve extends Component
     public $showStatus = '';
 
     public $showOption = false;
+
+    public $showSuccess = false;
     
 
     public function mount()
     {
+        if (!Auth::guard('super_admin')->check()) {
+            abort(403, 'Access not available');
+        } 
+
         $this->loadRequest();
     }
 
@@ -54,52 +64,40 @@ class TechnicalResolve extends Component
     {
 
         if ($this->statusFilter) {
-            $req= "SELECT req_ticket, req_title, req_date, req_status, req_id
-                  FROM technical_request WHERE req_status = ? ORDER BY req_id DESC";
+            $req= "SELECT tr.*, cm_max.last_message_id, cm_max.last_message_date
+                FROM technical_request tr
+                JOIN (
+                    SELECT req_id, MAX(msg_id) AS last_message_id, MAX(msg_date) as last_message_date
+                    FROM conversation_message
+                    GROUP BY req_id
+                ) cm_max ON tr.req_id = cm_max.req_id
+                WHERE req_status = ?
+                ORDER BY cm_max.last_message_id DESC";
             $this->request = collect(DB::select($req, [$this->statusFilter]));
+
         } else {
-            $req = "SELECT req_ticket, req_title, req_date, req_status, req_id
-                  FROM technical_request ORDER BY req_id DESC";
+            $req = "SELECT tr.*, cm_max.last_message_id, cm_max.last_message_date
+                FROM technical_request tr
+                JOIN (
+                    SELECT req_id, MAX(msg_id) AS last_message_id, MAX(msg_date) as last_message_date
+                    FROM conversation_message
+                    GROUP BY req_id
+                ) cm_max ON tr.req_id = cm_max.req_id
+                ORDER BY cm_max.last_message_id DESC";
             $this->request = collect(DB::select($req));
         }
 
+        $this->countUnread = collect(DB::select("
+            select cm.req_id, count(cm.req_id) as unread_count
+            from conversation_message cm
+            join technical_request tr on cm.req_id = tr.req_id
+            where cm.msg_seen_at is null
+            and cm.sender_type in ('owner', 'staff')
+            group by cm.req_id
+        "))->pluck('unread_count', 'req_id');
+
     }
 
-    
-    public function closeModal() {
-        $this->showModal = false;
-    }
-
-
-    public function openModal($req_id) {
-
-        if (!Auth::guard('super_admin')->check()) {
-            abort(403, 'Access not available');
-        } 
-
-        $ticket = DB::selectOne("
-            SELECT tr.req_id, tr.req_ticket, tr.req_title, tr.req_status,
-                o.firstname, o.lastname, o.store_name
-            FROM technical_request tr
-            JOIN owners o ON o.owner_id = tr.owner_id
-            WHERE tr.req_id = ?
-        ", [$req_id]);
-
-
-        $this->convos = collect(DB::select("
-            SELECT cm.*, tr.req_title, tr.req_status, o.firstname, o.lastname, o.store_name, tr.req_ticket, o.store_name
-            FROM technical_request tr
-            LEFT JOIN conversation_message cm
-                ON tr.req_id = cm.req_id
-            JOIN owners o on o.owner_id = tr.owner_id
-            WHERE tr.req_id = ?
-            ORDER BY cm.msg_date ASC
-        ", [$req_id]));
-
-        $this->ticket = $ticket;
-        $this->showModal = true;
-        
-    }
 
 
     
@@ -108,10 +106,6 @@ class TechnicalResolve extends Component
     }
 
     public function openOption() {
-        if (!Auth::guard('super_admin')->check()) {
-            abort(403, 'Access not available');
-        } 
-
         $this->showOption = true;
     }
 
@@ -123,10 +117,15 @@ class TechnicalResolve extends Component
         
         DB::update("
             update technical_request
-            set req_status = 'In Progress'
+            set req_status = 'Resolved'
             where req_id = ? ", [$req_id]);
 
+        $this->loadConversation($req_id);
+        $this->showSuccess = true;
+
     }
+
+
 
 
 
@@ -159,40 +158,100 @@ class TechnicalResolve extends Component
     }
 
 
-    public function loadConversation($req_id) {
 
-        $ticket = DB::select("
-            SELECT tr.req_id, tr.req_ticket, tr.req_title, tr.req_status,
-                o.firstname, o.lastname, o.store_name
-            FROM technical_request tr
-            JOIN owners o ON o.owner_id = tr.owner_id
-            WHERE tr.req_id = ?
-        ", [$req_id]);
-        
-        $this->convos = collect(DB::select("
-            SELECT cm.*, tr.req_title, tr.req_status, o.firstname, o.lastname, o.store_name, tr.req_ticket, o.store_name, tr.req_id
-            FROM technical_request tr
-            LEFT JOIN conversation_message cm
-                ON tr.req_id = cm.req_id
-            JOIN owners o on o.owner_id = tr.owner_id
-            WHERE tr.req_id = ?
-            ORDER BY cm.msg_date ASC
-        ", [$req_id]));
 
-        $this->ticket = $ticket;
+    
 
+    public function closeModal() {
+        $this->showModal = false;
     }
 
 
-    public function refreshConversation($req_id) {
-        $messages = collect(DB::select("
-            SELECT cm.*
-            FROM conversation_message cm
-            WHERE cm.req_id = ?
-            ORDER BY cm.msg_date ASC
-        ", [$req_id]));
+    public function openModal($req_id) {
 
-        $this->convos = $messages;
+        if (!Auth::guard('super_admin')->check()) {
+            abort(403, 'Access not available');
+        } 
+
+        $this->loadConversation($req_id);
+        $this->showModal = true;
+    }
+
+
+    public function loadConversation($req_id) {
+
+        $this->currentConvoId = $req_id;
+
+        $role = DB::selectOne("
+            SELECT 
+                CASE 
+                    WHEN owner_id IS NOT NULL THEN 'owner'
+                    WHEN staff_id IS NOT NULL THEN 'staff'
+                    ELSE 'unknown'
+                END AS role
+            FROM technical_request
+            WHERE req_id = ?
+        ", [$req_id]);
+
+        if ($role->role === "owner") {
+            $ticket = DB::selectOne("
+                SELECT tr.req_id, tr.req_ticket, tr.req_title, tr.req_status,
+                    o.firstname, o.lastname, o.store_name
+                FROM technical_request tr
+                JOIN owners o ON o.owner_id = tr.owner_id
+                WHERE tr.req_id = ?
+            ", [$req_id]);
+
+            $this->convos = collect(DB::select("
+                SELECT cm.*, tr.req_id, tr.req_title, tr.req_status, o.firstname, o.lastname, o.store_name, tr.req_ticket
+                FROM technical_request tr
+                LEFT JOIN conversation_message cm ON tr.req_id = cm.req_id
+                JOIN owners o ON o.owner_id = tr.owner_id
+                WHERE tr.req_id = ?
+                ORDER BY cm.msg_date DESC
+            ", [$req_id]));
+
+            $this->ticket = $ticket;
+
+        } elseif ($role->role === "staff") {
+            $ticket = DB::selectOne("
+                SELECT tr.req_id, tr.req_ticket, tr.req_title, tr.req_status,
+                    s.firstname, s.lastname, o.store_name
+                FROM technical_request tr
+                JOIN staff s ON s.staff_id = tr.staff_id
+                JOIN owners o ON s.owner_id = o.owner_id
+                WHERE tr.req_id = ?
+            ", [$req_id]);
+
+            $this->convos = collect(DB::select("
+                SELECT cm.*, tr.req_id, tr.req_title, tr.req_status, s.firstname, s.lastname, o.store_name, tr.req_ticket
+                FROM technical_request tr
+                LEFT JOIN conversation_message cm ON tr.req_id = cm.req_id
+                JOIN staff s ON s.staff_id = tr.staff_id
+                JOIN owners o ON s.owner_id = o.owner_id
+                WHERE tr.req_id = ?
+                ORDER BY cm.msg_date DESC
+            ", [$req_id]));
+
+            $this->ticket = $ticket;
+        }
+    }
+
+
+
+    public function refreshConversation() {
+
+        if (!$this->currentConvoId) {
+            return;
+        }
+
+         $this->convos = collect(DB::select("
+            SELECT cm.*, tr.req_title, tr.req_status
+            FROM technical_request tr
+            LEFT JOIN conversation_message cm ON tr.req_id = cm.req_id
+            WHERE tr.req_id = ?
+            ORDER BY cm.msg_date DESC
+        ", [$this->currentConvoId]));
     }
 
 
@@ -203,6 +262,7 @@ class TechnicalResolve extends Component
 
 
     public function render() {
+        $this->loadRequest();
         return view('livewire.technical-resolve');
     }
 }

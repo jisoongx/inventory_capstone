@@ -520,6 +520,7 @@ class StoreController extends Controller
                     ];
                 }
                 
+<<<<<<< Updated upstream
                 $itemTotal = $product->selling_price * $item['quantity'];
                 $totalAmount += $itemTotal;
 
@@ -529,6 +530,9 @@ class StoreController extends Controller
                     'quantity' => $item['quantity'],
                     'amount' => $itemTotal
                 ];
+=======
+                $totalAmount += $product->selling_price * $item['quantity'];
+>>>>>>> Stashed changes
             }
 
             session()->forget('transaction_items');
