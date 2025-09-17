@@ -50,7 +50,7 @@
 
                 <!-- Products Grid -->
                 <div id="productsGrid" class="hidden h-full overflow-y-auto">
-                    <div class="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-2"></div>
+                    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 p-2"></div>
                 </div>
 
                 <!-- No Products Found -->
@@ -67,7 +67,7 @@
         </div>
 
         <!-- Right Side - Cart Items (Expanded) -->
-        <div class="w-[45rem] bg-white rounded-lg shadow-lg flex flex-col" style="height: 120%;">
+        <div class="w-[20rem] bg-white rounded-lg shadow-lg flex flex-col" style="height: 120%;">
             <!-- Receipt Info Header -->
             <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 flex-shrink-0">
                 <div class="text-center">
@@ -892,7 +892,6 @@ class KioskSystem {
                      </svg>`
                 }
             </div>
-<<<<<<< Updated upstream
             <div class="flex-1 flex flex-col justify-between">
                 <h4 class="font-semibold text-sm text-gray-900 mb-2 line-clamp-2" title="${product.name}">
                     ${product.name}
@@ -908,18 +907,6 @@ class KioskSystem {
                         }
                     </div>
                 </div>
-=======
-            <h4 class="font-medium text-sm text-gray-900 mb-2 truncate" title="${product.name}">
-                ${product.name}
-            </h4>
-            <p class="text-lg font-bold text-red-600 mb-2">₱${parseFloat(product.selling_price).toFixed(2)}</p>
-            <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-600">Stock: ${product.stock}</span>
-                ${isOutOfStock ? 
-                    '<span class="text-red-500 font-medium">Out of Stock</span>' :
-                    isLowStock ? '<span class="text-orange-500 font-medium">Low Stock</span>' : ''
-                }
->>>>>>> Stashed changes
             </div>
         `;
 
@@ -1083,12 +1070,7 @@ class KioskSystem {
                         <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity + 1})">+</button>
                     </div>
                     <div class="text-right">
-<<<<<<< Updated upstream
                         <p class="font-bold text-lg text-red-600">₱${item.amount.toFixed(2)}</p>
-=======
-                        <p class="text-xs text-gray-500">₱${parseFloat(item.product.selling_price).toFixed(2)} each</p>
-                        <p class="font-bold text-red-600">₱${item.amount.toFixed(2)}</p>
->>>>>>> Stashed changes
                     </div>
                 </div>
             </div>

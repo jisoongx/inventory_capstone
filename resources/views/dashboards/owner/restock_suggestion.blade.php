@@ -15,15 +15,7 @@
 
     <!-- Filter + Action Buttons -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full lg:w-auto mt-2 lg:mt-0">
-        <!-- Filter -->
-        <form method="GET" action="{{ route('restock_suggestion') }}" class="flex-1 mb-2 sm:mb-0">
-            <select name="days" id="days" onchange="this.form.submit()"
-                class="w-full sm:w-auto px-3 py-1 text-sm rounded-md shadow-md border-gray-300 focus:ring-gray-200">
-                <option value="30" {{ $days == 30 ? 'selected' : '' }}>Last 30 days (Hot sellers)</option>
-                <option value="90" {{ $days == 90 ? 'selected' : '' }}>Last 90 days (Default)</option>
-                <option value="365" {{ $days == 365 ? 'selected' : '' }}>Last 12 months</option>
-            </select>
-        </form>
+       
 
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
@@ -53,14 +45,15 @@
             <table class="w-full divide-y divide-gray-200 text-sm min-w-[700px]">
                 <thead class="bg-gray-100 border-b border-gray-300 text-gray-700">
                     <tr>
+                         <th class="px-4 py-3 text-center">
+                            <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-red-500">
+                        </th>
                         <th class="px-4 py-3 text-left font-semibold uppercase tracking-wider">Product</th>
                         <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider">Total Sold</th>
                         <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider">Current Stock</th>
                         <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider">Suggested Restock</th>
                         <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider">Priority</th>
-                        <th class="px-4 py-3 text-center">
-                            <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-red-500">
-                        </th>
+                       
                     </tr>
                 </thead>
                 <tbody>
@@ -77,6 +70,11 @@
                     $priority = $product->stock <= 3 ? 'Urgent' : ($product->stock <= 7 ? 'In Demand' : 'Low Demand' );
                             @endphp
                             <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors {{ $product->suggested_quantity > 0 ? 'bg-yellow-50' : '' }}">
+                              <td class="px-4 py-3 text-center">
+                                <input type="checkbox" name="products[]" value="{{ $product->inven_code }}"
+                                    class="productCheckbox form-checkbox h-4 w-4 text-red-500">
+                                <input type="hidden" name="quantities[{{ $product->inven_code }}]" value="{{ $product->suggested_quantity }}">
+                            </td>
                             <td class="px-4 py-3 text-gray-900 font-medium">{{ $product->name }}</td>
                             <td class="px-4 py-3 text-center text-gray-700">{{ $product->total_sold }}</td>
                             <td class="px-4 py-3 text-center text-gray-700">{{ $product->stock }}</td>
@@ -93,11 +91,7 @@
                                 </span>
                                 <input type="hidden" name="priorities[{{ $product->inven_code }}]" value="{{ $priority }}">
                             </td>
-                            <td class="px-4 py-3 text-center">
-                                <input type="checkbox" name="products[]" value="{{ $product->inven_code }}"
-                                    class="productCheckbox form-checkbox h-4 w-4 text-red-500">
-                                <input type="hidden" name="quantities[{{ $product->inven_code }}]" value="{{ $product->suggested_quantity }}">
-                            </td>
+                          
                             </tr>
                             @endforeach
                 </tbody>
