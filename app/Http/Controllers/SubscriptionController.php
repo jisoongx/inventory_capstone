@@ -19,15 +19,15 @@ class SubscriptionController extends Controller
        
         $clients = Owner::whereHas('subscriptions', function ($query) {
             // Filter the subscriptions to only include those with a 'paid' status.
-            $query->where('status', 'active');
+            // $query->where('status', 'active');
         })
             // Use `with` to eager load the filtered subscriptions for each owner.
             // This prevents the N+1 query problem.
             ->with(['subscriptions' => function ($query) {
-                $query->where('status', 'active')
-                    ->with('planDetails');
+                // $query->where('status', 'active')
+                //     ->with('planDetails');
             }])
-            ->orderBy('created_on', 'desc') // Assuming the column is 'created_at' in the table
+            ->orderBy('created_on', 'asc') // Assuming the column is 'created_at' in the table
             ->paginate(10);
 
         return view('dashboards.super_admin.subscribers', compact('clients'));
@@ -70,16 +70,11 @@ class SubscriptionController extends Controller
         $plan = $request->input('plan');
         $status = $request->input('status');
         $date = $request->input('date');
-
         $clients = Owner::with(['subscription' => function ($q) {
-            // Only load active subscriptions
-            $q->where('status', 'Active')
-                ->with('planDetails');
+            // Load all subscriptions with plan details
+            $q->with('planDetails');
         }])
-            ->whereHas('subscription', function ($q) {
-                // Ensure owner has at least one active subscription
-                $q->where('status', 'Active');
-            })
+            ->whereHas('subscription') // ensure owner has at least one subscription (any status)
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {
                     $sub->where('store_name', 'like', "%{$query}%")
@@ -91,8 +86,7 @@ class SubscriptionController extends Controller
             })
             ->when($plan, function ($q) use ($plan) {
                 $q->whereHas('subscription', function ($sub) use ($plan) {
-                    $sub->where('plan_id', $plan)
-                        ->where('status', 'Active');
+                    $sub->where('plan_id', $plan);
                 });
             })
             ->when($status, function ($q) use ($status) {
@@ -102,12 +96,12 @@ class SubscriptionController extends Controller
             })
             ->when($date, function ($q) use ($date) {
                 $q->whereHas('subscription', function ($sub) use ($date) {
-                    $sub->whereDate('created_on', $date)
-                        ->where('status', 'Active');
+                    $sub->whereDate('created_on', $date);
                 });
             })
             ->orderBy('created_on', 'desc')
             ->get();
+
 
         return response()->json($clients);
     }

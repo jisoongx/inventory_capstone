@@ -6,12 +6,10 @@
         <!-- Left Column -->
         <div class="lg:w-1/3 flex flex-col gap-6">
             <!-- Latest Bill Card -->
-            <!-- Latest Bill Card -->
             <div class="bg-white shadow-md rounded-lg p-6 border-t-4 border-red-500">
                 <h2 class="text-md font-semibold text-red-700">Latest Billing</h2>
 
                 @php
-                // Find the latest payment across all clients
                 $latestPayment = null;
                 $latestOwner = null;
                 $latestSubscription = null;
@@ -54,7 +52,7 @@
                     <p class="text-gray-700">Amount: <span class="font-medium">₱{{ number_format($latestPayment->payment_amount, 2) }}</span></p>
                     <p class="text-gray-700">Status:
                         <span class="px-3 py-1 rounded-full text-xs font-semibold 
-                {{ $latestSubscription->status == 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700' }}">
+                            {{ $latestSubscription->status == 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700' }}">
                             {{ ucfirst($latestSubscription->status) }}
                         </span>
                     </p>
@@ -63,7 +61,6 @@
                 <p class="text-gray-500 mt-4">No latest billing available.</p>
                 @endif
             </div>
-
 
             <!-- Subscription Revenue Card -->
             <div class="bg-white shadow-md rounded-lg p-6 border-t-4 border-orange-500">
@@ -123,18 +120,26 @@
             <div class="flex flex-col sm:flex-row gap-4">
                 <input type="text" id="search" placeholder="Search by owner name"
                     autocomplete="off"
-                    class="w-full  sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-gray-200 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out"
+                    class="w-full sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-gray-200 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out"
                     style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'%236B7280\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;" />
 
                 <input type="date" id="dateFilter" name="dateFilter"
-                    class="w-full  sm:w-[180px] p-3 text-sm border border-gray-300 rounded-lg shadow-md  focus:ring-gray-200 focus:border-gray-500" />
+                    class="w-full sm:w-[180px] p-3 text-sm border border-gray-300 rounded-lg shadow-md focus:ring-gray-200 focus:border-gray-500" />
+
+                <!-- Status Filter -->
+                <select id="statusFilter"
+                    class="w-full sm:w-[180px] p-3 text-sm border border-gray-300 rounded-lg shadow-md bg-white text-gray-700 focus:ring-gray-200 focus:border-gray-500">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                </select>
             </div>
 
             <!-- Responsive Billing Table -->
             <div class="bg-white shadow-md rounded-md overflow-hidden">
                 <!-- Desktop Table -->
                 <table class="min-w-full hidden md:table divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-100 text-gray-700  uppercase tracking-wide">
+                    <thead class="bg-gray-100 text-gray-700 uppercase tracking-wide">
                         <tr>
                             <th class="px-6 py-3 text-left font-semibold">Owner Name</th>
                             <th class="px-6 py-3 text-center font-semibold">Date</th>
@@ -158,7 +163,7 @@
                             <td class="px-6 py-4 text-center whitespace-nowrap">{{ $subscription->planDetails->plan_title ?? 'N/A' }}</td>
                             <td class="px-6 py-4 text-center whitespace-nowrap">
                                 <span class="px-2 py-1 rounded-full text-xs font-semibold 
-                                            {{ $subscription->status == 'active' ? 'bg-green-100 text-green-700' : 'bg-red-200 text-red-700' }}">
+                                    {{ $subscription->status == 'active' ? 'bg-green-100 text-green-700' : 'bg-red-200 text-red-700' }}">
                                     {{ ucfirst($subscription->status) }}
                                 </span>
                             </td>
@@ -204,6 +209,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('search');
         const dateInput = document.getElementById('dateFilter');
+        const statusInput = document.getElementById('statusFilter');
         const tableBody = document.getElementById('billingTableBody');
         const cardContainer = document.getElementById('billingCards');
         const tableRows = Array.from(tableBody.getElementsByTagName('tr'));
@@ -212,14 +218,19 @@
         function filterTable() {
             const query = searchInput.value.toLowerCase();
             const selectedDate = dateInput.value;
+            const selectedStatus = statusInput.value.toLowerCase();
 
             // Filter desktop rows
             tableRows.forEach(row => {
                 const ownerName = row.cells[0].textContent.toLowerCase();
                 const paymentDate = row.cells[1].textContent.trim();
+                const statusText = row.cells[5].textContent.toLowerCase();
+
                 const matchesName = ownerName.includes(query);
                 const matchesDate = selectedDate ? paymentDate.startsWith(selectedDate) : true;
-                row.style.display = (matchesName && matchesDate) ? '' : 'none';
+                const matchesStatus = selectedStatus ? statusText.includes(selectedStatus) : true;
+
+                row.style.display = (matchesName && matchesDate && matchesStatus) ? '' : 'none';
             });
 
             // Filter mobile cards
@@ -227,11 +238,14 @@
                 const text = card.textContent.toLowerCase();
                 const matchesName = text.includes(query);
                 const matchesDate = selectedDate ? text.includes(selectedDate) : true;
-                card.style.display = (matchesName && matchesDate) ? '' : 'none';
+                const matchesStatus = selectedStatus ? text.includes(selectedStatus) : true;
+
+                card.style.display = (matchesName && matchesDate && matchesStatus) ? '' : 'none';
             });
         }
 
         searchInput.addEventListener('input', filterTable);
         dateInput.addEventListener('change', filterTable);
+        statusInput.addEventListener('change', filterTable);
     });
 </script>

@@ -20,6 +20,14 @@
                     <input type="date" id="dateFilter" name="dateFilter"
                         class="appearance-none w-full p-3 pl-4 pr-4 text-sm text-gray-700 border border-gray-300 rounded-lg bg-white focus:ring-gray-200 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out" />
                 </div>
+
+                <select id="statusFilter"
+                    class="appearance-none w-full sm:w-[180px] p-3 pl-4 pr-10 text-sm text-gray-700 border border-gray-300 rounded-lg bg-white focus:ring-gray-200 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                </select>
+
             </div>
         </div>
 
@@ -80,7 +88,7 @@
                 $subStatus = $subscription->status;
                 $statusClass = match($subStatus) {
                 'active' => 'border border-green-500 text-green-600 ',
-                'expired' => 'bg-red-100 text-red-800 ',
+                'expired' => 'border border-red-500 text-red-600 ',
                 default => 'bg-gray-100 text-gray-600 border border-gray-300'
                 };
                 @endphp
@@ -104,7 +112,7 @@
                     <td class="px-6 py-4 text-center">{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('M j, Y') : '-' }}</td>
                     <td class="px-6 py-4 text-center">
                         @if ($daysLeft < 0)
-                            <span class="text-red-600 font-semibold">Expired</span>
+                            <span class="text-red-600 font-semibold">expired</span>
                             @else
                             {{ floor($daysLeft) }} day{{ floor($daysLeft) !== 1 ? 's' : '' }}
                             @endif
@@ -290,9 +298,8 @@
                                 now.setHours(0, 0, 0, 0);
                                 const diff = Math.floor((endDate.getTime() - now.getTime()) / oneDay);
 
-
-                                if (diff < 0) {
-                                    daysLeftText = '<span class="text-red-500">Expired</span>';
+                                if (diff === 0) {
+                                    daysLeftText = '<span class="text-red-600 font-semibold">expired</span>';
                                 } else {
                                     daysLeftText = `${diff} day${diff !== 1 ? 's' : ''}`;
                                 }
