@@ -9,73 +9,79 @@ use Illuminate\Support\Facades\Auth;
 
 class RestockController extends Controller
 {
-    public function restockSuggestion(Request $request)
-    {
-        $ownerId = Auth::guard('owner')->id();
-        $days = (int) $request->input('days', 90);
-        $startDate = now()->subDays($days)->toDateString();
+   public function restockSuggestion(Request $request)
+{
+    $ownerId = Auth::guard('owner')->id();
+    $currentYear = now()->year;
 
-        $products = DB::table('products')
-            ->join('inventory', 'products.prod_code', '=', 'inventory.prod_code')
-            ->join('categories', 'products.category_id', '=', 'categories.category_id')
-            ->leftJoin(DB::raw("(
+    $products = DB::table('products')
+        ->join('inventory', 'products.prod_code', '=', 'inventory.prod_code')
+        ->join('categories', 'products.category_id', '=', 'categories.category_id')
+        ->leftJoin(DB::raw("(
             SELECT
                 ri.prod_code,
                 SUM(ri.item_quantity) as total_sold,
                 COUNT(DISTINCT r.receipt_id) as order_count
             FROM receipt_item ri
             INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
-            WHERE r.receipt_date >= '{$startDate}'
+            WHERE YEAR(r.receipt_date) = {$currentYear}
             GROUP BY ri.prod_code
         ) as sales"), 'products.prod_code', '=', 'sales.prod_code')
-            ->where('products.owner_id', $ownerId)
-            ->whereNotNull('sales.total_sold')
-            ->select(
-                'inventory.inven_code',
-                'products.prod_code',
-                'products.name',
-                'products.cost_price',
-                'products.selling_price',
-                'products.description',
-                'inventory.stock',
-                'products.stock_limit',
-                'inventory.batch_number',
-                'categories.category',
-                DB::raw('COALESCE(sales.total_sold, 0) as total_sold'),
-                DB::raw('COALESCE(sales.order_count, 0) as order_count'),
-                DB::raw("ROUND(SQRT((2 * COALESCE(sales.total_sold, 0) * products.cost_price) / 1)) as eoq")
-            )
-            ->orderByDesc('sales.total_sold')
-            ->get()
-            ->map(function ($product) use ($days) {
+        ->where('products.owner_id', $ownerId)
+        ->whereNotNull('sales.total_sold')
+        ->select(
+            'inventory.inven_code',
+            'products.prod_code',
+            'products.name',
+            'products.cost_price',
+            'products.selling_price',
+            'products.description',
+            'inventory.stock',
+            'products.stock_limit',
+            'inventory.batch_number',
+            'categories.category',
+            DB::raw('COALESCE(sales.total_sold, 0) as total_sold'),
+            DB::raw('COALESCE(sales.order_count, 0) as order_count')
+        )
+        ->get()
+        ->map(function ($product) {
 
-                $avgDailySales = $product->total_sold / $days;
+            // Average daily sales for the year
+            $avgDailySales = $product->total_sold / 365;
 
-                // Dynamic lead time based on sales velocity
-                if ($avgDailySales >= 10) {           // very fast-moving
-                    $leadTime = 1;
-                } elseif ($avgDailySales >= 5) {      // medium-moving
-                    $leadTime = 2;
-                } elseif ($avgDailySales >= 2) {      // slow-medium
-                    $leadTime = 3;
-                } else {                              // slow-moving
-                    $leadTime = 5;
-                }
+            // Dynamic lead time
+            if ($avgDailySales >= 10) {
+                $leadTime = 1; // very fast-moving
+            } elseif ($avgDailySales >= 5) {
+                $leadTime = 2; // medium-moving
+            } elseif ($avgDailySales >= 2) {
+                $leadTime = 3; // slow-medium
+            } else {
+                $leadTime = 5; // slow-moving
+            }
 
-                $reorderPoint = round($avgDailySales * $leadTime);
+            // Reorder point: minimum of 3 units
+            $reorderPoint = max(round($avgDailySales * $leadTime), 3);
 
-                $product->lead_time_days = $leadTime;
-                $product->reorder_point = $reorderPoint;
-                $product->suggested_quantity = ($product->stock < $reorderPoint)
-                    ? round(sqrt((2 * $product->total_sold * $product->cost_price) / 1))
-                    : 0;
+            // Suggested restock using EOQ formula minus current stock
+            $eoq = round(sqrt((2 * $product->total_sold * $product->cost_price) / 1));
+            $suggestedQuantity = max($eoq - $product->stock, 0);
 
-                return $product;
-            });
+            // Attach computed values
+            $product->lead_time_days = $leadTime;
+            $product->reorder_point = $reorderPoint;
+            $product->suggested_quantity = $suggestedQuantity;
+            $product->eoq = $eoq;
 
-        return view('dashboards.owner.restock_suggestion', compact('products', 'days'));
-    }
+            return $product;
+        })
+        // Sort by suggested quantity descending
+        ->sortByDesc('suggested_quantity')
+        // Reindex collection
+        ->values();
 
+    return view('dashboards.owner.restock_suggestion', compact('products', 'currentYear'));
+}
 
 
 
