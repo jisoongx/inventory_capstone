@@ -10,38 +10,38 @@
     </p>
 
     <!-- Filters Card -->
-  
-        <form id="filtersForm" method="GET" action="{{ route('seasonal_trends') }}" class="flex flex-wrap gap-4 items-center w-full">
 
-            <!-- Category Filter -->
-            <div class="flex items-center gap-2">
-                <!-- <label class="text-sm text-gray-600" for="categorySelect">Category:</label> -->
-                <select name="category_id" id="categorySelect"
-                    class="px-3 py-1 text-sm shadow-md rounded-md border border-gray-300 focus:ring-2 focus:ring-GRAY-300 focus:outline-none"
-                    onchange="document.getElementById('filtersForm').submit()">
-                    <option value="">All Categories</option>
-                    @foreach($categories as $cat)
-                    <option value="{{ $cat->category_id }}" {{ ($categoryId ?? '') == $cat->category_id ? 'selected' : '' }}>
-                        {{ $cat->category }}
-                    </option>
-                    @endforeach
-                </select>
-            </div>
+    <form id="filtersForm" method="GET" action="{{ route('seasonal_trends') }}" class="flex flex-wrap gap-4 items-center w-full">
 
-            <!-- Top N Filter -->
-            <div class="flex items-center gap-2">
-                <!-- <label class="text-sm text-gray-600" for="topNSelect">Top Products:</label> -->
-                <select name="top_n" id="topNSelect"
-                    class="px-3 py-1 text-sm shadow-md rounded-md border border-gray-300 focus:ring-2 focus:ring-GRAY-300 focus:outline-none"
-                    onchange="document.getElementById('filtersForm').submit()">
-                    <option value="10" {{ ($topN ?? 15) == 10 ? 'selected' : '' }}>Top 10</option>
-                    <option value="15" {{ ($topN ?? 15) == 15 ? 'selected' : '' }}>Top 15</option>
-                    <option value="20" {{ ($topN ?? 15) == 20 ? 'selected' : '' }}>Top 20</option>
-                </select>
-            </div>
+        <!-- Category Filter -->
+        <div class="flex items-center gap-2">
+            <!-- <label class="text-sm text-gray-600" for="categorySelect">Category:</label> -->
+            <select name="category_id" id="categorySelect"
+                class="px-3 py-1 text-sm shadow-md rounded-md border border-gray-300 focus:ring-2 focus:ring-GRAY-300 focus:outline-none"
+                onchange="document.getElementById('filtersForm').submit()">
+                <option value="">All Categories</option>
+                @foreach($categories as $cat)
+                <option value="{{ $cat->category_id }}" {{ ($categoryId ?? '') == $cat->category_id ? 'selected' : '' }}>
+                    {{ $cat->category }}
+                </option>
+                @endforeach
+            </select>
+        </div>
 
-        </form>
-   
+        <!-- Top N Filter -->
+        <div class="flex items-center gap-2">
+            <!-- <label class="text-sm text-gray-600" for="topNSelect">Top Products:</label> -->
+            <select name="top_n" id="topNSelect"
+                class="px-3 py-1 text-sm shadow-md rounded-md border border-gray-300 focus:ring-2 focus:ring-GRAY-300 focus:outline-none"
+                onchange="document.getElementById('filtersForm').submit()">
+                <option value="10" {{ ($topN ?? 15) == 10 ? 'selected' : '' }}>Top 10</option>
+                <option value="15" {{ ($topN ?? 15) == 15 ? 'selected' : '' }}>Top 15</option>
+                <option value="20" {{ ($topN ?? 15) == 20 ? 'selected' : '' }}>Top 20</option>
+            </select>
+        </div>
+
+    </form>
+
 
     <!-- Chart & Table Grid -->
     <div class="grid lg:grid-cols-2 gap-6">
@@ -116,10 +116,17 @@ $avgPastYears = $topProducts->pluck('last_year_sold');
         gradient.addColorStop(1, colorEnd);
         return gradient;
     }
-
     const ctx = document.getElementById('salesChart').getContext('2d');
-    const currentGradients = currentData.map((v, i) => gradientColor(ctx, v > pastData[i] ? '#22c55e' : '#3b82f6', v > pastData[i] ? '#16a34a' : '#2563eb'));
-    const pastGradients = pastData.map(() => gradientColor(ctx, '#93c5fd', '#3b82f6'));
+
+    // All Current Month bars are solid blue
+    const currentGradients = currentData.map(() =>
+        gradientColor(ctx, '#2563eb', '#2563eb')
+    );
+
+    // Past Data stays the same
+    const pastGradients = pastData.map(() =>
+        gradientColor(ctx, '#93c5fd', '#3b82f6')
+    );
 
     new Chart(ctx, {
         type: 'bar',
@@ -156,10 +163,7 @@ $avgPastYears = $topProducts->pluck('last_year_sold');
             },
             scales: {
                 y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
+                    beginAtZero: true
                 }
             }
         }
