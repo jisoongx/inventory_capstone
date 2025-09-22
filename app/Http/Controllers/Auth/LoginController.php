@@ -21,84 +21,63 @@ class LoginController extends Controller
             'password' => 'required'
         ]);
 
-        $email = $request->email;
-        $password = $request->password;
-        $authenticatedUser = null;
-        $guardUsed = null;
-
-        // Super Admin
-        $superAdmin = SuperAdmin::where('email', $email)->first();
-        if ($superAdmin && Hash::check($password, $superAdmin->super_pass)) {
-            $authenticatedUser = $superAdmin;
-            $guardUsed = 'super_admin';
-        }
-
-        // Owner
-        if (!$authenticatedUser) {
-            $owner = Owner::where('email', $email)->first();
-            if ($owner && Hash::check($password, $owner->owner_pass)) {
-                Auth::guard('owner')->login($owner);
-                $authenticatedUser = $owner;
-                $guardUsed = 'owner';
-            }
-        }
-
-        // Staff
-        if (!$authenticatedUser) {
-            $staff = Staff::where('email', $email)->first();
-            if ($staff) {
-                if ($staff->status === 'Deactivated') {
-                    throw ValidationException::withMessages([
-                        'email' => 'Your account has been deactivated.',
-                    ]);
-                }
-                if (Hash::check($password, $staff->staff_pass)) {
-                    $authenticatedUser = $staff;
-                    $guardUsed = 'staff';
-                }
-            }
-        }
-
-        if ($authenticatedUser && $guardUsed) {
-            Auth::guard($guardUsed)->login($authenticatedUser);
+        // Try Super Admin
+        if (Auth::guard('super_admin')->attempt($request->only('email', 'password'))) {
             $request->session()->regenerate();
-
-            ActivityLogController::log('Login', $guardUsed, $authenticatedUser, $request->ip());
-            switch ($guardUsed) {
-                case 'super_admin':
-                    return redirect()->route('subscription');
-                    break;
-                case 'owner':
-                    $owner = $authenticatedUser;
-                    $subscribe = $owner->subscription()->first();
-
-                    if (!$subscribe) {
-                        return redirect()->route('subscription.selection')
-                            ->with('info', 'No active subscription.');
-                    }
-                    elseif ($owner->status === 'Active') {
-                        $subscription = $owner->subscription;
-                        if ($subscription->progress_view = 0  ) {
-                            $subscription->progress_view = true;
-                            $subscription->save();
-                            return redirect()->route('subscription.progress');
-                        }
-                        return redirect()->route('dashboards.owner.dashboard');
-                    }  elseif ($owner->status === 'Deactivated') {
-                        return redirect()->route('subscription.expired')
-                            ->with('info', 'Your subscription has expired. Please renew to continue enjoying our services.');
-                    } 
-                    break;
-
-                case 'staff':
-                    return redirect()->route('staff.dashboard');
-                    break;
-            }
+            ActivityLogController::log('Login', 'super_admin', Auth::guard('super_admin')->user(), $request->ip());
+            return redirect()->route('subscription');
         }
 
-        throw ValidationException::withMessages([
-            'email' => 'Invalid email or password.',
-        ]);
+        // Try Owner
+        if (Auth::guard('owner')->attempt($request->only('email', 'password'))) {
+            $request->session()->regenerate();
+            $owner = Auth::guard('owner')->user();
+            ActivityLogController::log('Login', 'owner', $owner, $request->ip());
+
+            $latestSub = $owner->latestSubscription;
+
+            // Case 1: Owner has NO subscription at all.
+            if (!$latestSub) {
+                return redirect()->route('subscription.selection')
+                    ->with('info', 'Welcome! Please choose a plan to get started.');
+            }
+
+            // Case 2: Owner's latest subscription is ACTIVE.
+            if ($latestSub->status === 'active') {
+                return redirect()->route('dashboards.owner.dashboard');
+            }
+
+            // Case 3: Owner's latest subscription is EXPIRED.
+            // As requested, expired users are directed to the dashboard.
+            if ($latestSub->status === 'expired') {
+                return redirect()->route('dashboards.owner.dashboard');
+            }
+
+            // Default Case: For any other status (e.g., 'pending', 'cancelled').
+            return redirect()->route('subscription.selection')
+                ->with('info', 'Please complete your subscription process.');
+        }
+
+        // Try Staff
+        if (Auth::guard('staff')->attempt($request->only('email', 'password'))) {
+            $request->session()->regenerate();
+            $staff = Auth::guard('staff')->user();
+
+            if ($staff->status === 'Deactivated') {
+                Auth::guard('staff')->logout();
+                return back()->withErrors([
+                    'email' => 'Your account has been deactivated.',
+                ])->withInput($request->only('email'));
+            }
+
+            ActivityLogController::log('Login', 'staff', $staff, $request->ip());
+            return redirect()->route('staff.dashboard');
+        }
+
+        // If nothing matched, return with an error.
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ])->withInput($request->only('email'));
     }
 
 

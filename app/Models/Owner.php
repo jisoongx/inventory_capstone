@@ -46,7 +46,7 @@ class Owner extends Authenticatable
     public function activeSubscription()
     {
         return $this->hasOne(Subscription::class, 'owner_id')
-            ->where('status', 'paid')
+            ->where('status', 'active')
             ->where('subscription_end', '>=', now());
     }
 

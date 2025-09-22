@@ -9,9 +9,9 @@
     @livewireStyles
 </head>
 
-<body class="min-h-screen flex items-center justify-center bg-white font-poppins p-4">
+<body class="min-h-screen bg-gradient-to-br from-gray-700 via-red-800 to-black flex items-center justify-center p-4">
 
-    <div class="w-full max-w-sm bg-white rounded-lg  p-8 flex flex-col items-center gap-6">
+    <div class="w-full max-w-sm bg-white backdrop-blur-xl shadow-2xl rounded-xl p-8 flex flex-col items-center gap-6">
         <!-- Logo + Title -->
         <div class="flex flex-col items-center gap-2">
             <img src="{{ asset('assets/logo.png') }}" class="w-14 drop-shadow-md" alt="ShopLytix Logo">
@@ -34,15 +34,17 @@
             </p>
 
             <!-- Email -->
-            <div class="relative">
-                <span class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    mail
-                </span>
-                <input type="email" name="email" placeholder="Email" required
-                    class="w-full pl-12 pr-4 py-2.5 text-sm 
-                           bg-white border border-gray-300 rounded-lg 
-                           shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 
-                           placeholder-gray-400 transition" />
+            <div class="w-full">
+                <div class="relative">
+                    <span class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                        mail
+                    </span>
+                    <input type="email" name="email" placeholder="Email" required
+                        class="w-full pl-12 pr-4 py-2.5 text-sm 
+                               bg-white border border-gray-300 rounded-lg 
+                               shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 
+                               placeholder-gray-400 transition" />
+                </div>
                 @error('email')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                 @enderror

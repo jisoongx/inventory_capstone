@@ -10,9 +10,9 @@
 
 </head>
 
-<body class="min-h-screen flex items-center justify-center bg-white font-poppins p-4">
+<body class="min-h-screen bg-gradient-to-br from-gray-700 via-red-800 to-black flex items-center justify-center p-4">
 
-    <div class="w-full max-w-sm bg-white rounded-lg p-8 flex flex-col items-center gap-6">
+    <div class="w-full max-w-sm  rounded-2xl shadow-2xl backdrop-blur-xl p-8 flex flex-col items-center gap-6">
         <!-- Logo + Title -->
         <div class="flex flex-col items-center gap-2">
             <img src="{{ asset('assets/logo.png') }}" class="w-14 drop-shadow-md" alt="ShopLytix Logo">

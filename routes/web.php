@@ -99,7 +99,6 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name(
 //Subscription
 Route::get('/subscription/select', [SubscriptionController::class, 'create'])->name('subscription.selection');
 Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store');
-Route::get('/subscription/progress', [SubscriptionController::class, 'progress'])->name('subscription.progress');
 Route::get('/subscription/success', fn() => view('subscription_success'))->name('subscription.success');
 Route::get('/subscription/expired', fn() => view('subscription_expired'))->name('subscription.expired');
 
@@ -110,9 +109,7 @@ Route::get('/staff/dashboard', [DashboardController::class, 'index_staff'])->nam
 
 //subscription plan management
 Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');
-Route::put('/subs/{owner_id}/status', [SubscriptionController::class, 'updateSubStatus'])->name('subs.updateStatus');
-Route::get('/clients/sub-search', [SubscriptionController::class, 'sub_search'])->name('clients.sub_search');
-Route::get('/billing-history', [SubscriptionController::class, 'showExpiredSubscribers'])->name('billing.history');
+Route::get('/billing-history', [SubscriptionController::class, 'billing'])->name('billing.history');
 // activity logs
 Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('actLogs');
 Route::get('/staff-logs', [ActivityLogController::class, 'staffLogs'])->name('staffLogs');

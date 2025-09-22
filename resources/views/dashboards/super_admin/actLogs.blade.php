@@ -2,8 +2,7 @@
 
 @section('content')
 &nbsp;
-<h1 class="text-2xl font-extrabold text-gray-900 mb-6 mx-6">Activity Logs</h1>
-<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 mx-6">
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 mx-3">
     <!-- Smaller, Rounded Search Bar -->
     <div class="flex-1">
         <input
@@ -34,9 +33,9 @@
 
 
 </div>
-<div class="overflow-x-auto bg-white shadow-md rounded-md mx-6">
+<div class="overflow-x-auto bg-white shadow-md rounded-xl mx-3">
     <table class="min-w-full text-sm text-gray-700">
-        <thead class="bg-gray-100 text-center text-gray-700 uppercase tracking-wider">
+        <thead class="bg-red-500 text-center text-white uppercase tracking-wider">
             <tr>
                 <th class="px-6 py-3 font-semibold tracking-wider text-left">Date</th>
                 <th class="px-6 py-3 font-semibold tracking-wider">Time</th>

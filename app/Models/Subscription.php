@@ -27,10 +27,17 @@ class Subscription extends Model
         'subscription_end'   => 'datetime'
     ];
 
+    
+    
     public function isActive()
     {
-        return Carbon::now()->lt(Carbon::parse($this->subscription_end));
+        return $this->status === 'active'
+            && Carbon::now()->between(
+                Carbon::parse($this->subscription_start),
+                Carbon::parse($this->subscription_end)
+            );
     }
+
 
 
     public function owner()

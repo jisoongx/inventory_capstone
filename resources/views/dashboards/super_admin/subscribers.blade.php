@@ -1,490 +1,336 @@
 @extends('dashboards.super_admin.super_admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
 
-    <!-- Header: Title + Filters + Plan Buttons -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-6">
-        <div class="flex-1">
-            <h1 class="text-2xl font-bold text-gray-900 mb-4">Subscription Plan Management</h1>
-
-            <div class="flex flex-col sm:flex-row gap-4">
-                <!-- Search -->
-                <input type="text" id="search" placeholder="Search by store name or owner name"
-                    autocomplete="off"
-                    class="w-full sm:w-[360px] p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-gray-200 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out"
-                    style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;" />
-
-                <!-- Date Filter -->
-                <div class="relative w-full sm:w-[180px]">
-                    <input type="date" id="dateFilter" name="dateFilter"
-                        class="appearance-none w-full p-3 pl-4 pr-4 text-sm text-gray-700 border border-gray-300 rounded-lg bg-white focus:ring-gray-200 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out" />
-                </div>
-
-                <select id="statusFilter"
-                    class="appearance-none w-full sm:w-[180px] p-3 pl-4 pr-10 text-sm text-gray-700 border border-gray-300 rounded-lg bg-white focus:ring-gray-200 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out">
-                    <option value="">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="expired">Expired</option>
-                </select>
-
-            </div>
-        </div>
-
-        <!-- Plan Buttons -->
-        <div class="flex gap-4 mt-4 md:mt-0">
-            <!-- BASIC Plan -->
-            <button type="button"
-                class="filter-plan w-36 bg-white border-l-4  border-orange-500 text-sm text-orange-500 font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-200"
-                data-plan="1">
-                BASIC<br>
-                <span class="text-lg font-bold text-orange-500">₱250</span><br>
-                <span class="text-xs font-normal text-gray-600">for 6 months</span>
-            </button>
-
-            <!-- PREMIUM Plan -->
-            <button type="button"
-                class="filter-plan w-36 bg-white border-l-4  border-red-500 text-sm text-red-500 font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-200"
-                data-plan="2">
-                PREMIUM<br>
-                <span class="text-lg font-bold text-red-500">₱500</span><br>
-                <span class="text-xs font-normal text-gray-600">for 1 year</span>
-            </button>
-        </div>
-
-    </div>
-
-    <!-- Table -->
-    @if($clients->count())
-    <div class="overflow-x-auto bg-white shadow-md rounded-md ">
-        <table class="min-w-full table-auto border-collapse">
-            <thead class="bg-gray-100 text-sm text-gray-700 tracking-wider uppercase">
-                <tr>
-                    <th class="px-6 py-3 text-left font-semibold">Store Name</th>
-                    <th class="px-6 py-3 text-left font-semibold">Owner Name</th>
-                    <th class="px-6 py-3 text-center font-semibold">Plan</th>
-                    <th class="px-6 py-3 text-center font-semibold">Status</th>
-                    <th class="px-6 py-3 text-center font-semibold">Start Date</th>
-                    <th class="px-6 py-3 text-center font-semibold">Expiry Date</th>
-                    <th class="px-6 py-3 text-center font-semibold">Days Left</th>
-                    <th class="px-6 py-3 text-center font-semibold">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="text-sm text-gray-800 divide-y divide-gray-100">
-                @foreach($clients as $client)
-                @foreach($client->subscriptions as $subscription)
-                @php
-                $start = \Carbon\Carbon::parse($subscription->subscription_start ?? now());
-                $end = \Carbon\Carbon::parse($subscription->subscription_end ?? now());
-                $daysLeft = now()->diffInDays($end, false);
-
-                $planTitle = trim($subscription->planDetails->plan_title ?? '-');
-                $planClass = match($planTitle) {
-                'Basic' => 'text-orange-600 border border-orange-500',
-                'Premium' => 'text-red-600 border border-red-500',
-                default => 'bg-gray-100 text-gray-700 ',
-                };
-
-                $subStatus = $subscription->status;
-                $statusClass = match($subStatus) {
-                'active' => 'border border-green-500 text-green-600 ',
-                'expired' => 'border border-red-500 text-red-600 ',
-                default => 'bg-gray-100 text-gray-600 border border-gray-300'
-                };
-                @endphp
-
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 uppercase">{{ $client->store_name }}</td>
-                    <td class="px-6 py-4 uppercase">{{ $client->firstname }} {{ $client->middlename ?? '' }} {{ $client->lastname }}</td>
-                    <td class="px-6 py-4 text-center">
-                        @if ($planTitle !== '-')
-                        <span class="w-28 text-center px-3 py-1 inline-flex items-center justify-center text-sm leading-5 font-medium rounded-full {{ $planClass }}">
-                            {{ $planTitle }}
-                        </span>
-                        @else - @endif
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-sm leading-5 font-medium rounded-full {{ $statusClass }}">
-                            {{ ($subStatus) }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-center">{{ $subscription->subscription_start ? \Carbon\Carbon::parse($subscription->subscription_start)->format('M j, Y') : '-' }}</td>
-                    <td class="px-6 py-4 text-center">{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('M j, Y') : '-' }}</td>
-                    <td class="px-6 py-4 text-center">
-                        @if ($daysLeft < 0)
-                            <span class="text-red-600 font-semibold">expired</span>
-                            @else
-                            {{ floor($daysLeft) }} day{{ floor($daysLeft) !== 1 ? 's' : '' }}
-                            @endif
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <button type="button" class="edit-status-btn text-red-600 hover:text-red-800 font-medium transition duration-150 ease-in-out inline-flex items-center"
-                            data-owner-id="{{ $client->owner_id }}" data-current-status="{{ $subscription->status }}">
-                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                            </svg>
-                        </button>
-                    </td>
-                </tr>
-                @endforeach
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-
-    <div class="mt-4">
-        {{ $clients->links() }}
-    </div>
-    @else
-    <p class="text-gray-500 text-center">No active subscribers found.</p>
-    @endif
-</div>
-
-
-
-
-
-
-<div id="statusUpdateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
-    <div class="bg-white w-full max-w-md mx-auto rounded-md shadow-2xl p-6 relative animate-fadeIn">
-
-        <!-- Modal Header -->
-        <div class="flex justify-end mb-6">
-            <button id="cancelStatusBtn" class="text-gray-400 hover:text-gray-600 transition duration-200 ease-in-out">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-
-
-        <!-- Client Info -->
-        <div class="space-y-4 mb-6">
-            <div class="flex justify-between text-sm text-gray-700">
-                <span class="font-medium">Client ID:</span>
-                <span id="modalClientId" class="font-semibold text-gray-900"></span>
-            </div>
-            <div class="flex justify-between text-sm text-gray-700 items-center">
-                <span class="font-medium">Current Status:</span>
-                <span id="modalCurrentStatus"
-                    class="font-semibold text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-800 inline-block">
-                </span>
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex flex-col gap-3">
-            <!-- Approve / Activate Button -->
-            <button id="approveStatusBtn" data-new-status="active"
-                class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition duration-200 ease-in-out">
-                <span id="approveBtnLabel">Activate</span>
-            </button>
-
-            <!-- Decline / Deactivate Button -->
-            <button id="declineStatusBtn" data-new-status="expired"
-                class="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition duration-200 ease-in-out">
-                <span id="declineBtnLabel">Expired</span>
-            </button>
-
-
-        </div>
-    </div>
-</div>
-
-
-<div id="notification" class="fixed bottom-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hidden" style="min-width: 250px;">
-    Status updated successfully!
-</div>
-
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        let currentQuery = '';
-        let currentPlan = '';
-        let currentStatus = '';
-        let date = '';
-
-        // When typing in search box
-        $('#search').on('input', function() {
-            currentQuery = $(this).val();
-            fetchClients();
-        });
-
-        // When clicking BASIC or PREMIUM buttons
-        $('.filter-plan').on('click', function() {
-            currentPlan = $(this).data('plan');
-            fetchClients();
-        });
-
-        $('#statusFilter').on('change', function() {
-            currentStatus = $(this).val(); // Get selected status
-            fetchClients(); // Fetch with new filter
-        });
-
-        $('#dateFilter').on('change', function() {
-            date = $(this).val(); // Get selected status
-            fetchClients(); // Fetch with new filter
-        });
-
-
-        function fetchClients() {
-            $.ajax({
-                url: "{{ route('clients.sub_search') }}",
-                type: "GET",
-                data: {
-                    query: currentQuery,
-                    plan: currentPlan,
-                    status: currentStatus,
-                    date: date
-
-
-                },
-                success: function(data) {
-                    let tbody = '';
-                    const planMap = {
-                        1: {
-                            title: 'Basic',
-                            color: 'text-orange-600 border border-orange-500 '
-                        },
-                        2: {
-                            title: 'Premium',
-                            color: 'text-red-600 border border-red-500 '
-                        }
-                    };
-
-                    if (data.length > 0) {
-                        data.forEach(client => {
-                            function getStatusBadgeHtml(status) {
-                                let bgColor = 'border border-gray-500';
-                                let textColor = 'text-gray-500';
-                                if (status === 'active') {
-                                    bgColor = 'border border-green-600';
-                                    textColor = 'text-green-600';
-                                } else if (status === 'expired') {
-                                    bgColor = 'border border-red-600';
-                                    textColor = 'text-red-600';
-                                }
-                                return `
-                                <span class="w-24 text-center px-3 py-1 inline-flex items-center justify-center text-sm leading-5 font-medium rounded-full ${bgColor} ${textColor}">
-                                    ${status}
-                                </span>
-                                `;
-                            }
-                            const statusBadge = getStatusBadgeHtml(client.subscription.status);
-                            const plan = client.subscription?.plan_details?.plan_title ?? '-';
-
-                            const start = client.subscription?.subscription_start ? new Date(client.subscription.subscription_start).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                            }) : '-';
-                            const end = client.subscription?.subscription_end ? new Date(client.subscription.subscription_end).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                            }) : '-';
-
-                            let daysLeftText = '-';
-                            if (client.subscription?.subscription_end) {
-                                const endDate = new Date(client.subscription.subscription_end);
-                                const now = new Date();
-                                const oneDay = 1000 * 60 * 60 * 24;
-                                endDate.setHours(0, 0, 0, 0);
-                                now.setHours(0, 0, 0, 0);
-                                const diff = Math.floor((endDate.getTime() - now.getTime()) / oneDay);
-
-                                if (diff === 0) {
-                                    daysLeftText = '<span class="text-red-600 font-semibold">expired</span>';
-                                } else {
-                                    daysLeftText = `${diff} day${diff !== 1 ? 's' : ''}`;
-                                }
-                            }
-
-                            const planId = client.subscription?.plan_id;
-                            const planInfo = planMap[planId];
-
-                            const planBadge = planInfo ?
-                                `<span class="w-24 text-center px-2 py-1 inline-flex items-center justify-center text-sm font-medium leading-5 rounded-full ${planInfo.color}">
-                                    ${planInfo.title}
-                                </span>` : '-';
-
-                            tbody += `
-                                <tr class="border-b hover:bg-gray-50 text-sm">
-                                    <td class="px-6 py-4   text-left uppercase">${client.store_name}</td>
-                                    <td class="px-6 py-4   text-left uppercase">${client.firstname} ${client.middlename ?? ''} ${client.lastname}</td>
-                                    <td class="px-6 py-4 text-sm text-center">${planBadge}</td>
-                                    <td class="px-6 py-4">${statusBadge}</td>
-                                    <td class="px-6 py-4   text-gray-900 text-center">${start}</td>
-                                    <td class="px-6 py-4   text-gray-900 text-center">${end}</td>
-                                    <td class="px-6 py-4   text-center">${daysLeftText}</td>
-                                    <td class="px-6 py-4   text-center">
-                                        <button type="button"
-                                            class="edit-status-btn text-red-600 hover:text-blue-900 font-medium transition duration-150 ease-in-out inline-flex items-center"
-                                            data-owner-id="${client.owner_id}"
-                                            data-current-status="${client.subscription.status}">
-                                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                            </svg>
-
-                                        </button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        tbody = `
-                            <tr>
-                                <td colspan="8" class="text-center px-6 py-4 text-sm text-gray-500">
-                                    No results found.
-                                </td>
-                            </tr>
-                        `;
-                    }
-
-                    $('tbody').html(tbody);
-                }
-            });
-        }
-    });
-
-    // --- New Status Update Logic ---
-    let currentOwnerId = null; // Store the ID of the client being edited
-
-    // Function to update status badge styling
-    function updateStatusBadge(element, newStatus) {
-        let bgColor = '';
-        let textColor = '';
-
-        if (newStatus === 'Active') {
-            bgColor = 'border border-green-600';
-            textColor = 'text-green-600';
-        } else if (newStatus === 'Expired') {
-            bgColor = 'border border-red-600';
-            textColor = 'text-red-600';
-        } else {
-            bgColor = 'border border-gray-500';
-            textColor = 'text-gray-500';
-        }
-
-        element.removeClass().addClass(`w-24 text-center px-2 py-1 inline-flex items-center justify-center text-sm font-semibold rounded-full ${bgColor} ${textColor}`).text(newStatus);
+{{-- Helper function to generate dynamic badge classes --}}
+@php
+function getBadgeClasses($type, $value) {
+    $base = 'inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md text-white';
+    switch ($type) {
+        case 'plan':
+            return $base . ' ' . (trim($value) === 'Basic' ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-rose-500 to-rose-600');
+        case 'status':
+            return $base . ' ' . (trim($value) === 'active' ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-red-500 to-red-600');
+        case 'days':
+            if ($value < 0) return $base . ' bg-gradient-to-r from-red-500 to-red-600';
+            if ($value <= 7) return $base . ' bg-gradient-to-r from-red-500 to-red-600';
+            if ($value <= 14) return $base . ' bg-gradient-to-r from-orange-500 to-orange-600';
+            if ($value <= 30) return $base . ' bg-gradient-to-r from-yellow-500 to-amber-500';
+            return $base . ' bg-gradient-to-r from-gray-500 to-gray-600';
     }
+}
+@endphp
 
-    // Open Modal
-    $(document).on('click', '.edit-status-btn', function() {
-        currentOwnerId = $(this).data('owner-id');
-        let currentStatus = $(this).data('current-status');
+<style>
+    /* Active State for Stat Cards (uses CSS variables for dynamic coloring) */
+    .active-tab {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px var(--shadow-color);
+        border-color: var(--border-color) !important;
+        background: var(--bg-gradient);
+    }
+    .active-tab .top-indicator { opacity: 1 !important; }
 
-        $('#modalClientId').text(currentOwnerId);
-        $('#modalCurrentStatus').text(currentStatus);
-        updateStatusBadge($('#modalCurrentStatus'), currentStatus);
+    /* Hover Effects */
+    .group:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    }
+    .active-tab:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 35px var(--shadow-hover-color);
+    }
+    .group:hover .top-indicator { opacity: 1 !important; }
 
-        // Buttons and labels
-        const approveBtn = $('#approveStatusBtn');
-        const declineBtn = $('#declineStatusBtn');
-        const approveLabel = $('#approveBtnLabel');
-        const declineLabel = $('#declineBtnLabel');
+    /* Micro-animations */
+    .group:hover .w-12.h-12 { transform: scale(1.05); }
+    @keyframes float {
+        0%, 100% { transform: translate(8px, -8px) scale(1); }
+        50% { transform: translate(12px, -12px) scale(1.1); }
+    }
+    .group:hover .absolute.w-20 > div { animation: float 3s ease-in-out infinite; }
+</style>
 
-        // Reset buttons
-        approveBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
-        declineBtn.prop('disabled', false).removeClass('opacity-30 cursor-not-allowed');
+<div class="min-h-screen">
+    <div class="container mx-auto px-2 py-5 max-w-7xl">
 
-        // Set button labels based on current status
-        if (currentStatus === 'active') {
-            approveLabel.text('Activate');
-            declineLabel.text('Expired');
-            approveBtn.attr('data-new-status', 'active');
-            declineBtn.attr('data-new-status', 'expired');
-            // Already active, disable approve
-            approveBtn.prop('disabled', true).addClass('opacity-30 cursor-not-allowed');
-        } else if (currentStatus === 'expired') {
-            approveLabel.text('Activate');
-            declineLabel.text('Expired');
-            approveBtn.attr('data-new-status', 'active');
-            declineBtn.attr('data-new-status', 'expired');
-            // Already deactivated, disable decline
-            declineBtn.prop('disabled', true).addClass('opacity-30 cursor-not-allowed');
-        }
+        {{-- Stat Cards --}}
+        <div class="flex flex-col sm:flex-row gap-5 mb-5 w-full max-w-7xl">
+            <button id="activeTab" class="group relative flex-1 p-5 rounded-xl transition-all duration-300 ease-in-out cursor-pointer bg-gradient-to-br from-white to-emerald-50 border border-emerald-200 shadow-md overflow-hidden" data-tab="active">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-green-500 opacity-0 transition-opacity duration-300 top-indicator"></div>
+                <div class="absolute top-0 right-0 w-20 h-20 opacity-5"><div class="w-full h-full bg-emerald-500 rounded-full transform translate-x-8 -translate-y-8"></div></div>
+                <div class="relative z-10 text-left">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-white text-xl">verified</span></div>
+                            <div>
+                                <div class="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Active</div>
+                                <div class="text-3xl font-bold text-gray-900 leading-none">{{ $activeCount }}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-emerald-700 font-semibold px-3 py-1.5 bg-emerald-100 rounded-full border border-emerald-200"><div class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>Live</div></div>
+                    </div>
+                    <div class="text-sm text-gray-600 font-medium">Active Subscriptions</div>
+                </div>
+            </button>
 
-        $('#statusUpdateModal').removeClass('hidden').addClass('flex');
-    });
+            <button id="expiredTab" class="group relative flex-1 p-5 rounded-xl transition-all duration-300 ease-in-out cursor-pointer bg-gradient-to-br from-white to-red-50 border border-red-200 shadow-md overflow-hidden" data-tab="expired">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-rose-500 opacity-0 transition-opacity duration-300 top-indicator"></div>
+                <div class="absolute top-0 right-0 w-20 h-20 opacity-5"><div class="w-full h-full bg-red-500 rounded-full transform translate-x-8 -translate-y-8"></div></div>
+                <div class="relative z-10 text-left">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-white text-xl">cancel</span></div>
+                            <div>
+                                <div class="text-sm font-semibold text-red-700 uppercase tracking-wide">Expired</div>
+                                <div class="text-3xl font-bold text-gray-900 leading-none">{{ $expiredCount }}</div>
+                            </div>
+                        </div>
+                        @if($expiredCount > 0)
+                            <div class="text-xs text-red-700 font-semibold px-3 py-1.5 bg-red-100 rounded-full border border-red-200"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">priority_high</span>Action</div></div>
+                        @endif
+                    </div>
+                    <div class="text-sm text-gray-600 font-medium">Expired Subscriptions</div>
+                </div>
+            </button>
 
+            <button id="upcomingTab" class="group relative flex-1 p-5 rounded-xl transition-all duration-300 ease-in-out cursor-pointer bg-gradient-to-br from-white to-amber-50 border border-amber-200 shadow-md overflow-hidden" data-tab="upcoming">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-0 transition-opacity duration-300 top-indicator"></div>
+                <div class="absolute top-0 right-0 w-20 h-20 opacity-5"><div class="w-full h-full bg-amber-500 rounded-full transform translate-x-8 -translate-y-8"></div></div>
+                <div class="relative z-10 text-left">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-white text-xl">schedule</span></div>
+                            <div>
+                                <div class="text-sm font-semibold text-amber-700 uppercase tracking-wide">Upcoming</div>
+                                <div class="text-3xl font-bold text-gray-900 leading-none">{{ $upcomingCount }}</div>
+                            </div>
+                        </div>
+                        @if($upcomingCount > 0)
+                            <div class="text-xs text-amber-700 font-semibold px-3 py-1.5 bg-amber-100 rounded-full border border-amber-200"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">timer</span>30d</div></div>
+                        @endif
+                    </div>
+                    <div class="text-sm text-gray-600 font-medium">Expiring Soon</div>
+                </div>
+            </button>
+        </div>
 
-    // Close Modal
-    $('#cancelStatusBtn').on('click', function() {
-        $('#statusUpdateModal').removeClass('flex').addClass('hidden');
-        currentOwnerId = null; // Clear current ID
-    });
+        {{-- Filters Card --}}
+        <div class="bg-white rounded-xl shadow-md border-gray-100 mb-6 backdrop-blur-lg bg-opacity-90">
+            <div class="p-6">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="relative flex-1 min-w-[20rem]">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                        <input type="text" id="search" placeholder="Search stores or owners..." class="w-full pl-10 pr-4 py-3 rounded-lg text-sm focus:outline-none transition-all border border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500/30" />
+                    </div>
+                    <input type="date" id="dateFilter" class="px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-all shadow-sm" />
+                    <div id="planFilters" class="flex gap-2">
+                        <button type="button" class="filter-plan btn-filter bg-orange-400 hover:bg-orange-500 text-white rounded-lg px-4 py-3 text-sm font-semibold shadow-lg transition-all" data-plan="1">
+                            <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">star</span><div class="text-left"><div class="text-sm font-semibold">Basic</div><div class="text-xs opacity-90">₱250 • 6mo</div></div></div>
+                        </button>
+                        <button type="button" class="filter-plan btn-filter bg-rose-500 hover:bg-rose-600 text-white rounded-lg px-4 py-3 text-sm font-semibold shadow-lg transition-all" data-plan="2">
+                            <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">diamond</span><div class="text-left"><div class="text-sm font-semibold">Premium</div><div class="text-xs opacity-90">₱500 • 1yr</div></div></div>
+                        </button>
+                    </div>
+                    <div id="expiryFilters" class="hidden gap-2">
+                        <button type="button" class="expiry-filter btn-filter bg-red-500 hover:bg-red-700 text-white rounded-lg px-4 py-3 text-sm font-semibold shadow-lg" data-days="7"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">warning</span>7 Days</div></button>
+                        <button type="button" class="expiry-filter btn-filter bg-orange-500 hover:bg-orange-700 text-white rounded-lg px-4 py-3 text-sm font-semibold shadow-lg" data-days="14"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span>14 Days</div></button>
+                        <button type="button" class="expiry-filter btn-filter bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg px-4 py-3 text-sm font-semibold shadow-lg" data-days="30"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">event</span>30 Days</div></button>
+                    </div>
+                    <button type="button" id="clearFilters" class="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-3 text-sm font-semibold transition-all shadow-lg"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">clear_all</span>Clear</div></button>
+                </div>
+            </div>
+        </div>
 
-    // Handle Status Update (Approve/Decline)
-    $('#approveStatusBtn, #declineStatusBtn').on('click', function() {
-        const newStatus = $(this).data('new-status');
+        @if($clients->isNotEmpty())
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100" id="dataTable">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-fixed">
+                        <thead class="bg-slate-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wide"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-base">storefront</span>Store</div></th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wide"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-base">person</span>Owner</div></th>
+                                <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 uppercase tracking-wide w-32"><div class="flex items-center justify-center gap-1"><span class="material-symbols-outlined text-base">workspace_premium</span>Plan</div></th>
+                                <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 uppercase tracking-wide w-24"><div class="flex items-center justify-center gap-1"><span class="material-symbols-outlined text-base">toggle_on</span>Status</div></th>
+                                <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 uppercase tracking-wide">Start Date</th>
+                                <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 uppercase tracking-wide">Expiry Date</th>
+                                <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 uppercase tracking-wide">Days Left</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-100">
+                            @forelse($clients as $client)
+                                @foreach($client->subscriptions as $subscription)
+                                    @php
+                                        $daysLeft = now()->diffInDays(\Carbon\Carbon::parse($subscription->subscription_end ?? now()), false);
+                                        $planTitle = trim($subscription->planDetails->plan_title ?? '-');
+                                        $subStatus = $subscription->status;
+                                    @endphp
+                                    <tr class="subscription-row transition-all duration-250 hover:bg-indigo-50/50" data-status="{{ $subStatus }}" data-days-left="{{ $daysLeft }}" data-plan-id="{{ $subscription->plan_id }}" data-owner="{{ strtolower($client->firstname . ' ' . $client->lastname) }}" data-store="{{ strtolower($client->store_name) }}" data-expiry-date="{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('Y-m-d') : '' }}">
+                                        <td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white text-sm font-semibold shadow-md">{{ strtoupper(substr($client->store_name, 0, 2)) }}</div><div><div class="font-semibold text-slate-900 text-sm">{{ $client->store_name }}</div></div></div></td>
+                                        <td class="px-6 py-4"><div class="text-slate-800 font-semibold text-sm">{{ $client->firstname }} {{ $client->lastname }}</div><div class="text-xs text-slate-500">{{ $client->middlename ?? '' }}</div></td>
+                                        <td class="px-6 py-4 text-center">
+                                            @if ($planTitle !== '-')
+                                                <span class="w-[100px] {{ getBadgeClasses('plan', $planTitle) }}"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">{{ $planTitle === 'Basic' ? 'star' : 'diamond' }}</span>{{ $planTitle }}</div></span>
+                                            @else
+                                                <span class="text-slate-400 text-xs">No Plan</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 text-center"><span class="w-[80px] {{ getBadgeClasses('status', $subStatus) }}">{{ ucfirst($subStatus) }}</span></td>
+                                        <td class="px-6 py-4 text-center text-slate-700 text-sm font-medium">{{ $subscription->subscription_start ? \Carbon\Carbon::parse($subscription->subscription_start)->format('M j, Y') : '-' }}</td>
+                                        <td class="px-6 py-4 text-center text-slate-700 text-sm font-medium">{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('M j, Y') : '-' }}</td>
+                                        <td class="px-6 py-4 text-center"><span class="{{ getBadgeClasses('days', $daysLeft) }}">{{ $daysLeft < 0 ? 'Expired' : floor($daysLeft) . 'd' }}</span></td>
+                                    </tr>
+                                @endforeach
+                            @empty
+                                <tr><td colspan="7" class="text-center py-10 text-slate-500">No subscriptions match the current filters.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        if (!currentOwnerId) {
-            alert('Error: No client selected.');
-            return;
-        }
+            <div id="noResults" class="hidden bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100">
+                <div class="w-16 h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center mb-4"><span class="material-symbols-outlined text-slate-500 text-2xl">search_off</span></div>
+                <h3 class="text-lg font-semibold text-slate-900 mb-2">No Results Found</h3>
+                <p class="text-sm text-slate-500 mb-4">No subscriptions match your filters.</p>
+                <button type="button" id="clearAllFilters" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-6 py-3 text-sm font-semibold transition-all shadow-lg"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">refresh</span>Clear Filters</div></button>
+            </div>
 
-        // Show a loading indicator if desired
-        // For example, disable buttons and change text
+            <div id="pagination" class="mt-8 w-full flex justify-center">{{ $clients->links() }}</div>
+        @else
+            <div class="bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100">
+                <div class="w-16 h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center mb-4"><span class="material-symbols-outlined text-slate-500 text-2xl">inbox</span></div>
+                <h3 class="text-lg font-semibold text-slate-900 mb-2">No Subscriptions</h3>
+                <p class="text-sm text-slate-500">No subscription data available.</p>
+            </div>
+        @endif
+    </div>
+</div>
 
-        $.ajax({
-            url: `/subs/${currentOwnerId}/status`, // Laravel route for status update
-            type: "PUT", // Use PUT method for updating a resource
-            data: {
-                _token: '{{ csrf_token() }}', // Include CSRF token for PUT/POST requests
-                status: newStatus
-            },
-            success: function(response) {
-                if (response.success) {
-                    $('#statusUpdateModal').removeClass('flex').addClass('hidden'); // Close modal
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ui = {
+        tabs: document.querySelectorAll('[data-tab]'),
+        planFilters: document.getElementById('planFilters'),
+        expiryFilters: document.getElementById('expiryFilters'),
+        searchInput: document.getElementById('search'),
+        dateFilter: document.getElementById('dateFilter'),
+        clearFiltersBtn: document.getElementById('clearFilters'),
+        clearAllFiltersBtn: document.getElementById('clearAllFilters'),
+        subscriptionRows: document.querySelectorAll('.subscription-row'),
+        noResults: document.getElementById('noResults'),
+        dataTable: document.getElementById('dataTable'),
+        pagination: document.getElementById('pagination'),
+    };
 
-                    // Find the specific row and update its status badge
-                    const $row = $(`tr[data-owner-id="${currentOwnerId}"]`);
-                    const $statusCell = $row.find('.status-badge');
+    let currentTab = 'active';
 
-                    if ($statusCell.length) {
-                        updateStatusBadge($statusCell, response.new_status);
-                    }
+    const colorMap = {
+        'active': { border: 'rgb(52, 211, 153)', shadow: 'rgba(16, 185, 129, 0.12)', hoverShadow: 'rgba(16, 185, 129, 0.15)', bg: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)' },
+        'expired': { border: 'rgb(248, 113, 113)', shadow: 'rgba(239, 68, 68, 0.12)', hoverShadow: 'rgba(239, 68, 68, 0.15)', bg: 'linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)' },
+        'upcoming': { border: 'rgb(251, 191, 36)', shadow: 'rgba(245, 158, 11, 0.12)', hoverShadow: 'rgba(245, 158, 11, 0.15)', bg: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)' }
+    };
 
-                    // Show success notification
-                    $('#notification').text('Status updated to ' + response.new_status + ' successfully!').removeClass('bg-red-500 hidden').addClass('bg-green-500 flex');
-                    setTimeout(() => {
-                        $('#notification').removeClass('flex').addClass('hidden');
-                        location.reload();
-                    }, 2000); // Hide after 3 seconds
-
-                } else {
-                    alert('Failed to update status: ' + (response.message || 'Unknown error'));
-                    // Show error notification
-                    $('#notification').text('Failed to update status: ' + (response.message || 'Unknown error')).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
-                    setTimeout(() => {
-                        $('#notification').removeClass('flex').addClass('hidden');
-                        location.reload();
-                    }, 5000);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX Error:', error, xhr.responseText);
-                const errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'An error occurred during status update.';
-                alert(errorMessage);
-                // Show error notification
-                $('#notification').text(errorMessage).removeClass('bg-green-500 hidden').addClass('bg-red-500 flex');
-                setTimeout(() => {
-                    $('#notification').removeClass('flex').addClass('hidden');
-                    location.reload();
-                }, 5000);
-            },
-            complete: function() {
-                // Re-enable buttons, hide loading indicator
-                currentOwnerId = null; // Clear current ID
+    const updateTabUI = (activeTabId) => {
+        ui.tabs.forEach(tab => {
+            const isActive = tab.dataset.tab === activeTabId;
+            tab.classList.toggle('active-tab', isActive);
+            if (isActive) {
+                const colors = colorMap[activeTabId];
+                tab.style.setProperty('--border-color', colors.border);
+                tab.style.setProperty('--shadow-color', colors.shadow);
+                tab.style.setProperty('--hover-shadow-color', colors.hoverShadow);
+                tab.style.setProperty('--bg-gradient', colors.bg);
             }
         });
-    });
-</script>
+    };
 
+    const toggleFilterVisibility = (tab) => {
+        const isUpcoming = tab === 'upcoming';
+        ui.planFilters.classList.toggle('hidden', isUpcoming);
+        ui.planFilters.classList.toggle('flex', !isUpcoming);
+        ui.expiryFilters.classList.toggle('hidden', !isUpcoming);
+        ui.expiryFilters.classList.toggle('flex', isUpcoming);
+    };
+
+    const filterRows = () => {
+        const query = ui.searchInput.value.toLowerCase();
+        const date = ui.dateFilter.value;
+        const plan = ui.planFilters.querySelector('.selected')?.dataset.plan;
+        const expiry = ui.expiryFilters.querySelector('.selected')?.dataset.days;
+        let visibleCount = 0;
+
+        ui.subscriptionRows.forEach(row => {
+            const { status, planId, daysLeft, owner, store, expiryDate } = row.dataset;
+            let show = false;
+
+            if (currentTab === 'active') {
+                show = status === 'active' && (!plan || planId === plan);
+            } else if (currentTab === 'expired') {
+                show = status === 'expired' && (!plan || planId === plan);
+            } else if (currentTab === 'upcoming') {
+                const isUpcomingCandidate = status === 'active' && parseInt(daysLeft) >= 0;
+                if (isUpcomingCandidate) {
+                    show = expiry ? parseInt(daysLeft) <= parseInt(expiry) : parseInt(daysLeft) <= 30;
+                }
+            }
+
+            if (show && query && !(owner.includes(query) || store.includes(query))) show = false;
+            if (show && date && expiryDate !== date) show = false;
+
+            row.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        const hasResults = ui.subscriptionRows.length > 0 && visibleCount > 0;
+        const hasAnyRows = ui.subscriptionRows.length > 0;
+
+        if (ui.noResults) ui.noResults.classList.toggle('hidden', hasResults);
+        if (ui.dataTable) ui.dataTable.classList.toggle('hidden', !hasResults && hasAnyRows);
+        if (ui.pagination) ui.pagination.classList.toggle('hidden', !hasResults && hasAnyRows);
+    };
+
+    const handleTabClick = (e) => {
+        const tabId = e.currentTarget.dataset.tab;
+        if (tabId === currentTab) return;
+        currentTab = tabId;
+        clearAllFilters(false);
+    };
+
+    const handleFilterButtonClick = (e) => {
+        const button = e.currentTarget;
+        const isSelected = button.classList.contains('selected');
+        button.parentElement.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('selected'));
+        if (!isSelected) button.classList.add('selected');
+        filterRows();
+    };
+
+    const clearAllFilters = (resetTab = true) => {
+        ui.searchInput.value = '';
+        ui.dateFilter.value = '';
+        document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('selected'));
+        if (resetTab) {
+            currentTab = 'active';
+        }
+        updateTabUI(currentTab);
+        toggleFilterVisibility(currentTab);
+        filterRows();
+    };
+
+    // Attach Event Listeners
+    ui.tabs.forEach(tab => tab.addEventListener('click', handleTabClick));
+    ui.searchInput.addEventListener('input', filterRows);
+    ui.dateFilter.addEventListener('change', filterRows);
+    document.querySelectorAll('.filter-plan, .expiry-filter').forEach(btn => btn.addEventListener('click', handleFilterButtonClick));
+    ui.clearFiltersBtn.addEventListener('click', () => clearAllFilters(true));
+    if (ui.clearAllFiltersBtn) {
+        ui.clearAllFiltersBtn.addEventListener('click', () => clearAllFilters(true));
+    }
+
+    // Initial load
+    updateTabUI(currentTab);
+    toggleFilterVisibility(currentTab);
+    filterRows();
+});
+</script>
 @endsection

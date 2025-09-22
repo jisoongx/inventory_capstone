@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
 </head>
 
-<body class="bg-white font-[Inter] h-screen flex items-center justify-center">
+<body class="min-h-screen bg-gradient-to-br from-gray-700 via-red-800 to-black flex items-center justify-center p-4">
 
     <div class="flex flex-col items-center justify-center w-full max-w-4xl space-y-10 mb-20">
         <!-- Logo -->
@@ -21,7 +21,7 @@
 
         <div class="flex items-center justify-between w-full max-w-3xl relative">
             <div class="absolute top-8 left-0 right-0 h-1 bg-gray-200 rounded-lg -z-10"></div>
-           
+
             @php
             $progressWidth = 'w-1/3'; // default: only Sign Up done
 
