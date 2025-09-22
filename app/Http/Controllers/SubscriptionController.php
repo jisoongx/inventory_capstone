@@ -38,30 +38,129 @@ class SubscriptionController extends Controller
     }
 
 
-    public function billing()
+    // In app/Http/Controllers/SubscriptionController.php
+    // In app/Http/Controllers/SubscriptionController.php
+    public function billing(Request $request)
     {
-        // This block updates any subscriptions that have ended
-        $today = now()->startOfDay();
-        $subscriptionsToExpire = Subscription::where('subscription_end', '<=', $today)
-            ->where('status', 'active') // Only find active ones to expire
-            ->get();
+        // --- 1. Get ALL Clients with Data (Master Query) ---
+        $allClientsQuery = Owner::has('subscriptions.payments')->with('subscriptions.planDetails', 'subscriptions.payments');
+        $allClients = $allClientsQuery->get();
 
-        foreach ($subscriptionsToExpire as $sub) {
-            $sub->status = 'expired';
-            $sub->save();
+        // --- 2. Perform ALL Calculations on the Full Dataset ---
+
+        // Overall Period Filter for Revenue Card
+        $period = $request->input('period', 'all_time');
+        $startDate = null;
+        $endDate = now();
+        switch ($period) {
+            case 'this_month':
+                $startDate = now()->startOfMonth();
+                break;
+            case 'last_month':
+                $startDate = now()->subMonthNoOverflow()->startOfMonth();
+                $endDate = now()->subMonthNoOverflow()->endOfMonth();
+                break;
+            case 'this_year':
+                $startDate = now()->startOfYear();
+                break;
+            case 'last_year':
+                $startDate = now()->subYear()->startOfYear();
+                $endDate = now()->subYear()->endOfYear();
+                break;
         }
 
-        // This query now correctly fetches and paginates ONLY owners with subscriptions
-        $clients = Owner::whereHas('subscriptions') // <-- FIX IS HERE
-            ->with([
-                'subscriptions.planDetails',
-                'subscriptions.payments',
-            ])
-            ->orderBy('created_on', 'desc')
+        $allPayments = $allClients->flatMap->subscriptions->flatMap->payments;
+
+        // Latest Payment Calculation
+        $latestPayment = $allPayments->sortByDesc('payment_date')->first();
+        $latest = null;
+        if ($latestPayment) {
+            $latest = ['payment' => $latestPayment, 'sub' => $latestPayment->subscription, 'owner' => $latestPayment->subscription->owner];
+        }
+
+        // Subscription Revenue Card Calculation
+        $paymentsInPeriod = $allPayments->filter(fn($p) => !$startDate || \Carbon\Carbon::parse($p->payment_date)->between($startDate, $endDate));
+        $revenue = [
+            'basic' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Basic')->sum('payment_amount'),
+            'premium' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Premium')->sum('payment_amount')
+        ];
+        $totalRevenue = $revenue['basic'] + $revenue['premium'];
+        $basicPercentage = $totalRevenue > 0 ? ($revenue['basic'] / $totalRevenue) * 100 : 0;
+        $premiumPercentage = $totalRevenue > 0 ? ($revenue['premium'] / $totalRevenue) * 100 : 0;
+
+        // Plan Distribution Report Calculation
+        $pd_startDate = $request->input('pd_start_date');
+        $pd_endDate = $request->input('pd_end_date');
+        $planStats = ['basic' => ['active' => 0, 'expired' => 0], 'premium' => ['active' => 0, 'expired' => 0]];
+        foreach ($allClients->flatMap->subscriptions as $sub) {
+            $subStartDate = \Carbon\Carbon::parse($sub->subscription_start);
+            if ($pd_startDate && $pd_endDate && !$subStartDate->between($pd_startDate, $pd_endDate)) continue;
+
+            $planTitle = strtolower($sub->planDetails->plan_title ?? '');
+            if (array_key_exists($planTitle, $planStats) && in_array($sub->status, ['active', 'expired'])) {
+                $planStats[$planTitle][$sub->status]++;
+            }
+        }
+        $planStats['basic']['total'] = $planStats['basic']['active'] + $planStats['basic']['expired'];
+        $planStats['premium']['total'] = $planStats['premium']['active'] + $planStats['premium']['expired'];
+        $totalActive = $planStats['basic']['active'] + $planStats['premium']['active'];
+        $totalExpired = $planStats['basic']['expired'] + $planStats['premium']['expired'];
+        $grandTotalSubs = $totalActive + $totalExpired;
+
+        // Revenue Breakdown Report Calculation
+        $customStart = $request->input('start_date');
+        $customEnd = $request->input('end_date');
+        $revStartDate = $customStart ? \Carbon\Carbon::parse($customStart)->startOfDay() : $startDate;
+        $revEndDate = $customEnd ? \Carbon\Carbon::parse($customEnd)->endOfDay() : $endDate;
+
+        $monthlyRevenue = [];
+        foreach ($allPayments as $payment) {
+            $paymentDate = \Carbon\Carbon::parse($payment->payment_date);
+            if (!$revStartDate || $paymentDate->between($revStartDate, $revEndDate)) {
+                $monthKey = $paymentDate->format('Y-m');
+                if (!isset($monthlyRevenue[$monthKey])) {
+                    $monthlyRevenue[$monthKey] = ['basic' => 0, 'premium' => 0, 'total' => 0];
+                }
+
+                $plan = strtolower(trim($payment->subscription->planDetails->plan_title ?? ''));
+                if (isset($monthlyRevenue[$monthKey][$plan])) {
+                    $monthlyRevenue[$monthKey][$plan] += $payment->payment_amount;
+                }
+                $monthlyRevenue[$monthKey]['total'] += $payment->payment_amount;
+            }
+        }
+        krsort($monthlyRevenue);
+        $breakdownTotalBasic = array_sum(array_column($monthlyRevenue, 'basic'));
+        $breakdownTotalPremium = array_sum(array_column($monthlyRevenue, 'premium'));
+        $breakdownGrandTotal = array_sum(array_column($monthlyRevenue, 'total'));
+
+        // --- 3. Paginate the Results for the Table View ---
+        $clients = Owner::has('subscriptions.payments') // <<< FIX IS HERE
+            ->with('subscriptions.planDetails', 'subscriptions.payments')
             ->paginate(10);
 
-        // Pass the correctly counted and paginated clients to the view
-        return view('dashboards.super_admin.billing-history', compact('clients'));
+        // --- 4. Pass Everything to the View ---
+        return view('dashboards.super_admin.billing-history', compact(
+            'clients',
+            'latest',
+            'period',
+            'revenue',
+            'totalRevenue',
+            'basicPercentage',
+            'premiumPercentage',
+            'pd_startDate',
+            'pd_endDate',
+            'planStats',
+            'totalActive',
+            'totalExpired',
+            'grandTotalSubs',
+            'customStart',
+            'customEnd',
+            'monthlyRevenue',
+            'breakdownTotalBasic',
+            'breakdownTotalPremium',
+            'breakdownGrandTotal'
+        ));
     }
     
     public function create()
