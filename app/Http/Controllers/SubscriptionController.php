@@ -15,27 +15,79 @@ class SubscriptionController extends Controller
 {
 
 
-    public function subscribers()
-    {
-        // 1. Get ONLY clients who have a subscription
-        $allClients = Owner::has('subscriptions')->with('subscriptions')->get();
+   // In app/Http/Controllers/SubscriptionController.php
 
-        // 2. Calculate totals from this filtered collection
-        $activeCount = $allClients->sum(fn($client) => $client->subscriptions->where('status', 'active')->count());
-        $expiredCount = $allClients->sum(fn($client) => $client->subscriptions->where('status', 'expired')->count());
-        $upcomingCount = $allClients->sum(fn($client) => $client->subscriptions->where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)])->count());
+public function subscribers(Request $request)
+{
+    // Get filter values from the URL, with 'active' as the default status
+    $status = $request->input('status', 'active');
+    $planId = $request->input('plan');
+    $search = $request->input('search');
+    $expiryDays = $request->input('days');
+    $expiryDate = $request->input('date');
 
-        // 3. Paginate ONLY the clients who have a subscription
-        $paginatedClients = Owner::has('subscriptions')->with('subscriptions.planDetails', 'subscriptions.payments')->paginate(10);
+    // Start building the query for Owners who have subscriptions
+    $query = Owner::query()->whereHas('subscriptions');
 
-        // 4. Return the view with the correct data
-        return view('dashboards.super_admin.subscribers', [
-            'clients' => $paginatedClients,
-            'activeCount' => $activeCount,
-            'expiredCount' => $expiredCount,
-            'upcomingCount' => $upcomingCount,
-        ]);
+    // Apply filters to the subscriptions relationship
+    $query->whereHas('subscriptions', function ($q) use ($status, $planId, $expiryDays, $expiryDate) {
+        if ($status === 'upcoming') {
+            $q->where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)]);
+        } else {
+            $q->where('status', $status);
+        }
+
+        if ($planId) {
+            $q->where('plan_id', $planId);
+        }
+
+        if ($expiryDays) {
+            $q->where('subscription_end', '<=', now()->addDays($expiryDays));
+        }
+
+        if ($expiryDate) {
+            $q->whereDate('subscription_end', $expiryDate);
+        }
+    });
+
+    // Apply search filter to the Owner's name or store name
+    if ($search) {
+        $query->where(function ($q) use ($search) {
+            $q->where('firstname', 'like', "%{$search}%")
+              ->orWhere('lastname', 'like', "%{$search}%")
+              ->orWhere('store_name', 'like', "%{$search}%");
+        });
     }
+
+    // Eager load the filtered subscriptions and their details
+    $query->with(['subscriptions' => function ($q) use ($status, $planId, $expiryDays, $expiryDate) {
+        if ($status === 'upcoming') {
+            $q->where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)]);
+        } else {
+            $q->where('status', $status);
+        }
+        if ($planId) { $q->where('plan_id', $planId); }
+        if ($expiryDays) { $q->where('subscription_end', '<=', now()->addDays($expiryDays)); }
+        if ($expiryDate) { $q->whereDate('subscription_end', $expiryDate); }
+
+        $q->with('planDetails'); // Also load plan details for the filtered subs
+    }]);
+    
+    // Paginate the final, filtered query
+    $clients = $query->paginate(10)->withQueryString();
+
+    // Get total counts for the stat cards (these should run on the whole unfiltered dataset)
+    $activeCount = Subscription::where('status', 'active')->count();
+    $expiredCount = Subscription::where('status', 'expired')->count();
+    $upcomingCount = Subscription::where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)])->count();
+    
+    return view('dashboards.super_admin.subscribers', [
+        'clients' => $clients,
+        'activeCount' => $activeCount,
+        'expiredCount' => $expiredCount,
+        'upcomingCount' => $upcomingCount,
+    ]);
+}
 
 
     // In app/Http/Controllers/SubscriptionController.php
