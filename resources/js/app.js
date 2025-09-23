@@ -74,23 +74,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const year = JSON.parse(chartEle.dataset.year || "[]");
 
     new Chart(ctz, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: categories,
             datasets: [
                 {
                     label: year[0] || "",
                     data: products,
-                    backgroundColor: 'rgba(187, 19, 19, 1)',
-                    borderRadius: Number.MAX_VALUE,
-                    fill: true
+                    borderColor: "rgba(190, 21, 21, 1)",
+                    backgroundColor: 'transparent',
+                    pointBackgroundColor: "rgba(190, 21, 21, 1)",
                 },
                 {
                     label: year[1] || "",
                     data: productsPrev,
-                    backgroundColor: 'rgba(67, 102, 209, 1)',
-                    borderRadius: Number.MAX_VALUE,
-                    fill: true
+                    borderColor: 'rgba(67, 102, 209, 1)',
+                    backgroundColor: 'transparent',
+                    pointBackgroundColor: "rgba(67, 102, 209, 1)",
+                    borderDash: [7, ],
                 }
             ]
         },
@@ -105,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             },
             scales: {
-                x: { grid: { display: false } },
+                x: { grid: { display: true } },
                 y: { beginAtZero: true, display: false }
             }
         }
@@ -139,6 +140,7 @@ const table = new DataTable('#expensesTable', {
     dom: `<"flex justify-between items-center mb-2 text-xs"f>t<"flex justify-between items-center mt-2 text-xs"ip>`
 
 });
+
 
 
 

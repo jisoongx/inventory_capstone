@@ -285,6 +285,68 @@ public function getLatestBatch($prodCode)
 }
 
 
+public function edit($prodCode)
+{
+    $product = DB::table('products')
+        ->join('units', 'products.unit_id', '=', 'units.unit_id')
+        ->select('products.*', 'units.unit as unit')
+        ->where('products.prod_code', $prodCode)
+        ->first();
+
+    if (!$product) {
+        abort(404, 'Product not found');
+    }
+
+    $units = DB::table('units')->get(); // for dropdown if needed
+
+    return view('inventory-owner-edit', compact('product', 'units'));
+}
+
+public function update(Request $request, $prodCode)
+{
+    $ownerId = session('owner_id');
+
+    $validated = $request->validate([
+        'name' => 'required|string|max:100',
+        'barcode' => 'nullable|string|max:50',
+        'cost_price' => 'required|numeric|min:0',
+        'selling_price' => 'required|numeric|min:0',
+        'description' => 'nullable|string',
+        'unit_id' => 'required|integer',
+        'stock_limit' => 'nullable|integer|min:0',
+        'prod_image' => 'nullable|image|max:2048', // updated
+    ]);
+
+    // Handle photo upload
+    $photoPath = null;
+    if ($request->hasFile('prod_image')) { // updated
+        $photoPath = $request->file('prod_image')->store('product_images', 'public');
+    }
+
+    // Prepare update data
+    $updateData = [
+        'name' => $validated['name'],
+        'barcode' => $validated['barcode'],
+        'cost_price' => $validated['cost_price'],
+        'selling_price' => $validated['selling_price'],
+        'unit_id' => $validated['unit_id'],
+        'stock_limit' => $validated['stock_limit'],
+        'description' => $validated['description'] ?? null,
+    ];
+
+    // Only update prod_image if a new image was uploaded
+    if ($photoPath) {
+        $updateData['prod_image'] = $photoPath;
+    }
+
+    DB::table('products')
+        ->where('prod_code', $prodCode)
+        ->update($updateData);
+
+    return redirect()->route('inventory-owner')
+        ->with('success', 'Product updated successfully.');
+}
+
 
 
 

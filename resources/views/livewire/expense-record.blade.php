@@ -1,89 +1,110 @@
-@extends('dashboards.owner.owner') 
-
-@section('content')
-
-    <div class="flex-1 grid grid-cols-3 gap-4 p-2">
-        <div class="h-[40rem] bg-white shadow-lg p-5 rounded-lg col-span-2 flex flex-col">    
-            <div class="mb-4 text-center">
-                <p class="text-xs text-gray-700">Year {{ $year }}</p>
-                <form method="GET" class="flex items-center justify-center space-x-7 mt-2 p-2 bg-slate-100 rounded-lg">
-                    <button type="submit" name="month" value="{{ $month - 1 }}" class="text-gray-500">
-                        <span class="material-symbols-rounded">arrow_back_ios</span>
+<div class="flex flex-col h-[41rem] overflow-hidden px-3">
+    @livewire('expiration-container')
+    <div class="flex-1 grid grid-cols-3 space-x-4 mt-4">
+        <div class="bg-white p-5 rounded-lg col-span-2 flex flex-col border border-slate-20"> 
+            <div class="mb-4 text-center flex-shrink-0"> 
+                <p class="text-xs text-gray-700 mb-2">Year {{ $year }}</p> 
+                <div class="flex items-center justify-center space-x-2 bg-slate-100 p-3">
+                    <button wire:click="previousMonth" class="text-gray-500"
+                    wire:loading.attr="disabled">
+                        <span class="material-symbols-rounded-small">arrow_back_ios</span>
                     </button>
 
-                    <span class="text-sm font-semibold">{{ date('F', mktime(0,0,0, $month, 1)) }}</span>
+                    <span class="text-sm font-semibold w-[10rem]">
+                        {{ \Carbon\Carbon::createFromDate($year, $month, 1)->format('F Y') }}
+                    </span>
 
-                    <button type="submit" name="month" value="{{ $month + 1 }}" class="text-gray-500">
-                        <span class="material-symbols-rounded">arrow_forward_ios</span>
+                    <button wire:click="nextMonth" class="text-gray-500"
+                    wire:loading.attr="disabled">
+                        <span class="material-symbols-rounded-small">arrow_forward_ios</span>
                     </button>
-
-                    <input type="hidden" name="year" value="{{ $year }}">
-                </form>
+                </div>
             </div>
 
 
-            <div class="flex-grow">    
-                <table id="expensesTable" class="w-full text-xs text-left text-gray-700">
+            <div class="flex-grow overflow-y-auto">    
+                <table class="w-full text-xs text-left text-gray-700">
                     <thead class="uppercase text-xs font-medium sticky top-0 z-10 bg-white shadow-sm">
                         <tr>
-                            <th class="py-4 px-2">Title</th>
-                            <th class="py-4">Cost</th>
+                            <th class="py-4 w-[26%]">Title</th>
+                            <th class="py-4 w-[15%]">Cost</th>
                             <th class="py-4">Date Recorded</th>
-                            <th class="py-4">Action</th>
+                            <th class="py-4 w-[15%]">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach ($inputs as $input)
-                            <tr>
-                                <form method="POST" action="{{ route('dashboards.owner.expense_record_edit', ['expense_id' => $input->expense_id]) }}">
-                                @csrf
-                                    <td class="p-2">
-                                        <a href="{{ route('expenses.attachment', ['expense_id' => $input->expense_id]) }}" target="_blank"
-                                        class="view font-medium p-2">{{ $input->expense_descri }}</a>
-                                        <input type="text" name="expense_descri"
-                                            value="{{ old('expense_descri', $input->expense_descri) }}"
-                                            class="edit hidden border p-2 rounded w-full text-xs font-medium">
-                                    </td>
-                                    <td class=" p-2">
-                                        <span class="view p-2">{{ $input->expense_amount }}</span>
-                                        <input type="number" step="0.01" name="expense_amount"
-                                            value="{{ old('expense_amount', $input->expense_amount) }}"
-                                            class="edit hidden border p-2 rounded w-full text-xs">
-                                    </td>
-                                    <td class="p-2">{{ date('F d • g:i A', strtotime($input->expense_created)) }}</td>
-                                    <td class=" p-2 flex gap-2 items-center p-2">
-                                        <button type="button" class="editBtn bg-red-500 text-white px-3 py-1.5 rounded">
-                                            Edit
-                                        </button>
-                                        <button type="submit" class="saveBtn hidden bg-green-600 text-white px-3 py-1.5 rounded">
-                                            Save
-                                        </button>
-                                        <button type="button" class="cancelBtn hidden flex items-center justify-center w-6 h-6 rounded">
-                                            <span class="material-symbols-rounded text-red-500 text-base">cancel</span>
-                                        </button>
-                                    </td>
-                                </form>
-                            </tr>
-                        @endforeach
+                    <tbody class="text-left">
+                        @forelse ($inputs as $input)
+                        <tr>
+                            <td>
+                                @if ($editingId === $input->expense_id)
+                                    <input type="text" wire:model="editingDescri"
+                                        class="p-0 pb-1 border-0 border-b border-slate-300 focus:border-slate-500 w-[80%] text-xs font-medium rounded-none">
+                                @else
+                                    <span>{{ $input->expense_descri }}</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($editingId === $input->expense_id)
+                                    <input type="number" step="0.01" wire:model="editingAmount"
+                                        class="p-0 pb-1 border-0 border-b border-slate-300 focus:ring-0 focus:border-slate-500 w-[90%] text-xs font-medium rounded-none">
+                                @else
+                                    <span>{{ $input->expense_amount }}</span>
+                                @endif
+                            </td>
+                            <td>{{ date('F d • g:i A', strtotime($input->expense_created)) }}</td>
+                            <td class="p-2 flex gap-2 items-center">
+                                @if ($editingId === $input->expense_id)
+                                    <button type="button" wire:click="saveExpense"
+                                        class="bg-green-600 text-white px-3 py-1.5 rounded">
+                                        Save
+                                    </button>
+                                    <button type="button" wire:click="$set('editingId', null)">
+                                        <span class="material-symbols-rounded text-red-600">close_small</span>
+                                    </button>
+                                @else
+                                <button 
+                                    type="button" wire:click="editExpense({{ $input->expense_id }})"
+                                    class="px-3 py-1.5 rounded bg-red-500 text-white hover:bg-red-600
+                                        {{ $expired ? 'cursor-not-allowed hover:bg-red-500' : '' }}"
+                                        {{ $expired ? 'disabled' : '' }}>Edit
+                                </button>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td class="p-5 text-center" colspan="4">
+                                <div class="flex flex-col items-center justify-center space-y-3">
+                                    <span class="material-symbols-rounded-semibig text-slate-300">hourglass_disabled</span>
+                                    <span>No records to show.</span>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
 
-            <button data-modal-target="add-modal" data-modal-toggle="add-modal" class="text-xs text-blue-600 mt-3 text-right font-bold" type="button">
+            <button wire:click='addModalOpen()'
+            class="text-xs mt-3 text-right font-bold flex-shrink-0
+                {{ $expired 
+                        ? 'text-gray-600 cursor-not-allowed' 
+                        : 'text-blue-600 ' }}" 
+                        {{ $expired ? 'disabled' : '' }} type="button">
                 + Add record
             </button>
 
-            <div class="bg-blue-100 rounded-md p-4 mt-5 text-xs space-y-1">
-                <p><span class="font-semibold">Current Sales:</span> <span class="text-black float-right">₱{{ number_format($salesTotal->salesTotal, 2) }}</span></p>
-                <p><span class="font-semibold text-gray-700">Total In-Store Expenses:</span> <span class="text-gray-700 float-right">₱{{ number_format($expenseTotal->expenseTotal, 2) }}</span></p>
-                <p><span class="font-semibold text-gray-700">Total Revenue Loss:</span> <span class="text-gray-700 float-right">₱{{ number_format($lossTotal->lossTotal, 2) }}</span></p>
-                <p><span class="font-semibold text-red-600 text-sm">Month's Net Profit:</span> <span class="text-red-600 float-right font-bold text-sm">₱{{ number_format($salesTotal->salesTotal - ($expenseTotal->expenseTotal + $lossTotal->lossTotal), 2) }}</span></p>
+            <div class="bg-blue-100 rounded-md p-4 mt-5 text-xs space-y-1 flex-shrink-0">
+                <p><span class="font-semibold">Current Sales:</span> <span class="font-semibold text-black float-right">₱{{ number_format($totals->salesTotal, 2) }}</span></p>
+                <p><span class="font-semibold text-gray-700">Total In-Store Expenses:</span> <span class="text-gray-700 float-right">₱{{ number_format($totals->expenseTotal, 2) }}</span></p>
+                <p><span class="font-semibold text-gray-700">Total Revenue Loss:</span> <span class="text-gray-700 float-right">₱{{ number_format($totals->lossTotal, 2) }}</span></p>
+                <p><span class="font-semibold text-red-600 text-sm">Month's Net Profit:</span> <span class="text-red-600 float-right font-bold text-sm">₱{{ number_format($totals->salesTotal - ($totals->expenseTotal + $totals->lossTotal), 2) }}</span></p>
             </div>
         </div>
 
 
 
-        <div class="h-[40rem] bg-white shadow-lg pl-7 pr-5 py-5 rounded-lg flex flex-col relative space-y-3">
+        <div class="bg-white pl-7 pr-5 py-5 rounded-lg flex flex-col relative space-y-3 overflow-y-auto border border-slate-20">
             <p class="font-semibold text-sm">This Month's Insights</p>
             <div class="relative flex flex-col space-y-3 items-start justify-center border-l-2 border-gray-200 ">
 
@@ -215,84 +236,81 @@
                     @endif
                 </div>
             </div>
-
         </div>
-
-
 
     </div>
 
-    <div id="add-modal" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed z-50 inset-0 flex justify-center items-center w-full">
-        <div class="relative p-4 w-full max-w-3xl max-h-full">
+    @if($addModal)
+    <div id="add-modal" tabindex="-1" aria-hidden="true"
+        class="overflow-y-auto overflow-x-hidden fixed z-50 inset-0 flex justify-center items-center w-full bg-black/40">
+        <div class="relative p-4 w-full max-w-3xl max-h-full" wire:click.away="closeModal">
             <div class="relative bg-white rounded shadow-sm">
 
                 <div class="absolute -top-12 left-1/2 transform -translate-x-1/2">
-                    <img src="{{ asset('assets/expense.jpg') }}" class="w-24 h-24 rounded-full border-8 border-white shadow-md">
+                    <img src="{{ asset('assets/expense.jpg') }}"
+                        class="w-24 h-24 rounded-full border-8 border-white shadow-md">
                 </div>
 
                 <div class="flex items-center justify-center pt-16">
                     <h3 class="text-sm font-semibold">Add Expense</h3>
                 </div>
-
-                <div class="p-4">
-                    <form method="POST" action="{{ route('dashboards.owner.expense_record_add') }}" class="space-y-4" enctype="multipart/form-data">
-                        @csrf
-                        <div class="flex space-x-4">
-                            <div class="flex-1">
-                                <label for="expense_descri" class="block mb-2 text-xs font-medium text-gray-900">Item / Purpose</label>
-                                <input type="text" name="expense_descri" id="expense_descri" required
-                                    class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
-                            </div>
-                            <div class="flex-1">
-                                <label for="expense_category" class="block mb-2 text-xs font-medium text-gray-900">Expense Category</label>
-                                <select name="expense_category" id="expense_category" required
+                
+                <form wire:submit="addExpenses" enctype="multipart/form-data" class="p-4 space-y-5">
+                    <div class="flex space-x-4">
+                        <div class="flex-1">
+                            <label for="expense_descri"
+                                class="block mb-2 text-xs font-medium text-gray-900">Item / Purpose <span class="text-red-500">*</span></label>
+                            <input wire:model.defer="add_expense_descri" type="text" id="expense_descri" required
+                                class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"/>
+                        </div>
+                        <div class="flex-1">
+                            <label for="expense_category"
+                                class="block mb-2 text-xs font-medium text-gray-900">Expense Category <span class="text-red-500">*</span></label>
+                            <select wire:model.defer="add_expense_category" id="expense_category" required
                                     class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                                    <option value="" disabled selected>-- Select Category --</option>
-                                    <option value="purchases">Purchases</option>
-                                    <option value="supplies">Supplies</option>
-                                    <option value="utilities">Utilities</option>
-                                    <option value="rent">Rent</option>
-                                    <option value="transportation">Transportation</option>
-                                    <option value="maintenance and repairs">Maintenance and Repairs</option>
-                                    <option value="salaries">Salaries</option>
-                                    <option value="marketing">Marketing</option>
-                                    <option value="licenses/permits">Licenses/Permits</option>
-                                    <option value="insurance">Insurance</option>
-                                    <option value="software/subscriptions">Software/Subscriptions</option>
-                                    <option value="taxes">Taxes</option>
-                                    <option value="miscellaneous/others">Miscellaneous/Others</option>
-                                </select>
-                            </div>
+                                <option value="">-- Select Category --</option>
+                                <option value="purchases">Purchases</option>
+                                <option value="supplies">Supplies</option>
+                                <option value="utilities">Utilities</option>
+                                <option value="rent">Rent</option>
+                                <option value="transportation">Transportation</option>
+                                <option value="maintenance and repairs">Maintenance and Repairs</option>
+                                <option value="salaries">Salaries</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="licenses/permits">Licenses/Permits</option>
+                                <option value="insurance">Insurance</option>
+                                <option value="software/subscriptions">Software/Subscriptions</option>
+                                <option value="taxes">Taxes</option>
+                                <option value="miscellaneous/others">Miscellaneous/Others</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <div class="flex-1">
+                            <label for="expense_amount"
+                                class="block mb-2 text-xs font-medium text-gray-900">Amount <span class="text-red-500">*</span></label>
+                            <input wire:model.defer="add_expense_amount" type="number" step="0.01" id="expense_amount" required
+                                class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"/>
                         </div>
 
-                        <div class="flex space-x-4">
-                            <div class="flex-1">
-                                <label for="expense_amount" class="block mb-2 text-xs font-medium text-gray-900">Amount</label>
-                                <input type="number" step="0.01" name="expense_amount" id="expense_amount" required
-                                    class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
-                            </div>
-
-                            <div class="flex-1">
-                                <label for="attachment" class="block mb-2 text-xs font-medium text-gray-900">Attachment</label>
-                                <input type="file" name="attachment" id="attachment" accept=".pdf,.docx,.jpg,.jpeg,.png"
-                                    class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full" />
-                            </div>
+                        <div class="flex-1">
+                            <label for="add_expense_file"
+                                class="block mb-2 text-xs font-medium text-gray-900">Attachment</label>
+                            <input wire:model="add_expense_file" type="file" id="add_expense_file"
+                                accept=".pdf,.docx,.jpg,.jpeg,.png"
+                                class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full"/>
                         </div>
-                        <button type="submit" class="w-full text-white bg-red-600 hover:bg-red-700 font-medium rounded text-sm px-5 py-2.5 text-center">
-                            Add Expense
-                        </button>
-                    </form>
-                </div>
+                    </div>
+
+                    <button type="submit" wire:loading.attr="disabled"
+                            class="w-full text-white bg-red-600 hover:bg-red-700 font-medium rounded text-sm px-5 py-2.5 text-center">
+                        Add Expense
+                    </button>
+                </form>
             </div>
         </div>
     </div>
+    @endif
 
-
-@endsection
-
-
-                        <!-- <div class="flex-1">
-                            <label for="expense_date" class="block mb-2 text-xs font-medium text-gray-900">Date</label>
-                            <input type="date" name="expense_date" id="expense_date"
-                                class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
-                        </div> -->
+</div>

@@ -5,7 +5,8 @@
 @section('content')
 
         <!-- Inventory Table -->
-        <div class="p-6">
+        <div class="px-4 space-y-4">
+            @livewire('expiration-container')
             <h2 class="text-2xl font-semibold text-gray-800 mb-6">Product List</h2>
 
             <div class="flex justify-between items-center mt-4 mb-4">
@@ -74,7 +75,9 @@
 
                 {{-- Right side: Add Product --}}
                 <div>
-                    <button id="addProductBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 transform hover:scale-105">
+                    <button id="addProductBtn" {{ $expired ? 'disabled' : '' }}
+                        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 transform hover:scale-105
+                        {{ $expired ? 'cursor-not-allowed' : '' }}">
                         Add Product
                     </button>
                 </div>
@@ -135,13 +138,15 @@
                                 <td class="px-4 py-2 border text-center space-x-2">
                                     <!-- Info -->
                                     <a href="{{ route('inventory-product-info', $product->prod_code) }}" 
-                                    title="Info" 
                                     class="text-blue-500 hover:text-blue-700">
                                         <span class="material-symbols-outlined">info</span>
                                     </a>
 
                                     <!-- Edit -->
-                                    <a href="#" title="Edit" class="text-green-500 hover:text-green-700">
+                                    <a href="{{$expired ? '' : route('inventory-owner-edit', $product->prod_code)}}"
+                                        onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
+                                        title="Edit" class="text-green-500 hover:text-green-700
+                                        {{ $expired ? 'cursor-not-allowed' : '' }}">
                                         <span class="material-symbols-outlined">edit</span>
                                     </a>
                                     <!-- Delete -->
@@ -149,7 +154,9 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" title="Archive"
-                                            class="text-red-500 hover:text-red-700"
+                                            class="text-red-500 hover:text-red-700
+                                            {{ $expired ? 'cursor-not-allowed' : '' }}"
+                                            onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
                                             onclick="return confirm('Are you sure you want to archive this product?')">
                                             <span class="material-symbols-outlined">archive</span>
                                         </button>

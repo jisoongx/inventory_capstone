@@ -30,6 +30,7 @@ class TechnicalRequest extends Component
     private function loadRequests() {
         if (Auth::guard('owner')->check()) {
             $owner_id = Auth::guard('owner')->user()->owner_id;
+            
             $this->requests = collect(DB::select("
                 SELECT tr.*, cm_max.last_message_id, cm_max.last_message_date
                 FROM technical_request tr
@@ -148,9 +149,9 @@ class TechnicalRequest extends Component
             INSERT INTO conversation_message (sender_type, sender_id, message, msg_date, req_id)
             VALUES ('owner', ?, ?, NOW(), ?)", [ $owner_id, $this->newMessage, $req_id ]);
 
-            $this->refreshConvo($req_id);
             $this->reset('newMessage');
-            $this->newMessage = '';
+            $this->refreshConvo($req_id);
+            $this->dispatch('$refresh');
         }
 
         if (Auth::guard('staff')->check()) {

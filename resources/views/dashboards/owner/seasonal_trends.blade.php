@@ -96,7 +96,7 @@
 </div>
 
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 @php
 $productNames = $topProducts->pluck('name');
 $currentSales = $topProducts->pluck('current_month_sold');

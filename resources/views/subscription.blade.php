@@ -6,93 +6,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Subscription Plans</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
-        @keyframes scaleIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .animate-scale-in {
-            animation: scaleIn 0.3s ease-out forwards;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .spinner {
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            animation: spin 0.6s linear infinite;
-        }
-    </style>
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-gray-700 via-red-800 to-black font-sans flex items-center justify-center p-4">
+<body class="bg-gray-50 text-gray-800 text-[14px] antialiased">
 
-    {{-- A SINGLE MODAL that handles both Payment and Success states --}}
-    <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <div id="modalContent" class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md relative animate-scale-in">
+    <!-- PAYMENT MODAL -->
+    <div id="paymentModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden transition-opacity duration-300 ease-in-out opacity-0">
+        <div class="bg-white p-7 rounded-lg shadow-xl w-full max-w-lg relative border border-gray-200 transform scale-95 transition-transform duration-300 ease-out">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl transition-colors duration-200">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2 class="text-2xl font-semibold mb-6 text-center text-gray-800">Choose Payment Method</h2>
 
-            {{-- PAYMENT VIEW --}}
-            <div id="paymentFormView">
-                <button id="closeModalBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-                <div class="text-center mb-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-1" id="modalPlanTitle">Complete Your Purchase</h2>
-                    <p class="text-sm text-gray-500">Choose your preferred payment method.</p>
-                </div>
-                <form id="subscriptionForm" method="POST" novalidate>
+            <div class="space-y-4">
+                <label class="block bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 flex items-center cursor-pointer hover:bg-gray-200 transition-colors duration-200">
+                    <input type="radio" name="paymentMethod" value="gcash" onclick="toggleInput('gcash')" class="mr-3 accent-red-600 w-4 h-4">
+                    <span class="font-medium text-gray-700">GCash</span>
+                </label>
+                <label class="block bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 flex items-center cursor-pointer hover:bg-gray-200 transition-colors duration-200">
+                    <input type="radio" name="paymentMethod" value="debit" onclick="toggleInput('debit')" class="mr-3 accent-red-600 w-4 h-4">
+                    <span class="font-medium text-gray-700">Debit Card</span>
+                </label>
+            </div>
+
+            <div id="gcashInput" class="mt-6 hidden">
+                <label for="gcash-number" class="block font-medium mb-2 text-gray-700">GCash Number:</label>
+                <input id="gcash-number" type="text" placeholder="09XXXXXXXXX" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200">
+            </div>
+
+            <div id="debitInput" class="mt-6 hidden">
+                <label for="card-number" class="block font-medium mb-2 text-gray-700">Card Number:</label>
+                <input id="card-number" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200">
+            </div>
+
+            <div class="mt-8 text-right">
+                <form id="subscriptionForm" method="POST">
                     @csrf
                     <input type="hidden" name="plan_id" id="plan_id">
                     <input type="hidden" name="paymentMethod" id="selected_payment_method">
                     <input type="hidden" name="paymentAccNum" id="paymentAccNum">
-
-                    <div class="space-y-3 mb-6">
-                        <label class="block p-4 rounded-lg border-2 border-gray-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all">
-                            <div class="flex items-center">
-                                <input type="radio" name="paymentOption" value="gcash" class="w-5 h-5 accent-blue-600">
-                                <div class="ml-4 flex-1">
-                                    <p class="font-semibold text-gray-800">GCash</p>
-                                    <p class="text-xs text-gray-500">Pay with your GCash wallet</p>
-                                </div>
-                                <span class="material-symbols-rounded text-3xl text-blue-500">account_balance_wallet</span>
-                            </div>
-                        </label>
-                        <label class="block p-4 rounded-lg border-2 border-gray-200 cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 transition-all">
-                            <div class="flex items-center">
-                                <input type="radio" name="paymentOption" value="debit" class="w-5 h-5 accent-indigo-600">
-                                <div class="ml-4 flex-1">
-                                    <p class="font-semibold text-gray-800">Debit/Credit Card</p>
-                                    <p class="text-xs text-gray-500">Visa, Mastercard, etc.</p>
-                                </div>
-                                <span class="material-symbols-rounded text-3xl text-indigo-500">credit_card</span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div id="gcashInput" class="mb-4 hidden">
-                        <input id="gcash-number" type="tel" placeholder="09XXXXXXXXX" maxlength="11" class="w-full border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-sm" />
-                        <p id="gcash-error" class="text-red-500 text-xs mt-1 ml-1 hidden"></p>
-                    </div>
-                    <div id="debitInput" class="mb-4 hidden">
-                        <input id="card-number" type="tel" placeholder="XXXX XXXX XXXX XXXX" maxlength="19" class="w-full border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all text-sm" />
-                        <p id="card-error" class="text-red-500 text-xs mt-1 ml-1 hidden"></p>
-                    </div>
-
-                    <button type="submit" id="modalSubmitButton" class="w-full text-white px-4 py-3 rounded-lg font-semibold text-sm transition-all flex items-center justify-center bg-gray-400 cursor-not-allowed" disabled>
-                        <span id="buttonText">Select a payment method</span>
-                        <div id="loadingSpinner" class="w-5 h-5 rounded-full spinner hidden ml-2"></div>
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-7 py-3 rounded-md font-semibold text-base transition-colors duration-200 shadow-md hover:shadow-lg">
+                        Confirm Payment
                     </button>
                 </form>
             </div>
@@ -110,98 +64,139 @@
         </div>
     </div>
 
-    {{-- Main Page Content --}}
-    <div class="container mx-auto py-10 px-4">
-        <header class="text-center mb-10">
-            <h1 class="text-3xl font-extrabold text-white mb-2">Choose Your Plan</h1>
-            <p class="text-md text-gray-300">Select the perfect plan to grow your business.</p>
-        </header>
-        <main class="flex flex-col lg:flex-row justify-center items-center gap-6">
-            {{-- Basic Plan --}}
-            <div class="bg-white w-full max-w-xs rounded-2xl shadow-lg border border-gray-200 p-6 transition-all hover:shadow-2xl hover:-translate-y-1">
-                <h3 class="text-xl font-bold text-orange-500">Basic</h3>
-                <p class="text-gray-500 text-sm mt-2 mb-5">Ideal for getting started and organizing your sales.</p>
-                <div class="mb-5"><span class="text-4xl font-extrabold text-gray-900">₱250</span><span class="text-gray-500 font-medium text-sm"> / 6 months</span></div>
-                <button id="getStartedBtn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-lg transition-all">Get Started</button>
-                <ul class="mt-6 space-y-3 text-sm">
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Access to platform updates</li>
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Restock suggestion list</li>
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Daily sales tracking</li>
-                    <li class="flex items-center text-gray-400"><span class="material-symbols-rounded text-gray-400 mr-2">cancel</span>Advance sales analytics</li>
-                    <li class="flex items-center text-gray-400"><span class="material-symbols-rounded text-gray-400 mr-2">cancel</span>Comparative analysis</li>
-                    <li class="flex items-center text-gray-400"><span class="material-symbols-rounded text-gray-400 mr-2">cancel</span>Unlimited staff accounts</li>
-                </ul>
+    <!-- PAGE CONTENT -->
+    <div class="min-h-screen flex flex-col justify-center items-center py-10 px-4">
+        <div class="w-full max-w-6xl mb-10 flex items-center space-x-3">
+            <img src="{{ asset('assets/logo.png') }}" alt="Shoplytix Logo" class="w-14 h-14 object-contain" />
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">SHOPLYTIX</h1>
+        </div>
+
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:justify-center w-full border border-gray-200 rounded-lg overflow-hidden shadow-lg">
+
+            <!-- Features -->
+            <table class="w-full lg:w-[40%] bg-white rounded-none">
+                <thead>
+                    <tr>
+                        <th class="bg-gray-100 text-left px-6 py-4 font-semibold text-base text-gray-700">Features</th>
+                    </tr>
+                </thead>
+                <tbody class="text-base text-gray-700">
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">&nbsp;</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">Access to platform updates and system notices</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">Restock suggestion list</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">Daily sales tracking</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">Advanced sales analytics (monthly, category breakdown)</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">Comparative analysis of sales, losses, and profits</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">Hold more than 1 staff</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="px-6 py-3.5">&nbsp;</td>
+                    </tr>
+                </tbody>
+            </table>
+
+
+            <!-- Basic Plan -->
+            <div class="w-full lg:w-[28%] bg-white border-l border-gray-200 flex flex-col relative z-10 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
+                <div class="bg-gray-800 text-white px-3 py-4 font-semibold text-lg text-center flex-shrink-0">Basic</div>
+                <div class="flex flex-col flex-grow text-center text-gray-700">
+                    <div class="text-red-600 font-bold py-3 text-lg flex-shrink-0">₱250.00 / 6 months</div>
+                    <ul class="flex-grow">
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-times-circle text-gray-400 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-times-circle text-gray-400 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-times-circle text-gray-400 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-times-circle text-gray-400 text-lg"></i></li>
+                    </ul>
+                    <button onclick="openModal(1)" class="bg-red-600 text-white px-5 py-3 font-semibold text-base transition-colors duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 mt-auto">
+                        Subscribe Now
+                    </button>
+                </div>
             </div>
-            {{-- Premium Plan --}}
-            <div class="bg-white w-full max-w-xs rounded-2xl shadow-xl border-2 border-red-500 p-6 transition-all hover:shadow-2xl hover:-translate-y-1 relative">
-                <div class="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-red-500 text-white text-xs font-bold px-4 py-1 rounded-full">MOST POPULAR</div>
-                <h3 class="text-xl font-bold text-red-500">Premium</h3>
-                <p class="text-gray-500 text-sm mt-2 mb-5">For power users who need advanced insights and tools.</p>
-                <div class="mb-5"><span class="text-4xl font-extrabold text-gray-900">₱500</span><span class="text-gray-500 font-medium text-sm"> / year</span></div>
-                <button id="goPremiumBtn" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 rounded-lg transition-all">Go Premium</button>
-                <ul class="mt-6 space-y-3 text-sm">
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Access to platform updates</li>
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Restock suggestion list</li>
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Daily sales tracking</li>
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Advance sales analytics</li>
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Comparative analysis</li>
-                    <li class="flex items-center"><span class="material-symbols-rounded text-green-500 mr-2">check_circle</span>Unlimited staff accounts</li>
-                </ul>
+
+            <!-- Premium Plan -->
+            <div class="w-full lg:w-[28%] bg-white border-l border-red-500 flex flex-col relative z-10 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
+                <div class="absolute inset-x-0 top-0 h-1.5 bg-red-600"></div> <!-- Accent bar -->
+                <div class="bg-red-600 text-white px-3 py-4 font-semibold text-lg text-center relative z-10">Premium</div>
+                <div class="flex flex-col flex-grow text-center text-gray-700">
+                    <div class="text-red-600 font-bold py-3 text-lg flex-shrink-0">₱500.00 / year</div>
+                    <ul class="flex-grow">
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                        <li class="py-3 border-b border-gray-100"><i class="fas fa-check-circle text-green-500 text-lg"></i></li>
+                    </ul>
+                    <button onclick="openModal(2)" class="bg-red-600 text-white px-5 py-3 font-semibold text-base transition-colors duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 mt-auto">
+                        Subscribe Now
+                    </button>
+                </div>
             </div>
-        </main>
+
+        </div>
+
+        <div class="mt-12 text-center w-full text-gray-600">
+            Redirect to
+            <a href="{{ route('subscription.progress') }}" class="text-blue-700 font-medium underline hover:text-blue-800 transition-colors duration-200">Status Tracker</a>
+        </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // --- ELEMENT SELECTORS ---
-            const elements = {
-                modal: document.getElementById('paymentModal'),
-                paymentFormView: document.getElementById('paymentFormView'),
-                successView: document.getElementById('successView'),
-                form: document.getElementById('subscriptionForm'),
-                inputs: {
-                    gcash: document.getElementById('gcashInput'),
-                    debit: document.getElementById('debitInput'),
-                    gcashNumber: document.getElementById('gcash-number'),
-                    cardNumber: document.getElementById('card-number'),
-                    planId: document.getElementById('plan_id'),
-                    paymentMethod: document.getElementById('selected_payment_method'),
-                    paymentAccNum: document.getElementById('paymentAccNum'),
-                },
-                errors: {
-                    gcash: document.getElementById('gcash-error'),
-                    card: document.getElementById('card-error'),
-                },
-                buttons: {
-                    getStarted: document.getElementById('getStartedBtn'),
-                    goPremium: document.getElementById('goPremiumBtn'),
-                    closeModal: document.getElementById('closeModalBtn'),
-                    submit: document.getElementById('modalSubmitButton'),
-                },
-                ui: {
-                    modalTitle: document.getElementById('modalPlanTitle'),
-                    buttonText: document.getElementById('buttonText'),
-                    spinner: document.getElementById('loadingSpinner'),
-                },
-                radios: document.querySelectorAll('input[name="paymentOption"]'),
-            };
+        const modal = document.getElementById('paymentModal');
+        const modalContent = modal.querySelector('.bg-white'); // Get the modal content div
+        const gcashInput = document.getElementById('gcashInput');
+        const debitInput = document.getElementById('debitInput');
+        const gcashNumber = document.getElementById('gcash-number');
+        const cardNumber = document.getElementById('card-number');
+        const planIdInput = document.getElementById('plan_id');
+        const paymentMethodInput = document.getElementById('selected_payment_method');
+        const paymentAccNumInput = document.getElementById('paymentAccNum');
 
-            // --- FUNCTIONS ---
-            const openModal = (planId, planName, planPrice, themeColor) => {
-                elements.paymentFormView.classList.remove('hidden');
-                elements.successView.classList.add('hidden');
-                elements.modal.classList.remove('hidden');
-                elements.inputs.planId.value = planId;
-                elements.form.action = `/subscribe/${planId}`;
-                elements.ui.modalTitle.textContent = `Subscribe to ${planName}`;
-                elements.buttons.submit.dataset.price = planPrice;
-                elements.buttons.submit.dataset.theme = themeColor;
-            };
+        function openModal(planId) {
+            modal.classList.remove('hidden');
+            // Animate in
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10); // Small delay to allow 'hidden' removal to register
 
-            const closeModal = () => {
-                elements.modal.classList.add('hidden');
-                resetForm();
-            };
+            planIdInput.value = planId;
+            document.getElementById('subscriptionForm').action = '/subscribe/' + planId;
+        }
+
+        function closeModal() {
+            // Animate out
+            modal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            modal.addEventListener('transitionend', function handler() {
+                modal.classList.add('hidden');
+                modal.removeEventListener('transitionend', handler); // Clean up listener
+            });
+
+            gcashInput.classList.add('hidden');
+            debitInput.classList.add('hidden');
+            gcashNumber.value = '';
+            cardNumber.value = '';
+            paymentMethodInput.value = '';
+            paymentAccNumInput.value = '';
+        }
 
             const setButtonState = (state, text) => {
                 const btn = elements.buttons.submit;
@@ -318,7 +313,6 @@
             document.addEventListener('keydown', e => {
                 if (e.key === 'Escape' && !elements.modal.classList.contains('hidden')) closeModal();
             });
-        });
     </script>
 </body>
 

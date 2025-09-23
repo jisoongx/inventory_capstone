@@ -1,12 +1,17 @@
 @extends('dashboards.owner.owner')
 
 @section('content')
-<div class="p-4 md:p-6 space-y-3">
 
-    <div class="flex flex-col md:flex-row gap-4 md:gap-3">
+<div class="px-4">
+    @livewire('expiration-container')
+</div>
+
+<div class="md:p-6 space-y-3 -mt-2">
+
+    <div class="flex flex-col md:flex-row md:gap-3">
 
         <!-- Restock Card -->
-        <div class="relative bg-white rounded-lg p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
+        <div class="relative bg-white rounded-lg md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
 
             <!-- Top Green Bar -->
             <div class="absolute top-0 left-0 w-full h-1 bg-gray-700 rounded-t-2xl"></div>
@@ -20,8 +25,12 @@
             <div class="flex-1 min-w-0">
                 <h2 class="text-gray-800 text-base md:text-lg font-semibold">Wondering what to restock?</h2>
                 <p class="text-gray-600 mt-1 text-xs md:text-sm leading-relaxed">Get intelligent suggestions for your store so you never run out of popular products.</p>
-                <a href="{{ route('restock_suggestion') }}"
-                    class="mt-3 inline-block bg-green-500 text-white px-4 py-2 rounded-lg font-medium text-sm shadow hover:bg-green-600 hover:shadow-md transition-all">
+                <a  href="{{ $expired ? '' : route('restock_suggestion') }}"
+                    class="mt-3 inline-block px-4 py-2 rounded-lg font-medium text-sm shadow transition-all
+                        {{ $expired 
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                            : 'bg-green-500 text-white hover:bg-green-600 hover:shadow-md' }}"
+                            onclick="{{ $expired ? 'event.preventDefault();' : '' }}">
                     Generate List
                 </a>
             </div>
@@ -33,7 +42,7 @@
         </div>
 
         <!-- Seasonal Trends Card -->
-        <div class="relative bg-white rounded-lg p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
+        <div class="relative bg-white rounded-lg md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
 
             <!-- Top Blue Bar -->
             <div class="absolute top-0 left-0 w-full h-1 bg-gray-700 rounded-t-2xl"></div>
@@ -47,8 +56,14 @@
             <div class="flex-1 min-w-0">
                 <h2 class="text-gray-800 text-base md:text-lg font-semibold">Spot the Season’s Must-Have Products</h2>
                 <p class="text-gray-600 mt-1 text-xs md:text-sm leading-relaxed">Discover trending items and see what’s in high demand this season.</p>
-                <a href="{{ route('seasonal_trends') }}"
-                    class="mt-3 inline-block bg-blue-500 text-white px-4 py-2 rounded-lg font-medium text-sm shadow hover:bg-blue-600 hover:shadow-md transition-all">
+                <a 
+                    href="{{ $expired ? '' : route('seasonal_trends') }}"
+                    class="mt-3 inline-block px-4 py-2 rounded-lg font-medium text-sm shadow transition-all
+                        {{ $expired 
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                            : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md' }}"
+                            onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
+                >
                     View Seasonal Trends
                 </a>
             </div>

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title></title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @livewireStyles
+    <!-- @livewireStyles -->
 
     <!-- <link rel="stylesheet" href="/build/assets/dataTables.dataTables.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> -->
@@ -16,13 +16,13 @@
     </style>
 </head>
 
-<body class="bg-slate-50 min-h-screen" oncontextmenu="return false;">
+<body class="bg-slate-50 p-0" oncontextmenu="return false;">
 
    <aside id="sidebar" class="w-64 transition-all duration-300 bg-black text-white h-screen fixed top-0 left-0 p-4 flex flex-col justify-between z-50">
         <div>
-            <div class="flex flex-col items-center justify-center mb-6 mt-5">
+            <div class="flex flex-col items-center justify-center mb-10 mt-5">
                 <img src="{{ asset('assets/logo.png') }}" class="w-12 h-12 mb-2">
-                <span id="brandName" class="font-poppins text-lg font-semibold nav-label">Shoplytix</span>
+                <span id="brandName" class="font-poppins text-xl font-semibold">Shoplytix</span>
             </div>
 
             <nav class="space-y-2">
@@ -44,10 +44,18 @@
                         <span id="reportsArrow" class="material-symbols-rounded cursor-pointer">keyboard_arrow_down</span>
                     </a>
 
-                    <div id="reportsDropdown" class="ml-3 mt-1 space-y-1 border-l-4 border-gray-600 hidden">
+                    <div id="reportsDropdown" class="ml-5 mt-1 space-y-1 border-l-2 border-gray-600">
+                        <a href="" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Sales & Performance Reports</span>
+                        </a>
+                        <a href="" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Inventory Reports</span>
+                        </a>
+                        <a href="" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Customer & Behavior Reports</span>
+                        </a>
                         <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
-                            <span class="nav-label material-symbols-rounded">history_toggle_off</span>
-                            <span class="nav-label">Activity Log</span>
+                            <span class="text-xs">Activity Log</span>
                         </a>
                     </div>
                 </div>
@@ -65,10 +73,9 @@
     </aside>
 
 
-    <main id="mainContent" class="ml-64 flex-1 p-3 transition-all duration-300">
-        <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 relative pb-2">
+    <main id="mainContent" class="flex-1 p-0 ml-64 duration-300"> 
+        <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 pb-2 relative -mt-4 ml-2">
             <div class="relative space-x-5">
-
                 <div class="flex items-center gap-4">
                     
                     @livewire('notifications')
@@ -77,11 +84,8 @@
                         <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
                     </button>
                 </div>
-
-
                 <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
                     <form method="GET" action="{{ route('owner.profile') }}">
-                        {{-- Removed @csrf as it's not needed for GET requests --}}
                         <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</button>
                     </form>
                     <form method="POST" action="{{ route('logout') }}">
@@ -92,7 +96,6 @@
             </div>
         </div>
         
-        @livewireScripts
         @yield('content')
     </main>
 
@@ -143,7 +146,7 @@
         console.log(event.detail.message);
     });
 </script>
-@livewireScripts
+<!-- @livewireScripts -->
 </body>
 
 </html>

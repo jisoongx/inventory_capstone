@@ -76,6 +76,7 @@ class ProductAnalysis extends Component
             ->where('r.owner_id', $owner_id)
             ->groupBy('p.name','c.category','r.receipt_date','r.owner_id');
 
+
         if (!empty($this->searchWord)) {
             $search = '%' . $this->searchWord . '%';
             $query->where(function($q) use ($search) {

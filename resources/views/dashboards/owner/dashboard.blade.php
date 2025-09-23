@@ -1,9 +1,12 @@
 @extends('dashboards.owner.owner') 
-
+<head>
+    <title>Dashboard</title>
+</head>
 @section('content')
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
-
+    <div class="px-4 space-y-4">
+        @livewire('expiration-container')
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="">
                 <span class="text-sm text-gray-500">{{ $dateDisplay->format('F j, Y') }}</span>
                 <h1 class="text-2xl font-semibold mb-4">Welcome, {{ ucwords($owner_name) }}!</h1>
@@ -48,40 +51,40 @@
             <!-- profit chart -->
             <div class="bg-white p-5 rounded shadow border">
                     <p class="text-left text-black font-semibold text-xs border-b border-gray-200 pb-5">Monthly Net Profit</p>
-                <div class="flex items-center justify-center pt-4">
-                    <div class="flex-2 mr-7">
-                        <span class="text-xl font-bold block mb-1">
-                            {{ $dateDisplay->format('F Y') }}
+                <div class="flex items-center justify-between pt-4 gap-6">
+
+                <div class="flex flex-col">
+                    <span class="text-xl font-bold">
+                        {{ $dateDisplay->format('F Y') }}
+                    </span>
+                    <p class="text-xs">
+                        {{ $dateDisplay->format('D, d') }}
+                    </p>
+                </div>
+
+                <div class="flex flex-col text-right">
+                    @if (is_null($profitMonth) || $profitMonth === 0)
+                        <span class="text-xl text-red-700">
+                            Empty database.
                         </span>
-                        <p class="text-xs mb-3">
-                            {{ $dateDisplay->format('D, d') }}
-                        </p>
-                    </div>
-                    <div class="flex-1">
+                    @else
+                        <span class="text-xl font-bold">
+                            ₱{{ number_format($profitMonth, 2) }}
+                        </span>
+                    @endif
+                    <p class="text-xs">Current Net Profit</p>
+                </div>
 
-                        @if (is_null($profitMonth) || $profitMonth === 0)
-                            <span class="text-xl text-red-700 block mb-1">
-                                Empty database.
-                            </span>
-                        @else
-                            <span class="text-xl font-bold block mb-1">
-                                ₱{{ number_format($profitMonth, 2) }}
-                            </span>
-                        @endif
+                <div class="flex-1 flex items-center justify-end gap-3">
+                    <a href="{{ route('dashboards.owner.expense_record') }}"
+                    class="bg-red-100 border border-red-900 px-6 py-2.5 rounded text-xs text-center">
+                        View
+                    </a>
 
-                        <p class="text-xs mb-3">Current Net Profit</p>
-                    </div>
-
-                    <div>
-                        <a href="{{ route('dashboards.owner.expense_record') }}"
-                        class="bg-red-100 border border-red-900 px-6 py-2.5 rounded text-xs mr-3 text-black inline-block text-center">
-                            View
-                        </a>
-                    </div>
-
+                    <!-- Year Selector -->
                     <form method="GET" action="{{ route('dashboards.owner.dashboard') }}">
                         <select name="year" id="year"
-                            class="rounded px-6 py-2.5 border-gray-300 text-gray-700 text-xs focus:ring focus:ring-blue-200 focus:border-blue-400"
+                            class="rounded px-6 py-2.5 mt-4 border-gray-300 text-gray-700 text-xs focus:ring focus:ring-blue-200 focus:border-blue-400"
                             onchange="this.form.submit()">
                             @forelse ($year as $y)
                                 <option value="{{ $y }}"
@@ -94,6 +97,8 @@
                         </select>
                     </form>
                 </div>
+            </div>
+
                 <div class="flex space-x-1 mt-2">
                     <button onclick="zoomIn()" id="zoomIn" title="Zoom In">
                         <span class="material-symbols-rounded-small text-sm" title="Zoom In">add_circle</span>
@@ -109,7 +114,7 @@
                     <div id="profitChart" 
                         data-profits='@json($profits ?? [])' 
                         data-months='@json($months ?? [])'
-                        style="height: 380px; width: 800px;">
+                        style="height: 370px; width: 800px;">
                         <canvas></canvas>
                     </div>
                 </div>
@@ -117,7 +122,7 @@
         </div>
 
         <!-- table dapit -->
-        <div class="p-2">
+        <div class="">
             <div class="grid p-5 bg-white rounded shadow border">
                 <h3 class="text-xs font-semibold text-black mb-5">Comparative Analysis</h3>
                 
@@ -329,6 +334,7 @@
                 </div>
             </div> <!-- div sa table -->
         </div>
+    </div>
 
 
     <!-- <script>

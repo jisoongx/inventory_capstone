@@ -4,7 +4,11 @@
 </head>
 @section('content')
 
-<div class="max-w-6xl mx-auto px-4"> {{-- Limit width & center content --}}
+<div class="px-4">
+    @livewire('expiration-container')
+</div>
+
+<div class="max-w-6xl mx-auto py-4"> 
 
     <!-- Back Button -->
     <div class="mb-6 mt-4">

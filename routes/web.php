@@ -16,6 +16,7 @@ use App\Http\Controllers\RestockController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Livewire\ExpenseRecord;
 
 use App\Livewire\TechnicalRequest;
 
@@ -27,10 +28,17 @@ Route::get('/', function () {
 });
 
 
-Route::get('/expense_record', [MonthlyController::class, 'index'])->name('dashboards.owner.expense_record');
-Route::post('/expense_record/add', [MonthlyController::class, 'add'])->name('dashboards.owner.expense_record_add');
-Route::post('/expense_record/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.expense_record_edit');
-Route::get('/expenses/attachment/{expense_id?}', [MonthlyController::class, 'viewAttachment'])->name('expenses.attachment');
+
+Route::view('/welcome/to/shoplytix', 'landing-page');
+
+
+// Route::get('/expense_record', [MonthlyController::class, 'index'])->name('dashboards.owner.expense_record');
+// Route::post('/expense_record/add', [MonthlyController::class, 'add'])->name('dashboards.owner.expense_record_add');
+// Route::post('/expense_record/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.expense_record_edit');
+// Route::get('/expenses/attachment/{expense_id?}', [MonthlyController::class, 'viewAttachment'])->name('expenses.attachment');
+
+Route::view('/expense_record', 'dashboards.owner.expense_record')->name('dashboards.owner.expense_record');
+Route::get('/expenses/{id}/attachment', [ExpenseRecord::class, 'viewAttachment'])->name('expenses.viewAttachment');
 
 
 
@@ -138,6 +146,8 @@ Route::post('/register-product', [InventoryOwnerController::class, 'registerProd
 Route::post('/inventory/restock', [InventoryOwnerController::class, 'restockProduct'])->name('inventory.restock');
 Route::get('/inventory/latest-batch/{prodCode}', [InventoryOwnerController::class, 'getLatestBatch'])->name('inventory.latestBatch');
 Route::get('/inventory/product/{prodCode}', [InventoryOwnerController::class, 'showProductDetails'])->name('inventory-product-info');
+Route::get('/inventory-owner/edit/{prodCode}', [InventoryOwnerController::class, 'edit'])->name('inventory-owner-edit');
+Route::put('/inventory-owner/update/{prodCode}', [InventoryOwnerController::class, 'update'])->name('inventory-owner-update');
 
 
 

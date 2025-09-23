@@ -1,5 +1,8 @@
 @extends('dashboards.owner.owner')
 @section('content')
+<div class="px-4">
+    @livewire('expiration-container')
+</div>
 <div class="p-4">
     <!-- Start Transaction Button -->
     <div class="flex justify-end mb-6">

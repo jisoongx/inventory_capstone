@@ -130,7 +130,7 @@
                 </div>
                 <div class="absolute bottom-2 left-0 w-full px-4">
                     <div class="relative">
-                        <textarea wire:model.defer="newMessage" name="message" class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none bg-white text-sm" placeholder="Enter message here..." rows="3"></textarea>
+                        <textarea wire:model.live="newMessage" :key="$newMessage" class="w-full border border-slate-200 rounded-lg p-3 pr-12 resize-none bg-white text-sm" placeholder="Enter message here..." rows="3"></textarea>
                         <button wire:click="sendMessage({{ $recentreq->req_id }})" type="button" class="absolute right-2 bottom-2">
                             <span class="material-symbols-rounded">send</span>
                         </button>

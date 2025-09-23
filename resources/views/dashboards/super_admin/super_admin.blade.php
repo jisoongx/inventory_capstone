@@ -17,9 +17,9 @@
     <div class="flex">
         <aside id="sidebar" class="w-64 transition-all duration-300 bg-black text-white h-screen fixed top-0 left-0 p-4 flex flex-col justify-between z-50"> {{-- Added fixed, top-0, left-0, h-screen, z-50 --}}
             <div>
-                <div class="flex flex-col items-center justify-center mb-6 mt-5">
+                <div class="flex flex-col items-center justify-center mb-10 mt-5">
                     <img src="{{ asset('assets/logo.png') }}" class="w-12 h-12 mb-2">
-                    <span id="brandName" class="font-poppins text-lg font-semibold nav-label">Shoplytix</span>
+                    <span id="brandName" class="font-poppins text-xl font-semibold">Shoplytix</span>
                 </div>
 
                 <nav class="space-y-2">

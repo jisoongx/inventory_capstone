@@ -60,10 +60,7 @@ class CheckExpiration extends Command
                     VALUES (?, ?, ?, NOW(), ?, ?, ?)", 
                     ['Expiration Notice',
                     "Your account will expire on {$formattedEndDate}. Please renew your subscription.",
-                    'owner',
-                    $notifDate,
-                    2,
-                    'specific']);
+                    'owner', $notifDate, 2, 'specific']);
 
                 $notif_id = DB::getPdo()->lastInsertId();
 

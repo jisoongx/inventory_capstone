@@ -1,6 +1,9 @@
 @extends('dashboards.owner.owner')
 @section('content')
-<div class="min-h-screen bg-gray-100 p-4">
+<div class="px-4 mb-2">
+    @livewire('expiration-container')
+</div>
+<div class="px-4">
     <!-- Top Navigation Bar -->
     <div class="bg-white shadow-lg rounded-lg mb-4 p-4">
         <div class="flex items-center justify-between">
@@ -24,54 +27,57 @@
         </div>
     </div>
 
-    <!-- Categories Filter -->
-    <div class="bg-white shadow-lg rounded-lg mb-3 p-3">
-        <div id="categoryPills" class="grid grid-cols-4 gap-2">
-            <button class="category-pill active" data-category="">
-                <span class="w-2 h-2 bg-gray-500 rounded-full mr-1.5"></span>
-                All Categories
-            </button>
-            <!-- Categories will be loaded here dynamically -->
-        </div>
-    </div>
-
     <!-- Main Content Area -->
-    <div class="flex gap-6" style="height: calc(100vh - 100px);">
-        <!-- Left Side - Product Grid -->
-        <div class="flex-1 bg-white rounded-lg shadow-lg p-6 overflow-hidden">
-            <div class="h-full flex flex-col">
-                <!-- Loading State -->
-                <div id="loadingProducts" class="flex-1 flex items-center justify-center">
-                    <div class="text-center">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-                        <p class="text-gray-600">Loading products...</p>
+    <div class="flex-1 grid grid-cols-3 gap-4 h-[35rem] overflow-hidden">
+
+       <div class="flex flex-col col-span-2 min-h-0">
+            <!-- Categories Filter -->
+            <div class="bg-white shadow-lg rounded-lg p-3 overflow-x-auto flex-shrink-0">
+                <div id="categoryPills" class="flex space-x-2">
+                    <button class="category-pill active" data-category="">
+                        <span class="bg-gray-500 rounded-full"></span>
+                        All Categories
+                    </button>
+                    <!-- Categories will be loaded here dynamically -->
+                </div>
+            </div>
+
+            <!-- Left Side - Product Grid -->
+            <div class="flex-1 bg-white rounded-lg shadow-lg p-3 overflow-y-auto min-h-0">
+                <div class="flex flex-col">
+                    <!-- Loading State -->
+                    <div id="loadingProducts" class="flex-1 flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+                            <p class="text-gray-600">Loading products...</p>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Products Grid -->
-                <div id="productsGrid" class="hidden h-full overflow-y-auto">
-                    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 p-2"></div>
-                </div>
+                    <!-- Products Grid -->
+                    <div id="productsGrid" class="hidden h-full overflow-y-auto p-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3"></div>
+                    </div>
 
-                <!-- No Products Found -->
-                <div id="noProducts" class="hidden flex-1 flex items-center justify-center">
-                    <div class="text-center">
-                        <svg class="mx-auto mb-4 w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                        <p class="text-gray-600 text-lg">No products found</p>
-                        <p class="text-gray-500 text-sm">Try adjusting your search or category filter</p>
+                    <!-- No Products Found -->
+                    <div id="noProducts" class="hidden flex-1 flex items-center justify-center">
+                        <div class="text-center">
+                            <svg class="mx-auto mb-4 w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <p class="text-gray-600 text-lg">No products found</p>
+                            <p class="text-gray-500 text-sm">Try adjusting your search or category filter</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+       </div>
 
         <!-- Right Side - Cart Items (Expanded) -->
-        <div class="w-[20rem] bg-white rounded-lg shadow-lg flex flex-col" style="height: 120%;">
+        <div class="bg-white rounded-lg shadow-lg flex flex-col min-h-0">
             <!-- Receipt Info Header -->
             <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 flex-shrink-0">
                 <div class="text-center">
-                    <p class="text-lg font-bold">Receipt No.: {{ $receipt_no ?? '0' }}</p>
+                    <p class="text-sm font-bold">Receipt No.: {{ $receipt_no ?? '0' }}</p>
                     <p id="receiptDateTime" class="text-xs text-red-100 mt-1"></p>
                     <p class="text-xs text-red-100">Cashier: {{ $user_firstname ?? 'User' }}</p>
                 </div>
@@ -85,8 +91,8 @@
                         <svg class="mx-auto mb-4 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0H17M9 19a2 2 0 11-4 0 2 2 0 014 0zM20 19a2 2 0 11-4 0 2 2 0 014 0z"></path>
                         </svg>
-                        <p class="text-gray-600 text-lg">Your cart is empty</p>
-                        <p class="text-gray-500 text-sm">Tap on products to add them</p>
+                        <p class="text-gray-600 text-sm">Your cart is empty</p>
+                        <p class="text-gray-500 text-xs">Tap on products to add them</p>
                     </div>
                 </div>
             </div>
@@ -96,19 +102,19 @@
                 <!-- Summary -->
                 <div class="bg-white p-3 rounded-lg shadow-sm border">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Total Items:</span>
-                        <span id="totalQuantity" class="text-sm font-bold text-gray-900">0</span>
+                        <span class="text-xs font-medium text-gray-700">Total Items:</span>
+                        <span id="totalQuantity" class="text-xs font-bold text-gray-900">0</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-lg font-bold text-gray-900">Total:</span>
-                        <span id="totalAmount" class="text-lg font-bold text-red-600">₱0.00</span>
+                        <span class="text-sm font-bold text-gray-900">Total:</span>
+                        <span id="totalAmount" class="text-sm font-bold text-red-600">₱0.00</span>
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="space-y-2">
                     <button id="processPaymentBtn" disabled 
-                            class="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg font-bold text-base transition-all duration-300 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="text-xs w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg font-bold text-base transition-all duration-300 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed">
                         Process Payment
                     </button>
                 </div>
@@ -763,35 +769,39 @@ class KioskSystem {
 
     renderCategoryPills() {
         const container = document.getElementById('categoryPills');
-        
-        // Expanded category colors for better variety
+
         const colors = [
-            'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
-            'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500',
-            'bg-teal-500', 'bg-cyan-500', 'bg-lime-500', 'bg-emerald-500',
-            'bg-violet-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-sky-500',
-            'bg-amber-500', 'bg-slate-500'
+            'red', 'blue', 'green', 'yellow', 
+            'purple', 'pink', 'indigo', 'orange',
+            'teal', 'cyan', 'lime', 'emerald',
+            'violet', 'fuchsia', 'rose', 'skyblue',
+            'gold', 'slategray'
         ];
-        
+
         let pillsHTML = `
-            <button class="category-pill active" data-category="">
-                <span class="w-3 h-3 bg-gray-500 rounded-full mr-2"></span>
+            <button class="category-pill px-4 py-2 rounded-full text-white mr-4"
+                style="background-color: gray;"
+                data-category="">
                 All Categories
             </button>
         `;
-        
+
         this.categories.forEach((category, index) => {
-            const colorClass = colors[index % colors.length];
+            const bgColor = colors[index % colors.length];
             pillsHTML += `
-                <button class="category-pill" data-category="${category.category_id}">
-                    <span class="w-3 h-3 ${colorClass} rounded-full mr-2"></span>
+                <button class="category-pill px-4 py-2 rounded-full text-white mr-4"
+                    style="background-color: ${bgColor};"
+                    data-category="${category.category_id}">
                     ${category.category}
                 </button>
             `;
         });
-        
+
         container.innerHTML = pillsHTML;
     }
+
+
+
 
     selectCategory(categoryId) {
         this.activeCategory = categoryId;
@@ -893,11 +903,11 @@ class KioskSystem {
                 }
             </div>
             <div class="flex-1 flex flex-col justify-between">
-                <h4 class="font-semibold text-sm text-gray-900 mb-2 line-clamp-2" title="${product.name}">
+                <h4 class="font-semibold text-[13px] text-gray-900 mb-2 line-clamp-2" title="${product.name}">
                     ${product.name}
                 </h4>
                 <div>
-                    <p class="text-lg font-bold text-red-600 mb-2">₱${parseFloat(product.selling_price).toFixed(2)}</p>
+                    <p class="text-sm font-bold text-red-600 mb-2">₱${parseFloat(product.selling_price).toFixed(2)}</p>
                     <div class="flex items-center justify-between text-xs">
                         <span class="text-gray-600">Stock: ${product.stock}</span>
                         ${isOutOfStock ? 
@@ -1042,8 +1052,8 @@ class KioskSystem {
                     <svg class="mx-auto mb-4 w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0H17M9 19a2 2 0 11-4 0 2 2 0 014 0zM20 19a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
-                    <p class="text-gray-600 text-lg">Your cart is empty</p>
-                    <p class="text-gray-500 text-sm">Tap on products to add them</p>
+                    <p class="text-gray-600 text-sm">Your cart is empty</p>
+                    <p class="text-gray-500 text-xs">Tap on products to add them</p>
                 </div>
             `;
             return;
@@ -1053,8 +1063,8 @@ class KioskSystem {
             <div class="cart-item" data-prod-code="${item.product.prod_code}">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex-1 pr-4">
-                        <h4 class="font-semibold text-base text-gray-900 leading-5 mb-1">${item.product.name}</h4>
-                        <p class="text-sm text-gray-500">₱${parseFloat(item.product.selling_price).toFixed(2)} each</p>
+                        <h4 class="font-semibold text-sm text-gray-900 leading-5 mb-1">${item.product.name}</h4>
+                        <p class="text-xs text-gray-500">₱${parseFloat(item.product.selling_price).toFixed(2)} each</p>
                     </div>
                     <button class="remove-btn" onclick="kioskSystem.showRemoveModal('${item.product.prod_code}')">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1066,11 +1076,11 @@ class KioskSystem {
                     <div class="quantity-controls">
                         <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity - 1})" 
                                 ${item.quantity <= 1 ? 'disabled' : ''}>−</button>
-                        <span class="px-4 py-2 bg-gray-50 border rounded-lg text-sm font-medium min-w-[4rem] text-center">${item.quantity}</span>
+                        <span class="px-4 py-2 bg-gray-50 border rounded-lg text-xs font-medium min-w-[4rem] text-center">${item.quantity}</span>
                         <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity + 1})">+</button>
                     </div>
                     <div class="text-right">
-                        <p class="font-bold text-lg text-red-600">₱${item.amount.toFixed(2)}</p>
+                        <p class="font-bold text-sm text-red-600">₱${item.amount.toFixed(2)}</p>
                     </div>
                 </div>
             </div>
