@@ -15,95 +15,127 @@ class SubscriptionController extends Controller
 {
 
 
-   // In app/Http/Controllers/SubscriptionController.php
+    // In app/Http/Controllers/SubscriptionController.php
 
-public function subscribers(Request $request)
-{
-    // Get filter values from the URL, with 'active' as the default status
-    $status = $request->input('status', 'active');
-    $planId = $request->input('plan');
-    $search = $request->input('search');
-    $expiryDays = $request->input('days');
-    $expiryDate = $request->input('date');
+    // In your SubscriptionController.php
 
-    // Start building the query for Owners who have subscriptions
-    $query = Owner::query()->whereHas('subscriptions');
+    // In app/Http/Controllers/SubscriptionController.php
 
-    // Apply filters to the subscriptions relationship
-    $query->whereHas('subscriptions', function ($q) use ($status, $planId, $expiryDays, $expiryDate) {
-        if ($status === 'upcoming') {
-            $q->where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)]);
-        } else {
-            $q->where('status', $status);
+    public function subscribers(Request $request)
+    {
+        // 1. Get filter values from the URL
+        $status = $request->input('status', 'active');
+        $planId = $request->input('plan');
+        $search = $request->input('search');
+        $startDate = $request->input('start_date');
+        $range = $request->input('range');
+
+        // 2. Start the main query on the Owner model
+        $query = Owner::query();
+
+        // 3. Apply the global search filter
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('firstname', 'like', "%{$search}%")
+                    ->orWhere('lastname', 'like', "%{$search}%")
+                    ->orWhere('store_name', 'like', "%{$search}%");
+            });
         }
 
-        if ($planId) {
-            $q->where('plan_id', $planId);
-        }
-
-        if ($expiryDays) {
-            $q->where('subscription_end', '<=', now()->addDays($expiryDays));
-        }
-
-        if ($expiryDate) {
-            $q->whereDate('subscription_end', $expiryDate);
-        }
-    });
-
-    // Apply search filter to the Owner's name or store name
-    if ($search) {
-        $query->where(function ($q) use ($search) {
-            $q->where('firstname', 'like', "%{$search}%")
-              ->orWhere('lastname', 'like', "%{$search}%")
-              ->orWhere('store_name', 'like', "%{$search}%");
+        // 4. Filter the subscriptions relationship
+        $query->whereHas('subscriptions', function ($q) use ($status, $planId, $startDate, $range) {
+            if ($status === 'upcoming') {
+                $q->where('status', 'active')->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(30)]);
+            } else {
+                $q->where('status', $status);
+            }
+            if ($startDate) {
+                $q->whereDate('subscription_start', $startDate);
+            }
+            if ($planId) {
+                $q->where('plan_id', $planId);
+            }
+            if ($status === 'upcoming' && $range) {
+                switch ($range) {
+                    case 'urgent':
+                        $q->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(7)]);
+                        break;
+                    case 'soon':
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(8), Carbon::today()->addDays(14)]);
+                        break;
+                    case 'later':
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(15), Carbon::today()->addDays(30)]);
+                        break;
+                }
+            }
         });
+
+        // 5. Eager load the filtered subscriptions for display
+        $query->with(['subscriptions' => function ($q) use ($status, $planId, $startDate, $range) {
+            if ($status === 'upcoming') {
+                $q->where('status', 'active')->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(30)]);
+            } else {
+                $q->where('status', $status);
+            }
+            if ($startDate) $q->whereDate('subscription_start', $startDate);
+            if ($planId) $q->where('plan_id', $planId);
+            if ($status === 'upcoming' && $range) {
+                switch ($range) {
+                    case 'urgent':
+                        $q->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(7)]);
+                        break;
+                    case 'soon':
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(8), Carbon::today()->addDays(14)]);
+                        break;
+                    case 'later':
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(15), Carbon::today()->addDays(30)]);
+                        break;
+                }
+            }
+            $q->with('planDetails');
+        }]);
+
+        // 6. Paginate the results
+        $clients = $query->paginate(10)->withQueryString();
+
+        $isFiltered = ($request->has('search') && $request->input('search') !== '')
+            || ($request->has('plan') && $request->input('plan') !== '')
+            || ($request->has('range') && $request->input('range') !== '')
+            || ($request->has('start_date') && $request->input('start_date') !== '');
+
+
+
+
+
+
+        // For AJAX requests, we pass only the data needed for the table partial
+        if ($request->ajax()) {
+            return view('dashboards.super_admin.subscribers', compact('clients', 'isFiltered'))->render();
+        }
+
+        // For the initial full page load, we pass all data including stat card counts
+        $activeCount = Subscription::where('status', 'active')->count();
+        $expiredCount = Subscription::where('status', 'expired')->count();
+        $upcomingCount = Subscription::where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)])->count();
+
+        return view('dashboards.super_admin.subscribers', compact(
+            'clients',
+            'activeCount',
+            'expiredCount',
+            'upcomingCount',
+            'isFiltered'
+        ));
     }
 
-    // Eager load the filtered subscriptions and their details
-    $query->with(['subscriptions' => function ($q) use ($status, $planId, $expiryDays, $expiryDate) {
-        if ($status === 'upcoming') {
-            $q->where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)]);
-        } else {
-            $q->where('status', $status);
-        }
-        if ($planId) { $q->where('plan_id', $planId); }
-        if ($expiryDays) { $q->where('subscription_end', '<=', now()->addDays($expiryDays)); }
-        if ($expiryDate) { $q->whereDate('subscription_end', $expiryDate); }
-
-        $q->with('planDetails'); // Also load plan details for the filtered subs
-    }]);
-    
-    // Paginate the final, filtered query
-    $clients = $query->paginate(10)->withQueryString();
-
-    // Get total counts for the stat cards (these should run on the whole unfiltered dataset)
-    $activeCount = Subscription::where('status', 'active')->count();
-    $expiredCount = Subscription::where('status', 'expired')->count();
-    $upcomingCount = Subscription::where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)])->count();
-    
-    return view('dashboards.super_admin.subscribers', [
-        'clients' => $clients,
-        'activeCount' => $activeCount,
-        'expiredCount' => $expiredCount,
-        'upcomingCount' => $upcomingCount,
-    ]);
-}
 
 
-    // In app/Http/Controllers/SubscriptionController.php
-    // In app/Http/Controllers/SubscriptionController.php
     public function billing(Request $request)
     {
-        // --- 1. Get ALL Clients with Data (Master Query) ---
-        $allClientsQuery = Owner::has('subscriptions.payments')->with('subscriptions.planDetails', 'subscriptions.payments');
-        $allClients = $allClientsQuery->get();
-
-        // --- 2. Perform ALL Calculations on the Full Dataset ---
-
-        // Overall Period Filter for Revenue Card
+        // --- 1. Get Data for the Top Cards (Efficiently) ---
         $period = $request->input('period', 'all_time');
         $startDate = null;
         $endDate = now();
+
         switch ($period) {
             case 'this_month':
                 $startDate = now()->startOfMonth();
@@ -121,33 +153,49 @@ public function subscribers(Request $request)
                 break;
         }
 
-        $allPayments = $allClients->flatMap->subscriptions->flatMap->payments;
+        $paymentsInPeriod = Payment::with('subscription.planDetails')
+            ->when($startDate, fn($query) => $query->whereBetween('payment_date', [$startDate, $endDate]))
+            ->get();
 
-        // Latest Payment Calculation
-        $latestPayment = $allPayments->sortByDesc('payment_date')->first();
-        $latest = null;
-        if ($latestPayment) {
-            $latest = ['payment' => $latestPayment, 'sub' => $latestPayment->subscription, 'owner' => $latestPayment->subscription->owner];
-        }
-
-        // Subscription Revenue Card Calculation
-        $paymentsInPeriod = $allPayments->filter(fn($p) => !$startDate || \Carbon\Carbon::parse($p->payment_date)->between($startDate, $endDate));
         $revenue = [
             'basic' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Basic')->sum('payment_amount'),
-            'premium' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Premium')->sum('payment_amount')
+            'premium' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Premium')->sum('payment_amount'),
         ];
         $totalRevenue = $revenue['basic'] + $revenue['premium'];
         $basicPercentage = $totalRevenue > 0 ? ($revenue['basic'] / $totalRevenue) * 100 : 0;
         $premiumPercentage = $totalRevenue > 0 ? ($revenue['premium'] / $totalRevenue) * 100 : 0;
 
-        // Plan Distribution Report Calculation
+        $subscriptionsInPeriod = Subscription::with('planDetails')
+            ->when($startDate, fn($query) => $query->whereBetween('subscription_start', [$startDate, $endDate]))
+            ->get();
+
+        $cardCounts = [
+            'basic' => $subscriptionsInPeriod->where('planDetails.plan_title', 'Basic')->count(),
+            'premium' => $subscriptionsInPeriod->where('planDetails.plan_title', 'Premium')->count(),
+        ];
+
+        $plans = Plan::all();
+        $basicPrice = $plans->firstWhere('plan_title', 'Basic')->plan_price ?? 0;
+        $premiumPrice = $plans->firstWhere('plan_title', 'Premium')->plan_price ?? 0;
+
+        $latest = null;
+        $latestPayment = Payment::with('subscription.owner')->latest('payment_date')->first();
+        if ($latestPayment) {
+            $latest = [
+                'payment' => $latestPayment,
+                'sub' => $latestPayment->subscription,
+                'owner' => $latestPayment->subscription->owner
+            ];
+        }
+
         $pd_startDate = $request->input('pd_start_date');
         $pd_endDate = $request->input('pd_end_date');
         $planStats = ['basic' => ['active' => 0, 'expired' => 0], 'premium' => ['active' => 0, 'expired' => 0]];
-        foreach ($allClients->flatMap->subscriptions as $sub) {
-            $subStartDate = \Carbon\Carbon::parse($sub->subscription_start);
-            if ($pd_startDate && $pd_endDate && !$subStartDate->between($pd_startDate, $pd_endDate)) continue;
+        $allSubscriptions = Subscription::with('planDetails')
+            ->when($pd_startDate && $pd_endDate, fn($query) => $query->whereBetween('subscription_start', [$pd_startDate, $pd_endDate]))
+            ->get();
 
+        foreach ($allSubscriptions as $sub) {
             $planTitle = strtolower($sub->planDetails->plan_title ?? '');
             if (array_key_exists($planTitle, $planStats) && in_array($sub->status, ['active', 'expired'])) {
                 $planStats[$planTitle][$sub->status]++;
@@ -159,39 +207,68 @@ public function subscribers(Request $request)
         $totalExpired = $planStats['basic']['expired'] + $planStats['premium']['expired'];
         $grandTotalSubs = $totalActive + $totalExpired;
 
-        // Revenue Breakdown Report Calculation
         $customStart = $request->input('start_date');
         $customEnd = $request->input('end_date');
-        $revStartDate = $customStart ? \Carbon\Carbon::parse($customStart)->startOfDay() : $startDate;
-        $revEndDate = $customEnd ? \Carbon\Carbon::parse($customEnd)->endOfDay() : $endDate;
+        $revStartDate = $customStart ? Carbon::parse($customStart)->startOfDay() : $startDate;
+        $revEndDate = $customEnd ? Carbon::parse($customEnd)->endOfDay() : $endDate;
 
-        $monthlyRevenue = [];
-        foreach ($allPayments as $payment) {
-            $paymentDate = \Carbon\Carbon::parse($payment->payment_date);
-            if (!$revStartDate || $paymentDate->between($revStartDate, $revEndDate)) {
-                $monthKey = $paymentDate->format('Y-m');
-                if (!isset($monthlyRevenue[$monthKey])) {
-                    $monthlyRevenue[$monthKey] = ['basic' => 0, 'premium' => 0, 'total' => 0];
-                }
+        $monthlyRevenueData = Payment::selectRaw("DATE_FORMAT(payment.payment_date, '%Y-%m') as month")
+            ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Basic' THEN `payment`.`payment_amount` ELSE 0 END) as basic_revenue")
+            ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Premium' THEN `payment`.`payment_amount` ELSE 0 END) as premium_revenue")
+            ->join('subscriptions', 'payment.subscription_id', '=', 'subscriptions.subscription_id')
+            ->join('plans', 'subscriptions.plan_id', '=', 'plans.plan_id')
+            ->when($revStartDate, fn($query) => $query->whereBetween('payment.payment_date', [$revStartDate, $revEndDate]))
+            ->groupBy('month')
+            ->orderBy('month', 'desc')
+            ->get();
 
-                $plan = strtolower(trim($payment->subscription->planDetails->plan_title ?? ''));
-                if (isset($monthlyRevenue[$monthKey][$plan])) {
-                    $monthlyRevenue[$monthKey][$plan] += $payment->payment_amount;
-                }
-                $monthlyRevenue[$monthKey]['total'] += $payment->payment_amount;
-            }
-        }
-        krsort($monthlyRevenue);
+        $monthlyRevenue = $monthlyRevenueData->mapWithKeys(function ($item) {
+            return [
+                $item->month => [
+                    'basic' => $item->basic_revenue,
+                    'premium' => $item->premium_revenue,
+                    'total' => $item->basic_revenue + $item->premium_revenue,
+                ]
+            ];
+        })->toArray();
+
         $breakdownTotalBasic = array_sum(array_column($monthlyRevenue, 'basic'));
         $breakdownTotalPremium = array_sum(array_column($monthlyRevenue, 'premium'));
         $breakdownGrandTotal = array_sum(array_column($monthlyRevenue, 'total'));
 
-        // --- 3. Paginate the Results for the Table View ---
-        $clients = Owner::has('subscriptions.payments') // <<< FIX IS HERE
-            ->with('subscriptions.planDetails', 'subscriptions.payments')
-            ->paginate(10);
+        // --- 3. Build the Paginated Query for the Main Table ---
+        $clientsQuery = Owner::has('subscriptions.payments')
+            ->with('subscriptions.planDetails', 'subscriptions.payments');
 
-        // --- 4. Pass Everything to the View ---
+        // Check if any filter is applied to set the $isFiltered flag
+        $isFiltered = $request->hasAny(['search', 'date', 'status', 'plan']);
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $clientsQuery->where(function ($q) use ($searchTerm) {
+                $q->where('store_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('firstname', 'like', "%{$searchTerm}%")
+                    ->orWhere('middlename', 'like', "%{$searchTerm}%")
+                    ->orWhere('lastname', 'like', "%{$searchTerm}%");
+            });
+        }
+
+
+        if ($request->filled('date')) {
+            $clientsQuery->whereHas('subscriptions.payments', fn($q) => $q->whereDate('payment_date', $request->input('date')));
+        }
+
+        if ($request->filled('status')) {
+            $clientsQuery->whereHas('subscriptions', fn($q) => $q->where('status', $request->input('status')));
+        }
+
+        if ($request->filled('plan')) {
+            $planTitle = ucfirst($request->input('plan'));
+            $clientsQuery->whereHas('subscriptions.planDetails', fn($q) => $q->where('plan_title', $planTitle));
+        }
+
+        $clients = $clientsQuery->paginate(10)->withQueryString();
+
         return view('dashboards.super_admin.billing-history', compact(
             'clients',
             'latest',
@@ -211,10 +288,13 @@ public function subscribers(Request $request)
             'monthlyRevenue',
             'breakdownTotalBasic',
             'breakdownTotalPremium',
-            'breakdownGrandTotal'
+            'breakdownGrandTotal',
+            'basicPrice',
+            'premiumPrice',
+            'cardCounts',
+            'isFiltered' // Pass the new variable to the view
         ));
     }
-    
     public function create()
     {
         $plans = Plan::all();
