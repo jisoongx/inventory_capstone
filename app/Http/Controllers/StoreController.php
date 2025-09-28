@@ -213,12 +213,14 @@ class StoreController extends Controller
     // Add item to kiosk cart
     public function addToKioskCart(Request $request)
     {
+
         $request->validate([
             'prod_code' => 'required|exists:products,prod_code',
             'quantity' => 'required|integer|min:1'
         ]);
 
         try {
+            
             $product = Product::find($request->prod_code);
             
             if (!$product) {

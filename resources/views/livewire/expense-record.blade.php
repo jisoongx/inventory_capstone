@@ -28,7 +28,7 @@
                         <tr>
                             <th class="py-4 w-[26%]">Title</th>
                             <th class="py-4 w-[15%]">Cost</th>
-                            <th class="py-4">Date Recorded</th>
+                            <th class="py-4 w-[17%]">Date Recorded</th>
                             <th class="py-4 w-[15%]">Action</th>
                         </tr>
                     </thead>
@@ -65,9 +65,19 @@
                                 <button 
                                     type="button" wire:click="editExpense({{ $input->expense_id }})"
                                     class="px-3 py-1.5 rounded bg-red-500 text-white hover:bg-red-600
-                                        {{ $expired ? 'cursor-not-allowed hover:bg-red-500' : '' }}"
+                                        {{ $expired ? 'cursor-pointer hover:bg-red-500' : '' }}"
                                         {{ $expired ? 'disabled' : '' }}>Edit
                                 </button>
+                                    @if($expired)
+                                    <div x-data="{ open: false }" class="relative inline-block">
+                                        <span class="material-symbols-rounded-premium text-yellow-500 cursor-pointer"
+                                            @mouseenter="open = true" @mouseleave="open = false">crown</span>
+
+                                        <div x-show="open" x-transition class="absolute z-50 mt-2 bg-white border rounded px-2 py-1 text-[10px] shadow">
+                                            Subscribe to use this feature.
+                                        </div>
+                                    </div>
+                                    @endif
                                 @endif
                             </td>
                         </tr>

@@ -11,7 +11,7 @@
                 <span class="material-symbols-rounded">search</span>
             </span>
             <input type="text"
-                   wire:model.debounce.500ms="searchWord"
+                   wire:model.live.debounce.1ms="searchWord"
                    placeholder="Search..."
                    class="rounded-full border border-gray-500 p-3 pl-10 text-xs focus:ring focus:ring-blue-200 text-black">
         </div>
@@ -26,7 +26,7 @@
     </div>
 
     <div>
-        <table class="w-full text-xs text-left text-gray-700 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <table id="analysis-table" class="w-full text-xs text-left text-gray-700 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
             <thead class="uppercase text-xs font-semibold bg-gray-100 text-gray-600">
                 <tr>
                     <th class="cursor-pointer px-4 py-4 text-left" wire:click="sortBy('product_name')">Product ↓☰↑</th>
@@ -41,7 +41,7 @@
             </thead>
 
             <tbody class="divide-y divide-gray-100">
-                @forelse ($analysis as $analy)
+                @forelse ($analysisPage as $analy)
                     <tr class="hover:bg-gray-50 transition">
                         <td class="py-3 px-4">{{ $analy->product_name }}</td>
                         <td class="py-3 px-4">{{ $analy->category }}</td>
@@ -61,7 +61,7 @@
         </table>
 
         <div class="mt-4">
-            {{ $analysis->links() }}
+            {{ $analysisPage->links('vendor.livewire.tailwind', ['scrollTo' => '#analysis-table']) }}
         </div>
     </div>
 </div>

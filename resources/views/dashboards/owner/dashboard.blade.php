@@ -6,7 +6,7 @@
 
     <div class="px-4 space-y-4">
         @livewire('expiration-container')
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
             <div class="">
                 <span class="text-sm text-gray-500">{{ $dateDisplay->format('F j, Y') }}</span>
                 <h1 class="text-2xl font-semibold mb-4">Welcome, {{ ucwords($owner_name) }}!</h1>
@@ -32,20 +32,33 @@
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded shadow border">
-                    <p class="text-left text-black font-semibold text-xs pb-5">Sales by Category</p>
-
-                    <div class="w-full overflow-x-auto mt-3">
-                        <div id="productChart" 
-                            data-categories='@json($categories ?? [])' 
-                            data-products='@json($products ?? [])' 
-                            data-products-prev='@json($productsPrev ?? [])' 
-                            data-year='@json($year ?? [])'
-                            style="height: 350px;">
-                            <canvas>.</canvas>
+                <div class="flex gap-3 w-full pr-3">
+                    <div class="bg-white p-5 rounded shadow border w-[50%]">
+                        <p class="text-left text-black font-semibold text-xs">Sales by Category</p>
+                        <div class="overflow-x-auto mt-2">
+                            <div id="productChart" 
+                                data-categories='@json($categories ?? [])' 
+                                data-products='@json($products ?? [])' 
+                                data-products-prev='@json($productsPrev ?? [])' 
+                                data-year='@json($year ?? [])'
+                                style="height: 350px; width: 100%">
+                                <canvas></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded shadow border w-[50%]">
+                        <p class="text-left text-black font-semibold text-xs pb-5">Sales VS Loss - {{ $dateDisplay->format('F') }}</p>
+                        <div class="w-full overflow-x-auto mt-3">
+                            <div id="salesVSlossChart" 
+                                data-sales='@json($sales ?? [])' 
+                                data-losses='@json($losses ?? [])'
+                                style="height: 350px; width: 100%">
+                                <canvas></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <!-- profit chart -->
@@ -53,51 +66,51 @@
                     <p class="text-left text-black font-semibold text-xs border-b border-gray-200 pb-5">Monthly Net Profit</p>
                 <div class="flex items-center justify-between pt-4 gap-6">
 
-                <div class="flex flex-col">
-                    <span class="text-xl font-bold">
-                        {{ $dateDisplay->format('F Y') }}
-                    </span>
-                    <p class="text-xs">
-                        {{ $dateDisplay->format('D, d') }}
-                    </p>
-                </div>
-
-                <div class="flex flex-col text-right">
-                    @if (is_null($profitMonth) || $profitMonth === 0)
-                        <span class="text-xl text-red-700">
-                            Empty database.
-                        </span>
-                    @else
+                    <div class="flex flex-col">
                         <span class="text-xl font-bold">
-                            ₱{{ number_format($profitMonth, 2) }}
+                            {{ $dateDisplay->format('F Y') }}
                         </span>
-                    @endif
-                    <p class="text-xs">Current Net Profit</p>
-                </div>
+                        <p class="text-xs">
+                            {{ $dateDisplay->format('D, d') }}
+                        </p>
+                    </div>
 
-                <div class="flex-1 flex items-center justify-end gap-3">
-                    <a href="{{ route('dashboards.owner.expense_record') }}"
-                    class="bg-red-100 border border-red-900 px-6 py-2.5 rounded text-xs text-center">
-                        View
-                    </a>
+                    <div class="flex flex-col text-right">
+                        @if (is_null($profitMonth) || $profitMonth === 0)
+                            <span class="text-xl text-red-700">
+                                Empty database.
+                            </span>
+                        @else
+                            <span class="text-xl font-bold">
+                                ₱{{ number_format($profitMonth, 2) }}
+                            </span>
+                        @endif
+                        <p class="text-xs">Current Net Profit</p>
+                    </div>
 
-                    <!-- Year Selector -->
-                    <form method="GET" action="{{ route('dashboards.owner.dashboard') }}">
-                        <select name="year" id="year"
-                            class="rounded px-6 py-2.5 mt-4 border-gray-300 text-gray-700 text-xs focus:ring focus:ring-blue-200 focus:border-blue-400"
-                            onchange="this.form.submit()">
-                            @forelse ($year as $y)
-                                <option value="{{ $y }}"
-                                    {{ request('year') == $y || (empty(request('year')) && $loop->first) ? 'selected' : '' }}>
-                                    {{ $y }}
-                                </option>
-                            @empty
-                                <option class="text-black" value="{{ $latestYear }}">{{ $latestYear }}</option>
-                            @endforelse
-                        </select>
-                    </form>
+                    <div class="flex-1 flex items-center justify-end gap-3">
+                        <a href="{{ route('dashboards.owner.expense_record') }}"
+                        class="bg-red-100 border border-red-900 px-6 py-2.5 rounded text-xs text-center">
+                            View
+                        </a>
+
+                        <!-- Year Selector -->
+                        <form method="GET" action="{{ route('dashboards.owner.dashboard') }}">
+                            <select name="year" id="year"
+                                class="rounded px-6 py-2.5 mt-4 border-gray-300 text-gray-700 text-xs focus:ring focus:ring-blue-200 focus:border-blue-400"
+                                onchange="this.form.submit()">
+                                @forelse ($year as $y)
+                                    <option value="{{ $y }}"
+                                        {{ request('year') == $y || (empty(request('year')) && $loop->first) ? 'selected' : '' }}>
+                                        {{ $y }}
+                                    </option>
+                                @empty
+                                    <option class="text-black" value="{{ $latestYear }}">{{ $latestYear }}</option>
+                                @endforelse
+                            </select>
+                        </form>
+                    </div>
                 </div>
-            </div>
 
                 <div class="flex space-x-1 mt-2">
                     <button onclick="zoomIn()" id="zoomIn" title="Zoom In">
@@ -122,7 +135,7 @@
         </div>
 
         <!-- table dapit -->
-        <div class="">
+        <div class="space-y-4">
             <div class="grid p-5 bg-white rounded shadow border">
                 <h3 class="text-xs font-semibold text-black mb-5">Comparative Analysis</h3>
                 
@@ -303,15 +316,23 @@
 
                                         @if ($index < count($netprofits) - 1)
                                             @php
-                                                $nextProfit = $netprofits[$index + 1];
-                                                $diff = $nextProfit - $profit;
+                                                $next = $netprofits[$index + 1];
+                                                $diff = $next - $profit;
 
-                                                if ($profit == 0 && $nextProfit > 0) {
-                                                    $percent = null; 
-                                                } elseif ($profit == 0 && $nextProfit == 0) {
-                                                    $percent = 0;
+                                                if ($profit == 0) {
+                                                    if ($next > 0) {
+                                                        $percent = null;   // treat as infinity growth
+                                                        $status = 'increased';
+                                                    } elseif ($next < 0) {
+                                                        $percent = -100;   // from 0 to negative → 100% drop
+                                                        $status = 'decreased';
+                                                    } else {
+                                                        $percent = 0;      // 0 to 0
+                                                        $status = 'nochange';
+                                                    }
                                                 } else {
-                                                    $percent = ($diff / $profit) * 100;
+                                                    $percent = ($diff / abs($profit)) * 100;
+                                                    $status = $percent > 0 ? 'increased' : ($percent < 0 ? 'decreased' : 'nochange');
                                                 }
                                             @endphp
 
@@ -333,6 +354,9 @@
                     </table>
                 </div>
             </div> <!-- div sa table -->
+            <div class="grid p-5 bg-white rounded shadow border">
+                @livewire('product-analysis')
+            </div>
         </div>
     </div>
 

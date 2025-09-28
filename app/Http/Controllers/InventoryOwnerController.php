@@ -62,7 +62,7 @@ class InventoryOwnerController extends Controller
         $query .= " GROUP BY p.prod_code, p.category_id ORDER BY p.prod_code DESC";
 
         $products   = DB::select($query, $params);
-        $categories = DB::select("SELECT category_id, category FROM categories ORDER BY category ASC");
+        $categories = DB::select("SELECT category_id, category FROM categories WHERE owner_id = ? ORDER BY category ASC ", [$owner_id]);
         $units      = DB::select("SELECT unit_id, unit FROM units ORDER BY unit ASC");
 
         return view('inventory-owner', compact('owner_name', 'products', 'categories', 'units', 'search', 'category'));

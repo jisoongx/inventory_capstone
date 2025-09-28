@@ -113,8 +113,9 @@
 
                 <!-- Action Buttons -->
                 <div class="space-y-2">
-                    <button id="processPaymentBtn" disabled 
-                            class="text-xs w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg font-bold text-base transition-all duration-300 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button id="processPaymentBtn" disabled {{ $expired ? 'disabled' : '' }}
+                            class="text-xs w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg font-bold text-base transition-all duration-300 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed
+                            {{ $expired ? 'cursor-not-allowed hover:bg-red-500' : '' }}">
                         Process Payment
                     </button>
                 </div>
@@ -1094,11 +1095,13 @@ class KioskSystem {
 
     updateButtons() {
         const processBtn = document.getElementById('processPaymentBtn');
-        
-        processBtn.disabled = this.cartItems.length === 0;
-        
+
+        processBtn.disabled = {{ $expired ? 'true' : 'false' }} || this.cartItems.length === 0;
+
         if (this.cartItems.length === 0) {
-            processBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            processBtn.classList.add('opacity-50','cursor-not-allowed',
+                {!! $expired ? "'cursor-not-allowed','hover:bg-red-500','disabled'" : "" !!}
+            );
         } else {
             processBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }

@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const profits = JSON.parse(chartEl.dataset.profits || "[]");
     const months = JSON.parse(chartEl.dataset.months || "[]");
 
-    const lineChart = new Chart(ctx, {
+    new Chart(ctx, {
         type: "line",
         data: {
             labels: months,
@@ -43,7 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
             plugins: {
                 legend: { display: false },
                 zoom: {
-                    pan: { enabled: true, mode: "xy" },
                     zoom: { enabled: true, mode: "x" }
                 }
             },
@@ -77,37 +76,62 @@ document.addEventListener("DOMContentLoaded", () => {
         type: 'line',
         data: {
             labels: categories,
-            datasets: [
-                {
+            datasets: [{
                     label: year[0] || "",
                     data: products,
                     borderColor: "rgba(190, 21, 21, 1)",
                     backgroundColor: 'transparent',
-                    pointBackgroundColor: "rgba(190, 21, 21, 1)",
+                    borderWidth: 2,
+                    pointRadius: 1,
                 },
-                {
-                    label: year[1] || "",
+                ...(year.length > 1 ? [{
+                    label: year[1],
                     data: productsPrev,
                     borderColor: 'rgba(67, 102, 209, 1)',
                     backgroundColor: 'transparent',
-                    pointBackgroundColor: "rgba(67, 102, 209, 1)",
-                    borderDash: [7, ],
-                }
+                    borderDash: [7],
+                    borderWidth: 2,
+                    pointRadius: 1,
+                }] : [])
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: true },
-                zoom: {
-                    pan: { enabled: true, mode: 'xy' },
-                    zoom: { mode: 'x' }
+                legend: { 
+                    display: true,
                 }
             },
             scales: {
                 x: { grid: { display: true } },
                 y: { beginAtZero: true, display: false }
+            }
+        }
+    });
+
+    const chartSaleVsLoss = document.getElementById("salesVSlossChart");
+    const cty = chartSaleVsLoss.querySelector("canvas").getContext("2d");
+
+    const sales = JSON.parse(chartSaleVsLoss.dataset.sales || "[]");
+    const losses = JSON.parse(chartSaleVsLoss.dataset.losses || "[]");
+
+    new Chart(cty, {
+        type: "doughnut",
+        data: {
+            labels: ["Sales", "Loss"],
+            datasets: [{
+            data: [sales[sales.length - 1], losses[losses.length - 1]],
+            backgroundColor: ["#4CAF50", "#F44336"]
+            }]
+        },
+        options: {
+            rotation: -90,        
+            circumference: 180,   
+            plugins: {
+            legend: {
+                display: true,
+            }
             }
         }
     });

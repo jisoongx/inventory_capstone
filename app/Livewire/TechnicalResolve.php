@@ -151,6 +151,14 @@ class TechnicalResolve extends Component
             set req_status = 'In Progress'
             where req_id = ?", [$req_id]);
 
+        DB::update("
+            update conversation_message
+            set msg_seen_at = ?
+            where msg_seen_at is null
+            and req_id = ?
+            and sender_type in ('owner', 'staff')
+        ", [NOW(), $req_id]);
+
         
         $this->reset('newMessage');
 

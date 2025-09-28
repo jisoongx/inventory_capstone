@@ -171,6 +171,14 @@ class TechnicalRequest extends Component
             $this->newMessage = '';
         }
 
+        DB::update("
+            update conversation_message
+            set msg_seen_at = ?
+            where msg_seen_at is null
+            and req_id = ?
+            and sender_type = ?
+        ", [NOW(), $req_id, 'super']);
+
         
     }
 

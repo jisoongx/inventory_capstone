@@ -75,9 +75,5 @@
         </div>
 
     </div>
-
-        <div class="p-5 bg-white rounded shadow">
-            @livewire('product-analysis')
-        </div>
 </div>
 @endsection

@@ -11,6 +11,8 @@ class ProductAnalysis extends Component
 {
     use WithPagination;
 
+    protected $paginationTheme = 'tailwind';
+
     public $currentMonth;
     public $monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     public $sortField = 'product_name';
@@ -26,6 +28,11 @@ class ProductAnalysis extends Component
     }
 
     public function updatedCurrentMonth()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSearchWord()
     {
         $this->resetPage();
     }
@@ -52,29 +59,30 @@ class ProductAnalysis extends Component
             ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
             ->join('categories as c', 'p.category_id', '=', 'c.category_id')
             ->selectRaw('
+                p.prod_code,
                 p.name as product_name,
                 c.category as category,
-                month(r.receipt_date) as date,
                 SUM(ri.item_quantity) as unit_sold,
                 SUM(p.selling_price * ri.item_quantity) as total_sales,
                 SUM(p.cost_price * ri.item_quantity) as cogs,
                 (SUM(p.selling_price * ri.item_quantity) - SUM(p.cost_price * ri.item_quantity)) as profit,
                 ((SUM(p.selling_price * ri.item_quantity) - SUM(p.cost_price * ri.item_quantity))
                     / NULLIF(SUM(p.selling_price * ri.item_quantity),0)) * 100 as profit_margin_percent,
-                (SUM(p.selling_price * ri.item_quantity) / NULLIF(( 
+                (SUM(p.selling_price * ri.item_quantity) / NULLIF((
                     SELECT SUM(p2.selling_price * ri2.item_quantity)
                     FROM receipt r2
                     JOIN receipt_item ri2 ON r2.receipt_id = ri2.receipt_id
                     JOIN products p2 ON ri2.prod_code = p2.prod_code
-                    WHERE MONTH(r2.receipt_date) = MONTH(r.receipt_date)
-                      AND YEAR(r2.receipt_date) = YEAR(r.receipt_date)
-                      AND r2.owner_id = r.owner_id
+                    WHERE r2.owner_id = r.owner_id
+                    AND MONTH(r2.receipt_date) = ?
+                    AND YEAR(r2.receipt_date) = ?
                 ),0)) * 100 as contribution_percent
-            ')
+            ', [$this->currentMonth, $latestYear])
             ->whereMonth('r.receipt_date', $this->currentMonth)
             ->whereYear('r.receipt_date', $latestYear)
             ->where('r.owner_id', $owner_id)
-            ->groupBy('p.name','c.category','r.receipt_date','r.owner_id');
+            ->groupBy('p.prod_code','p.name','c.category','r.owner_id');
+
 
 
         if (!empty($this->searchWord)) {
@@ -84,13 +92,14 @@ class ProductAnalysis extends Component
                   ->orWhere('c.category','like',$search);
             });
         }
+        
 
         $query->orderBy($this->sortField, $this->sortDirection);
 
-        $analysis = $query->paginate(7);
+        $analysisPage = $query->paginate(7);
 
         return view('livewire.product-analysis', [
-            'analysis' => $analysis,
+            'analysisPage' => $analysisPage,
         ]);
     }
 }
