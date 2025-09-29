@@ -54,7 +54,8 @@
                     <button id="userButton" class="focus:outline-none">
                         <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">
                     </button>
-                    <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-10">
+                    <div id="dropdownMenu" class="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg hidden z-50">
+
                         <form method="GET" action="{{ route('super_admin.profile') }}">
                             <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</button>
                         </form>
@@ -69,8 +70,8 @@
 
         </main>
     </div>
-    
-     @livewireScripts
+
+    @livewireScripts
     <script>
         const userButton = document.getElementById('userButton');
         const dropdownMenu = document.getElementById('dropdownMenu');

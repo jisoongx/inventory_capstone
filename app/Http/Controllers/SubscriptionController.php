@@ -307,32 +307,26 @@ class SubscriptionController extends Controller
 
     public function store(Request $request, $planId)
     {
-        // Validate the incoming data
+        // Validate incoming data
         $validatedData = $request->validate([
-            'paymentMethod' => 'required|in:gcash,debit',
-            'paymentAccNum' => ['required', 'string', 'numeric', function ($attribute, $value, $fail) use ($request) {
-                if ($request->paymentMethod === 'gcash' && strlen($value) !== 11) {
-                    $fail('The GCash number must be 11 digits.');
-                }
-                if ($request->paymentMethod === 'debit' && strlen($value) !== 16) {
-                    $fail('The debit card number must be 16 digits.');
-                }
-            }],
+            'paypal_order_id' => 'required|string',
             'plan_id' => 'required|exists:plans,plan_id',
         ]);
 
         $owner = Auth::guard('owner')->user();
         $plan = Plan::find($planId);
 
-        // Additional server-side checks
         if (!$plan) {
             return response()->json(['message' => 'Plan not found.'], 404);
         }
+
         if ($owner->activeSubscription()->exists()) {
             return response()->json(['message' => 'You already have an active subscription.'], 409);
         }
 
         try {
+            // Optionally: Verify PayPal order via API here before creating subscription
+
             $subscription = Subscription::create([
                 'owner_id' => $owner->owner_id,
                 'plan_id' => $plan->plan_id,
@@ -344,19 +338,16 @@ class SubscriptionController extends Controller
             Payment::create([
                 'owner_id' => $owner->owner_id,
                 'subscription_id' => $subscription->subscription_id,
-                'payment_mode' => $validatedData['paymentMethod'],
-                'payment_acc_number' => $validatedData['paymentAccNum'],
+                'payment_mode' => 'paypal',
+                'payment_acc_number' => $validatedData['paypal_order_id'], // store PayPal order/transaction ID
                 'payment_amount' => $plan->plan_price,
                 'payment_date' => now(),
             ]);
 
-            // **On success, return a JSON success response**
             return response()->json(['success' => true, 'message' => 'Payment successful!']);
         } catch (\Exception $e) {
             Log::error('Subscription or Payment creation failed: ' . $e->getMessage());
-            // **On failure, return a JSON error response**
             return response()->json(['message' => 'Failed to process subscription. Please try again.'], 500);
         }
     }
-    
 }

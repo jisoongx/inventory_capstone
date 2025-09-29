@@ -115,11 +115,16 @@
 
             {{-- Dynamic content will be loaded here via AJAX --}}
             <div id="billing-table-content">
-                @if($isFiltered)
+                @php
+                $filtersApplied = request('search') || request('date') || request('status') || request('plan');
+                @endphp
+
+                @if($filtersApplied)
                 <div id="pagination-summary" class="p-4 rounded-lg bg-indigo-50 mb-5 border border-indigo-200 text-sm text-indigo-800">
                     Showing {{ $clients->total() }} record(s) matching your filters
                 </div>
                 @endif
+
 
                 @if($clients->isEmpty())
                 <div class="bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100">
@@ -136,7 +141,7 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table id="billingTable" class="min-w-full">
-                            <thead class="bg-slate-50">
+                            <thead class="bg-slate-50 border-b border-gray-100">
                                 <tr>
                                     <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 uppercase">
                                         <div class="flex items-center gap-1"><span class="material-symbols-outlined text-base">person</span> Owner</div>
@@ -166,7 +171,7 @@
                                 $paymentMode = $latestPayment->payment_mode ?? 'N/A';
                                 $paymentAmount = number_format($latestPayment->payment_amount ?? 0, 2);
                                 @endphp
-                                <tr>
+                                <tr class="transition-colors duration-200 hover:bg-blue-50">
                                     <td class="px-6 py-4">
                                         <div class="font-semibold text-slate-900 text-sm">{{ $ownerName }}</div>
                                     </td>

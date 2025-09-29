@@ -29,8 +29,19 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
 
     {{-- This div is used by Tailwind's JIT compiler to ensure these dynamic classes are not purged. --}}
 
+    {{-- Tailwind safelist for dynamic classes --}}
+    <div class="hidden">
+        border-emerald-500 border-red-500 border-amber-500
+        hover:border-emerald-400 hover:border-red-400 hover:border-amber-400
+        shadow-emerald-500/10 shadow-red-500/10 shadow-amber-500/10
+        text-emerald-600 text-red-600 text-amber-600
+        bg-emerald-100 bg-red-100 bg-amber-100
+    </div>
+
+
 
     @php
+
     // Data for stat cards, only needed on full page load
     $statCards=[ 'active'=> ['count' => $activeCount, 'label' => 'Active Subscriptions', 'icon' => 'verified', 'color' => 'emerald', 'hint' => 'Currently billed'],
     'expired' => ['count' => $expiredCount, 'label' => 'Expired Subscriptions', 'icon' => 'cancel', 'color' => 'red', 'hint' => 'Needs follow-up'],
@@ -64,8 +75,10 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                             <div class="text-right shrink-0">
                                 <div class="text-xs text-gray-500 font-semibold mb-1">{{ $card['hint'] }}</div>
                                 <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition-all duration-300 group-hover:bg-{{$color}}-500 focus-within:bg-{{$color}}-500">
-                                    <span class="material-symbols-outlined text-base text-gray-400 group-hover:text-indigo-600 group-focus-within:text-indigo-600">
+                                    <span class="material-symbols-outlined stat-card-chevron text-base text-gray-400 group-hover:text-indigo-600 group-focus-within:text-indigo-600">
                                         chevron_right
+                                    </span>
+
                                     </span>
                                 </div>
 
@@ -159,10 +172,10 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                 @endif
 
                 @if($clients->isNotEmpty())
-                <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-100">
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden  border-gray-100">
                     <div class="overflow-x-auto">
                         <table class="min-w-full">
-                            <thead class="bg-slate-50 sticky top-0 z-10">
+                            <thead class="bg-slate-50 sticky top-0 z-10 border-b border-gray-100">
                                 <tr>
                                     <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">
                                         <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">storefront</span>Store</div>
@@ -190,7 +203,7 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                                 $planTitle = trim($subscription->planDetails->plan_title ?? '-');
                                 $subStatus = $subscription->status;
                                 @endphp
-                                <tr class="transition-colors duration-200 hover:bg-slate-50">
+                                <tr class="transition-colors duration-200 hover:bg-blue-50">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white text-sm font-semibold shadow-md">{{ strtoupper(substr($client->store_name, 0, 2)) }}</div>
@@ -258,13 +271,31 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                 document.querySelectorAll('.stat-card-link').forEach(card => {
                     const cardStatus = card.dataset.filterValue;
                     const color = card.dataset.color;
+
+                    // Reset border and shadow
                     card.classList.remove(`border-${color}-500`, `shadow-${color}-500/10`);
                     card.classList.add('border-gray-200');
+
+                    // Reset chevron
+                    const chevron = card.querySelector('.stat-card-chevron');
+                    if (chevron) {
+                        chevron.classList.remove('text-indigo-500');
+                        chevron.classList.add('text-gray-400');
+                    }
+
+                    // Set active styles
                     if (cardStatus === status) {
                         card.classList.remove('border-gray-200');
                         card.classList.add(`border-${color}-500`, `shadow-${color}-500/10`);
+
+                        if (chevron) {
+                            chevron.classList.remove('text-gray-400');
+                            chevron.classList.add('text-indigo-500'); // always indigo
+                        }
                     }
                 });
+
+
 
                 document.getElementById('plan-filters').style.display = ['active', 'expired'].includes(status) ? 'flex' : 'none';
                 document.getElementById('expiry-filters').style.display = status === 'upcoming' ? 'flex' : 'none';
