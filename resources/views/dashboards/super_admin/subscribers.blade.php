@@ -199,10 +199,19 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                                 @foreach($client->subscriptions as $subscription)
                                 {{-- Your table row content here --}}
                                 @php
-                                $daysLeft = now()->diffInDays(\Carbon\Carbon::parse($subscription->subscription_end ?? now()), false);
                                 $planTitle = trim($subscription->planDetails->plan_title ?? '-');
                                 $subStatus = $subscription->status;
+                                $endDate = \Carbon\Carbon::parse($subscription->subscription_end ?? now());
+
+                                if (now()->lte($endDate)) {
+                                // inclusive (counts today + end date)
+                                $daysLeft = now()->diffInDays($endDate) + 1;
+                                } else {
+                                // already expired
+                                $daysLeft = 0;
+                                }
                                 @endphp
+
                                 <tr class="transition-colors duration-200 hover:bg-blue-50">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">

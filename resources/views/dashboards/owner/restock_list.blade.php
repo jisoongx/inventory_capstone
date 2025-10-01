@@ -1,151 +1,313 @@
 @extends('dashboards.owner.owner')
 
 @section('content')
-<div class="p-6 flex flex-col lg:flex-row gap-6">
+<div class="p-1 sm:p-2 lg:p-4 bg-slate-50 min-h-screen">
+    <div class="flex flex-col lg:flex-row gap-4">
 
-    <!-- 📄 Current Restock (Main Content) -->
-    <div class="flex-1 bg-white border-t-4 border-gray-700 shadow rounded-md p-6">
-        <div class="flex items-center justify-between mb-4">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800">Restock Details</h1>
-                <p class="text-gray-500 text-sm">View details of your selected restock list</p>
-            </div>
-            @if($restocks->count())
-            <div class="text-sm text-blue-400">
-                Latest: {{ \Carbon\Carbon::parse($restocks->first()->restock_created)->format('M d, Y • h:i A') }}
-            </div>
-            @endif
-        </div>
-
-        <!-- Toolbar (optional future actions) -->
-        <div class="flex justify-end mb-3 gap-2">
-            <button
-                class="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50">
-                Export
-            </button>
-            <button
-                class="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50">
-                Print
-            </button>
-        </div>
-
-        <!-- Dynamic content -->
-        <div id="restockContent" class="transition-opacity duration-200 opacity-100">
-            @if($restocks->count())
-            @php
-            $latest = $restocks->first();
-            $latestItems = $restockItems->where('restock_id', $latest->restock_id);
-            @endphp
-
-            <h2 class="text-sm font-medium text-gray-700 mb-3">
-                {{ \Carbon\Carbon::parse($latest->restock_created)->format('F d, Y • h:i A') }}
-            </h2>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-                    <thead class="bg-gray-50 text-gray-600">
-                        <tr>
-                            <th class="px-4 py-2 text-left font-medium">Product</th>
-                            <th class="px-4 py-2 text-center font-medium">Quantity</th>
-
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        @foreach($latestItems as $item)
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-4 py-2 text-gray-800">{{ $item->name }}</td>
-                            <td class="px-4 py-2 text-center">{{ $item->item_quantity }}</td>
-
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @else
-            <div class="flex items-center gap-2 text-gray-500 bg-gray-50 border border-gray-200 p-4 rounded-md text-sm">
-                <span></span> No restock has been finalized yet.
-            </div>
-            @endif
-        </div>
-    </div>
-
-    <!-- 📜 Restock History (Sidebar) -->
-    <div class="w-full lg:w-80 bg-white border-t-4 border-gray-700 shadow rounded-md p-6">
-        <h2 class="text-md font-semibold text-gray-800 mb-3">History</h2>
-        <p class="text-xs text-gray-500 mb-4">Click a record to view details</p>
-
-        @if($restocks->count())
-        <ul class="space-y-2">
-            @foreach($restocks as $index => $restock)
-            @php
-            $items = $restockItems->where('restock_id', $restock->restock_id);
-            @endphp
-            <li id="history-{{ $restock->restock_id }}"
-                class="p-3 rounded-md cursor-pointer transition
-                @if($index === 0) bg-blue-50 border-l-4 border-blue-500 @else hover:bg-gray-50 border border-gray-200 @endif"
-                onclick="showRestock('{{ $restock->restock_id }}')">
-                <div class="text-sm font-medium text-gray-800">
-                    {{ \Carbon\Carbon::parse($restock->restock_created)->format('M d, Y • h:i A') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                    {{ $items->count() }} items
+        <div class="flex-1 bg-white shadow-md rounded p-6 sm:p-8">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between pb-6 border-b border-slate-200">
+                <div>
+                    <a href="{{ route('restock_suggestion') }}"
+                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors mb-3">
+                        <span class="material-symbols-rounded text-xl">arrow_back</span>
+                        Back to Suggestions
+                    </a>
+                    <h1 class="text-xl font-semibold text-slate-800">Restock Details</h1>
+                    <p class="text-slate-500 mt-1 text-sm">Review the items from a finalized restock list.</p>
                 </div>
 
-                <!-- Hidden content -->
-                <div class="hidden" id="restock-{{ $restock->restock_id }}">
-                    <h2 class="text-sm font-medium text-gray-700 mb-3">
-                        {{ \Carbon\Carbon::parse($restock->restock_created)->format('F d, Y • h:i A') }}
-                    </h2>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-                            <thead class="bg-gray-50 text-gray-600">
-                                <tr>
-                                    <th class="px-4 py-2 text-left font-medium">Product</th>
-                                    <th class="px-4 py-2 text-center font-medium">Quantity</th>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <form id="exportForm" method="POST" action="{{ route('owner.exportPdf') }}">
+                        @csrf
+                        <input type="hidden" name="restock_id" id="exportRestockId">
+                        <input type="hidden" name="restock_created" id="exportRestockCreated">
+                        <input type="hidden" name="restock_items" id="exportRestockItems">
+                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
+                            <span class="material-symbols-rounded text-sm">download</span>
+                            Export
+                        </button>
+                    </form>
 
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                @foreach($items as $item)
-                                <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-4 py-2 text-gray-800">{{ $item->name }}</td>
-                                    <td class="px-4 py-2 text-center">{{ $item->item_quantity }}</td>
+                    <button id="printBtn" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
+                        <span class="material-symbols-rounded text-sm">print</span>
+                        Print
+                    </button>
 
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                </div>
+            </div>
+
+            <div id="restockContent" class="transition-opacity duration-300 opacity-100 pt-6">
+                @if($restocks->count())
+                @php
+                $latest = $restocks->first();
+                $latestItems = $restockItems->where('restock_id', $latest->restock_id);
+                @endphp
+
+                <div class="flex items-center justify-between mb-4">
+
+                    <span class="text-xs font-medium bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full">
+                        {{ \Carbon\Carbon::parse($latest->restock_created)->format('F d, Y • h:i A') }}
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-100 text-slate-600">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold">Product</th>
+                                <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
+                                <th class="px-4 py-3 text-center font-semibold w-32">Cost Price</th>
+                                <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($latestItems as $item)
+                            <tr>
+                                <td class="px-4 py-3">{{ $item->name }}</td>
+                                <td class="px-4 py-3 text-center">{{ $item->item_quantity }}</td>
+                                <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td>
+                                <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="bg-slate-50 font-semibold text-slate-700">
+                            <tr>
+                                <td colspan="3" class="px-4 py-3 text-right">Total</td>
+                                <td class="px-4 py-3 text-center">
+                                    {{ number_format($latestItems->sum('subtotal'), 2) }}
+                                </td>
+                            </tr>
+                        </tfoot>
+
+
+                    </table>
+                </div>
+                @else
+                <div class="flex flex-col items-center justify-center text-center p-10 bg-slate-100 rounded-lg">
+                    <span class="material-symbols-rounded text-5xl text-slate-400 mb-2">inventory_2</span>
+                    <h3 class="font-semibold text-slate-700">No Restock Lists Found</h3>
+                    <p class="text-sm text-slate-500">Create and finalize a restock list from the suggestions page first.</p>
+                </div>
+                @endif
+            </div>
+        </div>
+
+        <div class="w-full lg:w-96 bg-white shadow-md rounded p-6 sm:p-8 self-start">
+            <h2 class="text-lg font-semibold text-slate-800 mb-1">History</h2>
+            <p class="text-sm text-slate-500 mb-6 text-sm">Select a past list to view its details.</p>
+
+            @if($restocks->count())
+            <ul class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                @foreach($restocks as $index => $restock)
+                @php
+                $items = $restockItems->where('restock_id', $restock->restock_id);
+                @endphp
+                <li id="history-{{ $restock->restock_id }}"
+                    class="p-4 rounded-lg cursor-pointer transition-all duration-200 @if($index === 0) bg-rose-50 border-l-4 border-red-500 @else border border-slate-200 hover:border-red-400 hover:bg-rose-50/50 @endif"
+                    onclick="showRestock('{{ $restock->restock_id }}')">
+
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm font-semibold text-slate-700">
+                            {{ \Carbon\Carbon::parse($restock->restock_created)->format('M d, Y') }}
+                        </div>
+                        <div class="text-xs font-medium text-slate-500">
+                            {{ $items->count() }} {{ Str::plural('item', $items->count()) }}
+                        </div>
                     </div>
-                </div>
-            </li>
-            @endforeach
-        </ul>
-        @else
-        <p class="text-xs text-gray-500">No restock history found.</p>
-        @endif
+                    <div class="text-xs text-slate-500 mt-1">
+                        {{ \Carbon\Carbon::parse($restock->restock_created)->format('h:i A') }}
+                    </div>
+
+                    <div class="hidden" id="restock-{{ $restock->restock_id }}">
+                        <div class="flex items-center justify-between mb-4">
+
+                            <span class="text-xs font-medium bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full">
+                                {{ \Carbon\Carbon::parse($restock->restock_created)->format('F d, Y • h:i A') }}
+                            </span>
+                        </div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-100 text-slate-600">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-semibold">Product</th>
+                                        <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
+                                        <th class="px-4 py-3 text-center font-semibold w-32">Cost Price</th>
+                                        <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    @foreach($items as $item)
+                                    <tr class="hover:bg-rose-50/50 transition-colors">
+                                        <td class="px-4 py-3 text-slate-800 font-medium">{{ $item->name }}</td>
+                                        <td class="px-4 py-3 text-center font-mono text-slate-700">{{ $item->item_quantity }}</td>
+                                        <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td>
+                                        <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot class=" border-t-4 border-slate-100 font-bold text-indigo-500">
+                                    <tr>
+                                        <td colspan="3" class="px-4 py-3 text-left">Total</td>
+                                        <td class="px-4 py-3 text-center">
+                                            {{ number_format($items->sum('subtotal'), 2) }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+
+                            </table>
+
+                        </div>
+                    </div>
+                </li>
+                @endforeach
+            </ul>
+            @else
+            <p class="text-sm text-slate-500 text-center py-4">No history to show.</p>
+            @endif
+        </div>
     </div>
 </div>
 
-<!-- Script -->
 <script>
-    function showRestock(id) {
-        // Swap content
-        const content = document.getElementById('restock-' + id).innerHTML;
-        const container = document.getElementById('restockContent');
-        container.style.opacity = 0;
-        setTimeout(() => {
-            container.innerHTML = content;
-            container.style.opacity = 1;
-        }, 200);
+    document.addEventListener('DOMContentLoaded', function() {
+        // Automatically set export data for the first (latest) restock
+        const firstHistory = document.querySelector('[id^="history-"]');
+        if (firstHistory) {
+            const id = firstHistory.id.replace('history-', '');
+            showRestock(id, false); // false = don't animate on page load
+        }
 
-        // Highlight active history item
-        document.querySelectorAll('[id^="history-"]').forEach(el => {
-            el.classList.remove('bg-blue-50', 'border-l-4', 'border-blue-500');
-            el.classList.add('hover:bg-gray-50', 'border', 'border-gray-200');
+        // Export CSV
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function() {
+                const table = document.querySelector('#restockContent table');
+                if (!table) return alert('No data to export!');
+
+                const rows = table.querySelectorAll('tr');
+                let csv = [];
+
+                rows.forEach(row => {
+                    const cols = row.querySelectorAll('th, td');
+                    const rowData = Array.from(cols).map(col => `"${col.innerText.trim()}"`);
+                    csv.push(rowData.join(','));
+                });
+
+                const blob = new Blob([csv.join('\n')], {
+                    type: 'text/csv;charset=utf-8;'
+                });
+                const url = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'restock.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+
+        document.getElementById('printBtn').addEventListener('click', function() {
+            const content = document.getElementById('restockContent').innerHTML;
+            if (!content || !content.trim()) {
+                return alert('No data to print!');
+            }
+
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.open();
+            printWindow.document.write(`
+        <html>
+        <head>
+            <title>Restock List</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                th, td {
+                    border: 1px solid #ccc;
+                    padding: 8px;
+                    text-align: center;
+                }
+                th {
+                    background: #f1f1f1;
+                }
+                h2 {
+                    text-align: center;
+                    margin-bottom: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>SHOPLYTIX RESTOCK LIST</h2>
+            ${content}
+        </body>
+        </html>
+    `);
+            printWindow.document.close();
+
+            printWindow.onload = function() {
+                printWindow.focus();
+                printWindow.print();
+            };
         });
-        const active = document.getElementById('history-' + id);
-        active.classList.remove('hover:bg-gray-50', 'border', 'border-gray-200');
-        active.classList.add('bg-blue-50', 'border-l-4', 'border-blue-500');
+
+    });
+
+    /**
+     * Show restock details in the main container and update export inputs
+     * @param {string} id - restock id
+     * @param {boolean} animate - whether to animate opacity (default true)
+     */
+    function showRestock(id, animate = true) {
+        const templateEl = document.getElementById('restock-' + id);
+        if (!templateEl) return;
+
+        const container = document.getElementById('restockContent');
+        if (animate) container.style.opacity = 0;
+
+        setTimeout(() => {
+            container.innerHTML = templateEl.innerHTML;
+            if (animate) container.style.opacity = 1;
+        }, animate ? 200 : 0);
+
+        document.querySelectorAll('[id^="history-"]').forEach(el => {
+            el.classList.remove('bg-rose-50', 'border-l-4', 'border-red-500');
+            el.classList.add('border', 'border-slate-200', 'hover:border-red-400', 'hover:bg-rose-50/50');
+        });
+        const activeEl = document.getElementById('history-' + id);
+        activeEl.classList.remove('border', 'border-slate-200', 'hover:border-red-400', 'hover:bg-rose-50/50');
+        activeEl.classList.add('bg-rose-50', 'border-l-4', 'border-red-500');
+
+        // Populate export inputs
+        const restockCreatedSpan = templateEl.querySelector('span.text-xs.font-medium.bg-rose-100');
+        const rows = templateEl.querySelectorAll('tbody tr');
+        const items = [];
+
+        rows.forEach(row => {
+            if (row.children.length >= 4) {
+                items.push({
+                    name: row.children[0].innerText,
+                    quantity: row.children[1].innerText,
+                    cost_price: row.children[2].innerText,
+                    subtotal: row.children[3].innerText
+                });
+            }
+        });
+
+        document.getElementById('exportRestockId').value = id;
+        document.getElementById('exportRestockCreated').value = restockCreatedSpan ? restockCreatedSpan.innerText : '';
+        document.getElementById('exportRestockItems').value = JSON.stringify(items);
     }
 </script>
+
+
+
+
+
 @endsection

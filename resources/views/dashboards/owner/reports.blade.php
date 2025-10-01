@@ -6,12 +6,12 @@
     @livewire('expiration-container')
 </div>
 
-<div class="md:p-6 space-y-3 -mt-2">
+<div class="md:p-4 space-y-5 -mt-2">
 
-    <div class="flex flex-col md:flex-row md:gap-3">
+    <div class="flex flex-col md:flex-row md:gap-4">
 
         <!-- Restock Card -->
-        <div class="relative bg-white rounded-lg md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
+        <div class="relative bg-white rounded md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-lg hover:shadow-xl transition-all duration-300">
 
             <!-- Top Green Bar -->
             <div class="absolute top-0 left-0 w-full h-1 bg-gray-700 rounded-t-2xl"></div>
@@ -42,7 +42,7 @@
         </div>
 
         <!-- Seasonal Trends Card -->
-        <div class="relative bg-white rounded-lg md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-md hover:shadow-xl transition-all duration-300">
+        <div class="relative bg-white rounded md:p-6 flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-6 shadow-lg hover:shadow-xl transition-all duration-300">
 
             <!-- Top Blue Bar -->
             <div class="absolute top-0 left-0 w-full h-1 bg-gray-700 rounded-t-2xl"></div>

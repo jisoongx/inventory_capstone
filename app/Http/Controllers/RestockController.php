@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -9,15 +9,59 @@ use Illuminate\Support\Facades\Auth;
 
 class RestockController extends Controller
 {
-   public function restockSuggestion(Request $request)
-{
-    $ownerId = Auth::guard('owner')->id();
-    $currentYear = now()->year;
 
-    $products = DB::table('products')
-        ->join('inventory', 'products.prod_code', '=', 'inventory.prod_code')
-        ->join('categories', 'products.category_id', '=', 'categories.category_id')
-        ->leftJoin(DB::raw("(
+    public function exportPdf(Request $request)
+    {
+        $restockCreated = $request->input('restock_created');
+        $items = json_decode($request->input('restock_items'), true);
+
+        // Normalize values to floats/ints
+        $items = array_map(function ($item) {
+            return [
+                'name'       => $item['name'],
+                'quantity'   => (int) $item['quantity'],
+                'cost_price' => (float) str_replace(',', '', $item['cost_price']),
+                'subtotal'   => (float) str_replace(',', '', $item['subtotal']),
+            ];
+        }, $items);
+
+        $pdf = PDF::loadView('dashboards.owner.restock_pdf', [
+            'restock_created' => $restockCreated,
+            'items' => $items
+        ]);
+
+        return $pdf->download('restock-' . $restockCreated . '.pdf');
+    }
+
+
+
+
+    public function restockSuggestion(Request $request)
+    {
+        $ownerId = Auth::guard('owner')->id();
+        $currentYear = now()->year;
+
+        // All products for custom restock dropdown
+        $allProducts = DB::table('inventory')
+            ->join('products', 'inventory.prod_code', '=', 'products.prod_code')
+            ->where('inventory.owner_id', $ownerId)
+            ->select(
+                'inventory.inven_code',
+                'products.name',
+                'inventory.stock',
+                'products.cost_price' // 👈 add this
+            )
+            ->get();
+
+
+        // All categories for filter
+        $categories = DB::table('categories')->get();
+
+        // Products with suggested restock, excluding already finalized ones
+        $products = DB::table('products')
+            ->join('inventory', 'products.prod_code', '=', 'inventory.prod_code')
+            ->join('categories', 'products.category_id', '=', 'categories.category_id')
+            ->leftJoin(DB::raw("(
             SELECT
                 ri.prod_code,
                 SUM(ri.item_quantity) as total_sold,
@@ -27,61 +71,64 @@ class RestockController extends Controller
             WHERE YEAR(r.receipt_date) = {$currentYear}
             GROUP BY ri.prod_code
         ) as sales"), 'products.prod_code', '=', 'sales.prod_code')
-        ->where('products.owner_id', $ownerId)
-        ->whereNotNull('sales.total_sold')
-        ->select(
-            'inventory.inven_code',
-            'products.prod_code',
-            'products.name',
-            'products.cost_price',
-            'products.selling_price',
-            'products.description',
-            'inventory.stock',
-            'products.stock_limit',
-            'inventory.batch_number',
-            'categories.category',
-            DB::raw('COALESCE(sales.total_sold, 0) as total_sold'),
-            DB::raw('COALESCE(sales.order_count, 0) as order_count')
-        )
-        ->get()
-        ->map(function ($product) {
+            ->leftJoin('restock_item as ri_finalized', 'inventory.inven_code', '=', 'ri_finalized.inven_code')
+            ->leftJoin('restock as r_finalized', 'ri_finalized.restock_id', '=', 'r_finalized.restock_id')
+            ->where('products.owner_id', $ownerId)
+            ->whereNull('ri_finalized.item_id') // exclude products already finalized
+            ->select(
+                'inventory.inven_code',
+                'products.category_id',
+                'products.prod_code',
+                'products.name',
+                'products.cost_price',
+                'products.selling_price',
+                'products.description',
+                'inventory.stock',
+                'products.stock_limit',
+                'inventory.batch_number',
+                'categories.category',
+                DB::raw('COALESCE(sales.total_sold, 0) as total_sold'),
+                DB::raw('COALESCE(sales.order_count, 0) as order_count')
+            )
+            ->get()
+            ->map(function ($product) {
 
-            // Average daily sales for the year
-            $avgDailySales = $product->total_sold / 365;
+                // --- Average daily sales ---
+                $avgDailySales = $product->total_sold / 365;
 
-            // Dynamic lead time
-            if ($avgDailySales >= 10) {
-                $leadTime = 1; // very fast-moving
-            } elseif ($avgDailySales >= 5) {
-                $leadTime = 2; // medium-moving
-            } elseif ($avgDailySales >= 2) {
-                $leadTime = 3; // slow-medium
-            } else {
-                $leadTime = 5; // slow-moving
-            }
+                // --- Dynamic lead time ---
+                if ($avgDailySales >= 10) {
+                    $leadTime = 1; // very fast-moving
+                } elseif ($avgDailySales >= 5) {
+                    $leadTime = 2; // medium-moving
+                } elseif ($avgDailySales >= 2) {
+                    $leadTime = 3; // slow-medium
+                } else {
+                    $leadTime = 5; // slow-moving
+                }
 
-            // Reorder point: minimum of 3 units
-            $reorderPoint = max(round($avgDailySales * $leadTime), 3);
+                // --- Reorder point ---
+                $reorderPoint = max(round($avgDailySales * $leadTime), 3);
 
-            // Suggested restock using EOQ formula minus current stock
-            $eoq = round(sqrt((2 * $product->total_sold * $product->cost_price) / 1));
-            $suggestedQuantity = max($eoq - $product->stock, 0);
+                // --- EOQ suggested quantity ---
+                $eoq = round(sqrt((2 * $product->total_sold * $product->cost_price) / 1));
+                $suggestedQuantity = max($eoq - $product->stock, 0);
 
-            // Attach computed values
-            $product->lead_time_days = $leadTime;
-            $product->reorder_point = $reorderPoint;
-            $product->suggested_quantity = $suggestedQuantity;
-            $product->eoq = $eoq;
+                // Attach computed values
+                $product->lead_time_days = $leadTime;
+                $product->reorder_point = $reorderPoint;
+                $product->suggested_quantity = $suggestedQuantity;
+                $product->eoq = $eoq;
 
-            return $product;
-        })
-        // Sort by suggested quantity descending
-        ->sortByDesc('suggested_quantity')
-        // Reindex collection
-        ->values();
+                return $product;
+            })
+            ->filter(fn($product) => $product->suggested_quantity > 0) // only products needing restock
+            ->sortByDesc('suggested_quantity')
+            ->values();
 
-    return view('dashboards.owner.restock_suggestion', compact('products', 'currentYear'));
-}
+        return view('dashboards.owner.restock_suggestion', compact('products', 'allProducts', 'currentYear', 'categories'))->with('success', 'Restock list has been successfully finalized!');
+    }
+
 
 
 
@@ -90,24 +137,69 @@ class RestockController extends Controller
     {
         $ownerId = auth()->guard('owner')->id();
 
+        // Validate inputs
+        $request->validate([
+            'products.*' => 'exists:inventory,inven_code',
+            'quantities.*' => 'integer|min:1',
+            'custom_products.*' => 'exists:inventory,inven_code',
+            'custom_quantities.*' => 'integer|min:1',
+        ]);
+
+        // All products for dropdown (can include all stock)
+     
+
         // Create restock header
         $restockId = DB::table('restock')->insertGetId([
             'owner_id' => $ownerId,
             'restock_created' => now(),
         ]);
 
-        // Loop through selected products
-        foreach ($request->products as $invenCode) {
-            DB::table('restock_item')->insert([
-                'restock_id'    => $restockId,
-                'inven_code'    => $invenCode,  // ✅ matches Blade
-                'item_quantity' => $request->quantities[$invenCode] ?? 0,
-                'item_priority' => $request->priorities[$invenCode] ?? null,
-            ]);
+        $items = [];
+
+
+        // Add products from main table
+        if ($request->filled('products')) {
+            foreach ($request->products as $code) {
+                $items[] = [
+                    'inven_code' => $code,
+                    'item_quantity' => $request->quantities[$code] ?? 0,
+                ];
+            }
         }
+
+        // Add custom products from modal
+        if ($request->filled('custom_products')) {
+            foreach ($request->custom_products as $code) {
+                $items[] = [
+                    'inven_code' => $code,
+                    'item_quantity' => $request->custom_quantities[$code] ?? 0,
+                ];
+            }
+        }
+
+        // Combine duplicates by inven_code
+        $items = collect($items)
+            ->groupBy('inven_code')
+            ->map(function ($group, $inven_code) use ($restockId) {
+                return [
+                    'restock_id' => $restockId,
+                    'inven_code' => $inven_code,
+                    'item_quantity' => array_sum(array_column($group->toArray(), 'item_quantity')),
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        // Insert all items at once
+        if (!empty($items)) {
+            DB::table('restock_item')->insert($items);
+        }
+
 
         return redirect()->back()->with('success', 'Restock list finalized successfully!');
     }
+
+    
 
     public function list()
     {
@@ -121,9 +213,15 @@ class RestockController extends Controller
         $restockItems = DB::table('restock_item')
             ->join('inventory', 'restock_item.inven_code', '=', 'inventory.inven_code')
             ->join('products', 'inventory.prod_code', '=', 'products.prod_code')
-            ->select('restock_item.*', 'products.name')
+            ->select(
+                'restock_item.*',
+                'products.name',
+                'products.cost_price',
+                DB::raw('restock_item.item_quantity * products.cost_price as subtotal')
+            )
             ->orderByDesc('restock_item.restock_id')
             ->get();
+
 
         return view('dashboards.owner.restock_list', compact('restocks', 'restockItems'));
     }
