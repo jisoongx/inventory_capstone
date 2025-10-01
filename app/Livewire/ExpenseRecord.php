@@ -63,26 +63,6 @@ class ExpenseRecord extends Component
 
 
 
-
-    // private function expirationTracker() {
-    //     $owner_id = Auth::guard('owner')->user()->owner_id;
-
-    //     $owner = collect(DB::select("
-    //         select o.owner_id, s.subscription_end 
-    //         from owners o
-    //         join subscriptions s on o.owner_id = s.owner_id
-    //         where o.owner_id = ?
-    //         order by subscription_id desc
-    //         limit 1", [$owner_id]))->first();
-
-    //     if ($owner->subscription_end <= date('Y-m-d')) {
-    //         return $this->isExpired = true;
-    //     }
-
-    // }
-
-
-
     public function render() {
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');

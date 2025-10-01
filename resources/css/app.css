@@ -19,7 +19,7 @@
   font-family: 'Material Symbols Rounded';
   font-weight: normal;
   font-style: normal;
-  font-size: 24px;
+  font-size: 20px;
   display: inline-block;
   line-height: 1;
   text-transform: none;
@@ -28,7 +28,7 @@
   direction: ltr;
   font-variation-settings:
   'FILL' 0,
-  'wght' 600,
+  'wght' 400,
   'GRAD' 200,
   'opsz' 20
 }
@@ -172,6 +172,22 @@
     'wght' 400,
     'GRAD' 0,
     'opsz' 24;
+}
+
+
+.scrollbar-custom::-webkit-scrollbar {
+  height: 1px;
+}
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: #566274;
+  border-radius: 9999px;
+}
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+.scrollbar-custom {
+  scrollbar-color: #566274 #ffffff; 
+  scrollbar-width: thin;
 }
 
 

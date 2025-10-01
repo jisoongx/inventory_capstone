@@ -11,7 +11,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"> -->
     <style>
         .nav-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
     </style>
 </head>
@@ -45,7 +45,7 @@
                     </a>
 
                     <div id="reportsDropdown" class="ml-5 mt-1 space-y-1 border-l-2 border-gray-600">
-                        <a href="" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                        <a href="{{ route('dashboards.owner.rsp') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Sales & Performance Reports</span>
                         </a>
                         <a href="" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">

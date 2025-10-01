@@ -49,6 +49,9 @@ Route::view('/owner/technical-request', 'dashboards.owner.technical_request')->n
 
 
 
+Route::view('/reports/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('dashboards.owner.rsp');
+
+
 
 // Route::get('/owner/technical-request', [TechnicalController::class, 'index'])->name('dashboards.owner.technical_request');
 // Route::get('/dashboard/owner/technical_request/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.owner.technical_request');

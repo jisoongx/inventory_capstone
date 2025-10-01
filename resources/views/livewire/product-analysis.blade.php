@@ -54,7 +54,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="text-center py-4">Nothing to show.</td>
+                        <td colspan="8" class="text-center">
+                            <div class="flex flex-col justify-center items-center space-y-1 p-8">
+                                <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                <span class="text-gray-400">Nothing to show.</span>
+                            </div>
+                        </td>
                     </tr>
                 @endforelse
             </tbody>

@@ -76,39 +76,41 @@ document.addEventListener("DOMContentLoaded", () => {
         type: 'line',
         data: {
             labels: categories,
-            datasets: [{
-                    label: year[0] || "",
-                    data: products,
-                    borderColor: "rgba(190, 21, 21, 1)",
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    pointRadius: 1,
-                },
-                ...(year.length > 1 ? [{
-                    label: year[1],
-                    data: productsPrev,
-                    borderColor: 'rgba(67, 102, 209, 1)',
-                    backgroundColor: 'transparent',
-                    borderDash: [7],
-                    borderWidth: 2,
-                    pointRadius: 1,
-                }] : [])
+            datasets: [
+            {
+                label: year[0] || "",
+                data: products,
+                borderColor: "rgba(190, 21, 21, 1)",
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 1,
+            },
+            ...(year.length > 1 ? [{
+                label: year[1],
+                data: productsPrev,
+                borderColor: 'rgba(67, 102, 209, 1)',
+                backgroundColor: 'transparent',
+                borderDash: [7],
+                borderWidth: 2,
+                pointRadius: 1,
+            }] : [])
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    display: true,
-                }
+            legend: { display: false }
             },
             scales: {
-                x: { grid: { display: true } },
-                y: { beginAtZero: true, display: false }
+            x: { grid: { display: true }, ticks: { display: false } },
+            y: { beginAtZero: true, display: false }
             }
         }
     });
+
+
+        
 
     const chartSaleVsLoss = document.getElementById("salesVSlossChart");
     const cty = chartSaleVsLoss.querySelector("canvas").getContext("2d");
@@ -116,25 +118,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const sales = JSON.parse(chartSaleVsLoss.dataset.sales || "[]");
     const losses = JSON.parse(chartSaleVsLoss.dataset.losses || "[]");
 
+    const latestSales = sales[sales.length - 1] || 0;
+    const latestLoss = losses[losses.length - 1] || 0;
+    const netSales = Math.max(latestSales - latestLoss, 0); // avoid negatives
+
+    const prevSales = sales[sales.length - 2] || 0;
+    const prevLoss = losses[losses.length - 2] || 0;
+
     new Chart(cty, {
         type: "doughnut",
         data: {
-            labels: ["Sales", "Loss"],
-            datasets: [{
-            data: [sales[sales.length - 1], losses[losses.length - 1]],
-            backgroundColor: ["#4CAF50", "#F44336"]
-            }]
+            // labels: ["Sales", "Loss"],
+            datasets: [
+            {
+                label: "This Month",
+                data: [netSales, latestLoss],
+                backgroundColor: ["#4CAF50", "#F44336"],
+                cutout: "50%", 
+                radius: "80%", 
+            },
+            {
+                label: "Last Month", //inner ni
+                data: [prevSales, prevLoss],
+                backgroundColor: ["#1f6f22ff", "#b82e24ff"],
+                cutout: "65%",
+                radius: "80%",
+            },
+            ],
         },
         options: {
-            rotation: -90,        
-            circumference: 180,   
+            rotation: -90,
+            // circumference: 180,
             plugins: {
             legend: {
-                display: true,
-            }
-            }
-        }
+                display: false, 
+            },
+            },
+        },
     });
+
     
 });
 
