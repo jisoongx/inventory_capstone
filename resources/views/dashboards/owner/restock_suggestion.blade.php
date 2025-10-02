@@ -118,22 +118,22 @@
             </p>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{{ route('restock.list') }}" class="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm">
+            <a href="{{ route('restock.list') }}" class="inline-flex items-center shadow-md justify-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition ">
                 <span class="material-symbols-rounded mr-2 text-lg">list_alt</span>
                 View Lists
             </a>
-            <button type="submit" form="restockForm" class="inline-flex items-center justify-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition">
+            <button type="submit" form="restockForm" class="inline-flex items-center shadow-lg justify-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition">
                 <span class="material-symbols-rounded mr-2 text-lg">check_circle</span>
                 Finalize Selection
             </button>
         </div>
     </div>
 
-    <div class="bg-white shadow-sm rounded-lg p-4">
+    <div class="bg-white shadow-md rounded p-4 border-t-4 border-red-600">
         <div class="flex flex-col md:flex-row gap-3">
-            <div class="flex-1 relative">
+            <div class="flex-1 relative ">
                 <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                <input type="text" id="searchInput" placeholder="Search products..." class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-red-500 focus:ring-2 focus:ring-red-100">
+                <input type="text" id="searchInput" placeholder="Search products..." class="w-full pl-10 pr-4 py-2.5 border  border-slate-300 rounded-lg text-sm focus:border-red-500 focus:ring-2 focus:ring-red-100">
             </div>
             <div class="flex gap-2">
                 <select id="categoryFilter" class="px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-red-500 focus:ring-2 focus:ring-red-100">
@@ -151,12 +151,12 @@
         <div id="resultsCount" class="mt-3 text-sm text-slate-600"></div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div class="bg-white rounded shadow-md overflow-hidden">
         <form id="restockForm" method="POST" action="{{ route('restock.finalize') }}">
             @csrf
-            <div class="overflow-x-auto custom-scrollbar">
+            <div class="overflow-x-auto custom-scrollbar max-h-[352px] min-h-[350px] overflow-y-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                    <thead class=" text-slate-800 border-b border-slate-200 bg-red-100">
                         <tr>
                             <th class="p-4 text-center w-12">
                                 <input type="checkbox" id="selectAll" class="rounded border-slate-300 text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer">

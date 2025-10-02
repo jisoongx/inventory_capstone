@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
- use Barryvdh\DomPDF\Facade\Pdf;
+ use Barryxdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -126,7 +126,7 @@ class RestockController extends Controller
             ->sortByDesc('suggested_quantity')
             ->values();
 
-        return view('dashboards.owner.restock_suggestion', compact('products', 'allProducts', 'currentYear', 'categories'))->with('success', 'Restock list has been successfully finalized!');
+        return view('dashboards.owner.restock_suggestion', compact('products', 'allProducts', 'currentYear', 'categories'));
     }
 
 
@@ -255,14 +255,15 @@ class RestockController extends Controller
             ->select(
                 'p.prod_code',
                 'p.name',
+                'p.prod_image',
                 DB::raw('SUM(ri.item_quantity) as sold'),
                 DB::raw('YEAR(r.receipt_date) as year')
             )
-            ->groupBy('p.prod_code', 'p.name', 'year')
+            ->groupBy('p.prod_code', 'p.name', 'p.prod_image', 'year')
             ->get();
 
         // Compute average per product
-        $topProductsPast = $pastSales
+        $pastAverages = $pastSales
             ->groupBy('prod_code')
             ->map(function ($group) {
                 $avg = $group->avg('sold'); // average across years
@@ -270,43 +271,62 @@ class RestockController extends Controller
                 return (object)[
                     'prod_code' => $first->prod_code,
                     'name' => $first->name,
+                    'prod_image' => $first->prod_image,
                     'average_past' => round($avg, 2)
                 ];
-            })
-            ->sortByDesc('average_past')
-            ->take($topN); // apply top N limit here
+            });
 
-        // Current month sales
+        // Current month sales (with prod_image included)
         $currentSales = DB::table('receipt_item as ri')
             ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
             ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
+            ->when($categoryId, fn($q) => $q->where('p.category_id', $categoryId))
             ->whereYear('r.receipt_date', $currentYear)
             ->whereMonth('r.receipt_date', $currentMonth)
             ->where('p.owner_id', $ownerId)
-            ->select('p.prod_code', DB::raw('SUM(ri.item_quantity) as total_sold'))
-            ->groupBy('p.prod_code')
-            ->pluck('total_sold', 'prod_code');
+            ->select(
+                'p.prod_code',
+                'p.name',
+                'p.prod_image',
+                DB::raw('SUM(ri.item_quantity) as total_sold')
+            )
+            ->groupBy('p.prod_code', 'p.name', 'p.prod_image')
+            ->get()
+            ->keyBy('prod_code');
 
         // Combine current and past for final topProducts with forecast
-        $topProducts = $topProductsPast->map(function ($product) use ($currentSales) {
-            $current = $currentSales[$product->prod_code] ?? 0;
+        $topProducts = $pastAverages->map(function ($product) use ($currentSales) {
+            $currentData = $currentSales[$product->prod_code] ?? null;
+            $current = $currentData->total_sold ?? 0;
+
+            // Ensure prod_image comes from either past or current
+            $prodImage = $product->prod_image ?? ($currentData->prod_image ?? null);
 
             // Growth rate
-            $growth = $product->average_past > 0 ? (($current - $product->average_past) / $product->average_past) * 100 : 0;
+            $growth = $product->average_past > 0
+                ? (($current - $product->average_past) / $product->average_past) * 100
+                : 0;
 
-            // Exponential smoothing: forecast = alpha*current + (1-alpha)*past_avg
-            $alpha = 0.5; // can adjust smoothing factor
+            // Exponential smoothing forecast
+            $alpha = 0.5;
             $expectedDemand = round($alpha * $current + (1 - $alpha) * $product->average_past, 2);
 
             return (object)[
                 'prod_code' => $product->prod_code,
                 'name' => $product->name,
+                'prod_image' => $prodImage,
                 'current_month_sold' => (int) $current,
                 'last_year_sold' => $product->average_past,
                 'growth_rate' => round($growth, 2),
                 'expected_demand' => $expectedDemand
             ];
         });
+
+        // ✅ Sort by expected demand
+        $topProducts = $topProducts
+            ->sortByDesc('expected_demand')
+            ->take($topN)
+            ->values();
 
         $categories = DB::table('categories')->get();
 

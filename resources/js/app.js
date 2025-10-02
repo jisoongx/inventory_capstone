@@ -215,4 +215,3 @@ document.querySelector('#expensesTable').addEventListener('click', (e) => {
     }
 });
 
-

@@ -1,10 +1,25 @@
 @extends('dashboards.owner.owner')
 
 @section('content')
-<div class="p-1 sm:p-2 lg:p-4 bg-slate-50 min-h-screen">
+<style>
+    /* Hide scrollbar unless scrolling */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+        /* Chrome, Safari */
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        /* IE/Edge */
+        scrollbar-width: none;
+        /* Firefox */
+    }
+</style>
+<div class="p-1 sm:p-2 lg:p-4 bg-slate-50 animate-slide-down">
+
     <div class="flex flex-col lg:flex-row gap-4">
 
-        <div class="flex-1 bg-white shadow-md rounded p-6 sm:p-8">
+        <div class="flex-1 bg-white shadow-md rounded p-6 sm:p-8 border-t-4 border-red-600">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between pb-6 border-b border-slate-200">
                 <div>
                     <a href="{{ route('restock_suggestion') }}"
@@ -22,10 +37,12 @@
                         <input type="hidden" name="restock_id" id="exportRestockId">
                         <input type="hidden" name="restock_created" id="exportRestockCreated">
                         <input type="hidden" name="restock_items" id="exportRestockItems">
-                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
+                        <button type="submit" id="exportBtn"
+                            class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
                             <span class="material-symbols-rounded text-sm">download</span>
                             Export
                         </button>
+
                     </form>
 
                     <button id="printBtn" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
@@ -36,7 +53,8 @@
                 </div>
             </div>
 
-            <div id="restockContent" class="transition-opacity duration-300 opacity-100 pt-6">
+            <div id="restockContent" class="transition-opacity duration-300 opacity-100 pt-6 min-h-[380px]">
+
                 @if($restocks->count())
                 @php
                 $latest = $restocks->first();
@@ -50,9 +68,10 @@
                     </span>
                 </div>
 
-                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <div class="overflow-x-auto overflow-y-auto max-h-[48vh] no-scrollbar border border-slate-200 rounded-lg">
                     <table class="w-full text-sm">
-                        <thead class="bg-slate-100 text-slate-600">
+                        <thead class="bg-slate-100 text-slate-600 sticky top-0 z-10">
+
                             <tr>
                                 <th class="px-4 py-3 text-left font-semibold">Product</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
@@ -92,18 +111,18 @@
             </div>
         </div>
 
-        <div class="w-full lg:w-96 bg-white shadow-md rounded p-6 sm:p-8 self-start">
+        <div class="w-full lg:w-96 bg-white shadow-md min-h-[560px] rounded p-6 sm:p-8 self-start border-t-4 border-red-600">
             <h2 class="text-lg font-semibold text-slate-800 mb-1">History</h2>
             <p class="text-sm text-slate-500 mb-6 text-sm">Select a past list to view its details.</p>
 
             @if($restocks->count())
-            <ul class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+            <ul class="space-y-3 max-h-[60vh] no-scrollbar overflow-y-auto pr-2">
                 @foreach($restocks as $index => $restock)
                 @php
                 $items = $restockItems->where('restock_id', $restock->restock_id);
                 @endphp
                 <li id="history-{{ $restock->restock_id }}"
-                    class="p-4 rounded-lg cursor-pointer transition-all duration-200 @if($index === 0) bg-rose-50 border-l-4 border-red-500 @else border border-slate-200 hover:border-red-400 hover:bg-rose-50/50 @endif"
+                    class="p-4 rounded-lg cursor-pointer transition-all duration-200 @if($index === 0) bg-rose-50 border-red-500 @else border border-slate-200 hover:border-red-400 hover:bg-rose-50/50 @endif"
                     onclick="showRestock('{{ $restock->restock_id }}')">
 
                     <div class="flex items-center justify-between">
@@ -125,9 +144,11 @@
                                 {{ \Carbon\Carbon::parse($restock->restock_created)->format('F d, Y • h:i A') }}
                             </span>
                         </div>
-                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <div class="overflow-x-auto overflow-y-auto max-h-[48vh] border border-slate-200 rounded-lg custom-scrollbar">
                             <table class="w-full text-sm">
-                                <thead class="bg-slate-100 text-slate-600">
+
+                                <thead class="bg-slate-100 text-slate-600 sticky top-0 z-10">
+
                                     <tr>
                                         <th class="px-4 py-3 text-left font-semibold">Product</th>
                                         <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
@@ -170,85 +191,53 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Automatically set export data for the first (latest) restock
+        // Auto-select first history on page load
         const firstHistory = document.querySelector('[id^="history-"]');
         if (firstHistory) {
             const id = firstHistory.id.replace('history-', '');
-            showRestock(id, false); // false = don't animate on page load
+            showRestock(id, false);
         }
 
-        // Export CSV
-        const exportBtn = document.getElementById('exportBtn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', function() {
-                const table = document.querySelector('#restockContent table');
-                if (!table) return alert('No data to export!');
+        // EXPORT check
+        const exportForm = document.getElementById('exportForm');
+        exportForm?.addEventListener('submit', function(e) {
+            const table = document.querySelector('#restockContent table');
+            if (!table || table.querySelectorAll('tbody tr').length === 0) {
+                e.preventDefault(); // stop form submit
+                alert('No data to export!');
+                return false;
+            }
+        });
 
-                const rows = table.querySelectorAll('tr');
-                let csv = [];
-
-                rows.forEach(row => {
-                    const cols = row.querySelectorAll('th, td');
-                    const rowData = Array.from(cols).map(col => `"${col.innerText.trim()}"`);
-                    csv.push(rowData.join(','));
-                });
-
-                const blob = new Blob([csv.join('\n')], {
-                    type: 'text/csv;charset=utf-8;'
-                });
-                const url = URL.createObjectURL(blob);
-
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'restock.csv';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
-        }
-
-        document.getElementById('printBtn').addEventListener('click', function() {
-            const content = document.getElementById('restockContent').innerHTML;
-            if (!content || !content.trim()) {
-                return alert('No data to print!');
+        // PRINT check
+        const printBtn = document.getElementById('printBtn');
+        printBtn?.addEventListener('click', function() {
+            const table = document.querySelector('#restockContent table');
+            if (!table || table.querySelectorAll('tbody tr').length === 0) {
+                alert('No data to print!');
+                return;
             }
 
             const printWindow = window.open('', '', 'height=600,width=800');
             printWindow.document.open();
             printWindow.document.write(`
-        <html>
-        <head>
-            <title>Restock List</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    padding: 20px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 20px;
-                }
-                th, td {
-                    border: 1px solid #ccc;
-                    padding: 8px;
-                    text-align: center;
-                }
-                th {
-                    background: #f1f1f1;
-                }
-                h2 {
-                    text-align: center;
-                    margin-bottom: 10px;
-                }
-            </style>
-        </head>
-        <body>
-            <h2>SHOPLYTIX RESTOCK LIST</h2>
-            ${content}
-        </body>
-        </html>
-    `);
+            <html>
+            <head>
+                <title>Restock List</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+                    th { background: #f1f1f1; }
+                    h2 { text-align: center; margin-bottom: 10px; }
+                </style>
+            </head>
+            <body>
+                <h2>SHOPLYTIX RESTOCK LIST</h2>
+                ${document.getElementById('restockContent').innerHTML}
+            </body>
+            </html>
+        `);
             printWindow.document.close();
 
             printWindow.onload = function() {
@@ -256,13 +245,10 @@
                 printWindow.print();
             };
         });
-
     });
 
     /**
      * Show restock details in the main container and update export inputs
-     * @param {string} id - restock id
-     * @param {boolean} animate - whether to animate opacity (default true)
      */
     function showRestock(id, animate = true) {
         const templateEl = document.getElementById('restock-' + id);
@@ -277,12 +263,12 @@
         }, animate ? 200 : 0);
 
         document.querySelectorAll('[id^="history-"]').forEach(el => {
-            el.classList.remove('bg-rose-50', 'border-l-4', 'border-red-500');
+            el.classList.remove('bg-rose-50', 'border-red-500');
             el.classList.add('border', 'border-slate-200', 'hover:border-red-400', 'hover:bg-rose-50/50');
         });
         const activeEl = document.getElementById('history-' + id);
         activeEl.classList.remove('border', 'border-slate-200', 'hover:border-red-400', 'hover:bg-rose-50/50');
-        activeEl.classList.add('bg-rose-50', 'border-l-4', 'border-red-500');
+        activeEl.classList.add('bg-rose-50', 'border-red-500');
 
         // Populate export inputs
         const restockCreatedSpan = templateEl.querySelector('span.text-xs.font-medium.bg-rose-100');
@@ -305,9 +291,4 @@
         document.getElementById('exportRestockItems').value = JSON.stringify(items);
     }
 </script>
-
-
-
-
-
 @endsection
