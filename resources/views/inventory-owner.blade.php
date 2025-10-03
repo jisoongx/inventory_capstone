@@ -195,18 +195,30 @@
                                     <!-- Archive / Unarchive Button -->
                                     @if ($product->prod_status === 'active')
                                         <button type="button"
-                                            class="text-red-500 hover:text-red-700" title="Archive"
-                                            {{ $expired ? 'cursor-not-allowed' : '' }}"
-                                            onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
-                                            onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')">
+                                            class="text-red-500 hover:text-red-700 {{ $expired ? 'cursor-not-allowed' : '' }}"
+                                            title="Archive"
+                                            @if(!$expired)
+                                                onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                            @else
+                                                disabled
+                                            @endif
+                                        >
                                             <span class="material-symbols-outlined">archive</span>
                                         </button>
+
                                     @else
                                         <button type="button"
-                                            class="text-orange-400 hover:text-orange-600" title="Unarchive"
-                                            onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')">
+                                            class="text-orange-400 hover:text-orange-600 {{ $expired ? 'cursor-not-allowed' : '' }}"
+                                            title="Unarchive"
+                                            @if(!$expired)
+                                                onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                            @else
+                                                disabled
+                                            @endif
+                                        >
                                             <span class="material-symbols-outlined">unarchive</span>
                                         </button>
+
                                     @endif
 
 
