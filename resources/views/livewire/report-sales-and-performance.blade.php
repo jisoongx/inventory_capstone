@@ -85,13 +85,7 @@
                             <div class="grid grid-cols-3 gap-2 mt-2">
                                 @foreach($years as $yr)
                                     <label class="flex items-center justify-center cursor-pointer">
-                                        <input 
-                                            type="radio" 
-                                            name="selectedYear" 
-                                            value="{{ $yr->year }}" 
-                                            wire:model="selectedYearSingle" 
-                                            class="hidden peer"
-                                        >
+                                        <input type="radio" name="selectedYear" value="{{ $yr->year }}" wire:model="selectedYearSingle" class="hidden peer">
                                         <span class="peer-checked:bg-orange-600 peer-checked:text-white 
                                                     text-orange-600 bg-orange-100 hover:bg-orange-200 
                                                     rounded-full py-1 px-2 text-center text-[11px] transition">
@@ -140,77 +134,72 @@
 
 
             <div class="overflow-y-auto scrollbar-custom h-[35rem]">
-                <table class="text-sm text-left w-full">
-                    <thead class="bg-gray-50">
+                <table x-data="{ showTopProductUnit: false, showTopProductSales: false }" class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="bg-gray-50 h-[4rem]">
                         <tr class="text-gray-700 uppercase text-xs tracking-wider border-b">
-                            <th class="px-6 py-3 font-semibold text-xs sticky top-0 bg-gray-50">Category</th>
-                            <th class="px-6 py-3 text-right font-semibold sticky top-0 bg-gray-50">Units Sold</th>
-                            <th class="px-6 py-3 text-right font-semibold sticky top-0 bg-gray-50">Total Sales</th>
-                            <!-- <th class="px-6 py-3 text-right font-semibold sticky top-0 bg-gray-50">Avg. Price/Unit</th> -->
-                            <th class="px-6 py-3 text-right font-semibold sticky top-0 bg-gray-50">Gross Margin %</th>
-                            <th class="px-6 py-3 text-right font-semibold sticky top-0 bg-gray-50">Stock Turnover</th>
-                            <th class="px-6 py-3 text-right font-semibold sticky top-0 bg-gray-50 relative"
-                                x-data="{ open: false }">
-                                <div class="flex items-center justify-end gap-1">
-                                    <span>Growth</span>
-                                    <button @click="open = !open" class="p-1 rounded hover:bg-gray-200">
-                                    <span class="material-symbols-rounded">more_vert</span>
-                                    </button>
-                                </div>
-
-                                <div x-show="open" x-cloak @click.away="open = false" class="absolute right-5 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg z-50">
-                                    <div class="flex flex-col text-xs text-gray-700">
-                                        <button wire:click="fetchLastMonth" class="inline-flex items-center px-3 py-3 text-left rounded hover:bg-gray-100">
-                                            From last Month
-                                        </button>
-                                        <button wire:click="fetchLastYear" class="inline-flex items-center px-3 py-3 text-left rounded hover:bg-gray-100">
-                                            From last Year
-                                        </button>
+                            <th class="px-6 py-3 text-left font-semibold text-xs sticky top-0 bg-gray-50 w-[20%]">Category</th>
+                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50  w-[13%]">                                    
+                                <button @click="showTopProductUnit = !showTopProductUnit" type="button" class="text-xs">
+                                    <div class="flex items-center justify-end space-x-1">
+                                        <span>UNITS SOLD</span>
+                                        <span class="material-symbols-rounded-small text-gray-400">
+                                            keyboard_double_arrow_right
+                                        </span>
                                     </div>
-                                </div>
+                                </button>
                             </th>
-
+                            <th class="px-6 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[15%]" x-show="showTopProductUnit" x-cloak>
+                                Top Product by Unit
+                            </th>
+                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[14%]">                                    
+                                <button @click="showTopProductSales = !showTopProductSales" type="button" class="text-xs">
+                                    <div class="flex items-center justify-end space-x-1">
+                                        <span>TOTAL SALES</span>
+                                        <span class="material-symbols-rounded-small text-gray-400">
+                                            keyboard_double_arrow_right
+                                        </span>
+                                    </div>
+                                </button>
+                            </th>
+                            <th class="px-6 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[15%]" x-show="showTopProductSales" x-cloak>
+                                Top Product by Sales
+                            </th>
+                            <th class="px-6 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[10%]">COGS</th>
+                            <th class="px-6 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[15%]">GROSS MARGIN</th>
+                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50"></th>
                         </tr>
                     </thead>
+
                     <tbody class="divide-y divide-gray-200 text-xs">
                         @forelse($sbc as $input)
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-6 py-4 font-medium text-gray-900">{{ $input->category }}</td>
-                            <td class="px-6 py-4 text-right">{{ $input->unit_sold }}</td>
-                            <td class="px-6 py-4 text-right">{{ number_format($input->total_sales, 2) }}</td>
-                            <!-- <td class="px-6 py-4 text-right">40%</td> -->
-                            <!-- <td class="px-6 py-4 text-right">₱69.10</td> -->
-                            <td class="px-6 py-4 text-right
-                                @if($input->gross_margin >= 20)
-                                    text-green-600 font-bold
-                                @elseif($input->gross_margin >= 10)
-                                    text-yellow-600 font-semibold
-                                @else
-                                    text-red-600 font-semibold
-                                @endif">
-                                
-                                @if($input->gross_margin >= 20)
-                                    High
-                                @elseif($input->gross_margin >= 10)
-                                    Medium
-                                @else
-                                    Low
-                                @endif
-                            </td>
-
-                            <td class="px-6 py-4 text-right">3.5x</td>
-                            <td class="px-6 py-4 text-right text-green-600 font-semibold">
-                            </td>
-                        </tr>
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 font-medium text-gray-900">{{ $input->category }}</td>
+                                <td class="px-2 py-4 text-left font-medium text-gray-900">{{ $input->unit_sold }}</td>
+                                <td x-show="showTopProductUnit" x-cloak class="px-6 py-4 text-left font-medium text-gray-900">
+                                    {{ $input->top_product_unit }}
+                                </td>
+                                <td class="px-2 py-4 text-left font-medium text-gray-900">₱{{ number_format($input->total_sales, 2 )}}</td>
+                                <td x-show="showTopProductSales" x-cloak class="px-6 py-4 text-left font-medium text-gray-900">
+                                    {{ $input->top_product_sales }}
+                                </td>
+                                <td class="px-6 py-4 text-left font-medium text-gray-900">₱{{ number_format($input->cogs, 2 )}}</td>
+                                <td class="px-6 py-4 text-left font-medium text-gray-900">{{ number_format($input->gross_margin, 0) }}%</td>
+                                <td class="px-2 py-4 text-left font-medium text-white
+                                    @if($input->number == 1) bg-green-600
+                                    @elseif($input->number == 2) bg-yellow-600
+                                    @elseif($input->number == 3) bg-blue-600
+                                    @elseif($input->number == 4) bg-purple-600
+                                    @elseif($input->number == 5) bg-pink-600
+                                    @elseif($input->number == 6) bg-red-600
+                                    @endif
+                                ">
+                                    {{ $input->profit_comment }}
+                                </td>
+                            </tr>
                         @empty
-                        <tr>
-                            <td colspan="6" class="text-center">
-                                <div class="flex flex-col justify-center items-center space-y-1 pt-8">
-                                    <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
-                                    <span class="text-gray-400">Nothing to show.</span>
-                                </div>
-                            </td>
-                        </tr>
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-gray-400">Nothing to show.</td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>

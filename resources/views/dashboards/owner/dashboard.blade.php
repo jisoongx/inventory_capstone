@@ -36,28 +36,38 @@
                     <div class="bg-white p-5 rounded shadow border w-[50%]">
                         <p class="text-left text-black font-semibold text-xs">Sales by Category</p>
                         <div class="flex justify-center gap-4 mt-3">
-                            <span class="flex items-center gap-1">
-                                <span class="w-3 h-3 bg-red-600 inline-block rounded-full"></span>
-                                <span class="text-xs">{{ $year[0] }}</span>
-                            </span>
-                            @if(count($year) > 1)
-                            <span class="flex items-center gap-1">
-                                <span class="w-3 h-3 bg-blue-600 inline-block rounded-full"></span>
-                                <span class="text-xs">{{ $year[1] }}</span> 
-                            </span>
+                            @if($year[0] ?? false)
+                                <span class="flex items-center gap-1">
+                                    <span class="w-3 h-3 bg-red-600 inline-block rounded-full"></span>
+                                    <span class="text-xs">{{ $year[0] ?? '' }}</span>
+                                </span>
+                            @endif
+
+                            @if($year[1] ?? false)
+                                <span class="flex items-center gap-1">
+                                    <span class="w-3 h-3 bg-blue-600 inline-block rounded-full"></span>
+                                    <span class="text-xs">{{ $year[1] ?? '' }}</span>
+                                </span>
                             @endif
                         </div>
-                        <div class="overflow-x-auto mt-2 scrollbar-custom">
-                            <div id="productChart" 
-                                data-categories='@json($categories ?? [])' 
-                                data-products='@json($products ?? [])' 
-                                data-products-prev='@json($productsPrev ?? [])' 
-                                data-year='@json($year ?? [])'
-                                style="height: 250px; min-width: 390px;" 
-                                class="w-full">
-                                <canvas></canvas>
+                        @if(empty($year[0]))
+                                <div class="flex flex-col items-center justify-center pt-24 text-gray-500">
+                                    <span class="material-symbols-rounded-big text-slate-400">bar_chart</span>
+                                    <p class="mt-2 text-xs font-semibold">No chart available yet</p>
+                                </div>
+                        @else
+                            <div class="overflow-x-auto mt-2 scrollbar-custom">
+                                <div id="productChart" 
+                                    data-categories='@json($categories ?? [])' 
+                                    data-products='@json($products ?? [])' 
+                                    data-products-prev='@json($productsPrev ?? [])' 
+                                    data-year='@json($year ?? [])'
+                                    style="height: 250px; min-width: 390px;" 
+                                    class="w-full">
+                                    <canvas></canvas>
+                                </div>
                             </div>
-                        </div>
+                        @endif
                     </div>
                     <div class="bg-white p-5 rounded shadow border w-[50%]">
                         <p class="text-left text-black font-semibold text-xs">Sales VS Loss - {{ $dateDisplay->format('F') }}</p>

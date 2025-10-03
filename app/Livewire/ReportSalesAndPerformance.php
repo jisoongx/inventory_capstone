@@ -83,7 +83,34 @@ class ReportSalesAndPerformance extends Component
                             (SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
                             / SUM(p.selling_price * ritems.item_quantity)
                         ) * 100
-                    END AS gross_margin
+                    END AS gross_margin,
+                    COALESCE((
+                        SELECT p2.name
+                        FROM products p2
+                        JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                        JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                        WHERE p2.category_id = c.category_id
+                        AND r2.owner_id = ?
+                        AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                        AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                        GROUP BY p2.prod_code, p2.name
+                        ORDER BY SUM(ri2.item_quantity) DESC
+                        LIMIT 1
+                    ), '—') AS top_product_unit,
+                    COALESCE((
+                        SELECT p2.name
+                        FROM products p2
+                        JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                        JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                        WHERE p2.category_id = c.category_id
+                        AND r2.owner_id = ?
+                        AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                        AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                        GROUP BY p2.prod_code, p2.name
+                        ORDER BY SUM(ri2.item_quantity * p2.selling_price) DESC
+                        LIMIT 1
+                    ), '—') AS top_product_sales
+
                 FROM categories c
                 LEFT JOIN products p
                     ON c.category_id = p.category_id
@@ -99,10 +126,10 @@ class ReportSalesAndPerformance extends Component
                     ON p.prod_code = ritems.prod_code
                 WHERE c.owner_id = ?
                     and LOWER(c.category) LIKE ?
-                GROUP BY c.category
+                GROUP BY c.category, c.category_id
             ";
 
-            $bindings = array_merge([$owner_id, $owner_id], $years, $months, [$owner_id, $search]);
+            $bindings = array_merge([$owner_id], $years, $months, [$owner_id], $years, $months, [$owner_id, $owner_id], $years, $months, [$owner_id, $search]);
 
             $this->sbc = collect(DB::select($sql, $bindings));
 
@@ -120,7 +147,34 @@ class ReportSalesAndPerformance extends Component
                             (SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
                             / SUM(p.selling_price * ritems.item_quantity)
                         ) * 100
-                    END AS gross_margin
+                    END AS gross_margin,
+                    COALESCE((
+                        SELECT p2.name
+                        FROM products p2
+                        JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                        JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                        WHERE p2.category_id = c.category_id
+                        AND r2.owner_id = ?
+                        AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                        AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                        GROUP BY p2.prod_code, p2.name
+                        ORDER BY SUM(ri2.item_quantity) DESC
+                        LIMIT 1
+                    ), '—') AS top_product_unit,
+                    COALESCE((
+                        SELECT p2.name
+                        FROM products p2
+                        JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                        JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                        WHERE p2.category_id = c.category_id
+                        AND r2.owner_id = ?
+                        AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                        AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                        GROUP BY p2.prod_code, p2.name
+                        ORDER BY SUM(ri2.item_quantity * p2.selling_price) DESC
+                        LIMIT 1
+                    ), '—') AS top_product_sales
+
                 FROM categories c
                 LEFT JOIN products p
                     ON c.category_id = p.category_id
@@ -135,14 +189,52 @@ class ReportSalesAndPerformance extends Component
                 ) AS ritems
                     ON p.prod_code = ritems.prod_code
                 WHERE c.owner_id = ?
-                GROUP BY c.category
+                GROUP BY c.category, c.category_id
             ";
 
-            $bindings = array_merge([$owner_id, $owner_id], $years, $months, [$owner_id]);
+            $bindings = array_merge([$owner_id], $years, $months, [$owner_id], $years, $months, [$owner_id, $owner_id], $years, $months, [$owner_id]);
 
             $this->sbc = collect(DB::select($sql, $bindings));
 
+        
         }
+
+            $totalUnits = $this->sbc->sum('unit_sold');
+
+            // Rule-Based / Threshold-Based Classification - ALGORITHM
+            $this->sbc = $this->sbc->map(function($item) use ($totalUnits) {
+                $ratio = $totalUnits ? $item->unit_sold / $totalUnits : 0;
+
+                if ($ratio >= 0.3) {
+                    $salesBracket = 'High';
+                } elseif ($ratio >= 0.1) {
+                    $salesBracket = 'Medium';
+                } else {
+                    $salesBracket = 'Low';
+                }
+
+                if ($salesBracket == 'High' && $item->gross_margin >= 20) {
+                    $item->number = 1;
+                    $item->profit_comment = 'Selling well and profitable. Keep it promoted.';
+                } elseif ($salesBracket == 'High' && $item->gross_margin < 20) {
+                    $item->number = 2;
+                    $item->profit_comment = 'High sales but low profit. Review pricing or costs.';
+                } elseif ($salesBracket == 'Medium' && $item->gross_margin >= 20) {
+                    $item->number = 3;
+                    $item->profit_comment = 'Moderate sales with good profit. Promote more if possible.';
+                } elseif ($salesBracket == 'Medium' && $item->gross_margin < 20) {
+                    $item->number = 4;
+                    $item->profit_comment = 'Average sales and low profit. Monitor pricing and costs.';
+                } elseif ($salesBracket == 'Low' && $item->gross_margin >= 20) {
+                    $item->number = 5;
+                    $item->profit_comment = 'Low sales but profitable. Try promoting this category.';
+                } else {
+                    $item->number = 6;
+                    $item->profit_comment = 'Low sales and low profit. Consider discounting or reducing stock.';
+                }
+
+                return $item;
+            });
  
     }
 
