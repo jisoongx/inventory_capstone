@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class InventoryOwnerController extends Controller
 {
@@ -23,6 +24,7 @@ class InventoryOwnerController extends Controller
 
         $search   = $request->input('search');
         $category = $request->input('category');
+        $status   = $request->input('status', 'active'); // default to active
 
         $query = "
             SELECT
@@ -35,38 +37,41 @@ class InventoryOwnerController extends Controller
                 MIN(p.prod_image)    AS prod_image,
                 MIN(u.unit)          AS unit,
                 MIN(c.category)      AS category,
+                p.prod_status,
                 COALESCE(SUM(i.stock), 0) AS stock
             FROM products p
             JOIN units u       ON p.unit_id = u.unit_id
             JOIN categories c  ON p.category_id = c.category_id
             LEFT JOIN inventory i ON i.prod_code = p.prod_code
             WHERE p.owner_id = :owner_id
+            AND p.prod_status = :status
         ";
 
-        $params = ['owner_id' => $owner_id];
+        $params = [
+            'owner_id' => $owner_id,
+            'status'   => $status,
+        ];
 
-        // Case-insensitive search
         if (!empty($search)) {
             $query .= " AND (LOWER(p.name) LIKE :search_name OR LOWER(p.barcode) LIKE :search_barcode)";
             $params['search_name']    = '%' . strtolower($search) . '%';
             $params['search_barcode'] = '%' . strtolower($search) . '%';
         }
 
-        // Category filter
         if (!empty($category)) {
             $query .= " AND p.category_id = :category_id";
             $params['category_id'] = $category;
         }
 
-        // include p.category_id in GROUP BY
-        $query .= " GROUP BY p.prod_code, p.category_id ORDER BY p.prod_code DESC";
+        $query .= " GROUP BY p.prod_code, p.category_id, p.prod_status ORDER BY p.prod_code DESC";
 
         $products   = DB::select($query, $params);
-        $categories = DB::select("SELECT category_id, category FROM categories WHERE owner_id = ? ORDER BY category ASC ", [$owner_id]);
-        $units      = DB::select("SELECT unit_id, unit FROM units ORDER BY unit ASC");
-
-        return view('inventory-owner', compact('owner_name', 'products', 'categories', 'units', 'search', 'category'));
+        $categories = DB::select("SELECT category_id, category FROM categories WHERE owner_id = :owner_id ORDER BY category ASC", ['owner_id' => $owner_id]);
+        $units = DB::select("SELECT unit_id, unit FROM units WHERE owner_id = :owner_id ORDER BY unit ASC", ['owner_id' => $owner_id]);
+        
+        return view('inventory-owner', compact('owner_name', 'products', 'categories', 'units', 'search', 'category', 'status'));
     }
+
 
 
     public function suggest(Request $request)
@@ -96,7 +101,7 @@ class InventoryOwnerController extends Controller
         return response()->json($results);
     }
 
-
+    //for the info button in the product list table
     public function showProductDetails($prodCode)
     {
         // Get product info (include stock_limit)
@@ -127,8 +132,94 @@ class InventoryOwnerController extends Controller
     }
 
 
+    public function edit($prodCode)
+    {
+        $product = DB::table('products')
+            ->join('units', 'products.unit_id', '=', 'units.unit_id')
+            ->select('products.*', 'units.unit as unit')
+            ->where('products.prod_code', $prodCode)
+            ->first();
+
+        if (!$product) {
+            abort(404, 'Product not found');
+        }
+
+        $units = DB::table('units')->get(); // dropdown
+        $statuses = ['active', 'archived']; // for prod_status dropdown
+
+        return view('inventory-owner-edit', compact('product', 'units', 'statuses'));
+    }
+
+    public function update(Request $request, $prodCode)
+    {
+        $ownerId = session('owner_id');
+
+        $validated = $request->validate([
+            'name'          => 'required|string|max:100',
+            'barcode'       => 'nullable|string|max:50',
+            'cost_price'    => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+            'description'   => 'nullable|string',
+            'unit_id'       => 'required|integer',
+            'stock_limit'   => 'nullable|integer|min:0',
+            'prod_image'    => 'nullable|image|max:2048',
+            'prod_status'   => 'required|in:active,archived', // ✅ added validation
+        ]);
+
+        // Handle photo upload
+        $photoPath = null;
+        if ($request->hasFile('prod_image')) {
+            $photoPath = $request->file('prod_image')->store('product_images', 'public');
+        }
+
+        // Prepare update data
+        $updateData = [
+            'name'          => $validated['name'],
+            'barcode'       => $validated['barcode'],
+            'cost_price'    => $validated['cost_price'],
+            'selling_price' => $validated['selling_price'],
+            'unit_id'       => $validated['unit_id'],
+            'stock_limit'   => $validated['stock_limit'],
+            'description'   => $validated['description'] ?? null,
+            'prod_status'   => $validated['prod_status'], // ✅ added here
+        ];
+
+        if ($photoPath) {
+            $updateData['prod_image'] = $photoPath;
+        }
+
+        DB::table('products')
+            ->where('prod_code', $prodCode)
+            ->update($updateData);
+
+        return redirect()->route('inventory-owner')
+            ->with('success', 'Product updated successfully.');
+    }
 
 
+    public function archive($prodCode)
+    {
+        $ownerId = session('owner_id');
+
+        DB::table('products')
+            ->where('prod_code', $prodCode)
+            ->where('owner_id', $ownerId)
+            ->update(['prod_status' => 'archived']);
+
+        return redirect()->route('inventory-owner')->with('success', 'Product archived successfully.');
+    }
+
+    public function unarchive($prodCode)
+    {
+        $ownerId = session('owner_id');
+
+        DB::table('products')
+            ->where('prod_code', $prodCode)
+            ->where('owner_id', $ownerId)
+            ->update(['prod_status' => 'active']);
+
+        return redirect()->route('inventory-owner')->with('success', 'Product unarchived successfully.');
+    }
 
 
 
@@ -161,69 +252,93 @@ class InventoryOwnerController extends Controller
 
 
     public function registerProduct(Request $request)
-    {
-        $ownerId = session('owner_id');
+{
+    $ownerId = session('owner_id');
 
-        $validated = $request->validate([
-            'barcode' => 'required|string|max:50',
-            'name' => 'required|string|max:100',
-            'cost_price' => 'required|numeric|min:0',
-            'selling_price' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
-            'category_id' => 'required|integer',
-            'unit_id' => 'required|integer',
-            'photo' => 'nullable|image|max:2048',
-            // Product-specific field now
-            'stock_limit' => 'required|integer|min:0',
-            // Inventory-specific
-            'expiration_date' => 'nullable|date',
-            'batch_number' => 'nullable|string|max:50'
-        ]);
+    $validated = $request->validate([
+        'barcode' => 'required|string|max:50',
+        'name' => 'required|string|max:100',
+        'cost_price' => 'required|numeric|min:0',
+        'selling_price' => 'required|numeric|min:0',
+        'description' => 'nullable|string',
+        'category_id' => 'nullable',
+        'unit_id' => 'nullable',
+        'custom_category' => 'nullable|string|max:100',
+        'custom_unit' => 'nullable|string|max:50',
+        'photo' => 'nullable|image|max:2048',
+        'stock_limit' => 'required|integer|min:0',
+        'expiration_date' => 'nullable|date',
+        'batch_number' => 'nullable|string|max:50'
+    ]);
 
-        // Handle photo upload
-        $photoPath = null;
-        if ($request->hasFile('photo')) {
-            $photoPath = $request->file('photo')->store('product_images', 'public');
-        }
-
-        // ✅ Check if product already exists
-        $product = DB::table('products')
-            ->where('barcode', $validated['barcode'])
-            ->where('owner_id', $ownerId)
-            ->first();
-
-        if ($product) {
-            $prodCode = $product->prod_code;
-        } else {
-            // Insert into products with stock_limit
-            $prodCode = DB::table('products')->insertGetId([
-                'barcode' => $validated['barcode'],
-                'name' => $validated['name'],
-                'cost_price' => $validated['cost_price'],
-                'selling_price' => $validated['selling_price'],
-                'description' => $validated['description'] ?? null,
-                'owner_id' => $ownerId,
-                'staff_id' => null,
-                'category_id' => $validated['category_id'],
-                'unit_id' => $validated['unit_id'],
-                'prod_image' => $photoPath,
-                'stock_limit' => $validated['stock_limit'], // ✅ moved here
-            ]);
-        }
-
-        // ✅ Insert inventory record (no stock_limit anymore)
-        DB::table('inventory')->insert([
-            'prod_code' => $prodCode,
+    // ✅ Handle category
+    if ($validated['category_id'] === 'other' && !empty($validated['custom_category'])) {
+        $categoryId = DB::table('categories')->insertGetId([
+            'category' => $validated['custom_category'],
             'owner_id' => $ownerId,
-            'category_id' => $validated['category_id'],
-            'date_added' => now(),
-            'expiration_date' => $validated['expiration_date'] ?? null,
-            'last_updated' => now(),
-            'batch_number' => $validated['batch_number'] ?? null,
         ]);
-
-        return response()->json(['success' => true]);
+    } else {
+        $categoryId = $validated['category_id'];
     }
+
+    // ✅ Handle unit
+    if ($validated['unit_id'] === 'other' && !empty($validated['custom_unit'])) {
+        $unitId = DB::table('units')->insertGetId([
+            'unit' => $validated['custom_unit'],
+            'owner_id' => $ownerId,
+        ]);
+    } else {
+        $unitId = $validated['unit_id'];
+    }
+
+    // ✅ Handle photo upload with default fallback
+    if ($request->hasFile('photo')) {
+        $photoPath = $request->file('photo')->store('product_images', 'public');
+    } else {
+        // Store relative path to your default image in public/assets
+        $photoPath = 'assets/no-product-image.png';
+    }
+
+
+    // ✅ Check if product exists
+    $product = DB::table('products')
+        ->where('barcode', $validated['barcode'])
+        ->where('owner_id', $ownerId)
+        ->first();
+
+    if ($product) {
+        $prodCode = $product->prod_code;
+    } else {
+        // Insert product
+        $prodCode = DB::table('products')->insertGetId([
+            'barcode' => $validated['barcode'],
+            'name' => $validated['name'],
+            'cost_price' => $validated['cost_price'],
+            'selling_price' => $validated['selling_price'],
+            'description' => $validated['description'] ?? null,
+            'owner_id' => $ownerId,
+            'staff_id' => null,
+            'category_id' => $categoryId,
+            'unit_id' => $unitId,
+            'prod_image' => $photoPath,
+            'stock_limit' => $validated['stock_limit'],
+        ]);
+    }
+
+    // Insert inventory
+    DB::table('inventory')->insert([
+        'prod_code' => $prodCode,
+        'owner_id' => $ownerId,
+        'category_id' => $categoryId,
+        'date_added' => now(),
+        'expiration_date' => $validated['expiration_date'] ?? null,
+        'last_updated' => now(),
+        'batch_number' => $validated['batch_number'] ?? null,
+    ]);
+
+    return response()->json(['success' => true]);
+}
+
 
 
 
@@ -285,67 +400,7 @@ public function getLatestBatch($prodCode)
 }
 
 
-public function edit($prodCode)
-{
-    $product = DB::table('products')
-        ->join('units', 'products.unit_id', '=', 'units.unit_id')
-        ->select('products.*', 'units.unit as unit')
-        ->where('products.prod_code', $prodCode)
-        ->first();
 
-    if (!$product) {
-        abort(404, 'Product not found');
-    }
-
-    $units = DB::table('units')->get(); // for dropdown if needed
-
-    return view('inventory-owner-edit', compact('product', 'units'));
-}
-
-public function update(Request $request, $prodCode)
-{
-    $ownerId = session('owner_id');
-
-    $validated = $request->validate([
-        'name' => 'required|string|max:100',
-        'barcode' => 'nullable|string|max:50',
-        'cost_price' => 'required|numeric|min:0',
-        'selling_price' => 'required|numeric|min:0',
-        'description' => 'nullable|string',
-        'unit_id' => 'required|integer',
-        'stock_limit' => 'nullable|integer|min:0',
-        'prod_image' => 'nullable|image|max:2048', // updated
-    ]);
-
-    // Handle photo upload
-    $photoPath = null;
-    if ($request->hasFile('prod_image')) { // updated
-        $photoPath = $request->file('prod_image')->store('product_images', 'public');
-    }
-
-    // Prepare update data
-    $updateData = [
-        'name' => $validated['name'],
-        'barcode' => $validated['barcode'],
-        'cost_price' => $validated['cost_price'],
-        'selling_price' => $validated['selling_price'],
-        'unit_id' => $validated['unit_id'],
-        'stock_limit' => $validated['stock_limit'],
-        'description' => $validated['description'] ?? null,
-    ];
-
-    // Only update prod_image if a new image was uploaded
-    if ($photoPath) {
-        $updateData['prod_image'] = $photoPath;
-    }
-
-    DB::table('products')
-        ->where('prod_code', $prodCode)
-        ->update($updateData);
-
-    return redirect()->route('inventory-owner')
-        ->with('success', 'Product updated successfully.');
-}
 
 
 

@@ -7,81 +7,120 @@
         <!-- Inventory Table -->
         <div class="px-4 space-y-4">
             @livewire('expiration-container')
-            <h2 class="text-2xl font-semibold text-gray-800 mb-6">Product List</h2>
+            <h2 class="text-xl font-semibold text-gray-800 mb-6">Product List</h2>
 
             <div class="flex justify-between items-center mt-4 mb-4">
-                {{-- Left side: Filter + Search --}}
-                <div class="flex gap-2 items-center">
-                    {{-- Filter Button --}}
-                    <div class="relative">
+            {{-- Left side: Filter + Search --}}
+            <div class="flex gap-2 items-center">
+                {{-- Filter Button --}}
+                <div class="relative">
+                    <button 
+                        id="filterToggle" 
+                        type="button" 
+                        class="flex items-center border border-[#FF8A00] text-[#FF8A00] bg-transparent px-4 py-2 mb-4 rounded hover:bg-orange-50 transition"
+                    >
+                        <span class="material-symbols-outlined mr-2 text-[#FF8A00]">filter_alt</span> Filter
+                    </button>
+
+                    <div id="categoryDropdown" 
+                        class="absolute z-10 bg-white border border-gray-300 mt-2 rounded shadow hidden min-w-max max-h-60 overflow-y-auto"
+                    >
                         <button 
-                            id="filterToggle" 
-                            type="button" 
-                            class="flex items-center border border-[#FF8A00] text-[#FF8A00] bg-transparent px-4 py-2 mb-4 rounded hover:bg-orange-50 transition"
+                            onclick="filterByCategory('all')" 
+                            class="block w-full text-left px-4 py-2 hover:bg-gray-100 font-semibold"
                         >
-                            <span class="material-symbols-outlined mr-2 text-[#FF8A00]">filter_alt</span> Filter
+                            All
                         </button>
 
-                        <div id="categoryDropdown" 
-                            class="absolute z-10 bg-white border border-gray-300 mt-2 rounded shadow hidden min-w-max whitespace-nowrap overflow-auto"
-                        >
-                            <!-- All Category Option -->
+                        @foreach ($categories as $category)
                             <button 
-                                onclick="filterByCategory('all')" 
-                                class="block w-full text-left px-4 py-2 hover:bg-gray-100 font-semibold"
+                                onclick="filterByCategory('{{ $category->category_id }}')" 
+                                class="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             >
-                                All
+                                {{ $category->category }}
                             </button>
-
-                            @foreach ($categories as $category)
-                                <button 
-                                    onclick="filterByCategory('{{ $category->category_id }}')" 
-                                    class="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                                >
-                                    {{ $category->category }}
-                                </button>
-                            @endforeach
-                        </div>
+                        @endforeach
                     </div>
 
-
-                    {{-- Search Bar --}}
-                    <form method="GET" action="{{ url('inventory-owner') }}" class="relative w-72">
-                        <input 
-                            type="text" 
-                            id="search"
-                            name="search" 
-                            placeholder="Search by name or barcode" 
-                            autocomplete="off"
-                            class="rounded px-4 py-2 w-full pr-10 shadow-lg focus:outline-none focus:shadow-lg border border-gray-50 placeholder:text-sm placeholder-gray-400"
-
-                        >
-
-                        {{-- Suggestions Dropdown --}}
-                        <div 
-                            id="suggestions" 
-                            class="absolute z-10 w-full bg-white border border-gray-300 rounded shadow-md hidden max-h-60 overflow-y-auto mt-1"
-                        ></div>
-
-                        {{-- Search Icon (acts as submit button) --}}
-                        <button 
-                            type="submit" 
-                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#FF8A00] hover:text-orange-600"
-                        >
-                            <span class="material-symbols-outlined text-[#FF8A00]">search</span>
-                        </button>
-                    </form>
                 </div>
 
-                {{-- Right side: Add Product --}}
-                <div>
-                    <button id="addProductBtn" {{ $expired ? 'disabled' : '' }}
-                        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 transform hover:scale-105
-                        {{ $expired ? 'cursor-not-allowed' : '' }}">
-                        Add Product
+
+                {{-- Search Bar --}}
+                <form method="GET" action="{{ url('inventory-owner') }}" class="relative w-72">
+                    <input 
+                        type="text" 
+                        id="search"
+                        name="search" 
+                        placeholder="Search by name or barcode" 
+                        value="{{ $search ?? '' }}"
+                        autocomplete="off"
+                        class="rounded px-4 py-2 w-full pr-10 shadow-lg focus:border-[#FF8A00] focus:shadow-lg border border-gray-50 placeholder:text-sm placeholder-gray-400"
+                    >
+
+                    {{-- Carry status --}}
+                    <input type="hidden" name="status" value="{{ $status ?? 'active' }}">
+
+                    {{-- Suggestions Dropdown --}}
+                    <div 
+                        id="suggestions" 
+                        class="absolute z-10 w-full bg-white border border-gray-300 rounded shadow-md hidden max-h-60 overflow-y-auto mt-1"
+                    ></div>
+                    {{-- Search Icon --}}
+                    <button 
+                        type="submit" 
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#FF8A00] hover:text-orange-600"
+                    >
+                        <span class="material-symbols-outlined text-[#FF8A00]">search</span>
                     </button>
+                </form>
+
+
+                <!-- Status Toggle + Settings -->
+                <div class="flex items-center gap-2">
+                    <form action="{{ route('inventory-owner') }}" method="GET" id="statusToggleForm" class="flex items-center gap-2">
+                        <div class="relative flex bg-[#f09d39] rounded-full p-1 w-44">
+                            <input type="hidden" name="status" id="statusInput" value="{{ $status ?? 'active' }}">
+                            
+                            <!-- Selling (Active) -->
+                            <button type="button" 
+                                id="activeBtn" 
+                                class="flex-1 text-center text-sm py-1 rounded-full transition-all duration-300
+                                {{ ($status ?? 'active') === 'active' 
+                                    ? 'bg-white text-[#f09d39] shadow' 
+                                    : 'text-white' }}">
+                                Selling
+                            </button>
+
+                            <!-- Archived -->
+                            <button type="button" 
+                                id="archivedBtn" 
+                                class="flex-1 text-center text-sm py-1 rounded-full transition-all duration-300
+                                {{ ($status ?? 'active') === 'archived' 
+                                    ? 'bg-white text-[#f09d39] shadow' 
+                                    : 'text-white' }}">
+                                Archived
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Settings Icon -->
+                    <a href="{{ route('inventory-owner-settings') }}" 
+                    class="flex items-center justify-center w-10 h-10 mb-4 rounded-full bg-white shadow-lg transition" title="Category and Unit Settings">
+                        <span class="material-symbols-outlined text-[#f09d39]">category</span>
+                    </a>
                 </div>
             </div>
+
+            {{-- Right side: Add Product --}}
+            <div>
+                <button id="addProductBtn" {{ $expired ? 'disabled' : '' }}
+                        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 transform hover:scale-105
+                        {{ $expired ? 'cursor-not-allowed' : '' }}">
+                    Add Product
+                </button>
+            </div>
+        </div>
+
 
             
             <div class="overflow-x-auto bg-white rounded-lg shadow">
@@ -104,11 +143,15 @@
                                 <!-- Product Image -->
                                 <td class="px-4 py-2 border text-center">
                                     @if($product->prod_image)
-                                        <img src="{{ asset('storage/' . $product->prod_image) }}" 
+                                        <img src="{{ Str::startsWith($product->prod_image, 'assets/') 
+                                            ? asset($product->prod_image) 
+                                            : asset('storage/' . $product->prod_image) }}" 
                                             alt="Product Image" 
                                             class="h-16 w-16 object-cover rounded mx-auto">
                                     @else
-                                        —
+                                        <img src="{{ asset('assets/no-product.png') }}" 
+                                            alt="Image Not Found" 
+                                            class="h-16 w-16 object-cover rounded mx-auto">
                                     @endif
                                 </td>
 
@@ -149,18 +192,24 @@
                                         {{ $expired ? 'cursor-not-allowed' : '' }}">
                                         <span class="material-symbols-outlined">edit</span>
                                     </a>
-                                    <!-- Delete -->
-                                    <form action="#" method="POST" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" title="Archive"
-                                            class="text-red-500 hover:text-red-700
+                                    <!-- Archive / Unarchive Button -->
+                                    @if ($product->prod_status === 'active')
+                                        <button type="button"
+                                            class="text-red-500 hover:text-red-700" title="Archive"
                                             {{ $expired ? 'cursor-not-allowed' : '' }}"
                                             onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
-                                            onclick="return confirm('Are you sure you want to archive this product?')">
+                                            onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')">
                                             <span class="material-symbols-outlined">archive</span>
                                         </button>
-                                    </form>
+                                    @else
+                                        <button type="button"
+                                            class="text-orange-400 hover:text-orange-600" title="Unarchive"
+                                            onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')">
+                                            <span class="material-symbols-outlined">unarchive</span>
+                                        </button>
+                                    @endif
+
+
                                 </td>
                             </tr>
                         @empty
@@ -174,8 +223,60 @@
                 </table>
             </div>
 
-
         </div>
+
+
+    <!-- Archive / Unarchive Confirmation Modal -->
+    <div id="statusModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+            <!-- Title -->
+            <h2 id="statusModalTitle" class="text-xl font-semibold text-gray-800 mb-2"></h2>
+            <p id="statusModalMessage" class="text-sm text-gray-600 mb-4"></p>
+
+            <!-- Product Preview Card -->
+            <div class="flex items-center gap-4 border rounded-lg p-4 bg-gray-50 mb-5">
+                <!-- Product Image -->
+                <img id="statusProductImage" src="" alt="Product Image" class="h-20 w-20 rounded object-cover border" 
+                    onerror="this.src='/assets/no-product-image.png'">
+
+
+                <!-- Product Details -->
+                <div class="text-left flex-1 min-w-0">
+                    <p class="text-sm text-gray-700">
+                        <strong>Name:</strong>
+                        <span id="statusProductName"
+                            class="inline-block max-w-[200px] truncate align-middle"
+                            title="">
+                        </span>
+                    </p>
+                    <p class="text-sm text-gray-700">
+                        <strong>Barcode:</strong>
+                        <span id="statusProductBarcode"
+                            class="inline-block max-w-[200px] truncate align-middle"
+                            title="">
+                        </span>
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Form -->
+            <form id="statusForm" method="POST">
+                @csrf
+                @method('PATCH')
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeStatusModal()"
+                            class="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button id="statusSubmitBtn" type="submit"
+                            class="px-4 py-2 text-sm rounded text-white">
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     
     <!-- Add Product Modal -->
@@ -337,120 +438,132 @@
     </div>
 
     <!-- Register New Product Modal -->
-    <div id="registerProductModal" 
-        class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+<div id="registerProductModal" 
+    class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
 
-        <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
+    <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
 
-            <!-- Red Top Bar -->
-            <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-                <h2 class="text-white text-lg font-medium">REGISTER NEW PRODUCT</h2>
-                <button onclick="closeRegisterModal()" class="text-white hover:text-gray-200">
-                    <span class="material-symbols-outlined text-white">close</span>
-                </button>
-            </div>
+        <!-- Red Top Bar -->
+        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
+            <h2 class="text-white text-lg font-medium">REGISTER NEW PRODUCT</h2>
+            <button onclick="closeRegisterModal()" class="text-white hover:text-gray-200">
+                <span class="material-symbols-outlined text-white">close</span>
+            </button>
+        </div>
 
-            <!-- Scrollable Modal Content Center -->
-            <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
+        <!-- Scrollable Modal Content -->
+        <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
 
-                <!-- Left Side (Form Fields) -->
-                <form id="registerProductForm" class="w-1/2 space-y-4">
+            <!-- Left Side (Form Fields) -->
+            <form id="registerProductForm" class="w-1/2 space-y-4">
 
-                    <!-- Product Name -->
-                    <input type="text" name="name" placeholder="Product Name"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
+                <!-- Product Name -->
+                <input type="text" name="name" placeholder="Product Name"
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
 
-                    <!-- Description -->
-                    <textarea name="description" placeholder="Description"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm"></textarea>
+                <!-- Description -->
+                <textarea name="description" placeholder="Description"
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm"></textarea>
 
-                    <!-- Category + Unit in one row -->
-                    <div class="flex space-x-2">
-                        <select name="category_id"
-                            class="w-1/2 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm"
-                            style="position: relative; z-index: 50;" required>
+                <!-- Category + Unit -->
+                <div class="flex space-x-2">
+                    <!-- Category -->
+                    <div class="w-1/2">
+                        <select id="categorySelect" name="category_id"
+                            class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm mb-2"
+                            required>
                             <option value="">Category</option>
                             @foreach($categories as $cat)
                                 <option value="{{ $cat->category_id }}">{{ $cat->category }}</option>
                             @endforeach
+                            <option value="other">Other...</option>
                         </select>
 
-                        <select name="unit_id"
-                            class="w-1/2 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm"
-                            style="position: relative; z-index: 50;" required>
+                        <input type="text" id="customCategory" name="custom_category"
+                            placeholder="Enter new category"
+                            class="hidden w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm">
+                    </div>
+
+                    <!-- Unit -->
+                    <div class="w-1/2">
+                        <select id="unitSelect" name="unit_id"
+                            class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm mb-2"
+                            required>
                             <option value="">Unit</option>
                             @foreach($units as $unit)
                                 <option value="{{ $unit->unit_id }}">{{ $unit->unit }}</option>
                             @endforeach
+                            <option value="other">Other...</option>
                         </select>
+
+                        <input type="text" id="customUnit" name="custom_unit"
+                            placeholder="Enter new unit"
+                            class="hidden w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-green-600 text-sm">
                     </div>
-
-
-                    <!-- Stock Limit -->
-                    <input type="number" name="stock_limit" placeholder="Stock Limit" min="0" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
-
-                    <!-- Pricing -->
-                    <div class="border rounded-lg p-3 bg-gray-100">
-                        <h3 class="font-semibold text-sm text-center mb-2">Pricing</h3>
-
-                        <!-- Cost Price -->
-                        <input type="number" step="0.01" min="0" name="cost_price" id="costPrice" placeholder="Cost Price" 
-                            class="w-full px-3 py-2 mb-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm" required>
-
-                        <!-- Markup Type -->
-                        <div class="flex space-x-2 mb-2">
-                            <select id="markupType" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
-                                <option value="percentage">Percentage</option>
-                                <option value="fixed">Fixed</option>
-                            </select>
-                            <input type="number" id="markupValue" placeholder="Markup Value" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
-                                class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
-                        </div>
-
-                        <!-- Selling Price (auto-calculated) -->
-                        <input type="number" step="0.01" name="selling_price" id="sellingPrice" placeholder="Selling Price"
-                            class="w-full px-3 py-2 border border-gray-300 rounded text-sm" readonly>
-                    </div>
-                </form>
-
-               <!-- Right Side (Photo Upload & Barcode Display) -->
-                <div class="flex flex-col items-center w-1/2 space-y-16">
-
-                    <!-- Upload Photo Group -->
-                    <div class="flex flex-col items-center space-y-2.5">
-                        <label for="productPhoto" 
-                            class="w-32 h-32 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg cursor-pointer hover:bg-gray-50 relative overflow-hidden">
-                            <span class="material-symbols-outlined text-red-500 text-xl" id="uploadIcon">add_a_photo</span>
-                            <img id="previewImage" class="absolute inset-0 w-full h-full object-cover hidden rounded-lg" />
-                            <input type="file" id="productPhoto" name="photo" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
-                        </label>
-                        <span class="text-xs text-red-500" id="fileName">Upload Photo</span>
-                    </div>
-
-                    <!-- Barcode Group -->
-                    <div class="flex flex-col items-center space-y-1">
-                        <!-- Barcode Image -->
-                        <img id="barcodeImage" src="{{ asset('assets/barcode.png') }}" 
-                            alt="Barcode Preview" class="w-48 object-contain">
-
-                        <!-- Barcode Number Styled -->
-                        <div id="autoFilledBarcode" 
-                            class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest">
-                        </div>
-                        <span class="text-xs text-gray-500">(auto-filled from typed barcode)</span>
-                    </div>
-
-                    <!-- Submit Button with bigger margin -->
-                    <button type="submit" form="registerProductForm"
-                        class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
-                        Submit
-                    </button>
                 </div>
 
+                <!-- Stock Limit -->
+                <input type="number" name="stock_limit" placeholder="Stock Limit" min="0" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
+
+                <!-- Pricing -->
+                <div class="border rounded-lg p-3 bg-gray-100">
+                    <h3 class="font-semibold text-sm text-center mb-2">Pricing</h3>
+
+                    <!-- Cost Price -->
+                    <input type="number" step="0.01" min="0" name="cost_price" id="costPrice" placeholder="Cost Price" 
+                        class="w-full px-3 py-2 mb-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm" required>
+
+                    <!-- Markup Type -->
+                    <div class="flex space-x-2 mb-2">
+                        <select id="markupType" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
+                            <option value="percentage">Percentage</option>
+                            <option value="fixed">Fixed</option>
+                        </select>
+                        <input type="number" id="markupValue" placeholder="Markup Value" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                            class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
+                    </div>
+
+                    <!-- Selling Price -->
+                    <input type="number" step="0.01" name="selling_price" id="sellingPrice" placeholder="Selling Price"
+                        class="w-full px-3 py-2 border border-gray-300 rounded text-sm" readonly>
+                </div>
+            </form>
+
+            <!-- Right Side (Photo & Barcode) -->
+            <div class="flex flex-col items-center w-1/2 space-y-16">
+
+                <!-- Upload Photo -->
+                <div class="flex flex-col items-center space-y-2.5">
+                    <label for="productPhoto" 
+                        class="w-32 h-32 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg cursor-pointer hover:bg-gray-50 relative overflow-hidden">
+                        <span class="material-symbols-outlined text-red-500 text-xl" id="uploadIcon">add_a_photo</span>
+                        <img id="previewImage" class="absolute inset-0 w-full h-full object-cover hidden rounded-lg" />
+                        <input type="file" id="productPhoto" name="photo" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
+                    </label>
+                    <span class="text-xs text-red-500" id="fileName">Upload Photo</span>
+                </div>
+
+                <!-- Barcode -->
+                <div class="flex flex-col items-center space-y-1">
+                    <img id="barcodeImage" src="{{ asset('assets/barcode.png') }}" 
+                        alt="Barcode Preview" class="w-48 object-contain">
+                    <div id="autoFilledBarcode" 
+                        class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest">
+                    </div>
+                    <span class="text-xs text-gray-500">(auto-filled from typed barcode)</span>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" form="registerProductForm"
+                    class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                    Submit
+                </button>
             </div>
         </div>
     </div>
+</div>
+
 
 
 
@@ -514,9 +627,11 @@
 
                 <!-- Product Image Preview -->
                 <div class="flex flex-col items-center space-y-2.5">
-                    <img id="restockProdImage" class="w-32 h-32 object-cover rounded-lg" />
-                    <!-- <span class="text-xs text-gray-500">Product Preview</span> -->
+                    <img id="restockProdImage" 
+                        src="{{ asset('assets/no-product-image.png') }}" 
+                        class="w-32 h-32 object-cover rounded-lg" />
                 </div>
+
 
                 <!-- Barcode Display -->
                 <div class="flex flex-col items-center space-y-1">
@@ -567,12 +682,13 @@
             categoryDropdown.classList.add('hidden');
         });
 
-        // Filter by category
+        // Filter by category (preserve status)
         function filterByCategory(categoryId) {
+            const status = document.getElementById('statusInput')?.value || 'active';
             if (categoryId === 'all') {
-                window.location.href = `{{ url('inventory-owner') }}`;
+                window.location.href = `{{ url('inventory-owner') }}?status=${status}`;
             } else {
-                window.location.href = `{{ url('inventory-owner') }}?category=${categoryId}`;
+                window.location.href = `{{ url('inventory-owner') }}?category=${categoryId}&status=${status}`;
             }
         }
 
@@ -872,6 +988,7 @@
                     if (data.success) {
                         alert("Product registered successfully!");
                         closeRegisterModal();
+                        location.reload();
                     } else {
                         alert("Failed: " + data.message);
                     }
@@ -884,6 +1001,35 @@
         });
     </script>
 
+<!-- JS for Custom Category/Unit Toggle -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const categorySelect = document.getElementById("categorySelect");
+    const customCategory = document.getElementById("customCategory");
+    const unitSelect = document.getElementById("unitSelect");
+    const customUnit = document.getElementById("customUnit");
+
+    categorySelect.addEventListener("change", () => {
+        if (categorySelect.value === "other") {
+            customCategory.classList.remove("hidden");
+            customCategory.required = true;
+        } else {
+            customCategory.classList.add("hidden");
+            customCategory.required = false;
+        }
+    });
+
+    unitSelect.addEventListener("change", () => {
+        if (unitSelect.value === "other") {
+            customUnit.classList.remove("hidden");
+            customUnit.required = true;
+        } else {
+            customUnit.classList.add("hidden");
+            customUnit.required = false;
+        }
+    });
+});
+</script>
 
 <script>
     function openRestockModal(prodCode, prodName, prodImage, categoryId, barcode) {
@@ -892,7 +1038,15 @@
         document.getElementById('restockCategoryId').value = categoryId;
 
         // Product Image Preview
-        document.getElementById('restockProdImage').src = prodImage ? '/storage/' + prodImage : '/assets/no-image.png';
+        const restockImg = document.getElementById('restockProdImage');
+        if (prodImage) {
+            restockImg.src = '/storage/' + prodImage;
+            // 👇 If the file is missing, fallback automatically
+            restockImg.onerror = () => restockImg.src = '/assets/no-product-image.png';
+        } else {
+            restockImg.src = '/assets/no-product-image.png';
+        }
+
 
 
         // Auto-filled barcode number
@@ -955,6 +1109,73 @@
         .catch(err => console.error(err));
     });
 </script>
+
+<!-- Archive, Unarchive JavaScript -->
+<script>
+    function openStatusModal(action, prodCode, name, barcode, imageUrl) {
+        const modal = document.getElementById('statusModal');
+        const form = document.getElementById('statusForm');
+        const title = document.getElementById('statusModalTitle');
+        const message = document.getElementById('statusModalMessage');
+        const submitBtn = document.getElementById('statusSubmitBtn');
+
+        // Product details
+        document.getElementById('statusProductName').textContent = name;
+        document.getElementById('statusProductName').title = name; // tooltip
+
+        document.getElementById('statusProductBarcode').textContent = barcode;
+        document.getElementById('statusProductBarcode').title = barcode; // tooltip
+
+        document.getElementById('statusProductImage').src = imageUrl 
+            ? `/storage/${imageUrl}` 
+            : "{{ asset('assets/no-product-image.png') }}";
+
+        // Action-specific UI
+        if (action === 'archive') {
+            title.textContent = 'Archive Product';
+            message.textContent = 'Are you sure you want to archive this product?';
+            form.action = `/inventory/archive/${prodCode}`;
+            submitBtn.textContent = 'Yes, Archive';
+            submitBtn.className = "px-4 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600";
+        } else {
+            title.textContent = 'Unarchive Product';
+            message.textContent = 'Do you want to unarchive this product?';
+            form.action = `/inventory/unarchive/${prodCode}`;
+            submitBtn.textContent = 'Yes, Unarchive';
+            submitBtn.className = "px-4 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600";
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').classList.add('hidden');
+    }
+</script>
+
+
+<!-- Toggle Option for Active and Archived Products JavaScript -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("statusToggleForm");
+        const statusInput = document.getElementById("statusInput");
+        const activeBtn = document.getElementById("activeBtn");
+        const archivedBtn = document.getElementById("archivedBtn");
+
+        activeBtn.addEventListener("click", () => {
+            statusInput.value = "active";
+            form.submit();
+        });
+
+        archivedBtn.addEventListener("click", () => {
+            statusInput.value = "archived";
+            form.submit();
+        });
+    });
+</script>
+
+
+
 
 
 

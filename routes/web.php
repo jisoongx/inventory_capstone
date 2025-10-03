@@ -20,6 +20,7 @@ use App\Livewire\ExpenseRecord;
 
 
 use App\Livewire\TechnicalRequest;
+use App\Http\Controllers\InventoryOwnerSettingsController;
 
 
 
@@ -150,6 +151,20 @@ Route::post('/register-product', [InventoryOwnerController::class, 'registerProd
 Route::post('/inventory/restock', [InventoryOwnerController::class, 'restockProduct'])->name('inventory.restock');
 Route::get('/inventory/latest-batch/{prodCode}', [InventoryOwnerController::class, 'getLatestBatch'])->name('inventory.latestBatch');
 Route::get('/inventory/product/{prodCode}', [InventoryOwnerController::class, 'showProductDetails'])->name('inventory-product-info');
+Route::get('/inventory-owner/edit/{prodCode}', [InventoryOwnerController::class, 'edit'])->name('inventory-owner-edit');
+Route::put('/inventory-owner/update/{prodCode}', [InventoryOwnerController::class, 'update'])->name('inventory-owner-update');
+Route::patch('/inventory/archive/{prod_code}', [InventoryOwnerController::class, 'archive'])->name('inventory-owner-archive');
+Route::patch('/inventory/unarchive/{prod_code}', [InventoryOwnerController::class, 'unarchive'])->name('inventory-owner-unarchive');
+// Inventory Owner Category & Unit Settings
+Route::get('/inventory-owner-settings', [InventoryOwnerSettingsController::class, 'index'])->name('inventory-owner-settings');
+// Categories
+Route::post('/inventory-owner-settings/category', [InventoryOwnerSettingsController::class, 'storeCategory'])->name('owner.category.store');
+Route::patch('/inventory-owner-settings/category/{id}', [InventoryOwnerSettingsController::class, 'updateCategory'])->name('owner.category.update');
+// Units
+Route::post('/inventory-owner-settings/unit', [InventoryOwnerSettingsController::class, 'storeUnit'])->name('owner.unit.store');
+Route::patch('/inventory-owner-settings/unit/{id}', [InventoryOwnerSettingsController::class, 'updateUnit'])->name('owner.unit.update');
+
+
 Route::get('/inventory-owner/edit/{prodCode}', [InventoryOwnerController::class, 'edit'])->name('inventory-owner-edit');
 Route::put('/inventory-owner/update/{prodCode}', [InventoryOwnerController::class, 'update'])->name('inventory-owner-update');
 

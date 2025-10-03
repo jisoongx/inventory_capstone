@@ -10,14 +10,15 @@
 
 <div class="max-w-6xl mx-auto py-4"> 
 
-    <!-- Back Button -->
+   <!-- Back Button -->
     <div class="mb-6 mt-4">
         <a href="{{ route('inventory-owner') }}" 
-           class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg shadow-sm hover:bg-blue-300 transition">
-            <span class="material-symbols-outlined text-base mr-1">arrow_back</span>
-            Inventory
+        class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+            <span class="material-symbols-outlined text-sm mr-1">assignment_return</span>
+            Back
         </a>
     </div>
+
 
     <!-- Product Information (Enhanced Card) -->
 <div class="bg-white rounded-lg shadow-md p-6 mb-10">
@@ -26,7 +27,9 @@
         <!-- Product Image -->
         <div class="flex justify-center">
             @if($product->prod_image)
-                <img src="{{ asset('storage/' . $product->prod_image) }}" 
+                <img src="{{ $product->prod_image && file_exists(public_path('storage/' . $product->prod_image)) 
+                                    ? asset('storage/' . $product->prod_image) 
+                                    : asset('assets/no-product-image.png') }}" 
                      alt="{{ $product->name }}" 
                      class="w-56 h-56 object-cover rounded-lg shadow-md border">
             @else
@@ -136,6 +139,6 @@
         </div>
     </div>
 
-</div> {{-- end max-w container --}}
+</div> 
 
 @endsection
