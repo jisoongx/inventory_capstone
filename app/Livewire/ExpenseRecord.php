@@ -19,7 +19,7 @@ class ExpenseRecord extends Component
     public $add_expense_descri; 
     public $add_expense_category; 
     public $add_expense_amount; 
-    public $add_expense_file; 
+    public $add_expense_file;
 
     public $addModal = false;
 
@@ -251,17 +251,22 @@ class ExpenseRecord extends Component
             where expense_id = ?", [$expense_id]
         ))->first();
 
-        if (!$fileView || !$fileView->attachment) {
+        if (!$fileView || !$fileView->file_path) {
             return response('No attachment available.', 404);
         }
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime = finfo_buffer($finfo, $fileView->attachment);
-        finfo_close($finfo);
+        $path = storage_path('app/public/' . $fileView->file_path);
 
-        return response($fileView->attachment)
-            ->header('Content-Type', $mime)
-            ->header('Content-Disposition', 'inline; filename="attachment"');
+        if (!file_exists($path)) {
+            return response('File not found.', 404);
+        }
+
+        $mime = mime_content_type($path);
+
+        return response()->file($path, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
+        ]);
     }
 
 

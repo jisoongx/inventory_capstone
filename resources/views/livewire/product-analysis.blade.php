@@ -46,9 +46,9 @@
                         <td class="py-3 px-4">{{ $analy->product_name }}</td>
                         <td class="py-3 px-4">{{ $analy->category }}</td>
                         <td class="py-3 px-4">{{ $analy->unit_sold }}</td>
-                        <td class="py-3 px-4">{{ $analy->total_sales }}</td>
-                        <td class="py-3 px-4">{{ $analy->cogs }}</td>
-                        <td class="py-3 px-4">{{ $analy->profit }}</td>
+                        <td class="py-3 px-4">₱{{ number_format($analy->total_sales, 2) }}</td>
+                        <td class="py-3 px-4">₱{{ number_format($analy->cogs, 2) }}</td>
+                        <td class="py-3 px-4">₱{{ number_format($analy->profit) }}</td>
                         <td class="py-3 px-4">{{ number_format($analy->profit_margin_percent, 0) }}%</td>
                         <td class="py-3 px-4">{{ number_format($analy->contribution_percent, 0) }}%</td>
                     </tr>

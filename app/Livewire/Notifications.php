@@ -34,7 +34,7 @@ class Notifications extends Component
     }
 
     public function loadNotifs() {
-        $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
+        
         $user_email = Auth::guard('owner')->check() 
             ? Auth::guard('owner')->user()->email 
             : Auth::guard('staff')->user()->email;

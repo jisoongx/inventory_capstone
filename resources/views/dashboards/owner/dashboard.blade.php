@@ -32,8 +32,8 @@
                     </div>
                 </div>
 
-                <div class="flex gap-3 w-full pr-3">
-                    <div class="bg-white p-5 rounded shadow border w-[50%]">
+                <div class="flex gap-3 pr-3">
+                    <div class="bg-white p-5 rounded shadow border w-[50%] h-[26rem]">
                         <p class="text-left text-black font-semibold text-xs">Sales by Category</p>
                         <div class="flex justify-center gap-4 mt-3">
                             @if($year[0] ?? false)
@@ -50,46 +50,54 @@
                                 </span>
                             @endif
                         </div>
-                        @if(empty($year[0]))
-                                <div class="flex flex-col items-center justify-center pt-24 text-gray-500">
-                                    <span class="material-symbols-rounded-big text-slate-400">bar_chart</span>
-                                    <p class="mt-2 text-xs font-semibold">No chart available yet</p>
+                            @if(empty($year[0]))
+                                    <div class="flex flex-col items-center justify-center py-24 px-8 text-gray-500 text-center">
+                                        <span class="material-symbols-rounded-big text-slate-400">bar_chart</span>
+                                        <p class="mt-2 text-xs font-semibold">No sales by category found for this year.</p>
+                                    </div>
+                            @else
+                                <div class="overflow-x-auto mt-2 scrollbar-custom">
+                                    <div id="productChart" 
+                                        data-categories='@json($categories ?? [])' 
+                                        data-products='@json($products ?? [])' 
+                                        data-products-prev='@json($productsPrev ?? [])' 
+                                        data-products-ave='@json($productsAve ?? [])'
+                                        data-year='@json($year ?? [])'
+                                        style="height: 250px; min-width: 390px;" 
+                                        class="w-full">
+                                        <canvas></canvas>
+                                    </div>
                                 </div>
-                        @else
-                            <div class="overflow-x-auto mt-2 scrollbar-custom">
-                                <div id="productChart" 
-                                    data-categories='@json($categories ?? [])' 
-                                    data-products='@json($products ?? [])' 
-                                    data-products-prev='@json($productsPrev ?? [])' 
-                                    data-year='@json($year ?? [])'
-                                    style="height: 250px; min-width: 390px;" 
-                                    class="w-full">
-                                    <canvas></canvas>
-                                </div>
-                            </div>
-                        @endif
+                            @endif
                     </div>
-                    <div class="bg-white p-5 rounded shadow border w-[50%]">
+                    <div class="bg-white p-5 rounded shadow border">
                         <p class="text-left text-black font-semibold text-xs">Sales VS Loss - {{ $dateDisplay->format('F') }}</p>
                         <div class="w-full mt-3">
-                            <div id="salesVSlossChart" 
-                                data-sales='@json($sales ?? [])' 
-                                data-losses='@json($losses ?? [])'
-                                style="height: 350px;">
-                                <canvas></canvas>
-                                
-                                <div class="flex justify-center items-stretch gap-6 mt-4">
-                                    <div class="flex flex-col justify-center text-center px-4">
-                                        <p class="text-4xl font-bold text-green-700 leading-none"> %</p>
-                                        <p class="text-xs text-gray-600 mt-1">Sales</p>
-                                    </div>
-                                    <div class="border-l-2 border-gray-400 self-center h-12"></div>
-                                    <div class="flex flex-col justify-center text-center px-4">
-                                        <p class="text-4xl font-bold text-red-700 leading-none">28%</p>
-                                        <p class="text-xs text-gray-600 mt-1">Loss</p>
+                            @if((end($losses) ?? 0) == 0 || (end($sales) ?? 0) == 0)
+                                <div class="flex flex-col items-center justify-center py-24 text-gray-500 text-center">
+                                    <span class="material-symbols-rounded-big text-slate-400">donut_small</span>
+                                    <p class="mt-2 text-xs font-semibold">No sales or losses recorded for this month yet.</p>
+                                </div>
+                            @else
+                                <div id="salesVSlossChart" 
+                                    data-sales='@json($sales ?? [])' 
+                                    data-losses='@json($losses ?? [])'
+                                    style="height: 350px;">
+                                    <canvas></canvas>
+                                    
+                                    <div class="flex justify-center items-stretch gap-6 mt-4">
+                                        <div class="flex flex-col justify-center text-center px-4">
+                                            <p class="text-4xl font-bold text-green-700 leading-none"> %</p>
+                                            <p class="text-xs text-gray-600 mt-1">Sales</p>
+                                        </div>
+                                        <div class="border-l-2 border-gray-400 self-center h-12"></div>
+                                        <div class="flex flex-col justify-center text-center px-4">
+                                            <p class="text-4xl font-bold text-red-700 leading-none">28%</p>
+                                            <p class="text-xs text-gray-600 mt-1">Loss</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -158,11 +166,11 @@
                         <span class="material-symbols-rounded-small text-sm" title="Reset">reset_settings</span>
                     </button>
                 </div>
-                <div class="w-full overflow-x-auto mt-3 scrollbar-custom">
+                <div x-data x-init="$el.scrollLeft = $el.scrollWidth" class="w-full overflow-x-auto mt-3 scrollbar-custom">
                     <div id="profitChart" 
                         data-profits='@json($profits ?? [])' 
                         data-months='@json($months ?? [])'
-                        style="height: 370px; width: 800px;">
+                        style="height: 355px; width: 600px;">
                         <canvas></canvas>
                     </div>
                 </div>
@@ -174,7 +182,7 @@
             <div class="grid p-5 bg-white rounded shadow border">
                 <h3 class="text-xs font-semibold text-black mb-5">Comparative Analysis</h3>
                 
-                <div class="overflow-x-auto scrollbar-custom">
+                <div x-init="setTimeout(() => { $el.scrollLeft = $el.scrollWidth }, 100)" class="overflow-x-auto scrollbar-custom">
                     <table class="text-sm text-left text-slate-700 border-collapse table-auto w-full">
                         <thead>
                             <tr class="bg-red-700 text-xs text-slate-500 uppercase">

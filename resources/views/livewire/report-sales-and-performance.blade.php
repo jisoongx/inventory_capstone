@@ -25,7 +25,7 @@
                 ? 'bg-orange-50 text-black border-orange-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
-            Sales by Category
+            Sales by Category Report
         </button>
 
         <button 
@@ -34,7 +34,7 @@
                 ? 'bg-blue-50 text-black border-blue-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
-            Peak Hours
+            Peak Hours Operational Report
         </button>
     </div>
 
@@ -68,13 +68,16 @@
                         type="text"
                         wire:model.live.debounce.1ms="searchWord"
                         placeholder="Search Category..."
-                        class="rounded border border-gray-400 pl-10 pr-3 py-2 text-xs focus:ring focus:ring-blue-200 text-black"
+                        class="rounded border border-gray-400 pl-10 pr-3 py-2 text-xs focus:ring focus:ring-orange-200 text-black"
                     >
                 </div>
 
                 <div class="relative">
-                    <button @click="open = !open" type="button" class="p-2">
-                        <span class="material-symbols-rounded text-orange-500 hover:text-black" title="Filter">discover_tune</span>
+                    <button @click="open = !open" type="button" class="py-2 px-3 border border-orange-500 rounded hover:bg-orange-50">
+                        <div class="flex justify-center gap-1">
+                            <span class="material-symbols-rounded-premium text-orange-700" title="Filter">discover_tune</span>
+                            <span class="text-orange-700 text-xs font-semibold">Filter</span>
+                        </div>
                     </button>
                     
                     <div x-show="open" x-cloak @click.away="open = false" 
@@ -137,8 +140,8 @@
                 <table x-data="{ showTopProductUnit: false, showTopProductSales: false }" class="min-w-full divide-y divide-gray-200 text-xs">
                     <thead class="bg-gray-50 h-[4rem]">
                         <tr class="text-gray-700 uppercase text-xs tracking-wider border-b">
-                            <th class="px-6 py-3 text-left font-semibold text-xs sticky top-0 bg-gray-50 w-[20%]">Category</th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50  w-[13%]">                                    
+                            <th class="px-2 py-3 text-left font-semibold text-xs sticky top-0 bg-gray-50 w-[20%]">Category</th>
+                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50  w-[12%]">                                    
                                 <button @click="showTopProductUnit = !showTopProductUnit" type="button" class="text-xs">
                                     <div class="flex items-center justify-end space-x-1">
                                         <span>UNITS SOLD</span>
@@ -148,24 +151,24 @@
                                     </div>
                                 </button>
                             </th>
-                            <th class="px-6 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[15%]" x-show="showTopProductUnit" x-cloak>
+                            <th class="px-2 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductUnit" x-cloak>
                                 Top Product by Unit
                             </th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[14%]">                                    
+                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[12%]">                                    
                                 <button @click="showTopProductSales = !showTopProductSales" type="button" class="text-xs">
                                     <div class="flex items-center justify-end space-x-1">
-                                        <span>TOTAL SALES</span>
+                                        <span>SALES (₱)</span>
                                         <span class="material-symbols-rounded-small text-gray-400">
                                             keyboard_double_arrow_right
                                         </span>
                                     </div>
                                 </button>
                             </th>
-                            <th class="px-6 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[15%]" x-show="showTopProductSales" x-cloak>
+                            <th class="px-2 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductSales" x-cloak>
                                 Top Product by Sales
                             </th>
-                            <th class="px-6 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[10%]">COGS</th>
-                            <th class="px-6 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[15%]">GROSS MARGIN</th>
+                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[10%]">COGS (₱)</th>
+                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[13%]">GROSS MARGIN</th>
                             <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50"></th>
                         </tr>
                     </thead>
@@ -173,18 +176,18 @@
                     <tbody class="divide-y divide-gray-200 text-xs">
                         @forelse($sbc as $input)
                             <tr class="hover:bg-gray-50 transition">
-                                <td class="px-6 py-4 font-medium text-gray-900">{{ $input->category }}</td>
+                                <td class="px-2 py-4 font-medium text-gray-900">{{ $input->category }}</td>
                                 <td class="px-2 py-4 text-left font-medium text-gray-900">{{ $input->unit_sold }}</td>
-                                <td x-show="showTopProductUnit" x-cloak class="px-6 py-4 text-left font-medium text-gray-900">
+                                <td x-show="showTopProductUnit" x-cloak class="px-3 py-4 text-left font-medium text-gray-900 bg-gray-50">
                                     {{ $input->top_product_unit }}
                                 </td>
                                 <td class="px-2 py-4 text-left font-medium text-gray-900">₱{{ number_format($input->total_sales, 2 )}}</td>
-                                <td x-show="showTopProductSales" x-cloak class="px-6 py-4 text-left font-medium text-gray-900">
+                                <td x-show="showTopProductSales" x-cloak class="px-3 py-4 text-left font-medium text-gray-900 bg-gray-50">
                                     {{ $input->top_product_sales }}
                                 </td>
-                                <td class="px-6 py-4 text-left font-medium text-gray-900">₱{{ number_format($input->cogs, 2 )}}</td>
-                                <td class="px-6 py-4 text-left font-medium text-gray-900">{{ number_format($input->gross_margin, 0) }}%</td>
-                                <td class="px-2 py-4 text-left font-medium text-white
+                                <td class="px-2 py-4 text-left font-medium text-gray-900">₱{{ number_format($input->cogs, 2 )}}</td>
+                                <td class="px-2 py-4 text-left font-medium text-gray-900">{{ number_format($input->gross_margin, 0) }}%</td>
+                                <td class="px-2 py-4 text-center font-medium text-white text-[10px]
                                     @if($input->number == 1) bg-green-600
                                     @elseif($input->number == 2) bg-yellow-600
                                     @elseif($input->number == 3) bg-blue-600
@@ -208,7 +211,56 @@
 
         <!-- PEAK HOURS -->
         <div x-show="tab === 'peak-hours'">
-            <p class="text-gray-700"> <b>this is peak hours</b> report content goes here.</p>
+        
+            <div class="relative flex items-center text-gray-400 mb-4">
+                <input type="date" wire:model.live="dateChoice"
+                    class="text-xs border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"/>
+            </div>
+            <div class="overflow-y-auto scrollbar-custom h-[35rem]">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="sticky top-0 bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 sticky top-0 text-left text-xs font-medium uppercase tracking-wider">
+                                Day
+                            </th>
+                            <th scope="col" class="px-6 py-3 sticky top-0 text-left text-xs font-medium uppercase tracking-wider">
+                                Time Slot
+                            </th>
+
+                            <th scope="col" class="px-6 py-3 sticky top-0 text-right text-xs font-medium uppercase tracking-wider">
+                                Transactions
+                            </th>
+                            <th scope="col" class="px-6 py-3 sticky top-0 text-right text-xs font-medium uppercase tracking-wider">
+                                Sales (₱)
+                            </th>
+                            <th scope="col" class="px-6 py-3 sticky top-0 text-right text-xs font-medium uppercase tracking-wider">
+                                Avg. Value ₱
+                            </th>
+                        </tr>
+                    </thead>
+                    
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse($peak as $pk)
+                            <tr class="">
+                                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900">{{ $pk->dayName }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900">{{ $pk->time_slot }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-xs text-right">{{ $pk->transactions }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-xs font-medium text-green-600 text-right">₱{{ number_format($pk->sales, 2) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-xs text-right">₱{{ number_format($pk->avg_value, 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center">
+                                    <div class="flex flex-col justify-center items-center space-y-1 p-24">
+                                        <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                        <span class="text-gray-400 text-xs">Nothing to show.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

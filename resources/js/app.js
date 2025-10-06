@@ -16,11 +16,12 @@ Chart.register(...registerables, zoomPlugin);
 
 //sa charts ni
 document.addEventListener("DOMContentLoaded", () => {
-    const chartEl = document.getElementById("profitChart");
-    const ctx = chartEl.querySelector("canvas").getContext("2d");
 
-    const profits = JSON.parse(chartEl.dataset.profits || "[]");
-    const months = JSON.parse(chartEl.dataset.months || "[]");
+    const profitChart = document.getElementById("profitChart");
+    const ctx = profitChart.querySelector("canvas").getContext("2d");
+
+    const profits = JSON.parse(profitChart.dataset.profits || "[]");
+    const months = JSON.parse(profitChart.dataset.months || "[]");
 
     new Chart(ctx, {
         type: "line",
@@ -64,20 +65,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-    const chartEle = document.getElementById("productChart");
-    const ctz = chartEle.querySelector("canvas").getContext("2d");
+    const productChart = document.getElementById("productChart");
+    const ctz = productChart.querySelector("canvas").getContext("2d");
 
-    const categories = JSON.parse(chartEle.dataset.categories || "[]");
-    const products = JSON.parse(chartEle.dataset.products || "[]");
-    const productsPrev = JSON.parse(chartEle.dataset.productsPrev || "[]");
-    const year = JSON.parse(chartEle.dataset.year || "[]");
+    const categories = JSON.parse(productChart.dataset.categories || "[]");
+    const products = JSON.parse(productChart.dataset.products || "[]");
+    const productsPrev = JSON.parse(productChart.dataset.productsPrev || "[]");
+    const productsAve = JSON.parse(productChart.dataset.productsAve || "[]");
+    const year = JSON.parse(productChart.dataset.year || "[]");
 
     new Chart(ctz, {
-        type: 'line',
+        
         data: {
             labels: categories,
             datasets: [
             {
+                type: 'line',
                 label: year[0] || "",
                 data: products,
                 borderColor: "rgba(190, 21, 21, 1)",
@@ -86,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 pointRadius: 1,
             },
             ...(year.length > 1 ? [{
+                type: 'line',
                 label: year[1],
                 data: productsPrev,
                 borderColor: 'rgba(67, 102, 209, 1)',
@@ -93,7 +97,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 borderDash: [7],
                 borderWidth: 2,
                 pointRadius: 1,
-            }] : [])
+            }] : []), 
+            {
+                type: 'bar',
+                label: 'Average',
+                data: productsAve,
+                borderColor: "rgba(250, 196, 47, 1)",
+                backgroundColor: 'rgba(250, 196, 47, 1)',
+                borderWidth: 2,
+            }
             ]
         },
         options: {
@@ -137,13 +149,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 cutout: "50%", 
                 radius: "80%", 
             },
-            {
-                label: "Last Month", //inner ni
-                data: [prevSales, prevLoss],
-                backgroundColor: ["#1f6f22ff", "#b82e24ff"],
-                cutout: "65%",
-                radius: "80%",
-            },
+            // {
+            //     label: "Last Month", //inner ni
+            //     data: [prevSales, prevLoss],
+            //     backgroundColor: ["#1f6f22ff", "#b82e24ff"],
+            //     cutout: "65%",
+            //     radius: "80%",
+            // },
             ],
         },
         options: {

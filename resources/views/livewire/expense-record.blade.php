@@ -40,7 +40,10 @@
                                     <input type="text" wire:model="editingDescri"
                                         class="p-0 pb-1 border-0 border-b border-slate-300 focus:border-slate-500 w-[80%] text-xs font-medium rounded-none">
                                 @else
-                                    <span>{{ $input->expense_descri }}</span>
+                                    <a href="{{ asset('storage/' . $input->file_path) }}" target="_blank"
+                                    class="text-blue-600 hover:underline text-xs font-medium">
+                                        {{ $input->expense_descri }}
+                                    </a>
                                 @endif
                             </td>
                             <td>

@@ -14,6 +14,8 @@ class TechnicalRequest extends Component
     public $convos = [];
     public $recentreq = null;
 
+    public $searchWord;
+
     public $newMessage = '';
 
     public $currentReqId = null;
@@ -81,9 +83,18 @@ class TechnicalRequest extends Component
                 group by cm.req_id
             ", [$staff_id]))->pluck('unread_count', 'req_id');
         }
+
+        if (!empty($this->searchWord)) {
+            $search = strtolower($this->searchWord);
+
+            $this->requests = $this->requests->filter(function ($item) use ($search) {
+                return str_contains(strtolower($item->title ?? ''), $search)
+                    || str_contains(strtolower($item->conversation ?? ''), $search);
+            })->values();
+        }
     }
 
-    public function show($req_id = null) {
+    public function seen($req_id = null) { //mo pa trigger sad sha nga mo display ang convo
         $this->recentreq = $req_id 
             ? $this->requests->where('req_id', $req_id)->first()
             : $this->requests->first();

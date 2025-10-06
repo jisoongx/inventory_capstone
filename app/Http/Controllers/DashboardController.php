@@ -249,6 +249,30 @@ class DashboardController extends Controller
         ]))->toArray();
         $productPrevData = array_map(fn($row) => (float) $row->total_amount, $productCategoryPrev);
 
+        $productCategoryAve = collect(DB::select("
+            SELECT 
+                c.category,
+                ROUND(AVG(t.year_total), 2) AS avg_total_sales
+            FROM (
+                SELECT
+                    c.category_id,
+                    c.category,
+                    YEAR(r.receipt_date) AS year,
+                    SUM(p.selling_price * ri.item_quantity) AS year_total
+                FROM categories c
+                JOIN products p ON c.category_id = p.category_id
+                JOIN receipt_item ri ON p.prod_code = ri.prod_code
+                JOIN receipt r ON ri.receipt_id = r.receipt_id
+                WHERE r.owner_id = ?
+                GROUP BY c.category_id, c.category, YEAR(r.receipt_date)
+            ) AS t
+            JOIN categories c ON c.category_id = t.category_id
+            GROUP BY c.category_id, c.category
+            ORDER BY c.category_id
+        ", [$owner_id]))->toArray();
+        $productsAveData = array_map(fn($row) => (float) $row->avg_total_sales, $productCategoryAve);
+
+
 
         // $categories = collect(DB::select(
         //     "select category from categories
@@ -309,6 +333,7 @@ class DashboardController extends Controller
             'netprofits' => $netProfits,
             'products' => $productData,
             'productsPrev' => $productPrevData,
+            'productsAve'=> $productsAveData,
             'categories' => $categories,
             'currentMonth' => $currentMonth,
             'latestYear' => $latestYear,
@@ -385,5 +410,3 @@ class DashboardController extends Controller
     }
 }
 
-
-//wa pa nahuman ang comparative matrix

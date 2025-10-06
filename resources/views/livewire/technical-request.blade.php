@@ -16,14 +16,15 @@
                         search
                     </span>
                     <input type="text" name="search" id="search" placeholder="Search here..."
-                        class="border border-gray-300 text-gray-900 text-sm rounded-full focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-3"
+                        wire:model.live.debounce.1ms="searchWord"
+                        class="text-xs border border-gray-300 text-gray-900 text-sm rounded-full focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-3"
                     />
                 </div>
             </div>
                  
             <div class="overflow-y-auto mt-3 -z-1" wire:poll.keep-alive.5s>
                 @forelse ($requests as $req)
-                    <button wire:click="show({{ $req->req_id }})" type="button"
+                    <button wire:click="seen({{ $req->req_id }})" type="button"
                     wire:key="req-{{ $req->req_id }}"
                     wire:loading.attr="disabled"
                     class="flex items-center py-5 gap-3 hover:bg-slate-50 p-2 rounded-lg w-full {{ $recentreq && $recentreq->req_id === $req->req_id ? 'bg-slate-100' : '' }}">
