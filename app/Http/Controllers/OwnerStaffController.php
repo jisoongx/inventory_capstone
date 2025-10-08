@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -14,9 +16,34 @@ class OwnerStaffController extends Controller
     public function showStaff()
     {
         $ownerId = Auth::guard('owner')->id();
-        $staffMembers = Staff::where('owner_id', $ownerId)->paginate(10);
+        $staffMembers = Staff::where('owner_id', $ownerId)->get(); // Fetch all without pagination
         return view('dashboards.owner.staff_list', compact('staffMembers'));
     }
+
+
+    public function filter(Request $request)
+    {
+        $query = $request->get('search', '');
+        $status = $request->get('status', '');
+
+        $staffMembers = \App\Models\Staff::query()
+            ->when($query, function ($q) use ($query) {
+                $q->where(function ($sub) use ($query) {
+                    $sub->where('firstname', 'like', "%{$query}%")
+                        ->orWhere('middlename', 'like', "%{$query}%")
+                        ->orWhere('lastname', 'like', "%{$query}%")
+                        ->orWhere('email', 'like', "%{$query}%");
+                });
+            })
+            ->when($status, function ($q) use ($status) {
+                $q->where('status', $status);
+            })
+            ->orderBy('firstname')
+            ->get();
+
+        return response()->json(['staffMembers' => $staffMembers]);
+    }
+
 
     public function updateStatus(Request $request, Staff $staff)
     {
@@ -26,14 +53,23 @@ class OwnerStaffController extends Controller
 
         $staff->status = $request->status;
         $staff->save();
-        $staffName = "{$staff->firstname} {$staff->lastname}";
 
+        $staffName = "{$staff->firstname} {$staff->lastname}";
         $user = Auth::guard('owner')->user();
         $description = "Updated status of staff ({$staffName}) to {$staff->status}";
-        ActivityLogController::log($description, 'owner',  $user, $request->ip());
+        ActivityLogController::log($description, 'owner', $user, $request->ip());
 
-        return back()->with('success', 'Staff status updated successfully!');
+        $message = $staff->status === 'Active'
+            ? 'Staff has been activated successfully!'
+            : 'Staff has been deactivated successfully!';
+
+        return response()->json([
+            'message' => $message,
+            'staff' => $staff
+        ]);
     }
+
+
 
 
     public function updateStaffInfo(Request $request, Staff $staff)
@@ -52,12 +88,16 @@ class OwnerStaffController extends Controller
             ]);
 
             $staff->update($request->only(['firstname', 'middlename', 'lastname', 'email', 'contact']));
+
             $staffName = "{$staff->firstname} {$staff->lastname}";
             $user = Auth::guard('owner')->user();
             $description = "Updated staff ({$staffName}) details";
-            ActivityLogController::log($description,  'owner', $user, $request->ip());
+            ActivityLogController::log($description, 'owner', $user, $request->ip());
 
-            return response()->json(['message' => 'Staff details updated successfully!']);
+            return response()->json([
+                'message' => 'Staff details updated successfully!',
+                'staff' => $staff
+            ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
@@ -66,17 +106,43 @@ class OwnerStaffController extends Controller
     }
 
 
+
     public function addStaff(Request $request)
     {
         $ownerId = Auth::guard('owner')->id();
-        $request->validate([
-            'firstname' => ['required', 'string', 'max:255'],
+
+        $validator = Validator::make($request->all(), [
+            'firstname'  => ['required', 'string', 'max:255'],
             'middlename' => ['nullable', 'string', 'max:255'],
-            'lastname' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:staff'],
-            'contact' => ['nullable', 'string', 'max:20'],
+            'lastname'   => ['required', 'string', 'max:255'],
+            'email'      => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    $existsInStaff  = DB::table('staff')->where('email', $value)->exists();
+                    $existsInOwners = DB::table('owners')->where('email', $value)->exists();
+                    if ($existsInStaff || $existsInOwners) {
+                        $fail('The ' . $attribute . ' has already been taken.');
+                    }
+                },
+            ],
+            'contact' => [
+                'nullable',
+                'string',
+                'regex:/^09[0-9]{9}$/', // Must start with 09 and have 11 digits
+            ],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
+
+
+        if ($validator->fails()) {
+            if ($request->ajax()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
 
         $staff = Staff::create([
             'owner_id' => $ownerId,
@@ -91,6 +157,19 @@ class OwnerStaffController extends Controller
         $user = Auth::guard('owner')->user();
         ActivityLogController::log('Created new staff account', 'owner', $user, $request->ip());
 
-        return redirect()->route('owner.profile')->with('success', 'Staff account created successfully!');
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => 'Staff created successfully!',
+                'old' => [
+                    'firstname' => $request->firstname,
+                    'middlename' => $request->middlename,
+                    'lastname' => $request->lastname,
+                    'email' => $request->email,
+                    'contact' => $request->contact
+                ]
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Staff created successfully!');
     }
 }

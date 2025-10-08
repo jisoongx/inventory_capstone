@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Owner;
@@ -12,12 +13,25 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            // Names must be letters only, no numbers/symbols
             'firstname'  => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-]+$/'],
             'middlename' => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-]+$/'],
             'lastname'   => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-]+$/'],
             'store_name' => ['required', 'string', 'max:255', 'unique:owners,store_name'],
-            'email'      => ['required', 'string', 'email', 'max:255', 'unique:owners,email'],
+            'email'      => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    // Check if email already exists in owners or staff
+                    $existsInOwners = DB::table('owners')->where('email', $value)->exists();
+                    $existsInStaff  = DB::table('staff')->where('email', $value)->exists();
+
+                    if ($existsInOwners || $existsInStaff) {
+                        $fail('The ' . $attribute . ' has already been taken.');
+                    }
+                },
+            ],
             'contact'    => ['nullable', 'digits:11', 'starts_with:09'],
             'password'   => ['required', 'string', 'min:8', 'confirmed'],
         ], [

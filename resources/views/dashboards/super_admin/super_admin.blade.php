@@ -13,7 +13,7 @@
     </style>
 </head>
 
-<body class="bg-gradient-to-b from-white to-blue-100 min-h-screen">
+<body class="bg-slate-50 p-0" oncontextmenu="return false;">
     <div class="flex">
         <aside id="sidebar" class="w-64 transition-all duration-300 bg-black text-white h-screen fixed top-0 left-0 p-4 flex flex-col justify-between z-50"> {{-- Added fixed, top-0, left-0, h-screen, z-50 --}}
             <div>
@@ -49,7 +49,11 @@
         </aside>
 
         <main id="mainContent" class="flex-1 p-3 ml-64 transition-all duration-300">
-            <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 relative pb-2">
+            <div class="flex justify-between items-center mr-5 border-b-2 border-gray-300 relative pb-2">
+                <!-- Page-specific greeting (like Good day, Admin + Clock) -->
+                <div>
+                    @yield('page-header')
+                </div>
                 <div class="relative">
                     <button id="userButton" class="focus:outline-none">
                         <img src="{{ asset('assets/user.png') }}" class="w-8 h-8 rounded-full" alt="User Icon">

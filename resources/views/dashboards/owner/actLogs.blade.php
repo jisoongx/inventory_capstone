@@ -2,22 +2,28 @@
 
 @section('content')
 &nbsp;
-<div class="flex justify-between items-center mx-6">
-    <h1 class="text-2xl font-extrabold text-gray-900 mb-6">Activity Logs</h1>
+<div class="flex justify-between items-center mx-5">
+    <h1 class="text-xl font-semibold text-gray-900 mb-5 ml-2">Activity Logs</h1>
     <a href="{{ route('staffLogs') }}" class="text-blue-500 hover:text-blue-700 underline text-sm">Staff Activity Logs</a>
 </div>
 
 <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 mx-6">
     <!-- Smaller, Rounded Search Bar -->
-    <div class="flex-1">
+    <div class="relative flex-1">
+        <!-- Search Icon -->
+        <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[20px]">
+            search
+        </span>
+
+        <!-- Search Input -->
         <input
             type="text"
             id="search"
             placeholder="Search by location or activity"
             autocomplete="off"
-            class="w-full p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg focus:ring-gray-300 focus:border-gray-500 shadow-md transition-all duration-200 ease-in-out"
-            style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;">
+            class="w-full p-3 pl-11 text-sm text-gray-800 border border-gray-300 rounded-md bg-white focus:border-indigo-500 shadow-md transition-all duration-200 ease-in-out">
     </div>
+
     <div class="relative w-full sm:w-[180px]">
         <input
             type="time"
@@ -39,52 +45,54 @@
 
 </div>
 <div class="overflow-x-auto bg-white shadow-md rounded-md mx-6">
-    <table class="min-w-full text-sm text-center text-gray-700">
-        <thead class="bg-gray-100 uppercase  font-semibold">
-            <tr>
-                <th class="px-6 py-3 text-left">Date</th>
-                <th class="px-6 py-3">Time</th>
-                <th class="px-6 py-3">Location</th>
-                <th class="px-6 py-3 text-left">Activity</th>
-            </tr>
-        </thead>
-        <tbody id="logs-table-body" class="divide-y divide-gray-200">
-            @forelse ($logs as $log)
-            <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-4 text-left">
-                    {{ \Carbon\Carbon::parse($log->log_timestamp)->format('M j, Y') }}
-                </td>
-                <td class="px-6 py-4">
-                    @php
-                    $time = \Carbon\Carbon::parse($log->log_timestamp);
-                    $period = $time->format('A'); // AM or PM
-                    @endphp
+    <div class="max-h-[430px] overflow-y-auto"> <!-- 👈 fixed height + vertical scroll -->
+        <table class="min-w-full text-sm text-center text-slate-700">
+            <thead class="bg-red-50 text-center uppercase tracking-wider border-b border-gray-100 sticky top-0">
+                <tr>
+                    <th class="px-6 py-3 font-semibold text-left">Date</th>
+                    <th class="px-6 py-3 font-semibold">Time</th>
+                    <th class="px-6 py-3 font-semibold">Location</th>
+                    <th class="px-6 py-3 text-left font-semibold">Activity</th>
+                </tr>
+            </thead>
+            <tbody id="logs-table-body" class="divide-y divide-gray-200">
+                @forelse ($logs as $log)
+                <tr class="hover:bg-blue-50 transition-colors">
+                    <td class="px-6 py-4 text-left">
+                        {{ \Carbon\Carbon::parse($log->log_timestamp)->format('M j, Y') }}
+                    </td>
+                    <td class="px-6 py-4">
+                        @php
+                        $time = \Carbon\Carbon::parse($log->log_timestamp);
+                        $period = $time->format('A'); // AM or PM
+                        @endphp
 
-                    <span class="rounded-full px-3 py-1 inline-block font-medium
+                        <span class="rounded-full px-3 py-1 inline-block font-medium
         @if($period === 'AM')
             border border-amber-500 text-amber-500
         @elseif($period === 'PM')
             border border-blue-600 text-blue-700
         @endif">
-                        {{ $time->format('g:i A') }}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-gray-600">
-                    {{ $log->log_location ?? 'N/A' }}
-                </td>
-                <td class="px-6 py-4 text-gray-600 text-left">
-                    {{ $log->log_type }}
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="4" class="px-6 py-4 text-gray-500">
-                    No activity logs found.
-                </td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
+                            {{ $time->format('g:i A') }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600">
+                        {{ $log->log_location ?? 'N/A' }}
+                    </td>
+                    <td class="px-6 py-4 text-gray-600 text-left">
+                        {{ $log->log_type }}
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="4" class="px-6 py-4 text-gray-500">
+                        No activity logs found.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 </div>
 
 
@@ -152,7 +160,7 @@
 
 
                             html += `
-           <tr class="hover:bg-gray-50 transition duration-150 ease-in-out" data-log-id="${logs.log_id}">
+           <tr class="hover:bg-blue-50 transition duration-150 ease-in-out" data-log-id="${logs.log_id}">
                 <td class="px-6 py-4 text-sm text-gray-900 text-left">${formattedDate}</td>
                 <td class="px-6 py-4 text-sm text-gray-900 text-center">
                     <span class="rounded-full px-3 py-1 inline-block ${timeColor}">

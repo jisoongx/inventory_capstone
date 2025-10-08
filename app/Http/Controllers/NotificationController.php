@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Http\Controllers\ActivityLogController;
 
 class NotificationController extends Controller
 { 
@@ -64,6 +65,8 @@ class NotificationController extends Controller
                     VALUES ( ?, 0, NULL, ?)
                 ", [$user->user_email, $notif_id]);
             }
+
+           
 
             return redirect()->route('dashboards.super_admin.notification')->with('success', 'Notification sent successfully.');
         }

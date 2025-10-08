@@ -24,6 +24,10 @@ class SubscriptionController extends Controller
     public function subscribers(Request $request)
     {
         // 1. Get filter values from the URL
+        Subscription::where('status', 'active')
+            ->where('subscription_end', '<', now())
+            ->update(['status' => 'expired']);
+
         $status = $request->input('status', 'active');
         $planId = $request->input('plan');
         $search = $request->input('search');

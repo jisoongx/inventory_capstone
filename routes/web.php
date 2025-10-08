@@ -141,6 +141,8 @@ Route::get('/owner/staff', [OwnerStaffController::class, 'showStaff'])->name('ow
 Route::post('/owner/staff', [OwnerStaffController::class, 'addStaff'])->name('owner.add.staff');
 Route::put('/owner/staff/{staff}/status', [OwnerStaffController::class, 'updateStatus'])->name('owner.staff.updateStatus');
 Route::put('/owner/staff/{staff}', [OwnerStaffController::class, 'updateStaffInfo'])->name('owner.staff.update');
+Route::get('/owner/staff/filter', [OwnerStaffController::class, 'filter'])->name('owner.staff.filter');
+
 
 //Inventory for Owners
 Route::get('/inventory-owner', [InventoryOwnerController::class, 'index'])->name('inventory-owner');   

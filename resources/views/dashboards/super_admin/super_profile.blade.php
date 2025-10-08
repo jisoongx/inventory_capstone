@@ -2,10 +2,10 @@
 
 @section('content')
 <div class="container mx-auto p-6">
-    <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Welcome!</h1> {{-- Smaller greeting --}}
+    <h1 class="text-xl font-semibold text-gray-800 ">Welcome Admin!</h1> {{-- Smaller greeting --}}
     <p class="text-base text-gray-600 mb-6">{{ \Carbon\Carbon::now()->format('l, F d, Y') }}</p> {{-- Smaller date --}}
 
-    <div class="bg-white shadow-md rounded-lg p-6 max-w-3xl mx-auto space-y-6 border border-gray-100">
+    <div class="bg-white shadow-lg rounded-xl p-6 max-w-3xl mx-auto space-y-6 border border-slate-100">
         {{-- Success and error message display --}}
         @if (session('success'))
         <div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded-lg relative mb-3" role="alert">

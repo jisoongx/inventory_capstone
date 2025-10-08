@@ -192,6 +192,14 @@ class InventoryOwnerController extends Controller
             ->where('prod_code', $prodCode)
             ->update($updateData);
 
+        ActivityLogController::log(
+            'Updated product "' . $validated['name'] . '".',
+            'owner',
+            Auth::guard('owner')->user(),
+            request()->ip()
+        );
+
+
         return redirect()->route('inventory-owner')
             ->with('success', 'Product updated successfully.');
     }
@@ -201,10 +209,23 @@ class InventoryOwnerController extends Controller
     {
         $ownerId = session('owner_id');
 
+        $product = DB::table('products')
+            ->select('name')
+            ->where('prod_code', $prodCode)
+            ->where('owner_id', $ownerId)
+            ->first();
+
         DB::table('products')
             ->where('prod_code', $prodCode)
             ->where('owner_id', $ownerId)
             ->update(['prod_status' => 'archived']);
+
+        ActivityLogController::log(
+            'Archived product "' . ($product->name ?? 'Unknown') . '"',
+            'owner',
+            Auth::guard('owner')->user(),
+            request()->ip()
+        );
 
         return redirect()->route('inventory-owner')->with('success', 'Product archived successfully.');
     }
@@ -213,10 +234,24 @@ class InventoryOwnerController extends Controller
     {
         $ownerId = session('owner_id');
 
+        $product = DB::table('products')
+            ->select('name')
+            ->where('prod_code', $prodCode)
+            ->where('owner_id', $ownerId)
+            ->first();
+
         DB::table('products')
             ->where('prod_code', $prodCode)
             ->where('owner_id', $ownerId)
             ->update(['prod_status' => 'active']);
+
+
+        ActivityLogController::log(
+            'Unarchived product "' . ($product->name ?? 'Unknown') . '"',
+            'owner',
+            Auth::guard('owner')->user(),
+            request()->ip()
+        );
 
         return redirect()->route('inventory-owner')->with('success', 'Product unarchived successfully.');
     }
@@ -336,6 +371,16 @@ class InventoryOwnerController extends Controller
         'batch_number' => $validated['batch_number'] ?? null,
     ]);
 
+        $ip = $request->ip();
+        $guard = 'owner';
+        $user = Auth::guard('owner')->user();
+
+        ActivityLogController::log(
+            "Registered New Product: {$validated['name']}",
+            $guard,
+            $user,
+            $ip
+        );
     return response()->json(['success' => true]);
 }
 

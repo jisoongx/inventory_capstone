@@ -15,7 +15,7 @@
                             </div>
                             <div>
                                 <div class="text-sm font-semibold text-green-700 uppercase tracking-wide">Total Revenue</div>
-                                <div class="text-2xl font-bold text-gray-900 leading-none">₱{{ number_format($totalRevenue, 2) }}</div>
+                                <div class="text-xl font-bold text-gray-900 leading-none">₱{{ number_format($totalRevenue, 2) }}</div>
                             </div>
                         </div>
                         <form id="periodForm" action="{{ route('billing.history') }}" method="GET" class="relative -top-2 -right-2">
@@ -48,7 +48,7 @@
                         </div>
                         <div>
                             <div class="text-sm font-semibold text-rose-700 uppercase tracking-wide">Premium Revenue</div>
-                            <div class="text-2xl font-bold text-gray-900 leading-none">₱{{ number_format($revenue['premium'], 2) }}</div>
+                            <div class="text-xl font-bold text-gray-900 leading-none">₱{{ number_format($revenue['premium'], 2) }}</div>
                         </div>
                     </div>
                     <div class="text-right">
@@ -68,7 +68,7 @@
                         </div>
                         <div>
                             <div class="text-sm font-semibold text-orange-700 uppercase tracking-wide">Basic Revenue</div>
-                            <div class="text-2xl font-bold text-gray-900 leading-none">₱{{ number_format($revenue['basic'], 2) }}</div>
+                            <div class="text-xl font-bold text-gray-900 leading-none">₱{{ number_format($revenue['basic'], 2) }}</div>
                         </div>
                     </div>
                     <div class="text-right">
@@ -83,7 +83,7 @@
         {{-- Main Content Section --}}
         <div id="billingRecordsContainer" class="space-y-6 hidden">
             <div id="filtersContainer">
-                <div class="bg-white/95 backdrop-blur-lg rounded-lg shadow-md border border-slate-200">
+                <div class="bg-white/95 backdrop-blur-lg rounded shadow-md border border-slate-200">
                     <div class="p-5">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-semibold text-slate-900 text-sm">
@@ -141,7 +141,7 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table id="billingTable" class="min-w-full">
-                            <thead class="bg-slate-50 border-b border-gray-100">
+                            <thead class="bg-slate-100 border-b border-slate-200 sticky top-0">
                                 <tr>
                                     <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 uppercase">
                                         <div class="flex items-center gap-1"><span class="material-symbols-outlined text-base">person</span> Owner</div>
@@ -171,7 +171,7 @@
                                 $paymentMode = $latestPayment->payment_mode ?? 'N/A';
                                 $paymentAmount = number_format($latestPayment->payment_amount ?? 0, 2);
                                 @endphp
-                                <tr class="transition-colors duration-200 hover:bg-blue-50">
+                                <tr class="transition-colors duration-200 hover:bg-blue-100">
                                     <td class="px-6 py-4">
                                         <div class="font-semibold text-slate-900 text-sm">{{ $ownerName }}</div>
                                     </td>

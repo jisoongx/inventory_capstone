@@ -15,19 +15,20 @@
         /* Firefox */
     }
 </style>
-<div class="p-1 sm:p-2 lg:p-4 bg-slate-50 animate-slide-down">
+<div class="px-3 sm:px-4 lg:px-6 py-1 sm:py-2 lg:py-4 bg-slate-50 animate-slide-down">
+
 
     <div class="flex flex-col lg:flex-row gap-4">
 
-        <div class="flex-1 bg-white shadow-md rounded p-6 sm:p-8 border-t-4 border-red-600">
+        <div class="flex-1 bg-white shadow-md rounded p-6 sm:p-8 border-t-4 border-green-300">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between pb-6 border-b border-slate-200">
                 <div>
                     <a href="{{ route('restock_suggestion') }}"
-                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors mb-3">
+                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-green-600 transition-colors mb-3">
                         <span class="material-symbols-rounded text-xl">arrow_back</span>
-                        Back to Suggestions
+                        Back
                     </a>
-                    <h1 class="text-xl font-semibold text-slate-800">Restock Details</h1>
+                    <h1 class="text-lg font-semibold text-green-800">Restock Details</h1>
                     <p class="text-slate-500 mt-1 text-sm">Review the items from a finalized restock list.</p>
                 </div>
 
@@ -63,7 +64,7 @@
 
                 <div class="flex items-center justify-between mb-4">
 
-                    <span class="text-xs font-medium bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full">
+                    <span class="text-xs font-medium bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
                         {{ \Carbon\Carbon::parse($latest->restock_created)->format('F d, Y • h:i A') }}
                     </span>
                 </div>
@@ -104,15 +105,15 @@
                 @else
                 <div class="flex flex-col items-center justify-center text-center p-10 bg-slate-100 rounded-lg">
                     <span class="material-symbols-rounded text-5xl text-slate-400 mb-2">inventory_2</span>
-                    <h3 class="font-semibold text-slate-700">No Restock Lists Found</h3>
-                    <p class="text-sm text-slate-500">Create and finalize a restock list from the suggestions page first.</p>
+                    <h3 class="font-semibold text-sm text-slate-700">No Restock Lists Found</h3>
+                    <p class="text-xs text-slate-500">Create and finalize a restock list from the suggestions page first.</p>
                 </div>
                 @endif
             </div>
         </div>
 
-        <div class="w-full lg:w-96 bg-white shadow-md min-h-[560px] rounded p-6 sm:p-8 self-start border-t-4 border-red-600">
-            <h2 class="text-lg font-semibold text-slate-800 mb-1">History</h2>
+        <div class="w-full lg:w-96 bg-white shadow-md min-h-[560px] rounded p-6 sm:p-8 self-start border-t-4 border-green-300">
+            <h2 class="text-md font-semibold text-green-800 mb-1">History</h2>
             <p class="text-sm text-slate-500 mb-6 text-sm">Select a past list to view its details.</p>
 
             @if($restocks->count())
@@ -122,11 +123,11 @@
                 $items = $restockItems->where('restock_id', $restock->restock_id);
                 @endphp
                 <li id="history-{{ $restock->restock_id }}"
-                    class="p-4 rounded-lg cursor-pointer transition-all duration-200 @if($index === 0) bg-rose-50 border-red-500 @else border border-slate-200 hover:border-red-400 hover:bg-rose-50/50 @endif"
+                    class="p-4 rounded-lg cursor-pointer transition-all duration-200 @if($index === 0) bg-green-50 border-green-500 @else border border-slate-200 hover:border-green-400 hover:bg-green-50/50 @endif"
                     onclick="showRestock('{{ $restock->restock_id }}')">
 
                     <div class="flex items-center justify-between">
-                        <div class="text-sm font-semibold text-slate-700">
+                        <div class="text-sm font-semibold text-green-600">
                             {{ \Carbon\Carbon::parse($restock->restock_created)->format('M d, Y') }}
                         </div>
                         <div class="text-xs font-medium text-slate-500">
@@ -140,7 +141,7 @@
                     <div class="hidden" id="restock-{{ $restock->restock_id }}">
                         <div class="flex items-center justify-between mb-4">
 
-                            <span class="text-xs font-medium bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full">
+                            <span class="text-xs font-medium bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
                                 {{ \Carbon\Carbon::parse($restock->restock_created)->format('F d, Y • h:i A') }}
                             </span>
                         </div>
@@ -158,7 +159,7 @@
                                 </thead>
                                 <tbody class="divide-y divide-slate-200">
                                     @foreach($items as $item)
-                                    <tr class="hover:bg-rose-50/50 transition-colors">
+                                    <tr class="hover:bg-green-50/50 transition-colors">
                                         <td class="px-4 py-3 text-slate-800 font-medium">{{ $item->name }}</td>
                                         <td class="px-4 py-3 text-center font-mono text-slate-700">{{ $item->item_quantity }}</td>
                                         <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td>
@@ -183,7 +184,7 @@
                 @endforeach
             </ul>
             @else
-            <p class="text-sm text-slate-500 text-center py-4">No history to show.</p>
+            <p class="text-xs text-slate-500 text-center py-4">No history to show.</p>
             @endif
         </div>
     </div>
@@ -263,15 +264,15 @@
         }, animate ? 200 : 0);
 
         document.querySelectorAll('[id^="history-"]').forEach(el => {
-            el.classList.remove('bg-rose-50', 'border-red-500');
-            el.classList.add('border', 'border-slate-200', 'hover:border-red-400', 'hover:bg-rose-50/50');
+            el.classList.remove('bg-green-50', 'border-green-500');
+            el.classList.add('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
         });
         const activeEl = document.getElementById('history-' + id);
-        activeEl.classList.remove('border', 'border-slate-200', 'hover:border-red-400', 'hover:bg-rose-50/50');
-        activeEl.classList.add('bg-rose-50', 'border-red-500');
+        activeEl.classList.remove('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
+        activeEl.classList.add('bg-green-50', 'border-green-500');
 
         // Populate export inputs
-        const restockCreatedSpan = templateEl.querySelector('span.text-xs.font-medium.bg-rose-100');
+        const restockCreatedSpan = templateEl.querySelector('span.text-xs.font-medium.bg-green-100');
         const rows = templateEl.querySelectorAll('tbody tr');
         const items = [];
 

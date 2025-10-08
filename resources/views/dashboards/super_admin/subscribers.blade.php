@@ -12,6 +12,7 @@ return $base . ' ' . (trim($value) === 'active'
 ? 'bg-gradient-to-r from-green-500 to-green-600'
 : 'bg-gradient-to-r from-red-500 to-red-600');
 case 'days':
+$base .= ' w-24';
 if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
     if ($value <=7) return $base . ' bg-gradient-to-r from-red-500 to-red-600' ;
     if ($value <=14) return $base . ' bg-gradient-to-r from-orange-500 to-orange-600' ;
@@ -24,6 +25,46 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
 
     @if (!request()->ajax())
     @extends('dashboards.super_admin.super_admin')
+    @section('page-header')
+    <div class="flex items-center gap-3 text-gray-800">
+
+        <h2 class="text-lg font-semibold ml-3">Welcome, Admin!</h2>
+        <span class="material-symbols-rounded text-blue-600 align-middle">waving_hand</span>
+        <span class="text-gray-400">|</span>
+        <span id="date" class="text-sm font-medium text-slate-600"></span>
+        <span id="clock" class="text-sm font-medium text-slate-600"></span>
+    </div>
+
+    <script>
+        function updateDateTime() {
+            const clock = document.getElementById('clock');
+            const dateEl = document.getElementById('date');
+            const now = new Date();
+
+            // Format time (HH:MM:SS)
+            const timeOptions = {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            clock.textContent = now.toLocaleTimeString([], timeOptions);
+
+            // Format date (Day, Month DD, YYYY)
+            const dateOptions = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            dateEl.textContent = now.toLocaleDateString([], dateOptions);
+        }
+
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+    </script>
+    @endsection
+
+
 
     @section('content')
 
@@ -68,7 +109,7 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                                     <span class="material-symbols-outlined text-{{ $color }}-600 text-xl">{{ $card['icon'] }}</span>
                                 </div>
                                 <div>
-                                    <div class="text-2xl font-bold text-gray-900 leading-none">{{ $card['count'] }}</div>
+                                    <div class="text-xl font-bold text-{{ $color }}-600 leading-none">{{ $card['count'] }}</div>
                                     <div class="text-sm text-gray-600 font-medium mt-1">{{ $card['label'] }}</div>
                                 </div>
                             </div>
@@ -91,7 +132,7 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
             </div>
 
             {{-- Filters Card --}}
-            <div class="bg-white/90 backdrop-blur-lg rounded-lg shadow-md border border-gray-100 mb-6">
+            <div class="bg-white/90 backdrop-blur-lg rounded shadow-md border border-gray-100 mb-6">
                 <div class="p-6">
                     <form id="filterForm" class="flex flex-wrap items-center gap-4">
                         <input type="hidden" name="status" value="{{ $activeTab }}">
@@ -172,10 +213,10 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                 @endif
 
                 @if($clients->isNotEmpty())
-                <div class="bg-white rounded-lg shadow-lg overflow-hidden  border-gray-100">
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden ">
                     <div class="overflow-x-auto">
                         <table class="min-w-full">
-                            <thead class="bg-slate-50 sticky top-0 z-10 border-b border-gray-100">
+                            <thead class="bg-slate-100 sticky top-0 z-10 border-b border-slate-200">
                                 <tr>
                                     <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">
                                         <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">storefront</span>Store</div>
@@ -212,7 +253,7 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                                 }
                                 @endphp
 
-                                <tr class="transition-colors duration-200 hover:bg-blue-50">
+                                <tr class="transition-colors duration-200 hover:bg-blue-100">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white text-sm font-semibold shadow-md">{{ strtoupper(substr($client->store_name, 0, 2)) }}</div>
@@ -232,14 +273,14 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                                         </span>
                                     </td>
 
-                                    <td class="px-6 py-4 text-center">
-                                        <span class="{{ getBadgeClasses('status', $subStatus) }} w-[80px] justify-center">
+                                    <td class="px-6 py-4 text-center ">
+                                        <span class="{{ getBadgeClasses('status', $subStatus) }} justify-center">
                                             {{ ucfirst($subStatus) }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-center text-slate-700 text-sm font-medium">{{ $subscription->subscription_start ? \Carbon\Carbon::parse($subscription->subscription_start)->format('M j, Y') : '-' }}</td>
                                     <td class="px-6 py-4 text-center text-slate-700 text-sm font-medium">{{ $subscription->subscription_end ? \Carbon\Carbon::parse($subscription->subscription_end)->format('M j, Y') : '-' }}</td>
-                                    <td class="px-6 py-4 text-right"><span class="{{ getBadgeClasses('days', $daysLeft) }}">{{ $daysLeft < 0 ? 'Expired' : floor($daysLeft) . ' days' }}</span></td>
+                                    <td class="px-6 py-4 text-right"><span class=" w-24 {{ getBadgeClasses('days', $daysLeft) }}">{{ $daysLeft < 0 ? 'Expired' : floor($daysLeft) . ' days' }}</span></td>
                                 </tr>
                                 @endforeach
                                 @endforeach

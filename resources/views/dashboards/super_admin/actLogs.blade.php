@@ -1,19 +1,25 @@
 @extends('dashboards.super_admin.super_admin')
 
 @section('content')
-<div class="bg-gradient-to-b from-white to-blue-100 min-h-screen p-4">
-    <h1 class="text-lg font-semibold text-gray-900 mb-5">Activity Logs</h1>
+<div class="min-h p-3">
 
-    <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <!-- Filters Card -->
+    <h1 class="text-xl font-semibold text-gray-900 mb-5 mt-3 ml-2">Activity Logs</h1>
+    <div class="flex flex-col md:flex-row mb-5 md:items-center md:justify-between gap-4">
         <!-- Search Bar -->
-        <div class="flex-1">
+        <div class="relative flex-1">
+            <!-- Search Icon -->
+            <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                search
+            </span>
+
+            <!-- Search Input -->
             <input
                 type="text"
                 id="search"
                 placeholder="Search by location or activity"
                 autocomplete="off"
-                class="w-full p-3 pl-10 text-sm text-gray-800 border border-gray-300 rounded-lg focus:border-indigo-500 shadow-md transition-all duration-200 ease-in-out"
-                style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'currentColor\'><path fill-rule=\'evenodd\' d=\'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.307l3.093 3.093a.75.75 0 11-1.06 1.06l-3.093-3.093A7 7 0 012 9z\' clip-rule=\'evenodd\'/></svg>'); background-repeat: no-repeat; background-position: left 0.75rem center; background-size: 1.25rem;">
+                class="w-full p-3 pl-10 text-sm shadow-md text-gray-800 border border-gray-300 rounded-lg focus:border-indigo-500 transition-all duration-200 ease-in-out">
         </div>
 
         <!-- Time Filter -->
@@ -22,7 +28,7 @@
                 type="time"
                 id="timeFilter"
                 name="timeFilter"
-                class="appearance-none w-full p-3 pl-4 pr-10 text-sm text-gray-600 border border-gray-300 rounded-lg focus:border-indigo-500 shadow-md transition-all duration-200 ease-in-out" />
+                class="appearance-none w-full p-3 pl-4 pr-10 text-sm shadow-md text-gray-600 border border-gray-300 rounded-lg focus:border-indigo-500 transition-all duration-200 ease-in-out" />
         </div>
 
         <!-- Date Filter -->
@@ -31,14 +37,16 @@
                 type="date"
                 id="dateFilter"
                 name="dateFilter"
-                class="appearance-none w-full p-3 pl-4 pr-4 text-sm text-gray-600 border border-gray-300 rounded-lg focus:border-indigo-500 shadow-md transition-all duration-200 ease-in-out" />
+                class="appearance-none w-full p-3 pl-4 pr-4  shadow-md text-sm text-gray-600 border border-gray-300 rounded-lg focus:border-indigo-500 transition-all duration-200 ease-in-out" />
         </div>
     </div>
 
+
+
     <!-- Table Container with scroll -->
-    <div class="overflow-x-auto overflow-y-auto max-h-[500px] shadow-lg rounded-lg bg-white">
+    <div class="overflow-x-auto overflow-y-auto max-h-[430px] shadow-lg rounded bg-white">
         <table class="min-w-full text-sm text-slate-700">
-            <thead class="bg-slate-50 text-center text-slate-700 uppercase tracking-wider border-b border-gray-100 sticky top-0">
+            <thead class="bg-red-50 text-center text-slate-700 uppercase tracking-wider border-b border-gray-100 sticky top-0">
                 <tr>
                     <th class="px-6 py-3 font-semibold text-left">Date</th>
                     <th class="px-6 py-3 font-semibold w-[140px] text-center">Time</th>

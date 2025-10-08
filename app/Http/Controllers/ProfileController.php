@@ -55,16 +55,29 @@ class ProfileController extends Controller
 
         $validationRules = [
             'store_name' => ['nullable', 'string', 'max:255'],
-            'contact' => ['nullable', 'string', 'max:20'],
+            'contact' => [
+                'nullable',
+                'regex:/^09\d{9}$/', // ✅ must start with 09 and followed by 9 digits (total 11)
+                'max:11',
+                'min:11',
+            ],
             'store_address' => ['nullable', 'string', 'max:255'],
         ];
+
 
         if ($request->filled('current_password') || $request->filled('password') || $request->filled('password_confirmation')) {
             $validationRules['current_password'] = ['required', 'string'];
             $validationRules['password'] = ['required', 'string', 'min:8', 'confirmed'];
         }
 
-        $request->validate($validationRules);
+        try {
+            $request->validate($validationRules);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['errors' => $e->errors()], 422);
+            }
+            throw $e; // fallback for non-AJAX
+        }
 
         $profileUpdated = false;
         $passwordChanged = false;
@@ -86,9 +99,9 @@ class ProfileController extends Controller
 
         if ($request->filled('current_password')) {
             if (!Hash::check($request->current_password, $owner->owner_pass)) {
-                throw ValidationException::withMessages([
-                    'current_password' => ['The provided password does not match your current password.'],
-                ]);
+                return response()->json([
+                    'errors' => ['current_password' => ['The provided password does not match your current password.']]
+                ], 422);
             }
 
             $owner->owner_pass = Hash::make($request->password);
@@ -97,26 +110,48 @@ class ProfileController extends Controller
 
         $owner->save();
 
-        if ($profileUpdated) {
-            ActivityLogController::log(
-                'Profile Updated',
-                'owner',
-                $owner,
-                $request->ip()
-            );
+        // Refresh model to get latest data from DB
+        $owner->refresh();
+
+        // ✅ Return JSON for AJAX (with owner data)
+        if ($request->ajax()) {
+            if ($profileUpdated && $passwordChanged) {
+                return response()->json([
+                    'success' => 'Profile and password updated successfully!',
+                    'owner'   => $owner
+                ]);
+            } elseif ($profileUpdated) {
+                return response()->json([
+                    'success' => 'Profile updated successfully!',
+                    'owner'   => $owner
+                ]);
+            } elseif ($passwordChanged) {
+                return response()->json([
+                    'success' => 'Password updated successfully!',
+                    'owner'   => $owner
+                ]);
+            } else {
+                return response()->json([
+                    'info'  => 'No changes were made.',
+                    'owner' => $owner
+                ]);
+            }
         }
 
-        if ($passwordChanged) {
-            ActivityLogController::log(
-                'Password Changed',
-                'owner',
-                $owner,
-                $request->ip()
-            );
+        // ✅ Fallback for non-AJAX
+        if ($profileUpdated && $passwordChanged) {
+            return redirect()->back()->with('success', 'Profile and password updated successfully!');
+        } elseif ($profileUpdated) {
+            return redirect()->back()->with('success', 'Profile updated successfully!');
+        } elseif ($passwordChanged) {
+            return redirect()->back()->with('success', 'Password updated successfully!');
+        } else {
+            return redirect()->back()->with('info', 'No changes were made.');
         }
-
-        return redirect()->route('owner.profile')->with('success', 'Profile updated successfully!');
     }
+
+
+
 
     public function showStaffProfile()
     {

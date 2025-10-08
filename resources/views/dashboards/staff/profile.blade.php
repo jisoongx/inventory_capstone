@@ -2,10 +2,10 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-6 sm:px-6 lg:px-8"> {{-- Adjusted padding for better responsiveness --}}
-    <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Welcome, {{ $staff->firstname }}!</h1> {{-- Smaller greeting --}}
+    <h1 class="text-xl font-semibold text-gray-900">Welcome, {{ $staff->firstname }}!</h1> {{-- Smaller greeting --}}
     <p class="text-base text-gray-600 mb-6">{{ \Carbon\Carbon::now()->format('l, F d, Y') }}</p> {{-- Smaller date --}}
 
-    <div class="bg-white shadow-xl rounded-xl p-6 max-w-3xl mx-auto space-y-6 border border-gray-100"> {{-- Reduced padding, max-width, and spacing --}}
+    <div class="bg-white shadow-lg rounded-xl p-6 max-w-3xl mx-auto space-y-6 border border-slate-100"> {{-- Reduced padding, max-width, and spacing --}}
 
 
         {{-- Success and error message display --}}

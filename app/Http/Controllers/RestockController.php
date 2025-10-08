@@ -230,21 +230,15 @@ class RestockController extends Controller
     {
         $ownerId = Auth::guard('owner')->id();
         $categoryId = $request->input('category_id');
-
-        // Owner can choose top N products (default 15)
-        $topN = $request->input('top_n', 15);
+        $topN = $request->input('top_n', 20); // default top 20
 
         $now = Carbon::now();
         $currentMonth = $now->month;
         $currentYear = $now->year;
 
-        // Past years (exclude current year)
-        $years = DB::table('receipt')
-            ->whereYear('receipt_date', '<', $currentYear)
-            ->distinct()
-            ->pluck(DB::raw('YEAR(receipt_date)'));
+        // ✅ Get same month sales from the past 3 years
+        $years = [$currentYear - 1, $currentYear - 2, $currentYear - 3];
 
-        // Get past years same month sales, aggregated per year
         $pastSales = DB::table('receipt_item as ri')
             ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
             ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
@@ -262,21 +256,21 @@ class RestockController extends Controller
             ->groupBy('p.prod_code', 'p.name', 'p.prod_image', 'year')
             ->get();
 
-        // Compute average per product
+        // ✅ Compute average sales (same month, past 3 years)
         $pastAverages = $pastSales
             ->groupBy('prod_code')
             ->map(function ($group) {
-                $avg = $group->avg('sold'); // average across years
+                $avg = $group->avg('sold');
                 $first = $group->first();
                 return (object)[
                     'prod_code' => $first->prod_code,
                     'name' => $first->name,
                     'prod_image' => $first->prod_image,
-                    'average_past' => round($avg, 2)
+                    'average_past' => (int) round($avg)
                 ];
             });
 
-        // Current month sales (with prod_image included)
+        // ✅ Current month sales
         $currentSales = DB::table('receipt_item as ri')
             ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
             ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
@@ -294,37 +288,34 @@ class RestockController extends Controller
             ->get()
             ->keyBy('prod_code');
 
-        // Combine current and past for final topProducts with forecast
+        // ✅ Combine data
         $topProducts = $pastAverages->map(function ($product) use ($currentSales) {
             $currentData = $currentSales[$product->prod_code] ?? null;
             $current = $currentData->total_sold ?? 0;
 
-            // Ensure prod_image comes from either past or current
-            $prodImage = $product->prod_image ?? ($currentData->prod_image ?? null);
+            // Exponential smoothing (α = 0.5)
+            $alpha = 0.5;
+            $expectedDemand = round($alpha * $current + (1 - $alpha) * $product->average_past);
 
             // Growth rate
             $growth = $product->average_past > 0
-                ? (($current - $product->average_past) / $product->average_past) * 100
+                ? (($expectedDemand - $product->average_past) / $product->average_past) * 100
                 : 0;
-
-            // Exponential smoothing forecast
-            $alpha = 0.5;
-            $expectedDemand = round($alpha * $current + (1 - $alpha) * $product->average_past, 2);
 
             return (object)[
                 'prod_code' => $product->prod_code,
                 'name' => $product->name,
-                'prod_image' => $prodImage,
+                'prod_image' => $product->prod_image,
+                'average_past' => (int) $product->average_past,
                 'current_month_sold' => (int) $current,
-                'last_year_sold' => $product->average_past,
-                'growth_rate' => round($growth, 2),
-                'expected_demand' => $expectedDemand
+                'forecasted_demand' => (int) round($expectedDemand),
+                'growth_rate' => round($growth, 2)
             ];
         });
 
-        // ✅ Sort by expected demand
+        // ✅ Sort by past 3-year average sales (highest to lowest)
         $topProducts = $topProducts
-            ->sortByDesc('expected_demand')
+            ->sortByDesc('average_past')
             ->take($topN)
             ->values();
 
