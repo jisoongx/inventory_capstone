@@ -32,7 +32,21 @@ class RegisterController extends Controller
                     }
                 },
             ],
-            'contact'    => ['nullable', 'digits:11', 'starts_with:09'],
+            'contact' => [
+                'nullable',
+                'digits:11',
+                'starts_with:09',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $existsInOwners = DB::table('owners')->where('contact', $value)->exists();
+                        $existsInStaff  = DB::table('staff')->where('contact', $value)->exists();
+
+                        if ($existsInOwners || $existsInStaff) {
+                            $fail('The ' . $attribute . ' number has already been taken.');
+                        }
+                    }
+                },
+            ],
             'password'   => ['required', 'string', 'min:8', 'confirmed'],
         ], [
 

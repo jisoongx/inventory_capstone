@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
- use Barryxdh\DomPDF\Facade\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +15,6 @@ class RestockController extends Controller
         $restockCreated = $request->input('restock_created');
         $items = json_decode($request->input('restock_items'), true);
 
-        // Normalize values to floats/ints
         $items = array_map(function ($item) {
             return [
                 'name'       => $item['name'],
@@ -32,9 +31,6 @@ class RestockController extends Controller
 
         return $pdf->download('restock-' . $restockCreated . '.pdf');
     }
-
-
-
 
     public function restockSuggestion(Request $request)
     {
@@ -122,15 +118,12 @@ class RestockController extends Controller
 
                 return $product;
             })
-            ->filter(fn($product) => $product->suggested_quantity > 0) // only products needing restock
+            ->filter(fn($product) => $product->suggested_quantity > 0) 
             ->sortByDesc('suggested_quantity')
             ->values();
 
         return view('dashboards.owner.restock_suggestion', compact('products', 'allProducts', 'currentYear', 'categories'));
     }
-
-
-
 
 
     public function finalize(Request $request)
@@ -144,9 +137,6 @@ class RestockController extends Controller
             'custom_products.*' => 'exists:inventory,inven_code',
             'custom_quantities.*' => 'integer|min:1',
         ]);
-
-        // All products for dropdown (can include all stock)
-     
 
         // Create restock header
         $restockId = DB::table('restock')->insertGetId([
@@ -196,10 +186,9 @@ class RestockController extends Controller
         }
 
 
-        return redirect()->back()->with('success', 'Restock list finalized successfully!');
+        return redirect()->route('restock_suggestion');
     }
 
-    
 
     public function list()
     {
@@ -236,7 +225,7 @@ class RestockController extends Controller
         $currentMonth = $now->month;
         $currentYear = $now->year;
 
-        // ✅ Get same month sales from the past 3 years
+        //  same month sales from the past 3 years
         $years = [$currentYear - 1, $currentYear - 2, $currentYear - 3];
 
         $pastSales = DB::table('receipt_item as ri')
@@ -256,7 +245,7 @@ class RestockController extends Controller
             ->groupBy('p.prod_code', 'p.name', 'p.prod_image', 'year')
             ->get();
 
-        // ✅ Compute average sales (same month, past 3 years)
+        //  Compute average sales (same month, past 3 years)
         $pastAverages = $pastSales
             ->groupBy('prod_code')
             ->map(function ($group) {
@@ -270,7 +259,7 @@ class RestockController extends Controller
                 ];
             });
 
-        // ✅ Current month sales
+        // Current month sales
         $currentSales = DB::table('receipt_item as ri')
             ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
             ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
@@ -288,7 +277,7 @@ class RestockController extends Controller
             ->get()
             ->keyBy('prod_code');
 
-        // ✅ Combine data
+        //  Combine data
         $topProducts = $pastAverages->map(function ($product) use ($currentSales) {
             $currentData = $currentSales[$product->prod_code] ?? null;
             $current = $currentData->total_sold ?? 0;
@@ -313,7 +302,7 @@ class RestockController extends Controller
             ];
         });
 
-        // ✅ Sort by past 3-year average sales (highest to lowest)
+        // Sort by past 3-year average sales (highest to lowest)
         $topProducts = $topProducts
             ->sortByDesc('average_past')
             ->take($topN)

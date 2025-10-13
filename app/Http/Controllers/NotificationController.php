@@ -66,7 +66,12 @@ class NotificationController extends Controller
                 ", [$user->user_email, $notif_id]);
             }
 
-           
+            ActivityLogController::log(
+                'Sent a system notification entitled "' . $request->title . '"',
+                'super_admin',
+                $super_admin,
+                $request->ip()
+            );
 
             return redirect()->route('dashboards.super_admin.notification')->with('success', 'Notification sent successfully.');
         }

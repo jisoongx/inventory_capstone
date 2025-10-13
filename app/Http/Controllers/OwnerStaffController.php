@@ -16,7 +16,7 @@ class OwnerStaffController extends Controller
     public function showStaff()
     {
         $ownerId = Auth::guard('owner')->id();
-        $staffMembers = Staff::where('owner_id', $ownerId)->get(); // Fetch all without pagination
+        $staffMembers = Staff::where('owner_id', $ownerId)->get(); 
         return view('dashboards.owner.staff_list', compact('staffMembers'));
     }
 
@@ -69,9 +69,6 @@ class OwnerStaffController extends Controller
         ]);
     }
 
-
-
-
     public function updateStaffInfo(Request $request, Staff $staff)
     {
         if (Auth::guard('owner')->id() !== $staff->owner_id) {
@@ -106,7 +103,6 @@ class OwnerStaffController extends Controller
     }
 
 
-
     public function addStaff(Request $request)
     {
         $ownerId = Auth::guard('owner')->id();
@@ -130,8 +126,16 @@ class OwnerStaffController extends Controller
             ],
             'contact' => [
                 'nullable',
-                'string',
-                'regex:/^09[0-9]{9}$/', // Must start with 09 and have 11 digits
+                'regex:/^09[0-9]{9}$/',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $existsInStaff  = DB::table('staff')->where('contact', $value)->exists();
+                        $existsInOwners = DB::table('owners')->where('contact', $value)->exists();
+                        if ($existsInStaff || $existsInOwners) {
+                            $fail('The ' . $attribute . ' number has already been taken.');
+                        }
+                    }
+                },
             ],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);

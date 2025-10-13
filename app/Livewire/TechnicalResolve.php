@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Http\Controllers\ActivityLogController;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -113,12 +114,28 @@ class TechnicalResolve extends Component
 
         if (!Auth::guard('super_admin')->check()) {
             abort(403, 'Access not available');
-        } 
-        
+        }
+
+        $super = Auth::guard('super_admin')->user();
+
+        $requestData = DB::table('technical_request')
+            ->select('req_title')
+            ->where('req_id', $req_id)
+            ->first();
+
+        $title = $requestData ? $requestData->req_title : 'Unknown Request';
+
         DB::update("
             update technical_request
             set req_status = 'Resolved'
             where req_id = ? ", [$req_id]);
+
+        ActivityLogController::log(
+            "Marked a ticket entitled \"{$title}\" as resolved",
+            'super_admin',
+            $super,
+            request()->ip()
+        );
 
         $this->loadConversation($req_id);
         $this->showSuccess = true;
@@ -142,6 +159,13 @@ class TechnicalResolve extends Component
         $super = Auth::guard('super_admin')->user();
         $super_id = $super->super_id;
 
+        $requestData = DB::table('technical_request')
+            ->select('req_title')
+            ->where('req_id', $req_id)
+            ->first();
+
+        $title = $requestData ? $requestData->req_title : 'Unknown Request';
+
         DB::insert("
             INSERT INTO conversation_message (sender_type, sender_id, message, msg_date, req_id)
             VALUES ('super', ?, ?, NOW(), ?)", [ $super_id, $this->newMessage, $req_id ]);
@@ -159,7 +183,13 @@ class TechnicalResolve extends Component
             and sender_type in ('owner', 'staff')
         ", [NOW(), $req_id]);
 
-        
+        ActivityLogController::log(
+            "Sent a message regarding the ticket entitled \"{$title}\"",
+            'super_admin',
+            $super,
+            request()->ip()
+        );
+
         $this->reset('newMessage');
 
         $this->refreshConversation($req_id);

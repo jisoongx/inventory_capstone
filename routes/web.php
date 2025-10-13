@@ -125,7 +125,7 @@ Route::get('/staff/dashboard', [DashboardController::class, 'index_staff'])->nam
 
 //subscription plan management
 Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');
-Route::get('/billing-history', [SubscriptionController::class, 'billing'])->name('billing.history');
+Route::get('/billing-history', [BillingController::class, 'billing'])->name('billing.history');
 // activity logs
 Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('actLogs');
 Route::get('/staff-logs', [ActivityLogController::class, 'staffLogs'])->name('staffLogs');

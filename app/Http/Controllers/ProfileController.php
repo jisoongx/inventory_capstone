@@ -9,8 +9,6 @@ use Illuminate\Validation\ValidationException;
 use App\Models\Staff;
 use App\Http\Controllers\ActivityLogController;
 
-
-
 class ProfileController extends Controller
 {
 
@@ -52,13 +50,11 @@ class ProfileController extends Controller
     public function updateOwnerProfile(Request $request)
     {
         $owner = Auth::guard('owner')->user();
-
         $validationRules = [
             'store_name' => ['nullable', 'string', 'max:255'],
             'contact' => [
                 'nullable',
-                'regex:/^09\d{9}$/', // ✅ must start with 09 and followed by 9 digits (total 11)
-                'max:11',
+                'regex:/^09\d{9}$/', 
                 'min:11',
             ],
             'store_address' => ['nullable', 'string', 'max:255'],
@@ -76,7 +72,7 @@ class ProfileController extends Controller
             if ($request->ajax()) {
                 return response()->json(['errors' => $e->errors()], 422);
             }
-            throw $e; // fallback for non-AJAX
+            throw $e; 
         }
 
         $profileUpdated = false;
@@ -109,11 +105,8 @@ class ProfileController extends Controller
         }
 
         $owner->save();
-
-        // Refresh model to get latest data from DB
         $owner->refresh();
 
-        // ✅ Return JSON for AJAX (with owner data)
         if ($request->ajax()) {
             if ($profileUpdated && $passwordChanged) {
                 return response()->json([
@@ -138,7 +131,6 @@ class ProfileController extends Controller
             }
         }
 
-        // ✅ Fallback for non-AJAX
         if ($profileUpdated && $passwordChanged) {
             return redirect()->back()->with('success', 'Profile and password updated successfully!');
         } elseif ($profileUpdated) {
@@ -149,8 +141,6 @@ class ProfileController extends Controller
             return redirect()->back()->with('info', 'No changes were made.');
         }
     }
-
-
 
 
     public function showStaffProfile()
@@ -170,7 +160,7 @@ class ProfileController extends Controller
     {
         $staff = Auth::guard('staff')->user();
 
-        // 🩷 CASE 1: If user is changing password
+    
         if ($request->filled('current_password') || $request->filled('password')) {
             $request->validate([
                 'current_password' => ['required', 'string'],
@@ -187,7 +177,7 @@ class ProfileController extends Controller
                 throw ValidationException::withMessages($errors);
             }
 
-            // ✅ Update password
+        
             $passwordColumn = $staff->getAuthPasswordName();
             $staff->$passwordColumn = Hash::make($request->password);
             $staff->save();
@@ -206,14 +196,14 @@ class ProfileController extends Controller
             return redirect()->route('staff.profile')->with('success', 'Password updated successfully!');
         }
 
-        // 🩵 CASE 2: If user is editing profile (contact info)
+        
         if ($request->filled('contact')) {
             $request->validate([
                 'contact' => [
                     'bail',
                     'required',
-                    'regex:/^09/',  // must start with 09
-                    'digits:11',    // must be exactly 11 digits (and only numbers)
+                    'regex:/^09/', 
+                    'digits:11', 
                 ],
             ], [
                 'contact.required' => 'Please enter your contact number.',
@@ -242,7 +232,6 @@ class ProfileController extends Controller
             return redirect()->route('staff.profile')->with('success', 'Profile updated successfully!');
         }
 
-        // 🩶 CASE 3: If no valid data provided
         if ($request->ajax()) {
             return response()->json(['info' => 'No changes detected.']);
         }

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Http\Controllers\ActivityLogController;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -147,7 +148,13 @@ class TechnicalRequest extends Component
 
     public function sendMessage($req_id)
     {
-        
+        $conversation = DB::table('technical_request')
+            ->where('req_id', $req_id)
+            ->select('req_title')
+            ->first();
+
+        $title = $conversation ? $conversation->req_title : 'Unknown Conversation';
+
         if (Auth::guard('owner')->check()) {
             $owner = Auth::guard('owner')->user();
             $owner_id = $owner->owner_id;
@@ -156,9 +163,18 @@ class TechnicalRequest extends Component
                 return;
             }
 
+          
+
             DB::insert("
             INSERT INTO conversation_message (sender_type, sender_id, message, msg_date, req_id)
             VALUES ('owner', ?, ?, NOW(), ?)", [ $owner_id, $this->newMessage, $req_id ]);
+
+            ActivityLogController::log(
+                "Sent a message regarding the request entitled \"{$title}\"",
+                'owner',
+                $owner,
+                request()->ip()
+            );
 
             $this->reset('newMessage');
             $this->refreshConvo($req_id);
@@ -176,6 +192,13 @@ class TechnicalRequest extends Component
             DB::insert("
             INSERT INTO conversation_message (sender_type, sender_id, message, msg_date, req_id)
             VALUES ('staff', ?, ?, NOW(), ?)", [ $staff_id, $this->newMessage, $req_id ]);
+
+            ActivityLogController::log(
+                "Sent a message regarding the request entitled \"{$title}\"",
+                'staff',
+                $staff,
+                request()->ip()
+            );
 
             $this->refreshConvo($req_id);
             $this->reset('newMessage');
@@ -207,6 +230,13 @@ class TechnicalRequest extends Component
 
 
     public function addRequest() {
+        $title = trim($this->addRequestTitle);
+        $message = trim($this->addRequestMessage);
+
+        if ($title === '' || $message === '') {
+            return;
+        }
+
 
         if (Auth::guard('owner')->check()) {
             $owner = Auth::guard('owner')->user();
@@ -225,6 +255,12 @@ class TechnicalRequest extends Component
 
             $req_id = DB::getPdo()->lastInsertId();
 
+            ActivityLogController::log(
+                "Created a technical request entitled \"{$title}\"",
+                'owner',
+                $owner,
+                request()->ip()
+            );
             
             DB::insert("
                 INSERT INTO conversation_message (req_id, sender_type, sender_id, message, msg_date)
@@ -251,7 +287,13 @@ class TechnicalRequest extends Component
 
             $req_id = DB::getPdo()->lastInsertId();
 
-            
+            ActivityLogController::log(
+                "Created a technical request entitled \"{$title}\"",
+                'staff',
+                $staff,
+                request()->ip()
+            );
+
             DB::insert("
                 INSERT INTO conversation_message (req_id, sender_type, sender_id, message, msg_date)
                 VALUES (?, 'staff', ?, ?, NOW())

@@ -125,8 +125,8 @@
                 View Lists
             </a>
             <button type="submit" form="restockForm" class="inline-flex items-center shadow-lg justify-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition">
-                <span class="material-symbols-rounded mr-2 text-lg">check_circle</span>
-                Finalize Selection
+                <span class="material-symbols-rounded mr-2 text-lg">fact_check</span>
+                Confirm Selection
             </button>
         </div>
     </div>
@@ -514,6 +514,8 @@
             });
 
             // 👉 Submit the form to Laravel
+            sessionStorage.setItem('showSuccess', '1');
+
             restockForm.submit();
         });
 
@@ -530,21 +532,24 @@
 
     });
 </script>
-@if(session('success'))
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const toast = document.getElementById('toast');
-        const toastMessage = document.getElementById('toastMessage');
-        toastMessage.textContent = "{{ session('success') }}";
-        toast.classList.remove('hidden');
-        toast.classList.add('flex');
-
-        setTimeout(() => {
-            toast.classList.add('hidden');
-            toast.classList.remove('flex');
-        }, 3000);
+        if (sessionStorage.getItem('showSuccess') === '1') {
+            sessionStorage.removeItem('showSuccess'); // so it only triggers once
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = "Restock list successfully created!";
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('flex');
+            }, 4000);
+        }
     });
 </script>
-@endif
+
+
 
 @endsection

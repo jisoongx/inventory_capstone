@@ -3,6 +3,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Owner;
+use App\Models\Payment;
+use App\Models\Subscription;
+use App\Models\Plan;
+use Carbon\Carbon;
 
 class BillingController extends Controller
 {
@@ -12,7 +16,7 @@ class BillingController extends Controller
         $date = $request->input('date');
 
         $clients = Owner::with(['subscriptions.planDetails', 'subscriptions.payments'])
-            // Remove status filtering to show all subscriptions
+    
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($q2) use ($query) {
                     $q2->where('firstname', 'like', "%{$query}%")
@@ -22,12 +26,179 @@ class BillingController extends Controller
             })
             ->when($date, function ($q) use ($date) {
                 $q->whereHas('subscriptions', function ($sub) use ($date) {
-                    $sub->whereDate('created_on', $date); // Filter by payment/subscription creation date
+                    $sub->whereDate('created_on', $date);
                 });
             })
             ->orderBy('created_on', 'desc')
             ->get();
 
         return response()->json($clients->toArray());
+    }
+
+    public function billing(Request $request)
+    {
+
+        $period = $request->input('period', 'all_time');
+        $startDate = null;
+        $endDate = now();
+
+        switch ($period) {
+            case 'this_month':
+                $startDate = now()->startOfMonth();
+                break;
+            case 'last_month':
+                $startDate = now()->subMonthNoOverflow()->startOfMonth();
+                $endDate = now()->subMonthNoOverflow()->endOfMonth();
+                break;
+            case 'this_year':
+                $startDate = now()->startOfYear();
+                break;
+            case 'last_year':
+                $startDate = now()->subYear()->startOfYear();
+                $endDate = now()->subYear()->endOfYear();
+                break;
+        }
+
+        $paymentsInPeriod = Payment::with('subscription.planDetails')
+            ->when($startDate, fn($query) => $query->whereBetween('payment_date', [$startDate, $endDate]))
+            ->get();
+
+        $revenue = [
+            'basic' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Basic')->sum('payment_amount'),
+            'premium' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Premium')->sum('payment_amount'),
+        ];
+        $totalRevenue = $revenue['basic'] + $revenue['premium'];
+        $basicPercentage = $totalRevenue > 0 ? ($revenue['basic'] / $totalRevenue) * 100 : 0;
+        $premiumPercentage = $totalRevenue > 0 ? ($revenue['premium'] / $totalRevenue) * 100 : 0;
+
+        $subscriptionsInPeriod = Subscription::with('planDetails')
+            ->when($startDate, fn($query) => $query->whereBetween('subscription_start', [$startDate, $endDate]))
+            ->get();
+
+        $cardCounts = [
+            'basic' => $subscriptionsInPeriod->where('planDetails.plan_title', 'Basic')->count(),
+            'premium' => $subscriptionsInPeriod->where('planDetails.plan_title', 'Premium')->count(),
+        ];
+
+        $plans = Plan::all();
+        $basicPrice = $plans->firstWhere('plan_title', 'Basic')->plan_price ?? 0;
+        $premiumPrice = $plans->firstWhere('plan_title', 'Premium')->plan_price ?? 0;
+
+        $latest = null;
+        $latestPayment = Payment::with('subscription.owner')->latest('payment_date')->first();
+        if ($latestPayment) {
+            $latest = [
+                'payment' => $latestPayment,
+                'sub' => $latestPayment->subscription,
+                'owner' => $latestPayment->subscription->owner
+            ];
+        }
+
+        $pd_startDate = $request->input('pd_start_date');
+        $pd_endDate = $request->input('pd_end_date');
+        $planStats = ['basic' => ['active' => 0, 'expired' => 0], 'premium' => ['active' => 0, 'expired' => 0]];
+        $allSubscriptions = Subscription::with('planDetails')
+            ->when($pd_startDate && $pd_endDate, fn($query) => $query->whereBetween('subscription_start', [$pd_startDate, $pd_endDate]))
+            ->get();
+
+        foreach ($allSubscriptions as $sub) {
+            $planTitle = strtolower($sub->planDetails->plan_title ?? '');
+            if (array_key_exists($planTitle, $planStats) && in_array($sub->status, ['active', 'expired'])) {
+                $planStats[$planTitle][$sub->status]++;
+            }
+        }
+        $planStats['basic']['total'] = $planStats['basic']['active'] + $planStats['basic']['expired'];
+        $planStats['premium']['total'] = $planStats['premium']['active'] + $planStats['premium']['expired'];
+        $totalActive = $planStats['basic']['active'] + $planStats['premium']['active'];
+        $totalExpired = $planStats['basic']['expired'] + $planStats['premium']['expired'];
+        $grandTotalSubs = $totalActive + $totalExpired;
+
+        $customStart = $request->input('start_date');
+        $customEnd = $request->input('end_date');
+        $revStartDate = $customStart ? Carbon::parse($customStart)->startOfDay() : $startDate;
+        $revEndDate = $customEnd ? Carbon::parse($customEnd)->endOfDay() : $endDate;
+
+        $monthlyRevenueData = Payment::selectRaw("DATE_FORMAT(payment.payment_date, '%Y-%m') as month")
+            ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Basic' THEN `payment`.`payment_amount` ELSE 0 END) as basic_revenue")
+            ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Premium' THEN `payment`.`payment_amount` ELSE 0 END) as premium_revenue")
+            ->join('subscriptions', 'payment.subscription_id', '=', 'subscriptions.subscription_id')
+            ->join('plans', 'subscriptions.plan_id', '=', 'plans.plan_id')
+            ->when($revStartDate, fn($query) => $query->whereBetween('payment.payment_date', [$revStartDate, $revEndDate]))
+            ->groupBy('month')
+            ->orderBy('month', 'desc')
+            ->get();
+
+        $monthlyRevenue = $monthlyRevenueData->mapWithKeys(function ($item) {
+            return [
+                $item->month => [
+                    'basic' => $item->basic_revenue,
+                    'premium' => $item->premium_revenue,
+                    'total' => $item->basic_revenue + $item->premium_revenue,
+                ]
+            ];
+        })->toArray();
+
+        $breakdownTotalBasic = array_sum(array_column($monthlyRevenue, 'basic'));
+        $breakdownTotalPremium = array_sum(array_column($monthlyRevenue, 'premium'));
+        $breakdownGrandTotal = array_sum(array_column($monthlyRevenue, 'total'));
+
+
+        $clientsQuery = Owner::has('subscriptions.payments')
+            ->with('subscriptions.planDetails', 'subscriptions.payments');
+
+
+        $isFiltered = $request->hasAny(['search', 'date', 'status', 'plan']);
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $clientsQuery->where(function ($q) use ($searchTerm) {
+                $q->where('store_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('firstname', 'like', "%{$searchTerm}%")
+                    ->orWhere('middlename', 'like', "%{$searchTerm}%")
+                    ->orWhere('lastname', 'like', "%{$searchTerm}%");
+            });
+        }
+
+
+        if ($request->filled('date')) {
+            $clientsQuery->whereHas('subscriptions.payments', fn($q) => $q->whereDate('payment_date', $request->input('date')));
+        }
+
+        if ($request->filled('status')) {
+            $clientsQuery->whereHas('subscriptions', fn($q) => $q->where('status', $request->input('status')));
+        }
+
+        if ($request->filled('plan')) {
+            $planTitle = ucfirst($request->input('plan'));
+            $clientsQuery->whereHas('subscriptions.planDetails', fn($q) => $q->where('plan_title', $planTitle));
+        }
+
+        $clients = $clientsQuery->paginate(10)->withQueryString();
+
+        return view('dashboards.super_admin.billing-history', compact(
+            'clients',
+            'latest',
+            'period',
+            'revenue',
+            'totalRevenue',
+            'basicPercentage',
+            'premiumPercentage',
+            'pd_startDate',
+            'pd_endDate',
+            'planStats',
+            'totalActive',
+            'totalExpired',
+            'grandTotalSubs',
+            'customStart',
+            'customEnd',
+            'monthlyRevenue',
+            'breakdownTotalBasic',
+            'breakdownTotalPremium',
+            'breakdownGrandTotal',
+            'basicPrice',
+            'premiumPrice',
+            'cardCounts',
+            'isFiltered'
+        ));
     }
 }
