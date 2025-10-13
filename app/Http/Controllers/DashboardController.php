@@ -23,7 +23,7 @@ class DashboardController extends Controller
         $yearToUse = $selectedYear ?? $latestYear;
         
         
-        $currentMonth = (int)date('n');
+        $currentMonth = (int) date('m');
         $months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         $tableMonths = range(0, ($currentMonth - 1));
         $tableMonthNames = array_slice($months, 0, $currentMonth);
@@ -252,24 +252,23 @@ class DashboardController extends Controller
         $productCategoryAve = collect(DB::select("
             SELECT 
                 c.category,
-                ROUND(AVG(t.year_total), 2) AS avg_total_sales
-            FROM (
+                COALESCE(ROUND(AVG(t.year_total), 2), 0) AS avg_total_sales
+            FROM categories c
+            LEFT JOIN (
                 SELECT
-                    c.category_id,
-                    c.category,
+                    p.category_id,
                     YEAR(r.receipt_date) AS year,
                     SUM(p.selling_price * ri.item_quantity) AS year_total
-                FROM categories c
-                JOIN products p ON c.category_id = p.category_id
+                FROM products p
                 JOIN receipt_item ri ON p.prod_code = ri.prod_code
                 JOIN receipt r ON ri.receipt_id = r.receipt_id
                 WHERE r.owner_id = ?
-                GROUP BY c.category_id, c.category, YEAR(r.receipt_date)
-            ) AS t
-            JOIN categories c ON c.category_id = t.category_id
+                GROUP BY p.category_id, YEAR(r.receipt_date)
+            ) AS t ON c.category_id = t.category_id
+            WHERE c.owner_id = ?
             GROUP BY c.category_id, c.category
             ORDER BY c.category_id
-        ", [$owner_id]))->toArray();
+        ", [$owner_id, $owner_id]))->toArray();
         $productsAveData = array_map(fn($row) => (float) $row->avg_total_sales, $productCategoryAve);
 
 
@@ -320,6 +319,103 @@ class DashboardController extends Controller
         ', [$currentMonth, $owner_id, $latestYear]))->first();
 
 
+
+
+        $latestSales = end($sales) ?: 0;
+        $latestLoss = end($losses) ?: 0;
+        $previousSales = count($sales) > 1 ? $sales[count($sales) - 2] : 0;
+        $previousLoss = count($losses) > 1 ? $losses[count($losses) - 2] : 0;
+
+        // PARA NI DAPIT WHERE GI FETCH TANAN EXCEPT SA LAST 
+        $previousSalesAll = array_slice($sales, 0, -1);
+        $previousLossAll = array_slice($losses, 0, -1);
+
+        $totalActivity = $latestSales + $latestLoss;
+        $totalPrevActivity = $previousSales + $previousLoss;
+
+        $salesPercentage = $totalActivity > 0 ? round(($latestSales / $totalActivity) * 100, 1) : 0;
+        $lossPercentage = $totalActivity > 0 ? round(($latestLoss / $totalActivity) * 100, 1) : 0;
+        $salesPrevPercentage = $totalPrevActivity > 0 ? round(($previousSales / $totalPrevActivity) * 100, 1) : 0;
+        $lossPrevPercentage = $totalPrevActivity > 0 ? round(($previousLoss / $totalPrevActivity) * 100, 1) : 0;
+
+
+        $diffSales = $salesPercentage - $salesPrevPercentage;
+        $diffLoss = $lossPercentage - $lossPrevPercentage;
+
+        if(array_sum($previousSalesAll)==0) {
+            $salesInsights = "This is your baseline month. Future sales comparisons will be based on this data.";
+            $salesState = 'Start';
+            $lossInsights = "This is your baseline month. Future loss comparisons will be based on this data.";
+            $lossState = 'Start';
+
+        } else {
+            if($diffSales > 0) {
+                $salesInsights = "Compared to last month, sales improved by " . number_format(abs($diffSales), 1) . "%.";
+                $salesState = 'Positive';
+                
+            } elseif ($diffSales < 0) {
+                $salesInsights = "Compared to last month, sales decreased by " . number_format(abs($diffSales), 1) . "%.";
+                $salesState = 'Negative';
+
+            } else {
+                $salesInsights = "Sales remained consistent at " . number_format($salesPercentage, 1) . "%.";
+                $salesState = 'Stable';
+            }
+
+            if($diffLoss > 0) {
+                $lossInsights = "Compared to last month, loss increased by " . number_format(abs($diffLoss), 1) . "%.";
+                $lossState = 'Negative';
+
+            } elseif ($diffLoss < 0) {
+                $lossInsights = "Compared to last month, loss decreased by " . number_format(abs($diffLoss), 1) . "%.";
+                $lossState = 'Positive';
+
+            } else {
+                if($diffLoss < 0){
+                    $lossInsights = "Loss remained steady at " . number_format($lossPercentage, 1) . "%.";
+                    $lossState = 'Warning';  
+
+                }else {
+                    $lossInsights = "Good jub! Loss remained steady at " . number_format($lossPercentage, 1) . "%.";
+                    $lossState = 'Stagnant';
+                }
+            }
+        }
+
+        
+
+
+
+        if ($lossPercentage < 3) {
+            $insight = "Excellent! Strong sales with minimal losses.";
+            $performanceLabel = "Excellent";
+
+        } elseif ($lossPercentage < 8 && $salesPercentage > 92) {
+            $insight = "Healthy balance between sales and losses.";
+            $performanceLabel = "Good";
+
+        } elseif ($lossPercentage < 8) {
+            $insight = "Good balance but work on increasing sales.";
+            $performanceLabel = "Good";
+
+        } elseif ($lossPercentage < 15 && $salesPercentage > 85) {
+            $insight = "Sales are okay but losses are reducing your profit.";
+            $performanceLabel = "Warning";
+
+        } elseif ($lossPercentage < 15) {
+            $insight = "Losses are high and affecting your profit. Reduce waste.";
+            $performanceLabel = "Warning";
+
+        } else {
+            $insight = "High losses are eating into your sales. Take action now.";
+            $performanceLabel = "Critical";
+        }
+
+        
+
+
+
+
         return view('dashboards.owner.dashboard', [
             'owner_name' => $owner_name,
             'months' => $months,
@@ -341,8 +437,14 @@ class DashboardController extends Controller
             'dailySales' => $dailySales,
             'weeklySales' => $weeklySales,
             'monthSales' => $monthSales,
-            // 'notifs' => $this->getNotifs(),
-            // 'countNotifs' => $this->countNotifs(),
+            'salesPercentage' => $salesPercentage,
+            'lossPercentage' => $lossPercentage,
+            'insight' => $insight,
+            'performanceLabel' => $performanceLabel,
+            'salesInsights' => $salesInsights,
+            'lossInsights' => $lossInsights,
+            'salesState' => $salesState,
+            'lossState' => $lossState,
         ]);
     }   
 

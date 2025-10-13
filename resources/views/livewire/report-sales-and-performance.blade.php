@@ -11,15 +11,6 @@
         </button>
 
         <button 
-            @click="tab = 'top-selling'"
-            :class="tab === 'top-selling' 
-                ? 'bg-yellow-50 text-black border-yellow-500 border-t border-l border-r rounded-t-lg' 
-                : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
-            class="px-6 py-3 font-medium text-xs">
-            Top Selling Product
-        </button>
-
-        <button 
             @click="tab = 'sales-category'"
             :class="tab === 'sales-category' 
                 ? 'bg-orange-50 text-black border-orange-500 border-t border-l border-r rounded-t-lg' 
@@ -41,7 +32,6 @@
     <div class="border bg-white p-4 rounded-b-lg mb-3 h-[40rem]"
         :class="{
             'border-green-500 bg-green-50': tab === 'sales',
-            'border-yellow-500 bg-yellow-50': tab === 'top-selling',
             'border-orange-500 bg-orange-50': tab === 'sales-category',
             'border-blue-500 bg-blue-50': tab === 'peak-hours'
         }">
@@ -49,11 +39,6 @@
         <!-- DAILY SALES or MONTHLY -->
         <div x-show="tab === 'sales'">
             <p class="text-gray-700">📊 <b>Sales</b> report content goes here.</p>
-        </div>
-
-        <!-- TOP SELLING -->
-        <div x-show="tab === 'top-selling'">
-            <p class="text-gray-700">⚡ <b>top selling</b> report content goes here.</p>
         </div>
 
         <!-- sALES BY CATEGORY -->
@@ -234,7 +219,7 @@
                                 Sales (₱)
                             </th>
                             <th scope="col" class="px-6 py-3 sticky top-0 text-right text-xs font-medium uppercase tracking-wider">
-                                Avg. Value ₱
+                                Avg. Sales Value (₱)
                             </th>
                         </tr>
                     </thead>

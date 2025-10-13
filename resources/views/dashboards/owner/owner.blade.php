@@ -51,10 +51,10 @@
                         <a href="{{ route('dashboards.owner.rsp') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Sales & Performance Reports</span>
                         </a>
-                        <a href="" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                        <a href="{{ route('dashboards.owner.inven_reports') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Inventory Reports</span>
                         </a>
-                        <a href="" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                        <a href="{{ route('dashboards.owner.customer_behavior') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Customer & Behavior Reports</span>
                         </a>
                         <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">

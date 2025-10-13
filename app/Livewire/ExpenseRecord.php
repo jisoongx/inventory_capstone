@@ -176,7 +176,7 @@ class ExpenseRecord extends Component
             AND YEAR(r.receipt_date) = ?
             AND MONTH(r.receipt_date) = ?
             GROUP BY DATE(r.receipt_date)
-            ORDER BY DATE(r.receipt_date) DESC
+            ORDER BY SUM(p.selling_price * ri.item_quantity) DESC
             LIMIT 3', [$owner_id, $this->year, $this->month]
         ))->toArray();
 

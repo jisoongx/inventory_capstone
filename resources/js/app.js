@@ -75,7 +75,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const year = JSON.parse(productChart.dataset.year || "[]");
 
     new Chart(ctz, {
-        
         data: {
             labels: categories,
             datasets: [
@@ -86,25 +85,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 borderColor: "rgba(190, 21, 21, 1)",
                 backgroundColor: 'transparent',
                 borderWidth: 2,
-                pointRadius: 1,
+                pointRadius: 2,
             },
             ...(year.length > 1 ? [{
                 type: 'line',
                 label: year[1],
                 data: productsPrev,
                 borderColor: 'rgba(67, 102, 209, 1)',
+                pointBackgroundColor: 'rgba(67, 102, 209, 1)', 
                 backgroundColor: 'transparent',
                 borderDash: [7],
                 borderWidth: 2,
-                pointRadius: 1,
+                pointRadius: 2,
             }] : []), 
             {
                 type: 'bar',
                 label: 'Average',
                 data: productsAve,
                 borderColor: "rgba(250, 196, 47, 1)",
-                backgroundColor: 'rgba(250, 196, 47, 1)',
-                borderWidth: 2,
+                backgroundColor: 'rgba(243, 236, 217, 1)',
+                borderWidth: 1,
             }
             ]
         },
@@ -115,8 +115,19 @@ document.addEventListener("DOMContentLoaded", () => {
             legend: { display: false }
             },
             scales: {
-            x: { grid: { display: true }, ticks: { display: false } },
-            y: { beginAtZero: true, display: false }
+                x: { 
+                    grid: { display: true }, 
+                    ticks: { 
+                        display: true, 
+                        minRotation: 90,
+                        font: { family: "Poppins, sans-serif", size: 10 },
+                        callback: function(value) {
+                            const label = this.getLabelForValue(value);
+                            return label.slice(0, 8);
+                        }
+                    } 
+                },
+                y: { beginAtZero: true, display: false }
             }
         }
     });
@@ -132,39 +143,60 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const latestSales = sales[sales.length - 1] || 0;
     const latestLoss = losses[losses.length - 1] || 0;
-    const netSales = Math.max(latestSales - latestLoss, 0); // avoid negatives
+    // const netSales = Math.max(latestSales - latestLoss, 0); 
 
-    const prevSales = sales[sales.length - 2] || 0;
-    const prevLoss = losses[losses.length - 2] || 0;
+    const greenGradient = cty.createLinearGradient(0, 0, 400, 0);
+    greenGradient.addColorStop(0, "#049942ff");
+    greenGradient.addColorStop(0, "#05b54eff");
+    greenGradient.addColorStop(1, "#B2FF59");
+
+    const redGradient = cty.createLinearGradient(0, 0, 400, 0);
+    redGradient.addColorStop(0, "#f00232ff");
+    redGradient.addColorStop(0, "#f02951ff");
+    redGradient.addColorStop(1, "#f9a29aff");
 
     new Chart(cty, {
-        type: "doughnut",
+        type: "bar",
         data: {
-            // labels: ["Sales", "Loss"],
+            labels: [""],
             datasets: [
             {
-                label: "This Month",
-                data: [netSales, latestLoss],
-                backgroundColor: ["#4CAF50", "#F44336"],
-                cutout: "50%", 
-                radius: "80%", 
+                label: "Sales",
+                data: [latestSales],
+                backgroundColor: greenGradient,
+                borderRadius: 14,
             },
-            // {
-            //     label: "Last Month", //inner ni
-            //     data: [prevSales, prevLoss],
-            //     backgroundColor: ["#1f6f22ff", "#b82e24ff"],
-            //     cutout: "65%",
-            //     radius: "80%",
-            // },
+            {
+                label: "Loss",
+                data: [latestLoss],
+                backgroundColor: redGradient,
+                borderRadius: 14,
+            },
             ],
         },
         options: {
-            rotation: -90,
-            // circumference: 180,
+            indexAxis: "y", 
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-            legend: {
-                display: false, 
+                legend: { display: false },
             },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: "#666",
+                        font: { family: "Poppins, sans-serif", size: 8 }
+                    },
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { display: false },
+                },
+            },
+            animation: {
+            duration: 1500,
+            easing: "easeOutQuart",
             },
         },
     });

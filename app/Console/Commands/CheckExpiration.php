@@ -6,6 +6,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+
+// php artisan check:expiration
+
 class CheckExpiration extends Command
 {
     protected $signature = 'check:expiration';

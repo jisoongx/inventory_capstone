@@ -49,8 +49,11 @@ Route::view('/staff/technical-request', 'dashboards.staff.technical_request')->n
 Route::view('/owner/technical-request', 'dashboards.owner.technical_request')->name('dashboards.owner.technical_request');
 
 
-
+// REPORTS DAPIT
 Route::view('/reports/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('dashboards.owner.rsp');
+Route::view('/reports/inventory-reports', 'dashboards.owner.report-inventory-reports')->name('dashboards.owner.inven_reports');
+Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-customer-and-behavior')->name('dashboards.owner.customer_behavior');
+
 
 
 
