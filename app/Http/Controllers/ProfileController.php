@@ -170,28 +170,83 @@ class ProfileController extends Controller
     {
         $staff = Auth::guard('staff')->user();
 
-        $request->validate([
-            'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        if (!Hash::check($request->current_password, $staff->getAuthPassword())) {
-            throw ValidationException::withMessages([
-                'current_password' => ['The provided password does not match your current password.'],
+        // 🩷 CASE 1: If user is changing password
+        if ($request->filled('current_password') || $request->filled('password')) {
+            $request->validate([
+                'current_password' => ['required', 'string'],
+                'password' => ['required', 'string', 'min:8', 'confirmed'],
             ]);
+
+            if (!Hash::check($request->current_password, $staff->getAuthPassword())) {
+                $errors = ['current_password' => ['The provided password does not match your current password.']];
+
+                if ($request->ajax()) {
+                    return response()->json(['errors' => $errors], 422);
+                }
+
+                throw ValidationException::withMessages($errors);
+            }
+
+            // ✅ Update password
+            $passwordColumn = $staff->getAuthPasswordName();
+            $staff->$passwordColumn = Hash::make($request->password);
+            $staff->save();
+
+            ActivityLogController::log(
+                'Staff password changed',
+                'staff',
+                $staff,
+                $request->ip()
+            );
+
+            if ($request->ajax()) {
+                return response()->json(['success' => 'Password updated successfully!']);
+            }
+
+            return redirect()->route('staff.profile')->with('success', 'Password updated successfully!');
         }
 
-        $passwordColumn = $staff->getAuthPasswordName();
-        $staff->$passwordColumn = Hash::make($request->password);
-        $staff->save();
+        // 🩵 CASE 2: If user is editing profile (contact info)
+        if ($request->filled('contact')) {
+            $request->validate([
+                'contact' => [
+                    'bail',
+                    'required',
+                    'regex:/^09/',  // must start with 09
+                    'digits:11',    // must be exactly 11 digits (and only numbers)
+                ],
+            ], [
+                'contact.required' => 'Please enter your contact number.',
+                'contact.regex' => 'The contact number must start with 09.',
+                'contact.digits' => 'The contact number must be exactly 11 digits.',
+            ]);
 
-        ActivityLogController::log(
-            'Staff password changed',
-            'staff',
-            $staff,
-            $request->ip()
-        );
 
-        return redirect()->route('staff.profile')->with('success', 'Password updated successfully!');
+            $staff->contact = $request->contact;
+            $staff->save();
+
+            ActivityLogController::log(
+                'Staff contact updated',
+                'staff',
+                $staff,
+                $request->ip()
+            );
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => 'Profile updated successfully!',
+                    'staff' => $staff,
+                ]);
+            }
+
+            return redirect()->route('staff.profile')->with('success', 'Profile updated successfully!');
+        }
+
+        // 🩶 CASE 3: If no valid data provided
+        if ($request->ajax()) {
+            return response()->json(['info' => 'No changes detected.']);
+        }
+
+        return redirect()->route('staff.profile')->with('info', 'No changes detected.');
     }
 }

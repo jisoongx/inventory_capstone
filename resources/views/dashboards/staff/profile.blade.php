@@ -1,178 +1,267 @@
-@extends('dashboards.staff.staff') {{-- This extends your main staff dashboard layout --}}
+@extends('dashboards.staff.staff')
 
 @section('content')
-<div class="container mx-auto px-4 py-6 sm:px-6 lg:px-8"> {{-- Adjusted padding for better responsiveness --}}
-    <h1 class="text-xl font-semibold text-gray-900">Welcome, {{ $staff->firstname }}!</h1> {{-- Smaller greeting --}}
-    <p class="text-base text-gray-600 mb-6">{{ \Carbon\Carbon::now()->format('l, F d, Y') }}</p> {{-- Smaller date --}}
+<div class="bg-slate-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
 
-    <div class="bg-white shadow-lg rounded-xl p-6 max-w-3xl mx-auto space-y-6 border border-slate-100"> {{-- Reduced padding, max-width, and spacing --}}
-
-
-        {{-- Success and error message display --}}
-        @if (session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
-            <span class="block sm:inline text-sm">{{ session('success') }}</span>
+        {{-- Page Header --}}
+        <div class="mb-8">
+            <h1 class="text-xl font-semibold tracking-tight text-slate-800">Welcome, {{ $staff->firstname }}!</h1>
+            <p class="text-sm text-slate-500">{{ \Carbon\Carbon::now()->format('l, F d, Y') }}</p>
         </div>
-        @endif
 
-        @if ($errors->any())
-        <div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded-lg relative mb-3" role="alert">
-            <ul class="list-disc list-inside text-sm">
-                @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-        @endif
+        {{-- Main Content Card --}}
+        <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 max-w-4xl mx-auto border border-slate-100">
 
-        {{-- Profile Header Section --}}
-        <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 pb-4 border-b border-gray-200">
-            <img src="{{ asset('assets/user.png') }}" alt="Profile Picture" class="w-24 h-24 rounded-full border-3 border-red-500 object-cover shadow-sm">
-            <div class="text-center sm:text-left flex-grow">
-                <div class="flex items-center justify-between"> {{-- Flex container for name/email and button group --}}
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">{{ $staff->firstname }} {{ $staff->middlename ?? '' }} {{ $staff->lastname }}</h2>
-                        <p class="text-sm text-gray-600 mt-0.5">{{ $staff->email }}</p>
+            {{-- Success/Error/Info messages --}}
+            @if (session('success'))
+            <div class="flex items-center bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <span class="material-symbols-rounded mr-2">check_circle</span>
+                <span class="block sm:inline text-sm font-medium">{{ session('success') }}</span>
+            </div>
+            @endif
+            @if (session('info'))
+            <div class="flex items-center bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <span class="material-symbols-rounded mr-2">info</span>
+                <span class="block sm:inline text-sm font-medium">{{ session('info') }}</span>
+            </div>
+            @endif
+            @if ($errors->any())
+            <div class="flex items-start bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <span class="material-symbols-rounded mr-2 mt-0.5">error</span>
+                <div>
+                    <strong class="font-bold text-sm">Oops!</strong>
+                    <ul class="list-disc list-inside text-sm mt-1">
+                        @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+            @endif
+
+            {{-- Profile Header --}}
+            <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 pb-6 border-b border-slate-200">
+                <img src="{{ asset('assets/user.png') }}" alt="Profile Picture" class="w-24 h-24 rounded-full object-cover ring-2 ring-offset-2 ring-indigo-500">
+                <div class="text-center sm:text-left flex-grow">
+                    <h2 class="text-xl font-bold text-slate-900">{{ $staff->firstname }} {{ $staff->middlename ?? '' }} {{ $staff->lastname }}</h2>
+                    <p class="text-sm text-slate-500 mt-1">{{ $staff->email }}</p>
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" id="editProfileButton" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Edit Profile</button>
+                    <button type="button" id="togglePasswordSection" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Change Password</button>
+                </div>
+            </div>
+
+            {{-- Profile Details Form --}}
+            <div class="pt-6 space-y-4">
+                <form id="staffDetailsForm" method="POST" action="{{ route('staff.profile.update') }}">
+                    @csrf
+                    @method('PUT')
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div>
+                            <label for="store_name" class="block text-sm font-medium text-slate-700 mb-1">Store Name</label>
+                            <input type="text" id="store_name" value="{{ $staff->owner->store_name ?? 'N/A' }}" class="block w-full rounded-lg border-slate-300 shadow-sm disabled:bg-slate-50 disabled:text-slate-500 text-base" disabled>
+                        </div>
+                        <div>
+                            <label for="position" class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                            <input type="text" id="position" value="{{ $staff->email}}" class="block w-full rounded-lg border-slate-300 shadow-sm disabled:bg-slate-50 disabled:text-slate-500 text-base" disabled>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="contact" class="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+                            <input type="text" name="contact" id="contact" value="{{ old('contact', $staff->contact ?? '') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-500 text-base" disabled>
+                        </div>
                     </div>
-                    <div class="flex flex-col space-y-2 ml-4"> {{-- New flex container for stacking buttons --}}
+                    <div class="text-right mt-6">
+                        <button type="submit" id="saveProfileDetailsButton" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200 hidden">Save Changes</button>
+                    </div>
+                </form>
+            </div>
 
-                        <button type="button" id="togglePasswordSection" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105">
-                            Change Password
+            {{-- Password Change Section --}}
+            <div id="passwordSection" class="hidden mt-6 pt-6 border-t border-slate-200">
+                <form id="passwordForm" method="POST" action="{{ route('staff.profile.update') }}" class="space-y-4">
+                    @csrf
+                    @method('PUT')
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div>
+                            <label for="current_password" class="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                            <div class="relative">
+                                <input type="password" name="current_password" id="current_password" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
+                                <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
+                                    <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                            <div class="relative">
+                                <input type="password" name="password" id="password" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
+                                <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
+                                    <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                            <div class="relative">
+                                <input type="password" name="password_confirmation" id="password_confirmation" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
+                                <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
+                                    <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right pt-2">
+                        <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition-colors duration-200">
+                            Update Password
                         </button>
-
                     </div>
-                </div>
+                </form>
             </div>
+
         </div>
+    </div>
+</div>
 
-        {{-- Profile Details Section --}}
-        <div class="pt-4 space-y-4"> {{-- Reduced spacing --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Section Elements
+        const passwordSection = document.getElementById('passwordSection');
+        const staffDetailsForm = document.getElementById('staffDetailsForm');
+        const passwordForm = document.getElementById('passwordForm');
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3"> {{-- Reduced gap --}}
-                <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200"> {{-- Reduced padding --}}
-                    <p class="text-sm font-medium text-gray-500">Store Name</p>
-                    <p class="text-base text-gray-900 font-medium mt-0.5">{{ $staff->owner->store_name ?? 'N/A' }}</p> {{-- Smaller text --}}
-                </div>
-                <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200"> {{-- Reduced padding --}}
-                    <p class="text-sm font-medium text-gray-500">Position</p>
-                    <p class="text-base text-gray-900 font-medium mt-0.5">{{ $staff->position ?? 'Staff' }}</p> {{-- Smaller text --}}
-                </div>
-                <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200"> {{-- Reduced padding --}}
-                    <p class="text-sm font-medium text-gray-500">Contact Number</p>
-                    <p class="text-base text-gray-900 font-medium mt-0.5">{{ $staff->contact ?? 'N/A' }}</p> {{-- Smaller text --}}
-                </div>
-            </div>
-        </div>
+        // Buttons
+        const togglePasswordSectionButton = document.getElementById('togglePasswordSection');
+        const editProfileButton = document.getElementById('editProfileButton');
+        const saveProfileDetailsButton = document.getElementById('saveProfileDetailsButton');
 
-        {{-- Password Change Section (initially hidden) --}}
-        <div id="passwordSection" class="hidden mt-4 pt-4 border-t border-gray-200">
-            <form method="POST" action="{{ route('staff.profile.update') }}" class="space-y-4">
-                @csrf
-                @method('PUT') {{-- Use PUT method for updating resources --}}
+        // Profile inputs (only 'contact' is editable)
+        const contactInput = document.getElementById('contact');
+        let isDetailsEditMode = false;
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3"> {{-- Added grid for consistent layout --}}
-                    <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-                        <label for="current_password" class="block text-sm font-medium text-gray-700 mb-0.5">Current Password</label>
-                        <div class="relative">
-                            <input type="password" name="current_password" id="current_password"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
-                            <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="current_password">
-                                <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
-                            </button>
-                        </div>
-                        @error('current_password') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
-                    </div>
+        // Button classes
+        const secondaryBtnClasses = ['bg-white', 'text-slate-700', 'border-slate-300', 'hover:bg-slate-50'];
+        const destructiveBtnClasses = ['bg-red-600', 'text-white', 'border-transparent', 'hover:bg-red-700'];
 
-                    <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-0.5">New Password</label>
-                        <div class="relative">
-                            <input type="password" name="password" id="password"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
-                            <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="password">
-                                <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
-                            </button>
-                        </div>
-                        @error('password') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
-                    </div>
+        // Toast Helper
+        function showToast(message, type = "success") {
+            const colors = {
+                success: "bg-green-600",
+                info: "bg-blue-600",
+                error: "bg-red-600"
+            };
+            const toast = document.createElement("div");
+            toast.className = `${colors[type] || colors.success} text-white px-4 py-2 rounded shadow fixed top-16 right-4 z-50 transition-opacity duration-500`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
 
-                    <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-                        <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-0.5">Confirm New Password</label>
-                        <div class="relative">
-                            <input type="password" name="password_confirmation" id="password_confirmation"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 pr-10 password-input-field text-base">
-                            <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button" data-target="password_confirmation">
-                                <span class="material-symbols-rounded password-eye-icon hidden text-lg">visibility_off</span>
-                            </button>
-                        </div>
-                        @error('password_confirmation') <span class="text-red-500 text-xs mt-0.5 block">{{ $message }}</span> @enderror
-                    </div>
-                </div>
+        // Close all toggle sections
+        const closeAllSections = () => {
+            passwordSection.classList.add('hidden');
+            togglePasswordSectionButton.textContent = 'Change Password';
+            togglePasswordSectionButton.classList.remove(...destructiveBtnClasses);
+            togglePasswordSectionButton.classList.add(...secondaryBtnClasses);
+        };
 
-                <div class="text-right pt-3">
-                    <button type="submit" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-lg shadow-md text-white bg-gradient-to-br from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105">
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div> {{-- End of passwordSection div --}}
+        // Toggle profile edit mode
+        const setDetailsEditMode = (enable) => {
+            contactInput.disabled = !enable;
+            if (enable) {
+                saveProfileDetailsButton.classList.remove('hidden');
+                editProfileButton.textContent = 'Cancel Edit';
+                editProfileButton.classList.remove(...secondaryBtnClasses);
+                editProfileButton.classList.add(...destructiveBtnClasses);
+                closeAllSections();
+            } else {
+                saveProfileDetailsButton.classList.add('hidden');
+                editProfileButton.textContent = 'Edit Profile';
+                editProfileButton.classList.remove(...destructiveBtnClasses);
+                editProfileButton.classList.add(...secondaryBtnClasses);
+                contactInput.value = contactInput.defaultValue; // Revert changes on cancel
+            }
+            isDetailsEditMode = enable;
+        };
 
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Logic for toggling the password change section
-                const togglePasswordSectionButton = document.getElementById('togglePasswordSection');
-                const passwordSection = document.getElementById('passwordSection');
+        // Toggle Sections
+        togglePasswordSectionButton.addEventListener('click', function() {
+            const isHidden = passwordSection.classList.contains('hidden');
+            if (isDetailsEditMode) setDetailsEditMode(false);
+            closeAllSections();
+            if (isHidden) {
+                passwordSection.classList.remove('hidden');
+                this.textContent = 'Hide Section';
+                this.classList.remove(...secondaryBtnClasses);
+                this.classList.add(...destructiveBtnClasses);
+            }
+        });
 
-                if (togglePasswordSectionButton && passwordSection) {
-                    togglePasswordSectionButton.addEventListener('click', function() {
-                        passwordSection.classList.toggle('hidden');
-                        // Change button text and color
-                        if (passwordSection.classList.contains('hidden')) {
-                            this.textContent = 'Change Password';
-                            this.classList.remove('bg-red-600', 'hover:bg-red-700');
-                            this.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                        } else {
-                            this.textContent = 'Hide Password Fields';
-                            this.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                            this.classList.add('bg-red-600', 'hover:bg-red-700');
-                        }
-                    });
-                }
+        editProfileButton.addEventListener('click', () => setDetailsEditMode(!isDetailsEditMode));
 
-                // Select all password input fields and their corresponding toggle buttons/icons
-                const passwordInputFields = document.querySelectorAll('.password-input-field');
-
-                passwordInputFields.forEach(inputField => {
-                    const toggleButton = inputField.nextElementSibling; // Assuming button is the next sibling
-                    const eyeIcon = toggleButton ? toggleButton.querySelector('.password-eye-icon') : null;
-
-                    // Function to show/hide the eye icon based on input value
-                    const toggleEyeIconVisibility = () => {
-                        if (eyeIcon) {
-                            if (inputField.value.length > 0) {
-                                eyeIcon.classList.remove('hidden');
-                            } else {
-                                eyeIcon.classList.add('hidden');
-                            }
-                        }
-                    };
-
-                    // Initial check on page load (if there's pre-filled data, though unlikely for password fields)
-                    toggleEyeIconVisibility();
-
-                    // Listen for input events (typing)
-                    inputField.addEventListener('input', toggleEyeIconVisibility);
-
-                    // Existing logic for toggling password visibility (eye icon click)
-                    if (toggleButton) {
-                        toggleButton.addEventListener('click', function() {
-                            const type = inputField.getAttribute('type') === 'password' ? 'text' : 'password';
-                            inputField.setAttribute('type', type);
-                            if (eyeIcon) {
-                                eyeIcon.textContent = type === 'password' ? 'visibility_off' : 'visibility';
-                            }
-                        });
-                    }
-                });
+        // Password toggle buttons
+        document.querySelectorAll('.password-toggle-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.previousElementSibling;
+                const eye = this.querySelector('.password-eye-icon');
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                if (eye) eye.textContent = type === 'password' ? 'visibility_off' : 'visibility';
             });
-        </script>
-        @endsection
+        });
+
+        document.querySelectorAll('.password-input-field').forEach(input => {
+            const eye = input.nextElementSibling.querySelector('.password-eye-icon');
+            const toggleEye = () => eye && eye.classList.toggle('hidden', input.value.length === 0);
+            input.addEventListener('input', toggleEye);
+            toggleEye();
+        });
+
+        // AJAX submission for all forms
+        [staffDetailsForm, passwordForm].forEach(form => {
+            if (!form) return;
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                fetch(form.action, {
+                        method: form.method,
+                        body: new FormData(form),
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(data.success, "success");
+                            if (form === passwordForm) {
+                                form.reset();
+                            }
+                            if (form === staffDetailsForm && data.staff) {
+                                // Update the contact input's value and default value to reflect the change
+                                contactInput.value = data.staff.contact;
+                                contactInput.defaultValue = data.staff.contact;
+                                setDetailsEditMode(false); // Exit edit mode
+                            }
+                        }
+
+                        if (data.errors) {
+                            Object.values(data.errors).forEach(errArr => errArr.forEach(err => showToast(err, "error")));
+                        }
+
+                        if (data.info) {
+                            showToast(data.info, "info");
+                        }
+                    })
+                    .catch(() => showToast("Something went wrong.", "error"));
+            });
+        });
+
+        // Initialize view
+        setDetailsEditMode(false);
+    });
+</script>
+@endsection
