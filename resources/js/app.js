@@ -7,6 +7,10 @@ import zoomPlugin from 'chartjs-plugin-zoom';
 import 'datatables.net-dt/css/dataTables.dataTables.css';
 import DataTable from 'datatables.net-dt';
 
+import JsBarcode from "jsbarcode";
+
+
+
 // import Alpine from 'alpinejs'
 
 // window.Alpine = Alpine
@@ -259,3 +263,22 @@ document.querySelector('#expensesTable').addEventListener('click', (e) => {
     }
 });
 
+
+//sa generate barcode ni
+window.JsBarcode = JsBarcode;
+window.generateBarcode = function() {
+    const randomBarcode = Math.floor(100000000000 + Math.random() * 900000000000).toString(); // 12-digit barcode
+    JsBarcode("#generatedBarcode", randomBarcode, {
+        format: "CODE128",      // You can change to EAN13, CODE39, etc.
+        displayValue: true,     // Shows the numbers below
+        fontSize: 18,
+        lineColor: "#000",
+        width: 2,
+        height: 80,
+    });
+    document.getElementById("generatedBarcodeInput").value = randomBarcode;
+};
+
+document.getElementById("generateNewBarcodeBtn")?.addEventListener("click", () => {
+    generateBarcode();
+});

@@ -362,49 +362,119 @@
     </div>
 
 
-
-    <!-- Modal for barcode already exists -->
-    <div id="barcodeExistsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+    <!-- Scan Barcode Modal -->
+    <div id="scanBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
         <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
-
+            
             <!-- Red Top Bar -->
             <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-                <h2 class="text-white text-lg font-medium">Barcode Already Exists</h2>
-                <button onclick="closeAllModals()" class="text-white hover:text-gray-200">
+                <h2 class="text-white text-lg font-medium">Scan Product Barcode</h2>
+                <button onclick="closeScanModal()" class="text-white hover:text-gray-200">
                     <span class="material-symbols-outlined text-white">close</span>
                 </button>
             </div>
 
             <!-- Modal Content Center -->
             <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 mb-16">
-                <div class="mb-10">
-                    <img src="{{ asset('assets/warning-icon.png') }}" alt="Warning" class="h-20 mx-auto">
+                <div class="mb-4">
+                    <img src="{{ asset('assets/scan-barcode.png') }}" alt="Scan Barcode" class="h-32 mx-auto">
                 </div>
 
-                <p class="font-medium text-base text-black text-center mb-8">
-                    Product barcode <span class="font-bold text-red-500">already exists</span> in your inventory
-                </p>
+                <p class="text-gray-600 mb-6 text-center text-xs">Place your cursor inside the field below, then scan the barcode using your barcode scanner device.</p>
 
-                <div class="flex justify-center gap-6">
-                    <!-- Restock Button (no $product here, JS will handle it) -->
-                    <button 
-                        id="barcodeExistsRestockBtn"
-                        class="w-32 bg-[#F18301] text-white text-sm py-3 rounded-3xl hover:bg-[#cc6900] transition-all duration-200 transform hover:scale-105"
-                    >
-                        Add Stock
+                <input
+                    type="text"
+                    id="scannedBarcodeInput"
+                    placeholder="Waiting for barcode..."
+                    class="w-2/4 px-4 py-3 border border-gray-300 rounded focus:outline-none focus:border-red-600 mb-4 placeholder:text-sm text-center"
+                    autofocus
+                >
+
+                <button type="button"
+                    onclick="processScannedBarcode()"
+                    class="w-2/6 bg-black mx-auto block text-white py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+   <!-- Generate Barcode Modal -->
+<div id="generateBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+    <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
+
+        <!-- Red Top Bar -->
+        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
+            <h2 class="text-white text-lg font-medium">Generate New Barcode</h2>
+            <button onclick="closeGenerateModal()" class="text-white hover:text-gray-200">
+                <span class="material-symbols-outlined text-white">close</span>
+            </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 mb-16">
+
+            <!-- Step 1: Choose Product Category -->
+            <div class="w-1/2 mb-6">
+                <select id="barcodeCategory" 
+                    class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-red-600 text-center text-sm" 
+                    required>
+                    <option value="">Select Product Category</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ strtoupper(substr($cat->category, 0, 3)) }}">
+                            {{ $cat->category }}
+                        </option>
+                    @endforeach
+                    <option value="other">Other...</option>
+                </select>
+
+                <!-- Custom Prefix (hidden initially) -->
+                <input type="text" id="customPrefixInput" maxlength="5"
+                    placeholder="Enter custom prefix (2–5 letters)"
+                    class="hidden mt-3 w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-center uppercase text-sm placeholder-gray-400"
+                >
+
+                <!-- Error Message -->
+                <p id="categoryError" class="text-red-600 text-sm text-center mt-2 hidden"></p>
+            </div>
+
+            <!-- Generate Button (First Step) -->
+            <button id="generateBarcodeBtn"
+                class="bg-black text-white text-sm px-8 py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105">
+                Generate Barcode
+            </button>
+
+            <!-- Step 2: Display Generated Barcode (Hidden Initially) -->
+            <div id="generatedSection" class="hidden flex flex-col items-center mt-8 space-y-4">
+                <!-- Barcode Display -->
+                <div id="barcodeContainer" class="text-center">
+                    <svg id="generatedBarcode"></svg>
+                </div>
+
+                <!-- Barcode Text Display -->
+                <input type="text" id="generatedBarcodeInput" name="barcode" readonly
+                    class="w-2/3 px-4 py-3 border border-gray-300 rounded text-center bg-gray-100 font-mono text-lg tracking-widest"
+                >
+
+                <!-- Action Buttons -->
+                <div class="flex gap-4 mt-4">
+                    <button id="generateNewBarcodeBtn"
+                        class="bg-black text-white text-sm px-6 py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105">
+                        Generate New Barcode
                     </button>
 
-                    <!-- Enter New Barcode -->
-                    <button 
-                        onclick="reopenTypeModal()" 
-                        class="w-48 bg-black text-white text-sm py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
-                    >
-                        Enter New Barcode
+                    <button id="useBarcodeBtn"
+                        class="bg-[#B50612] text-white text-sm px-6 py-3 rounded-3xl hover:bg-red-700 transition-all duration-200 transform hover:scale-105">
+                        Use This Barcode
                     </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+
 
 
 
@@ -888,6 +958,177 @@
         });
 
     </script>
+
+    <!-- Scan Barcode Modal JavaScript -->
+    <script>
+        function openScanModal() {
+            document.getElementById('scanBarcodeModal').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('scannedBarcodeInput').focus();
+            }, 300);
+        }
+
+        function closeScanModal() {
+            document.getElementById('scanBarcodeModal').classList.add('hidden');
+            document.getElementById('scannedBarcodeInput').value = '';
+        }
+
+        // Automatically detect scanner input and process it when Enter is pressed
+        document.getElementById('scannedBarcodeInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                processScannedBarcode();
+            }
+        });
+
+        function processScannedBarcode() {
+            const barcode = document.getElementById('scannedBarcodeInput').value.trim();
+            if (!barcode) return alert("Please scan a barcode first.");
+
+            // Example: send scanned barcode to backend (AJAX or redirect)
+            console.log("Scanned barcode:", barcode);
+
+            // ✅ You can now either:
+            // Option 1: Redirect to a route that searches for that barcode
+            // window.location.href = `/products/search/${barcode}`;
+
+            // Option 2: Send via AJAX to check product details
+            // fetch(`/products/scan`, {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            //     },
+            //     body: JSON.stringify({ barcode })
+            // }).then(res => res.json())
+            // .then(data => {
+            //     console.log(data);
+            //     // Handle product data display here
+            // });
+
+            closeScanModal();
+        }
+    </script>
+
+    <!-- Generate Barcode Modal JavaScript -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const barcodeCategory = document.getElementById("barcodeCategory");
+        const customPrefixInput = document.getElementById("customPrefixInput");
+        const categoryError = document.getElementById("categoryError");
+        const generateBtn = document.getElementById("generateBarcodeBtn");
+        const generatedSection = document.getElementById("generatedSection");
+        const barcodeContainer = document.getElementById("generatedBarcode");
+        const barcodeInput = document.getElementById("generatedBarcodeInput");
+        const generateNewBtn = document.getElementById("generateNewBarcodeBtn");
+        const useBarcodeBtn = document.getElementById("useBarcodeBtn");
+
+        // Show custom prefix input when "Other..." is selected
+        barcodeCategory.addEventListener("change", () => {
+            categoryError.classList.add("hidden"); // clear error on change
+            if (barcodeCategory.value === "other") {
+                customPrefixInput.classList.remove("hidden");
+                customPrefixInput.focus();
+            } else {
+                customPrefixInput.classList.add("hidden");
+                customPrefixInput.value = "";
+            }
+        });
+
+        // Generate random barcode (numeric portion)
+        function generateRandomBarcode(prefix = "XX") {
+            const randomNum = Math.floor(100000 + Math.random() * 900000); // 6 digits
+            return `${prefix}${randomNum}`;
+        }
+
+        // Render barcode using JsBarcode
+        function renderBarcode(code) {
+            JsBarcode(barcodeContainer, code, {
+                format: "CODE128",
+                lineColor: "#000",
+                width: 2,
+                height: 80,
+                displayValue: true,
+                fontSize: 16,
+            });
+            barcodeInput.value = code;
+            generatedSection.classList.remove("hidden");
+        }
+
+        //  Handle initial barcode generation
+        generateBtn.addEventListener("click", () => {
+            categoryError.classList.add("hidden"); // hide any previous error
+
+            let selectedCategory = barcodeCategory.value;
+
+            // Prevent proceeding if no category selected
+            if (!selectedCategory) {
+                categoryError.textContent = "Please select a product category.";
+                categoryError.classList.remove("hidden");
+                return;
+            }
+
+            let prefix = selectedCategory;
+
+            // Handle custom prefix (Other option)
+            if (prefix === "other") {
+                prefix = customPrefixInput.value.trim().toUpperCase();
+
+                if (!prefix) {
+                    categoryError.textContent = "Please enter a custom prefix (2–5 letters).";
+                    categoryError.classList.remove("hidden");
+                    return;
+                }
+
+                // Validate prefix length and letters only
+                if (!/^[A-Za-z]{2,5}$/.test(prefix)) {
+                    categoryError.textContent = "Custom prefix must contain 2 to 5 letters only.";
+                    categoryError.classList.remove("hidden");
+                    return;
+                }
+            }
+
+            const newCode = generateRandomBarcode(prefix);
+            renderBarcode(newCode);
+        });
+
+        // Generate new barcode (same prefix)
+        generateNewBtn.addEventListener("click", () => {
+            let prefix = barcodeCategory.value || "OT";
+            if (prefix === "other") prefix = customPrefixInput.value.trim().toUpperCase() || "OT";
+
+            const newCode = generateRandomBarcode(prefix);
+            renderBarcode(newCode);
+        });
+
+        // Placeholder action for "Use This Barcode"
+        useBarcodeBtn.addEventListener("click", () => {
+            alert("Barcode selected: " + barcodeInput.value);
+            // Here you can proceed to another modal or save logic (e.g., AJAX save)
+        });
+
+        // Modal open/close handlers
+        window.openGenerateModal = function() {
+            document.getElementById('generateBarcodeModal').classList.remove('hidden');
+            generatedSection.classList.add('hidden');
+            barcodeCategory.value = "";
+            customPrefixInput.classList.add('hidden');
+            customPrefixInput.value = "";
+            categoryError.classList.add("hidden");
+        };
+
+        window.closeGenerateModal = function() {
+            document.getElementById('generateBarcodeModal').classList.add('hidden');
+        };
+    });
+</script>
+
+
+
+
+
+
+
 
    <!-- Register New Product Modal JavaScript -->
     <script>
