@@ -1,11 +1,17 @@
 <div class="flex-grow">
 
-    <p class="font-semibold text-xs mb-4 border-b pb-4">
-        {{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }} Product Performance Analysis
-    </p>
+    <a href="" class="flex items-center mb-4 border-b pb-4 w-full">
+        <div class="group flex items-center font-semibold text-xs space-x-1.5 rounded px-2 py-1 cursor-pointer transition-all duration-300 hover:bg-gray-100 hover:scale-[1.02]">
+            <span>
+                {{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }} Product Performance Analysis
+            </span>
+            <span class="material-symbols-rounded text-base transition-transform duration-300 group-hover:translate-x-1">
+                arrow_right_alt
+            </span>
+        </div>
+    </a>
 
     <div class="flex mb-4 justify-between">
-        
         <div class="relative text-gray-400">
             <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <span class="material-symbols-rounded">search</span>

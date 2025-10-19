@@ -16,6 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^3.6",
         "paypal/rest-api-sdk-php": "^1.6",
+        "php-ai/php-ml": "^0.10.0",
         "srmklive/paypal": "^3.0"
     },
     "require-dev": {

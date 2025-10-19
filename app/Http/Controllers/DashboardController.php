@@ -326,11 +326,11 @@ class DashboardController extends Controller
         $previousSales = count($sales) > 1 ? $sales[count($sales) - 2] : 0;
         $previousLoss = count($losses) > 1 ? $losses[count($losses) - 2] : 0;
 
-        // PARA NI DAPIT WHERE GI FETCH TANAN EXCEPT SA LAST 
+        // PARA NI DAPIT WHERE GI FETCH TANAN EXCEPT SA LAST
         $previousSalesAll = array_slice($sales, 0, -1);
         $previousLossAll = array_slice($losses, 0, -1);
 
-        $totalActivity = $latestSales + $latestLoss;
+        $totalActivity = $latestSales + $latestLoss; 
         $totalPrevActivity = $previousSales + $previousLoss;
 
         $salesPercentage = $totalActivity > 0 ? round(($latestSales / $totalActivity) * 100, 1) : 0;
