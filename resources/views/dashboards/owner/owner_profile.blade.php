@@ -46,8 +46,17 @@
                 <div class="text-center sm:text-left flex-grow">
                     <h2 class="text-xl font-bold text-slate-900">{{ $owner->firstname }} {{ $owner->middlename ?? '' }} {{ $owner->lastname }}</h2>
                     <p class="text-sm text-slate-500 mt-1">{{ $owner->email }}</p>
-                    <a href="{{ route('owner.show.staff') }}" class="text-indigo-600 hover:text-indigo-800 underline text-sm mt-2 inline-block font-medium">View Staff List</a>
+
+                    <div class="mt-2 space-y-1">
+                        <a href="{{ route('owner.show.staff') }}" class="block text-indigo-600 hover:text-indigo-800 underline text-sm font-medium">
+                            View Staff List
+                        </a>
+                        <a href="{{ route('billing.history2') }}" class="block text-indigo-600 hover:text-indigo-800 underline text-sm font-medium">
+                            Billing History
+                        </a>
+                    </div>
                 </div>
+
                 <div class="flex items-center gap-2 pt-2">
                     <button type="button" id="editProfileButton" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Edit Profile</button>
                     <button type="button" id="togglePasswordSection" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Change Password</button>

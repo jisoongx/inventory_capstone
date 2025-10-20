@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Livewire\WithFileUploads;
+use App\Http\Controllers\ActivityLogController;
 
 class ExpenseRecord extends Component
 {
@@ -240,6 +241,17 @@ class ExpenseRecord extends Component
 
         $this->reset(['add_expense_descri', 'add_expense_category', 'add_expense_amount', 'add_expense_file']);
         $this->addModal = false;
+
+        $user = Auth::guard('owner')->user();
+        $ip = request()->ip();
+
+        ActivityLogController::log(
+            'Added expense record: ' . $validated['add_expense_descri'],
+            'owner',
+            $user,
+            $ip
+        );
+
 
         session()->flash('success', 'Expense added successfully!');
     }

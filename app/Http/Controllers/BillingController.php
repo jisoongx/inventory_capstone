@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\Plan;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class BillingController extends Controller
 {
@@ -200,5 +201,21 @@ class BillingController extends Controller
             'cardCounts',
             'isFiltered'
         ));
+    }
+
+    public function billingOwner()
+    {
+        // Assuming the logged-in user is an Owner
+        $owner = Auth::guard('owner')->user();
+
+        // Fetch all payments with subscription & plan details
+        $payments = Payment::with([
+            'subscription.planDetails'
+        ])
+            ->where('owner_id', $owner->owner_id)
+            ->orderByDesc('payment_date')
+            ->get();
+
+        return view('dashboards.owner.billing-history2', compact('payments'));
     }
 }

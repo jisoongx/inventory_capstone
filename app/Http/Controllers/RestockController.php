@@ -29,6 +29,16 @@ class RestockController extends Controller
             'items' => $items
         ]);
 
+        $user = auth('owner')->user();
+        $ip = $request->ip();
+
+        ActivityLogController::log(
+            'Exported a restock list',
+            'owner',
+            $user,
+            $ip
+        );
+
         return $pdf->download('restock-' . $restockCreated . '.pdf');
     }
 
@@ -185,6 +195,15 @@ class RestockController extends Controller
             DB::table('restock_item')->insert($items);
         }
 
+        $user = auth('owner')->user();
+        $ip = $request->ip();
+
+        ActivityLogController::log(
+            'Finalized a restock list',
+            'owner',
+            $user,
+            $ip
+        );
 
         return redirect()->route('restock_suggestion');
     }

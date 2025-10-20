@@ -193,7 +193,7 @@ class InventoryOwnerController extends Controller
             ->update($updateData);
 
         ActivityLogController::log(
-            'Updated product "' . $validated['name'] . '".',
+            'Updated product: ' . $validated['name'],
             'owner',
             Auth::guard('owner')->user(),
             request()->ip()
@@ -221,7 +221,7 @@ class InventoryOwnerController extends Controller
             ->update(['prod_status' => 'archived']);
 
         ActivityLogController::log(
-            'Archived product "' . ($product->name ?? 'Unknown') . '"',
+            'Archived product: ' . ($product->name ?? 'Unknown'),
             'owner',
             Auth::guard('owner')->user(),
             request()->ip()
@@ -247,7 +247,7 @@ class InventoryOwnerController extends Controller
 
 
         ActivityLogController::log(
-            'Unarchived product "' . ($product->name ?? 'Unknown') . '"',
+            'Unarchived product: ' . ($product->name ?? 'Unknown'),
             'owner',
             Auth::guard('owner')->user(),
             request()->ip()
@@ -376,7 +376,7 @@ class InventoryOwnerController extends Controller
         $user = Auth::guard('owner')->user();
 
         ActivityLogController::log(
-            "Registered New Product: {$validated['name']}",
+            'Registered new product: ' . $validated['name'],
             $guard,
             $user,
             $ip

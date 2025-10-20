@@ -32,4 +32,8 @@ class Payment extends Model
         return $this->belongsTo(Subscription::class, 'subscription_id', 'subscription_id');
         // 👆 adjust 'id' if your subscriptions table uses 'subscription_id' instead of the default 'id'
     }
+
+    protected $casts = [
+        'payment_date' => 'datetime',
+    ];
 }

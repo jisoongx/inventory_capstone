@@ -353,4 +353,4 @@
         document.querySelectorAll('.status-select').forEach(select => updateStatusColor(select));
     });
 </script>
-@endsection
+@endsection 
