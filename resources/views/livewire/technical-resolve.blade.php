@@ -1,29 +1,28 @@
 <div class="p-2">  
     <p class="font-semibold text-lg mt-2">Technical Support Panel</p>
     
-    <div class="flex items-center mt-5 gap-3">
-        
-        <div class="flex gap-2 bg-white px-3 py-2 rounded-lg text-xs border-2">
+    <div class="flex items-center mt-3 gap-1">
+        <div class="flex gap-2 bg-white px-3 py-1 rounded-lg text-xs border-2">
             <button wire:click="filterByStatus('')" type="button"
-                class="py-2 px-3 hover:bg-slate-200 rounded-lg">All</button>
+                class="py-1 px-3 hover:bg-slate-200 rounded">All</button>
             <button wire:click="filterByStatus('Pending')" type="button"
-                class="py-2 px-3 hover:bg-slate-200 rounded-lg">Pending</button>
+                class="py-1 px-3 hover:bg-slate-200 rounded">Pending</button>
             <button wire:click="filterByStatus('In Progress')" type="button"
-                class="py-2 px-3 hover:bg-slate-200 rounded-lg">In Progress</button>
+                class="py-1 px-3 hover:bg-slate-200 rounded">In Progress</button>
             <button wire:click="filterByStatus('Resolved')" type="button"
-                class="py-2 px-3 hover:bg-slate-200 rounded-lg">Resolve</button>
+                class="py-1 px-3 hover:bg-slate-200 rounded">Resolve</button>
         </div>
 
         <div>
-            <input 
-                wire:model.live="searchWord"
+            <!-- <input 
+                wire:model.debounce.500ms="searchWord"
                 class="py-4 px-5 bg-white w-96 rounded-lg text-xs border-2" 
                 placeholder="Search conversation here..."
-            />
+            /> -->
         </div>
     </div>
 
-    <div class="relative overflow-x-auto mt-5 h-[31rem]">
+    <div class="relative overflow-x-auto mt-3 h-[34rem] border">
         <table class="w-full text-xs text-left rtl:text-right p-2">
             <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10">
                 <tr>
@@ -46,7 +45,9 @@
                 <tr class="bg-white">
                     <td class="px-6 py-3"> 
                         <button class="flex items-center gap-3" type="button"
-                        wire:click='openModal( {{ $req->req_id }} )'>
+                            wire:click='showAndRead( {{ $req->req_id }} )'
+                            wire:key="req-{{ $req->req_id }}"
+                        >
                             <div class="relative">
                                 <span class="material-symbols-rounded text-blue-800 bg-blue-100 p-3 rounded-full">confirmation_number</span>
                             </div>
@@ -54,6 +55,14 @@
                                 <p class="text-xs {{ ($countUnread[$req->req_id] ?? 0) > 0 ? 'font-bold' : '' }}">
                                     {{ $req->req_ticket }}
                                 </p>
+                            </div>
+                            
+                            <div>
+                                @if (($countUnread[$req->req_id] ?? 0) > 0)
+                                    <span class="bg-rose-600 h-4 w-4 rounded-full text-white text-[10px] flex items-center justify-center font-semibold mr-2">
+                                        {{ $countUnread[$req->req_id] }}
+                                    </span>
+                                @endif
                             </div>
                         </button>                
                     </td>
@@ -183,7 +192,7 @@
             x-transition:leave="transition transform ease-in duration-300"
             x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 translate-y-2"
-            class="fixed left-5 bottom-24 z-50 flex w-94 items-center bg-blue-600 px-9 py-3 shadow-lg text-white space-x-3"
+            class="fixed left-5 bottom-8 z-50 flex w-94 items-center bg-blue-600 px-9 py-3 shadow-lg text-white space-x-3"
         >
                 <span class="material-symbols-rounded-full text-white">check_circle</span>
                 <p class="text-sm text-gray-800 text-white text-xs">The ticket has been marked as resolved.</p>

@@ -73,7 +73,8 @@ Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-c
 
 
 
-
+// Route::view('/super/technical-support', 'dashboards.super_admin.technical')->middleware('auth:super_admin')
+// ->name('dashboards.super_admin.technical');
 
 Route::view('/super/technical-support', 'dashboards.super_admin.technical')->name('dashboards.super_admin.technical');
 

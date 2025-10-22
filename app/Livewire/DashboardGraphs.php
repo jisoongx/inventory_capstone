@@ -40,6 +40,18 @@ class DashboardGraphs extends Component
     public $selectedYear;
 
     public function mount() {
+        
+        $this->currencySales();
+        $this->salesByCategory();
+        $this->salesVSloss();
+        $this->monthlyNetProfit();
+        $this->fixMonthlyProfit();
+
+    }
+
+    
+    public function currencySales() {
+
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
         }
@@ -88,12 +100,6 @@ class DashboardGraphs extends Component
             AND r.owner_id = ?
             AND year(receipt_date) = ?
         ', [$currentMonth, $owner_id, $latestYear]))->first();
-
-        
-        $this->salesByCategory();
-        $this->salesVSloss();
-        $this->monthlyNetProfit();
-        $this->fixMonthlyProfit();
 
     }
 

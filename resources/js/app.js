@@ -76,6 +76,7 @@ function initProfitChart()
     window.profitChartInstance = canvas.chartInstance;
 }
 
+
 function initSalesVSLossChart() 
 {
     const salesVSlossChart = document.getElementById("salesVSlossChart");
@@ -160,6 +161,7 @@ function initSalesVSLossChart()
 
     window.salesVSlossChartInstance = canvas.chartInstance;
 }
+
 
 function initProductChart() 
 {
@@ -259,11 +261,42 @@ function initProductChart()
 }
 
 
+
+
+function updateDateTime() {
+    const clock = document.getElementById('clock');
+    const dateEl = document.getElementById('date');
+    if (!clock || !dateEl) return;
+
+    const now = new Date();
+
+    clock.textContent = now.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+
+    dateEl.textContent = now.toLocaleDateString([], {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+
+
+
+
 document.addEventListener("livewire:init", () => {
     
     initProfitChart();
     initSalesVSLossChart();
     initProductChart();
+
+    // para real time date ni diri
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
 
     Livewire.hook("morph.updating", ({ component }) => {
         
@@ -321,6 +354,8 @@ document.addEventListener("livewire:init", () => {
 
 
 
+
+
 document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelector('#zoomIn').addEventListener('click', (e) => {
@@ -334,8 +369,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector('#zoomReset').addEventListener('click', (e) => {
         lineChart.resetZoom();
     })
-
-
 
     // const productChart = document.getElementById("productChart");
     // const ctz = productChart.querySelector("canvas").getContext("2d");
@@ -475,6 +508,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     
 });
+
 
 
 

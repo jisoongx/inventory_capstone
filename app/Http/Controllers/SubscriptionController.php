@@ -18,6 +18,7 @@ class SubscriptionController extends Controller
     public function subscribers(Request $request)
     {
 
+        
         Subscription::where('status', 'active')
             ->where('subscription_end', '<', now())
             ->update(['status' => 'expired']);

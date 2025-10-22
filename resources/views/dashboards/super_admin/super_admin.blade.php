@@ -8,7 +8,7 @@
     @livewireStyles
     <style>
         .nav-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
     </style>
 </head>

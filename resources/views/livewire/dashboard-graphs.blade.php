@@ -1,10 +1,13 @@
 <div>
     <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
         <div class="">
-            <span class="text-sm text-gray-500">{{ $dateDisplay->format('F j, Y') }}</span>
+            <div wire:ignore>
+                <span id="date" class="text-sm font-medium text-slate-600"></span>
+                <span id="clock" class="text-sm font-medium text-slate-600"></span>
+            </div>
             <h1 class="text-2xl font-semibold mb-4">Welcome, {{ ucwords($owner_name) }}!</h1>
 
-            <div class="flex gap-3 mb-3 w-full">
+            <div class="flex gap-3 mb-3 w-full" wire:poll.keep-alive="currencySales()">
                 <div class="bg-white border-t-4 border-red-900 p-4 shadow-lg rounded flex-[2] text-center">
                     <p class="text-red-800 text-xl font-bold">₱{{ number_format($dailySales->dailySales, 2) }}</p>
                     <span class="text-gray-600 text-xs font-bold">Daily Sales</span>

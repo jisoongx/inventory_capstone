@@ -36,7 +36,10 @@ class TechnicalResolve extends Component
         } 
 
         $this->loadRequest();
+         $this->updatedSearchWord();
     }
+
+
 
     public function updatedSearchWord() {
         $like = "%{$this->searchWord}%";
@@ -53,6 +56,8 @@ class TechnicalResolve extends Component
             ORDER BY tr.req_id DESC
         ", [$like, $like, $like, $like]));
     }
+
+
 
     public function filterByStatus($status) {
         $this->statusFilter = $status;
@@ -197,6 +202,26 @@ class TechnicalResolve extends Component
 
 
 
+    public function showAndRead($req_id) {
+        $this->openModal($req_id);
+        $this->markAsRead($req_id);
+    }
+
+
+
+    public function markAsRead($req_id) {
+
+        DB::update("
+            update conversation_message
+            set msg_seen_at = ?
+            where msg_seen_at is null
+            and req_id = ?
+            and sender_type in ('owner', 'staff')
+        ", [NOW(), $req_id]);
+
+    }
+
+
 
     
 
@@ -293,10 +318,11 @@ class TechnicalResolve extends Component
     }
 
 
-
     public function refreshRequests() {
         $this->loadRequest();
     }
+
+
 
 
     public function render() {

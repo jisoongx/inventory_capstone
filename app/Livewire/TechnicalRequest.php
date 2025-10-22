@@ -109,6 +109,7 @@ class TechnicalRequest extends Component
             set msg_seen_at = ?
             where msg_seen_at is null
             and req_id = ?
+            and sender_type in ('super')
         ", [NOW(), $req_id]);
     }
 

@@ -145,7 +145,7 @@
                     x-transition:leave="transition transform ease-in duration-300"
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 translate-y-2"
-                    class="fixed right-5 bottom-24 z-50 flex w-94 items-center space-x-3 border-l-4 border-emerald-600 bg-emerald-50 px-4 py-3 shadow-lg"
+                    class="fixed right-5 bottom-8 z-50 flex w-94 items-center space-x-3 border-l-4 border-emerald-600 bg-emerald-50 px-4 py-3 shadow-lg"
                 >
                     <div class="">
                         <span class="material-symbols-rounded-full text-green-600 text-lg">check_circle</span>
