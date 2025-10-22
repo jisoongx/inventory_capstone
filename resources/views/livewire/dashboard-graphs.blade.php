@@ -58,7 +58,7 @@
                         @else
                             <div wire:poll.keep-alive="salesByCategory" class="hidden"></div>
                             <div class="overflow-x-auto mt-2 scrollbar-custom" >
-                                <div id="productChart"
+                                <div id="productChart" 
                                     x-data="{ updating: false }" 
                                     x-init="initProductChart()"
 

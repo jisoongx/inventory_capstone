@@ -277,7 +277,7 @@ document.addEventListener("livewire:init", () => {
             salesChartContainer.__x.set("updating", true);
         }
 
-        const productsChartContainer = document.getElementById("salesVSlossChart");
+        const productsChartContainer = document.getElementById("productChart");
         if (productsChartContainer && productsChartContainer.__x) {
             productsChartContainer.__x.set("updating", true);
         }
@@ -301,7 +301,7 @@ document.addEventListener("livewire:init", () => {
             }
         }
 
-        const productsChartContainer = document.getElementById("salesVSlossChart");
+        const productsChartContainer = document.getElementById("productChart");
         if (productsChartContainer) {
             initProductChart(); 
             if (productsChartContainer.__x) {
