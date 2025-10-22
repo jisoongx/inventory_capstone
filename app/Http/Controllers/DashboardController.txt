@@ -1,0 +1,513 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+// class DashboardController extends Controller
+// {
+//     public function index(Request $request){
+//         if (!Auth::guard('owner')->check()) {
+//             return redirect()->route('login')->with('error', 'Please login first.');
+//         }
+
+//         $owner = Auth::guard('owner')->user();
+//         $owner_id = $owner->owner_id;
+//         $owner_name = $owner->firstname;
+
+//         $selectedYear = $request->input('year');
+//         $latestYear = now()->year;
+//         $yearToUse = $selectedYear ?? $latestYear;
+        
+        
+//         $currentMonth = (int) date('m');
+//         $months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+//         $tableMonths = range(0, ($currentMonth - 1));
+//         $tableMonthNames = array_slice($months, 0, $currentMonth);
+
+//         if (is_null($selectedYear)) {
+//             $months = array_slice($months, 0, $currentMonth);
+//             $allMonths = range(0, ($currentMonth - 1));
+//         } elseif ($selectedYear == $latestYear) {
+//             $months = array_slice($months, 0, $currentMonth);
+//             $allMonths = range(0, ($currentMonth - 1));
+//         } else {
+//             $allMonths = range(0, 11);
+//         }
+        
+
+//         $profits = [];  //sa graph ni
+
+
+//         $expenses = collect(DB::select("
+//             SELECT 
+//                 m.month,
+//                 IFNULL(e.expense_total, 0) AS expense_total
+//             FROM (
+//                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+//                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+//                 SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+//             ) m
+//             LEFT JOIN (
+//                 SELECT 
+//                     MONTH(expense_created) AS month,
+//                     SUM(expense_amount) AS expense_total
+//                 FROM expenses
+//                 WHERE YEAR(expense_created) = ? AND owner_id = ?
+//                 GROUP BY MONTH(expense_created)
+//             ) e ON m.month = e.month
+//             ORDER BY m.month
+//         ", [$latestYear, $owner_id]))->pluck('expense_total')->slice(0, $currentMonth)->toArray();
+
+//         $losses = collect(DB::select("
+//             SELECT 
+//                 m.month,
+//                 IFNULL(l.total_loss, 0) AS total_loss
+//             FROM (
+//                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+//                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+//                 SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+//             ) m
+//             LEFT JOIN (
+//                 SELECT 
+//                     MONTH(d.damaged_date) AS month,
+//                     SUM(d.damaged_quantity * p.selling_price) AS total_loss
+//                 FROM damaged_items d
+//                 JOIN products p ON d.prod_code = p.prod_code
+//                 WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+//                 GROUP BY MONTH(d.damaged_date)
+//             ) l ON m.month = l.month
+//             ORDER BY m.month
+//         ", [$owner_id, $latestYear]))->pluck('total_loss')->slice(0, $currentMonth)->toArray();
+     
+//         $sales = collect(DB::select("
+//             SELECT 
+//                 m.month,
+//                 IFNULL(s.monthly_sales, 0) AS monthly_sales
+//             FROM (
+//                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+//                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+//                 SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+//             ) m
+//             LEFT JOIN (
+//                 SELECT 
+//                     MONTH(r.receipt_date) AS month,
+//                     SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+//                 FROM 
+//                     receipt r
+//                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+//                 JOIN products p ON p.prod_code = ri.prod_code
+//                 WHERE 
+//                     r.owner_id = ? AND
+//                     p.owner_id = r.owner_id AND
+//                     YEAR(r.receipt_date) = ?
+//                 GROUP BY MONTH(r.receipt_date)
+//             ) s ON m.month = s.month
+//             ORDER BY m.month
+//         ", [$owner_id, $latestYear]))->pluck('monthly_sales')->slice(0, $currentMonth)->toArray();
+
+//         foreach ($tableMonths as $month) {
+//             $sale     = $sales[$month]    ?? null;
+//             $expense  = $expenses[$month] ?? null;
+//             $loss     = $losses[$month]   ?? null;
+
+//             $netProfits[$month] = $sale - ($expense + $loss);
+//         }
+
+//         $GraphExpenses = collect(DB::select("
+//             SELECT 
+//                 m.month,
+//                 IFNULL(e.expense_total, 0) AS expense_total
+//             FROM (
+//                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+//                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+//                 SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+//             ) m
+//             LEFT JOIN (
+//                 SELECT 
+//                     MONTH(expense_created) AS month,
+//                     SUM(expense_amount) AS expense_total
+//                 FROM expenses
+//                 WHERE YEAR(expense_created) = ? AND owner_id = ?
+//                 GROUP BY MONTH(expense_created)
+//             ) e ON m.month = e.month
+//             ORDER BY m.month
+//         ", [$yearToUse, $owner_id]))->pluck('expense_total')->toArray();
+
+//         $GraphLosses = collect(DB::select("
+//             SELECT 
+//                 m.month,
+//                 IFNULL(l.total_loss, 0) AS total_loss
+//             FROM (
+//                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+//                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+//                 SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+//             ) m
+//             LEFT JOIN (
+//                 SELECT 
+//                     MONTH(d.damaged_date) AS month,
+//                     SUM(d.damaged_quantity * p.selling_price) AS total_loss
+//                 FROM damaged_items d
+//                 JOIN products p ON d.prod_code = p.prod_code
+//                 WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+//                 GROUP BY MONTH(d.damaged_date)
+//             ) l ON m.month = l.month
+//             ORDER BY m.month
+//         ", [$owner_id, $yearToUse]))->pluck('total_loss')->toArray();
+     
+//         $GraphSales = collect(DB::select("
+//             SELECT 
+//                 m.month,
+//                 IFNULL(s.monthly_sales, 0) AS monthly_sales
+//             FROM (
+//                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+//                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+//                 SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+//             ) m
+//             LEFT JOIN (
+//                 SELECT 
+//                     MONTH(r.receipt_date) AS month,
+//                     SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+//                 FROM 
+//                     receipt r
+//                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+//                 JOIN products p ON p.prod_code = ri.prod_code
+//                 WHERE 
+//                     r.owner_id = ? AND
+//                     p.owner_id = r.owner_id AND
+//                     YEAR(r.receipt_date) = ?
+//                 GROUP BY MONTH(r.receipt_date)
+//             ) s ON m.month = s.month
+//             ORDER BY m.month
+//         ", [$owner_id, $yearToUse]))->pluck('monthly_sales')->toArray();
+
+//         foreach ($allMonths as $month) {
+//             $Gsale     = $GraphSales[$month]    ?? null;
+//             $Gexpense  = $GraphExpenses[$month] ?? null;
+//             $Gloss     = $GraphLosses[$month]   ?? null;
+
+//             $profits[$month] = $Gsale - ($Gexpense + $Gloss);
+//         }
+
+
+//         $profitMonth = $netProfits[$currentMonth - 1] ?? 0;
+
+
+
+//         $productCategory = collect(DB::select("
+//             SELECT
+//             c.category,
+//             COALESCE(
+//                 SUM(
+//                 CASE 
+//                     WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
+//                     THEN p.selling_price * ri.item_quantity
+//                     ELSE 0
+//                 END
+//                 ), 0
+//             ) AS total_amount,
+//             c.category_id
+//             FROM categories c
+//             LEFT JOIN products p ON c.category_id = p.category_id
+//             LEFT JOIN receipt_item ri ON p.prod_code = ri.prod_code
+//             LEFT JOIN receipt r ON ri.receipt_id = r.receipt_id
+//             WHERE c.owner_id = ?
+//             GROUP BY c.category_id, c.category
+//             ORDER BY c.category_id;
+//         ", [
+//             $latestYear, $owner_id, $owner_id
+//         ]))->toArray();
+//         $categories = array_map(fn($row) => $row->category, $productCategory);
+//         $productData = array_map(fn($row) => (float) $row->total_amount , $productCategory);
+
+//         $productCategoryPrev = collect(DB::select("
+//             SELECT
+//             c.category,
+//             COALESCE(
+//                 SUM(
+//                 CASE 
+//                     WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
+//                     THEN p.selling_price * ri.item_quantity
+//                     ELSE 0
+//                 END
+//                 ), 0
+//             ) AS total_amount,
+//             c.category_id
+//             FROM categories c
+//             LEFT JOIN products p ON c.category_id = p.category_id
+//             LEFT JOIN receipt_item ri ON p.prod_code = ri.prod_code
+//             LEFT JOIN receipt r ON ri.receipt_id = r.receipt_id
+//             WHERE c.owner_id = ?
+//             GROUP BY c.category_id, c.category
+//             ORDER BY c.category_id;
+//         ", [
+//             $latestYear-1, $owner_id, $owner_id
+//         ]))->toArray();
+//         $productPrevData = array_map(fn($row) => (float) $row->total_amount, $productCategoryPrev);
+
+//         $productCategoryAve = collect(DB::select("
+//             SELECT 
+//                 c.category,
+//                 COALESCE(ROUND(AVG(t.year_total), 2), 0) AS avg_total_sales
+//             FROM categories c
+//             LEFT JOIN (
+//                 SELECT
+//                     p.category_id,
+//                     YEAR(r.receipt_date) AS year,
+//                     SUM(p.selling_price * ri.item_quantity) AS year_total
+//                 FROM products p
+//                 JOIN receipt_item ri ON p.prod_code = ri.prod_code
+//                 JOIN receipt r ON ri.receipt_id = r.receipt_id
+//                 WHERE r.owner_id = ?
+//                 GROUP BY p.category_id, YEAR(r.receipt_date)
+//             ) AS t ON c.category_id = t.category_id
+//             WHERE c.owner_id = ?
+//             GROUP BY c.category_id, c.category
+//             ORDER BY c.category_id
+//         ", [$owner_id, $owner_id]))->toArray();
+//         $productsAveData = array_map(fn($row) => (float) $row->avg_total_sales, $productCategoryAve);
+
+
+
+//         // $categories = collect(DB::select(
+//         //     "select category from categories
+//         //     where owner_id = ? ", [$owner_id,]
+//         // ))->pluck('category')->toArray();
+
+
+//         $year = collect(DB::select("
+//             SELECT DISTINCT YEAR(expense_created) AS year
+//             FROM expenses
+//             WHERE expense_created IS NOT NULL and owner_id = ?
+//             ORDER BY year DESC
+//         ", [$owner_id]))->pluck('year')->toArray();
+
+//         $dateDisplay = Carbon::now('Asia/Manila');
+
+//         $day = now()->format('Y-m-d');
+
+//         $dailySales = collect(DB::select('
+//             select ifnull(sum(p.selling_price * ri.item_quantity), 0) as dailySales
+//             from receipt r
+//             join receipt_item ri on r.receipt_id = ri.receipt_id
+//             join products p on ri.prod_code = p.prod_code
+//             where date(receipt_date) = ?
+//             and r.owner_id = ?
+//         ', [$day, $owner_id]))->first();
+
+//         $weeklySales = collect(DB::select('
+//             SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS weeklySales
+//             FROM receipt r
+//             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+//             JOIN products p ON ri.prod_code = p.prod_code
+//             WHERE r.receipt_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
+//             AND r.owner_id = ?
+//         ', [$owner_id]))->first();
+
+//         $monthSales = collect(DB::select('
+//             SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS monthSales
+//             FROM receipt r
+//             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+//             join products p on ri.prod_code = p.prod_code
+//             where month(receipt_date) = ?
+//             AND r.owner_id = ?
+//             AND year(receipt_date) = ?
+//         ', [$currentMonth, $owner_id, $latestYear]))->first();
+
+
+
+
+//         $latestSales = end($sales) ?: 0;
+//         $latestLoss = end($losses) ?: 0;
+//         $previousSales = count($sales) > 1 ? $sales[count($sales) - 2] : 0;
+//         $previousLoss = count($losses) > 1 ? $losses[count($losses) - 2] : 0;
+
+//         // PARA NI DAPIT WHERE GI FETCH TANAN EXCEPT SA LAST
+//         $previousSalesAll = array_slice($sales, 0, -1);
+//         $previousLossAll = array_slice($losses, 0, -1);
+
+//         $totalActivity = $latestSales + $latestLoss; 
+//         $totalPrevActivity = $previousSales + $previousLoss;
+
+//         $salesPercentage = $totalActivity > 0 ? round(($latestSales / $totalActivity) * 100, 1) : 0;
+//         $lossPercentage = $totalActivity > 0 ? round(($latestLoss / $totalActivity) * 100, 1) : 0;
+//         $salesPrevPercentage = $totalPrevActivity > 0 ? round(($previousSales / $totalPrevActivity) * 100, 1) : 0;
+//         $lossPrevPercentage = $totalPrevActivity > 0 ? round(($previousLoss / $totalPrevActivity) * 100, 1) : 0;
+
+
+//         $diffSales = $salesPercentage - $salesPrevPercentage;
+//         $diffLoss = $lossPercentage - $lossPrevPercentage;
+
+//         if(array_sum($previousSalesAll)==0) {
+//             $salesInsights = "This is your baseline month. Future sales comparisons will be based on this data.";
+//             $salesState = 'Start';
+//             $lossInsights = "This is your baseline month. Future loss comparisons will be based on this data.";
+//             $lossState = 'Start';
+
+//         } else {
+//             if($diffSales > 0) {
+//                 $salesInsights = "Compared to last month, sales improved by " . number_format(abs($diffSales), 1) . "%.";
+//                 $salesState = 'Positive';
+                
+//             } elseif ($diffSales < 0) {
+//                 $salesInsights = "Compared to last month, sales decreased by " . number_format(abs($diffSales), 1) . "%.";
+//                 $salesState = 'Negative';
+
+//             } else {
+//                 $salesInsights = "Sales remained consistent at " . number_format($salesPercentage, 1) . "%.";
+//                 $salesState = 'Stable';
+//             }
+
+//             if($diffLoss > 0) {
+//                 $lossInsights = "Compared to last month, loss increased by " . number_format(abs($diffLoss), 1) . "%.";
+//                 $lossState = 'Negative';
+
+//             } elseif ($diffLoss < 0) {
+//                 $lossInsights = "Compared to last month, loss decreased by " . number_format(abs($diffLoss), 1) . "%.";
+//                 $lossState = 'Positive';
+
+//             } else {
+//                 if($diffLoss < 0){
+//                     $lossInsights = "Loss remained steady at " . number_format($lossPercentage, 1) . "%.";
+//                     $lossState = 'Warning';  
+
+//                 }else {
+//                     $lossInsights = "Good jub! Loss remained steady at " . number_format($lossPercentage, 1) . "%.";
+//                     $lossState = 'Stagnant';
+//                 }
+//             }
+//         }
+
+        
+
+
+
+//         if ($lossPercentage < 3) {
+//             $insight = "Excellent! Strong sales with minimal losses.";
+//             $performanceLabel = "Excellent";
+
+//         } elseif ($lossPercentage < 8 && $salesPercentage > 92) {
+//             $insight = "Healthy balance between sales and losses.";
+//             $performanceLabel = "Good";
+
+//         } elseif ($lossPercentage < 8) {
+//             $insight = "Good balance but work on increasing sales.";
+//             $performanceLabel = "Good";
+
+//         } elseif ($lossPercentage < 15 && $salesPercentage > 85) {
+//             $insight = "Sales are okay but losses are reducing your profit.";
+//             $performanceLabel = "Warning";
+
+//         } elseif ($lossPercentage < 15) {
+//             $insight = "Losses are high and affecting your profit. Reduce waste.";
+//             $performanceLabel = "Warning";
+
+//         } else {
+//             $insight = "High losses are eating into your sales. Take action now.";
+//             $performanceLabel = "Critical";
+//         }
+
+        
+
+
+
+
+//         return view('dashboards.owner.dashboard', [
+//             'owner_name' => $owner_name,
+//             'months' => $months,
+//             'profits' => $profits,
+//             'year' => $year,
+//             'expenses' => $expenses,
+//             'dateDisplay' => $dateDisplay,
+//             'profitMonth' => $profitMonth,
+//             'losses' => $losses,
+//             'sales' => $sales,
+//             'netprofits' => $netProfits,
+//             'products' => $productData,
+//             'productsPrev' => $productPrevData,
+//             'productsAve'=> $productsAveData,
+//             'categories' => $categories,
+//             'currentMonth' => $currentMonth,
+//             'latestYear' => $latestYear,
+//             'tableMonthNames' => $tableMonthNames,
+//             'dailySales' => $dailySales,
+//             'weeklySales' => $weeklySales,
+//             'monthSales' => $monthSales,
+//             'salesPercentage' => $salesPercentage,
+//             'lossPercentage' => $lossPercentage,
+//             'insight' => $insight,
+//             'performanceLabel' => $performanceLabel,
+//             'salesInsights' => $salesInsights,
+//             'lossInsights' => $lossInsights,
+//             'salesState' => $salesState,
+//             'lossState' => $lossState,
+//         ]);
+//     }   
+
+//     public function index_staff(){
+//         if (!Auth::guard('staff')->check()) {
+//             return redirect()->route('login')->with('error', 'Please login first.');
+//         }
+
+//         $staff = Auth::guard('staff')->user();
+//         $staff_id = $staff->staff_id;
+//         $staff_name = $staff->firstname;
+
+//         $latestYear = now()->year;
+//         $currentMonth = (int)date('n');
+//         $day = now()->format('Y-m-d');
+//         $dateDisplay = Carbon::now('Asia/Manila');
+
+
+
+//         $getOwner_id = collect(DB::select('
+//             select s.staff_id, o.owner_id
+//             from staff s
+//             join owners o on s.owner_id = o.owner_id
+//             where s.staff_id = ?
+//         ', [$staff_id]));
+
+
+//         $dailySales = collect(DB::select('
+//             select ifnull(sum(p.selling_price * ri.item_quantity), 0) as dailySales
+//             from receipt r
+//             join receipt_item ri on r.receipt_id = ri.receipt_id
+//             join products p on ri.prod_code = p.prod_code
+//             where date(receipt_date) = ?
+//             and r.owner_id = ?
+//         ', [$day, $getOwner_id]))->first();
+
+//         $weeklySales = collect(DB::select('
+//             SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS weeklySales
+//             FROM receipt r
+//             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+//             JOIN products p ON ri.prod_code = p.prod_code
+//             WHERE r.receipt_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
+//             AND r.owner_id = ?
+//         ', [$getOwner_id]))->first();
+
+//         $monthSales = collect(DB::select('
+//             SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS monthSales
+//             FROM receipt r
+//             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+//             join products p on ri.prod_code = p.prod_code
+//             where month(receipt_date) = ?
+//             AND r.owner_id = ?
+//             AND year(receipt_date) = ?
+//         ', [$currentMonth, $getOwner_id, $latestYear]))->first();
+
+//          return view('dashboards.staff.dashboard', [
+//             'staff_name' => $staff_name,
+//             'dateDisplay' => $dateDisplay,
+//             'dailySales' => $dailySales,
+//             'weeklySales' => $weeklySales,
+//             'monthSales' => $monthSales,
+//             // 'notifs' => $this->getNotifs(),
+//             // 'countNotifs' => $this->countNotifs(),
+//         ]);
+//     }
+// }
+

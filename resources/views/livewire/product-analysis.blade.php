@@ -1,4 +1,4 @@
-<div class="flex-grow">
+<div class="flex-grow grid p-5 bg-white rounded shadow border">
 
     <a href="" class="flex items-center mb-4 border-b pb-4 w-full">
         <div class="group flex items-center font-semibold text-xs space-x-1.5 rounded px-2 py-1 cursor-pointer transition-all duration-300 hover:bg-gray-100 hover:scale-[1.02]">

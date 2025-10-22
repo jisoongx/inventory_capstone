@@ -34,6 +34,8 @@ Route::get('/', function () {
 Route::view('/welcome/to/shoplytix', 'landing-page');
 
 
+Route::view('/owner/dashboard', 'dashboards.owner.dashboard')->name('dashboards.owner.dashboard');
+
 // Route::get('/expense_record', [MonthlyController::class, 'index'])->name('dashboards.owner.expense_record');
 // Route::post('/expense_record/add', [MonthlyController::class, 'add'])->name('dashboards.owner.expense_record_add');
 // Route::post('/expense_record/edit/{expense_id?}', [MonthlyController::class, 'edit'])->name('dashboards.owner.expense_record_edit');
@@ -45,7 +47,6 @@ Route::get('/expenses/{id}/attachment', [ExpenseRecord::class, 'viewAttachment']
 
 
 Route::view('/staff/technical-request', 'dashboards.staff.technical_request')->name('dashboards.staff.technical_request');
-
 Route::view('/owner/technical-request', 'dashboards.owner.technical_request')->name('dashboards.owner.technical_request');
 
 
@@ -120,7 +121,7 @@ Route::get('/subscription/expired', fn() => view('subscription_expired'))->name(
 
 //Different user dashboards used as layout
 Route::get('/super-admin/dashboard', fn() => view('dashboards.super_admin.super_admin'))->name('super_admin.dashboard');
-Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('dashboards.owner.dashboard');
+// Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('dashboards.owner.dashboard');
 Route::get('/staff/dashboard', [DashboardController::class, 'index_staff'])->name('staff.dashboard');
 
 //subscription plan management
