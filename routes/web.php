@@ -117,8 +117,8 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name(
 //Subscription
 Route::get('/subscription/select', [SubscriptionController::class, 'create'])->name('subscription.selection');
 Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store');
-Route::get('/subscription/success', fn() => view('subscription_success'))->name('subscription.success');
-Route::get('/subscription/expired', fn() => view('subscription_expired'))->name('subscription.expired');
+// Route::post('/subscribe/basic', [SubscriptionController::class, 'subscribeBasic'])
+//     ->name('owner.subscribe.basic');
 
 //Different user dashboards used as layout
 Route::get('/super-admin/dashboard', fn() => view('dashboards.super_admin.super_admin'))->name('super_admin.dashboard');

@@ -65,11 +65,11 @@ class BillingController extends Controller
             ->get();
 
         $revenue = [
-            'basic' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Basic')->sum('payment_amount'),
+            'standard' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Standard')->sum('payment_amount'),
             'premium' => $paymentsInPeriod->where('subscription.planDetails.plan_title', 'Premium')->sum('payment_amount'),
         ];
-        $totalRevenue = $revenue['basic'] + $revenue['premium'];
-        $basicPercentage = $totalRevenue > 0 ? ($revenue['basic'] / $totalRevenue) * 100 : 0;
+        $totalRevenue = $revenue['standard'] + $revenue['premium'];
+        $standardPercentage = $totalRevenue > 0 ? ($revenue['standard'] / $totalRevenue) * 100 : 0;
         $premiumPercentage = $totalRevenue > 0 ? ($revenue['premium'] / $totalRevenue) * 100 : 0;
 
         $subscriptionsInPeriod = Subscription::with('planDetails')
@@ -77,12 +77,12 @@ class BillingController extends Controller
             ->get();
 
         $cardCounts = [
-            'basic' => $subscriptionsInPeriod->where('planDetails.plan_title', 'Basic')->count(),
+            'standard' => $subscriptionsInPeriod->where('planDetails.plan_title', 'Standard')->count(),
             'premium' => $subscriptionsInPeriod->where('planDetails.plan_title', 'Premium')->count(),
         ];
 
         $plans = Plan::all();
-        $basicPrice = $plans->firstWhere('plan_title', 'Basic')->plan_price ?? 0;
+        $standardPrice = $plans->firstWhere('plan_title', 'Standard')->plan_price ?? 0;
         $premiumPrice = $plans->firstWhere('plan_title', 'Premium')->plan_price ?? 0;
 
         $latest = null;
@@ -97,7 +97,7 @@ class BillingController extends Controller
 
         $pd_startDate = $request->input('pd_start_date');
         $pd_endDate = $request->input('pd_end_date');
-        $planStats = ['basic' => ['active' => 0, 'expired' => 0], 'premium' => ['active' => 0, 'expired' => 0]];
+        $planStats = ['standard' => ['active' => 0, 'expired' => 0], 'premium' => ['active' => 0, 'expired' => 0]];
         $allSubscriptions = Subscription::with('planDetails')
             ->when($pd_startDate && $pd_endDate, fn($query) => $query->whereBetween('subscription_start', [$pd_startDate, $pd_endDate]))
             ->get();
@@ -108,10 +108,10 @@ class BillingController extends Controller
                 $planStats[$planTitle][$sub->status]++;
             }
         }
-        $planStats['basic']['total'] = $planStats['basic']['active'] + $planStats['basic']['expired'];
+        $planStats['standard']['total'] = $planStats['standard']['active'] + $planStats['standard']['expired'];
         $planStats['premium']['total'] = $planStats['premium']['active'] + $planStats['premium']['expired'];
-        $totalActive = $planStats['basic']['active'] + $planStats['premium']['active'];
-        $totalExpired = $planStats['basic']['expired'] + $planStats['premium']['expired'];
+        $totalActive = $planStats['standard']['active'] + $planStats['premium']['active'];
+        $totalExpired = $planStats['standard']['expired'] + $planStats['premium']['expired'];
         $grandTotalSubs = $totalActive + $totalExpired;
 
         $customStart = $request->input('start_date');
@@ -120,7 +120,7 @@ class BillingController extends Controller
         $revEndDate = $customEnd ? Carbon::parse($customEnd)->endOfDay() : $endDate;
 
         $monthlyRevenueData = Payment::selectRaw("DATE_FORMAT(payment.payment_date, '%Y-%m') as month")
-            ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Basic' THEN `payment`.`payment_amount` ELSE 0 END) as basic_revenue")
+            ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Standard' THEN `payment`.`payment_amount` ELSE 0 END) as standard_revenue")
             ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Premium' THEN `payment`.`payment_amount` ELSE 0 END) as premium_revenue")
             ->join('subscriptions', 'payment.subscription_id', '=', 'subscriptions.subscription_id')
             ->join('plans', 'subscriptions.plan_id', '=', 'plans.plan_id')
@@ -132,20 +132,25 @@ class BillingController extends Controller
         $monthlyRevenue = $monthlyRevenueData->mapWithKeys(function ($item) {
             return [
                 $item->month => [
-                    'basic' => $item->basic_revenue,
+                    'standard' => $item->standard_revenue,
                     'premium' => $item->premium_revenue,
-                    'total' => $item->basic_revenue + $item->premium_revenue,
+                    'total' => $item->standard_revenue + $item->premium_revenue,
                 ]
             ];
         })->toArray();
 
-        $breakdownTotalBasic = array_sum(array_column($monthlyRevenue, 'basic'));
+        $breakdownTotalStandard = array_sum(array_column($monthlyRevenue, 'standard'));
         $breakdownTotalPremium = array_sum(array_column($monthlyRevenue, 'premium'));
         $breakdownGrandTotal = array_sum(array_column($monthlyRevenue, 'total'));
 
 
-        $clientsQuery = Owner::has('subscriptions.payments')
-            ->with('subscriptions.planDetails', 'subscriptions.payments');
+        $clientsQuery = Owner::whereHas('subscriptions.payments')
+            ->with([
+                'subscriptions' => function ($q) {
+                    $q->with(['planDetails', 'payments']);
+                }
+            ]);
+
 
 
         $isFiltered = $request->hasAny(['search', 'date', 'status', 'plan']);
@@ -182,7 +187,7 @@ class BillingController extends Controller
             'period',
             'revenue',
             'totalRevenue',
-            'basicPercentage',
+            'standardPercentage',
             'premiumPercentage',
             'pd_startDate',
             'pd_endDate',
@@ -193,10 +198,10 @@ class BillingController extends Controller
             'customStart',
             'customEnd',
             'monthlyRevenue',
-            'breakdownTotalBasic',
+            'breakdownTotalStandard',
             'breakdownTotalPremium',
             'breakdownGrandTotal',
-            'basicPrice',
+            'standardPrice',
             'premiumPrice',
             'cardCounts',
             'isFiltered'

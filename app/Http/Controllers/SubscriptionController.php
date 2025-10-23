@@ -10,6 +10,7 @@ use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 
 
@@ -130,12 +131,6 @@ class SubscriptionController extends Controller
 
     public function store(Request $request, $planId)
     {
-        
-        $validatedData = $request->validate([
-            'paypal_order_id' => 'required|string',
-            'plan_id' => 'required|exists:plans,plan_id',
-        ]);
-
         $owner = Auth::guard('owner')->user();
         $plan = Plan::find($planId);
 
@@ -143,12 +138,34 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'Plan not found.'], 404);
         }
 
+        if (strtolower($plan->plan_title) === 'basic') {
+            $hasUsedBasic = Subscription::where('owner_id', $owner->owner_id)
+                ->whereHas('planDetails', fn($q) => $q->where('plan_title', 'Basic'))
+                ->exists();
+
+            if ($hasUsedBasic) {
+                // ✅ Custom 409 response — this should show in your JS alert
+                return response()->json([
+                    'message' => 'You have already used our one-time free Basic plan.'
+                ], 409);
+            }
+        }
+
+        // Check if already subscribed
         if ($owner->activeSubscription()->exists()) {
             return response()->json(['message' => 'You already have an active subscription.'], 409);
         }
 
         try {
-           
+            // ✅ If Basic plan (price 0) — skip PayPal validation
+            if ($plan->plan_price > 0) {
+                $validatedData = $request->validate([
+                    'paypal_order_id' => 'required|string',
+                    'plan_id' => 'required|exists:plans,plan_id',
+                ]);
+            }
+
+            // Create subscription
             $subscription = Subscription::create([
                 'owner_id' => $owner->owner_id,
                 'plan_id' => $plan->plan_id,
@@ -157,19 +174,67 @@ class SubscriptionController extends Controller
                 'status' => 'active',
             ]);
 
+            // Create payment record
             Payment::create([
                 'owner_id' => $owner->owner_id,
                 'subscription_id' => $subscription->subscription_id,
-                'payment_mode' => 'paypal',
-                'payment_acc_number' => $validatedData['paypal_order_id'], 
+                'payment_mode' => $plan->plan_price == 0 ? 'free trial' : 'paypal',
+                'payment_acc_number' => $plan->plan_price == 0 ? '0' : $request->paypal_order_id,
                 'payment_amount' => $plan->plan_price,
                 'payment_date' => now(),
             ]);
 
-            return response()->json(['success' => true, 'message' => 'Payment successful!']);
+            return response()->json(['success' => true, 'message' => 'Subscription activated successfully!']);
         } catch (\Exception $e) {
             Log::error('Subscription or Payment creation failed: ' . $e->getMessage());
             return response()->json(['message' => 'Failed to process subscription. Please try again.'], 500);
         }
     }
+
+
+    // public function subscribeBasic(Request $request)
+    // {
+    //     $ownerId = Auth::guard('owner')->id();
+    //     $plan = Plan::where('plan_title', 'Basic')->first();
+
+    //     if (!$plan) {
+    //         return response()->json(['error' => 'Plan not found'], 404);
+    //     }
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // 1️⃣ Create the subscription
+    //         $subscriptionId = DB::table('subscriptions')->insertGetId([
+    //             'owner_id' => $ownerId,
+    //             'plan_id' => $plan->plan_id,
+    //             'subscription_start' => now(),
+    //             'subscription_end' => now()->addMonth(),
+    //             'status' => 'active',
+             
+    //         ]);
+
+    //         // 2️⃣ Create the payment record (ensure table name is correct)
+    //         $paymentId = DB::table('payment')->insertGetId([ // ← likely plural
+    //             'owner_id' => $ownerId,
+    //             'subscription_id' => $subscriptionId,
+    //             'payment_mode' => 'Free Trial',
+    //             'payment_amount' => 0,
+    //             'payment_acc_number' => '0',
+    //             'payment_date' => now(),
+          
+    //         ]);
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'message' => 'Basic plan activated successfully',
+    //             'subscription_id' => $subscriptionId,
+    //             'payment_id' => $paymentId,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json(['error' => $e->getMessage()], 500);
+    //     }
+    // }
 }

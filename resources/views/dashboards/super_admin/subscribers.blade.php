@@ -4,9 +4,18 @@ function getBadgeClasses($type, $value) {
 $base = 'inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md text-white';
 switch ($type) {
 case 'plan':
-return $base . ' ' . (trim($value) === 'Basic'
-? 'bg-gradient-to-r from-orange-400 to-orange-500'
-: 'bg-gradient-to-r from-rose-500 to-rose-600');
+$value = trim($value);
+switch ($value) {
+case 'Basic':
+return $base . ' bg-gradient-to-r from-yellow-500 to-yellow-600';
+case 'Standard':
+return $base . ' bg-gradient-to-r from-orange-400 to-orange-500';
+case 'Premium':
+return $base . ' bg-gradient-to-r from-rose-500 to-rose-600';
+default:
+return $base . ' bg-gradient-to-r from-gray-400 to-gray-500'; // fallback
+}
+
 case 'status':
 return $base . ' ' . (trim($value) === 'active'
 ? 'bg-gradient-to-r from-green-500 to-green-600'
@@ -144,11 +153,17 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
 
                         {{-- Plan Filters (for 'active' and 'expired') --}}
                         <div id="plan-filters" class="flex gap-2">
+                            <a href="?plan=3" data-filter-key="plan" data-filter-value="3"
+                                class="filter-link rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-all flex items-center gap-2 text-yellow-500 
+                                 hover:bg-yellow-50 focus:ring-2 focus:ring-yellow-400">
+                                <span class="material-symbols-outlined text-base text-yellow-500">magic_button</span>
+                                <span>Basic</span>
+                            </a>
                             <a href="?plan=1" data-filter-key="plan" data-filter-value="1"
                                 class="filter-link rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-all flex items-center gap-2 text-orange-500 
                                 hover:bg-orange-50 focus:ring-2 focus:ring-orange-400">
                                 <span class="material-symbols-outlined text-orange-500">star</span>
-                                <span>Basic</span>
+                                <span>Standard</span>
                             </a>
                             <a href="?plan=2" data-filter-key="plan" data-filter-value="2"
                                 class="filter-link rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-all flex items-center gap-2 text-rose-500 
@@ -267,7 +282,17 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                                     <td class="px-6 py-4 text-center">
                                         <span class="{{ getBadgeClasses('plan', $planTitle) }} w-[100px] justify-center">
                                             <div class="flex items-center gap-1">
-                                                <span class="material-symbols-outlined text-xs">{{ $planTitle === 'Basic' ? 'star' : 'diamond' }}</span>
+                                                @php
+                                                $planIcon = match($planTitle) {
+                                                'Basic' => 'magic_button', // or 'verified', 'layers', any symbol you like
+                                                'Standard' => 'star',
+                                                'Premium' => 'diamond',
+                                                default => 'help'
+                                                };
+                                                @endphp
+
+                                                <span class="material-symbols-outlined text-xs">{{ $planIcon }}</span>
+
                                                 {{ $planTitle }}
                                             </div>
                                         </span>

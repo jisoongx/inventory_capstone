@@ -1,3 +1,23 @@
+@php
+if (!function_exists('getBadgeClasses')) {
+function getBadgeClasses($type, $value) {
+$base = 'inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md text-white';
+switch (ucfirst(strtolower(trim($value)))) {
+case 'Basic':
+return $base . ' bg-gradient-to-r from-yellow-500 to-yellow-600';
+case 'Standard':
+return $base . ' bg-gradient-to-r from-orange-400 to-orange-500';
+case 'Premium':
+return $base . ' bg-gradient-to-r from-rose-500 to-rose-600';
+default:
+return $base . ' bg-gradient-to-r from-gray-400 to-gray-500';
+}
+}
+}
+@endphp
+
+
+
 @extends('dashboards.super_admin.super_admin')
 
 @section('content')
@@ -67,16 +87,16 @@
                             <span class="material-symbols-outlined">star</span>
                         </div>
                         <div>
-                            <div class="text-sm font-semibold text-orange-700 uppercase tracking-wide">Basic Revenue</div>
-                            <div class="text-xl font-bold text-gray-900 leading-none">₱{{ number_format($revenue['basic'], 2) }}</div>
+                            <div class="text-sm font-semibold text-orange-700 uppercase tracking-wide">Standard Revenue</div>
+                            <div class="text-xl font-bold text-gray-900 leading-none">₱{{ number_format($revenue['standard'], 2) }}</div>
                         </div>
                     </div>
                     <div class="text-right">
                         <div class="text-xs font-semibold text-slate-500">Plan Price</div>
-                        <div class="font-bold text-orange-600">₱{{ number_format($basicPrice, 2) }}</div>
+                        <div class="font-bold text-orange-600">₱{{ number_format($standardPrice, 2) }}</div>
                     </div>
                 </div>
-                <p class="text-xs text-slate-500 font-medium mt-4 pt-3 border-t border-slate-200">{{ $cardCounts['basic'] }} subscriptions.</p>
+                <p class="text-xs text-slate-500 font-medium mt-4 pt-3 border-t border-slate-200">{{ $cardCounts['standard'] }} subscriptions.</p>
             </div>
         </div>
 
@@ -105,7 +125,7 @@
                             </select>
                             <select name="plan" class="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-all shadow-sm">
                                 <option value="">All Plans</option>
-                                <option value="basic" {{ request('plan') == 'basic' ? 'selected' : '' }}>Basic</option>
+                                <option value="standard" {{ request('plan') == 'standard' ? 'selected' : '' }}>Standard</option>
                                 <option value="premium" {{ request('plan') == 'premium' ? 'selected' : '' }}>Premium</option>
                             </select>
                         </form>
@@ -159,36 +179,49 @@
                             </thead>
                             <tbody id="billingTableBody" class="bg-white divide-y divide-slate-100">
                                 @foreach ($clients as $owner)
+                                @foreach ($owner->subscriptions->when(request('status'), function ($q) {
+                                return $q->where('status', request('status'));
+                                }) as $subscription)
+                                @foreach ($subscription->payments as $payment)
+
                                 @php
-                                $latestPayment = $owner->subscriptions->flatMap(fn($sub) => $sub->payments)->sortByDesc('payment_date')->first();
-                                if (!$latestPayment) continue;
-                                $latestSubscription = $latestPayment->subscription;
-                                $planTitle = $latestSubscription->planDetails->plan_title ?? 'N/A';
-                                $planType = strtolower($planTitle);
-                                $status = $latestSubscription->status ?? 'N/A';
+                                $planTitle = $subscription->planDetails->plan_title ?? 'N/A';
+                                $status = $subscription->status ?? 'N/A';
                                 $ownerName = $owner->firstname . ' ' . $owner->lastname;
-                                $paymentDate = \Carbon\Carbon::parse($latestPayment->payment_date)->format('M d, Y');
-                                $paymentMode = $latestPayment->payment_mode ?? 'N/A';
-                                $paymentAmount = number_format($latestPayment->payment_amount ?? 0, 2);
+                                $paymentDate = \Carbon\Carbon::parse($payment->payment_date)->format('M d, Y');
+                                $paymentMode = $payment->payment_mode ?? 'N/A';
+                                $paymentAmount = number_format($payment->payment_amount ?? 0, 2);
                                 @endphp
                                 <tr class="transition-colors duration-200 hover:bg-blue-100">
                                     <td class="px-6 py-4">
                                         <div class="font-semibold text-slate-900 text-sm">{{ $ownerName }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-center text-slate-700 text-sm font-medium">{{ $paymentDate }}</td>
-                                    <td class="px-6 py-4 text-center"><span class="bg-slate-700 text-white px-2 py-1 rounded-md text-[10px] shadow-md font-semibold">{{ $paymentMode }}</span></td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="bg-slate-700 text-white px-2 py-1 rounded-md text-[10px] shadow-md font-semibold">{{ $paymentMode }}</span>
+                                    </td>
                                     <td class="px-6 py-4 text-center font-bold text-green-600 text-sm">₱{{ $paymentAmount }}</td>
                                     <td class="px-6 py-4 text-center">
-                                        <span class="w-[100px] inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md {{ $planType === 'basic' ? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white' : 'bg-gradient-to-r from-rose-500 to-rose-600 text-white' }}">
-                                            <div class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">{{ $planType === 'premium' ? 'diamond' : 'star' }}</span>{{ $planTitle }}</div>
+                                        <span class="{{ getBadgeClasses('plan', $planTitle) }}">
+                                            <div class="flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-xs">
+                                                    {{ strtolower($planTitle) === 'premium' ? 'diamond' : (strtolower($planTitle) === 'standard' ? 'star' : 'magic_button') }}
+                                                </span>
+                                                {{ $planTitle }}
+                                            </div>
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-center">
-                                        <span class="w-[80px] inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md {{ $status === 'active' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-gradient-to-r from-red-500 to-red-600 text-white' }}">{{ $status }}</span>
+                                        <span class="w-[80px] inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md {{ $status === 'active' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-gradient-to-r from-red-500 to-red-600 text-white' }}">
+                                            {{ $status }}
+                                        </span>
                                     </td>
                                 </tr>
                                 @endforeach
+                                @endforeach
+                                @endforeach
                             </tbody>
+
                         </table>
                     </div>
                     <div class="px-6 py-4 border-t border-slate-200">
@@ -230,11 +263,11 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-slate-100">
                             <tr>
-                                <td class="px-6 py-3 font-medium text-slate-800">Basic</td>
-                                <td class="px-6 py-3 text-center">{{$planStats['basic']['active']}}</td>
-                                <td class="px-6 py-3 text-center">{{$planStats['basic']['expired']}}</td>
-                                <td class="px-6 py-3 text-center font-semibold">{{$planStats['basic']['total']}}</td>
-                                <td class="px-6 py-3 text-center">{{ $grandTotalSubs > 0 ? number_format(($planStats['basic']['total'] / $grandTotalSubs) * 100, 1) : 0 }}%</td>
+                                <td class="px-6 py-3 font-medium text-slate-800">Standard</td>
+                                <td class="px-6 py-3 text-center">{{$planStats['standard']['active']}}</td>
+                                <td class="px-6 py-3 text-center">{{$planStats['standard']['expired']}}</td>
+                                <td class="px-6 py-3 text-center font-semibold">{{$planStats['standard']['total']}}</td>
+                                <td class="px-6 py-3 text-center">{{ $grandTotalSubs > 0 ? number_format(($planStats['standard']['total'] / $grandTotalSubs) * 100, 1) : 0 }}%</td>
                             </tr>
                             <tr>
                                 <td class="px-6 py-3 font-medium text-slate-800">Premium</td>
@@ -282,7 +315,7 @@
                         <thead class="sticky top-0 z-10 bg-slate-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700 uppercase">Month</th>
-                                <th class="px-6 py-3 text-center text-sm font-semibold text-slate-700 uppercase">Basic Revenue</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-slate-700 uppercase">Standard Revenue</th>
                                 <th class="px-6 py-3 text-center text-sm font-semibold text-slate-700 uppercase">Premium Revenue</th>
                                 <th class="px-6 py-3 text-center text-sm font-semibold text-slate-700 uppercase">Total</th>
                             </tr>
@@ -291,7 +324,7 @@
                             @forelse($monthlyRevenue as $month => $revenues)
                             <tr>
                                 <td class="px-6 py-3 font-medium text-slate-800">{{ \Carbon\Carbon::parse($month)->format('M Y') }}</td>
-                                <td class="px-6 py-3 text-center">₱{{number_format($revenues['basic'], 2)}}</td>
+                                <td class="px-6 py-3 text-center">₱{{number_format($revenues['standard'], 2)}}</td>
                                 <td class="px-6 py-3 text-center">₱{{number_format($revenues['premium'], 2)}}</td>
                                 <td class="px-6 py-3 text-center font-semibold text-slate-900">₱{{number_format($revenues['total'], 2)}}</td>
                             </tr>
@@ -304,7 +337,7 @@
                         <tfoot class="sticky bottom-0 z-10 bg-slate-50 border-t-2 border-slate-200">
                             <tr class="font-bold">
                                 <td class="px-6 py-3 text-left text-sm text-slate-900 uppercase">Total</td>
-                                <td class="px-6 py-3 text-center text-sm text-slate-900">₱{{ number_format($breakdownTotalBasic, 2) }}</td>
+                                <td class="px-6 py-3 text-center text-sm text-slate-900">₱{{ number_format($breakdownTotalStandard, 2) }}</td>
                                 <td class="px-6 py-3 text-center text-sm text-slate-900">₱{{ number_format($breakdownTotalPremium, 2) }}</td>
                                 <td class="px-6 py-3 text-center text-sm text-indigo-700">₱{{ number_format($breakdownGrandTotal, 2) }}</td>
                             </tr>
