@@ -18,11 +18,28 @@
                 </div>
             </div>
 
-            <!-- Right Section - Barcode Scanner Button -->
-            <div class="ml-4">
-                <button id="barcodeBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
-                    <span>Scanner</span>
-                </button>
+            <!-- Right Section - Report/Transactions Button -->
+            <div class="ml-4 flex items-center space-x-3">
+                
+                @if(Auth::guard('owner')->check())
+                    <!-- Owner: Report Button -->
+                    <a href="{{ route('report-sales-performance') }}" 
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        <span>Reports</span>
+                    </a>
+                @elseif(Auth::guard('staff')->check())
+                    <!-- Staff: Transactions Button -->
+                    <a href="{{ route('report-sales-performance') }}" 
+                       class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        <span>Transactions</span>
+                    </a>
+                @endif
             </div>
         </div>
     </div>
@@ -92,7 +109,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0H17M9 19a2 2 0 11-4 0 2 2 0 014 0zM20 19a2 2 0 11-4 0 2 2 0 014 0z"></path>
                         </svg>
                         <p class="text-gray-600 text-sm">Your cart is empty</p>
-                        <p class="text-gray-500 text-xs">Tap on products to add them</p>
+                        <p class="text-gray-500 text-xs">Scan products or tap to add them</p>
                     </div>
                 </div>
             </div>
@@ -124,35 +141,24 @@
     </div>
 </div>
 
-<!-- Barcode Scanner Modal -->
-<div id="barcodeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+<!-- Barcode Scanner Warning Modal -->
+<div id="barcodeWarningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold">Barcode Scanner</h3>
-            <button id="closeBarcodeModal" class="text-gray-400 hover:text-gray-600">
+            <h3 class="text-lg font-bold text-orange-600">Scanner Not Detected</h3>
+            <button id="closeBarcodeWarning" class="text-gray-400 hover:text-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
         <div class="space-y-4">
-            <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <svg class="mx-auto mb-2 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            <div class="bg-orange-50 border-2 border-orange-200 rounded-lg p-6 text-center">
+                <svg class="mx-auto mb-3 w-16 h-16 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                 </svg>
-                <p class="text-gray-600 mb-2">Start Scanning</p>
-                <p class="text-sm text-gray-500">Camera will activate here</p>
-            </div>
-            <input type="text" id="barcodeInput" placeholder="Or enter barcode manually..." 
-                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
-            <div class="flex gap-2">
-                <button id="searchBarcodeBtn" class="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
-                    Search
-                </button>
-                <button id="cancelBarcodeBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-                    Cancel
-                </button>
+                <p class="text-gray-700 font-medium mb-2">Barcode scanner not detected</p>
+                <p class="text-sm text-gray-600">Please connect your scanner or select products manually from the grid below.</p>
             </div>
         </div>
     </div>
@@ -606,6 +612,9 @@ class KioskSystem {
         this.removeItemData = null;
         this.categories = [];
         this.activeCategory = '';
+        this.barcodeBuffer = '';
+        this.barcodeTimeout = null;
+        this.scannerActive = true;
         
         this.init();
     }
@@ -616,6 +625,7 @@ class KioskSystem {
         this.loadProducts();
         this.loadCartItems();
         this.startRealTimeClock();
+        this.initializeBarcodeScanner();
     }
 
     bindEvents() {
@@ -631,29 +641,9 @@ class KioskSystem {
         document.getElementById('searchInput').addEventListener('input', 
             this.debounce(() => this.loadProducts(), 300));
 
-        // Barcode scanner
-        document.getElementById('barcodeBtn').addEventListener('click', () => {
-            this.showModal('barcodeModal');
-            setTimeout(() => document.getElementById('barcodeInput').focus(), 300);
-        });
-
-        // Barcode modal events
-        document.getElementById('closeBarcodeModal').addEventListener('click', () => {
-            this.hideModal('barcodeModal');
-        });
-        
-        document.getElementById('cancelBarcodeBtn').addEventListener('click', () => {
-            this.hideModal('barcodeModal');
-        });
-
-        document.getElementById('searchBarcodeBtn').addEventListener('click', () => {
-            this.searchByBarcode();
-        });
-
-        document.getElementById('barcodeInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.searchByBarcode();
-            }
+        // Barcode warning modal events
+        document.getElementById('closeBarcodeWarning').addEventListener('click', () => {
+            this.hideModal('barcodeWarningModal');
         });
 
         // Cart actions
@@ -700,7 +690,7 @@ class KioskSystem {
         });
 
         // Close modals on outside click
-        ['barcodeModal', 'removeReasonModal', 'paymentModal', 'receiptModal'].forEach(modalId => {
+        ['barcodeWarningModal', 'removeReasonModal', 'paymentModal', 'receiptModal'].forEach(modalId => {
             document.getElementById(modalId).addEventListener('click', (e) => {
                 if (e.target.id === modalId) {
                     this.hideModal(modalId);
@@ -711,11 +701,83 @@ class KioskSystem {
         // ESC key to close modals
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                ['barcodeModal', 'removeReasonModal', 'paymentModal', 'receiptModal'].forEach(modalId => {
+                ['barcodeWarningModal', 'removeReasonModal', 'paymentModal', 'receiptModal'].forEach(modalId => {
                     this.hideModal(modalId);
                 });
             }
         });
+    }
+
+    initializeBarcodeScanner() {
+        // Test for scanner availability on page load
+        let scannerDetected = false;
+        const testTimeout = setTimeout(() => {
+            if (!scannerDetected) {
+                this.showModal('barcodeWarningModal');
+            }
+        }, 2000); // Wait 2 seconds to detect scanner
+
+        // Listen for keypress events (barcode scanners simulate keyboard input)
+        document.addEventListener('keypress', (e) => {
+            // Ignore if user is typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            scannerDetected = true;
+            clearTimeout(testTimeout);
+
+            // Clear previous timeout
+            if (this.barcodeTimeout) {
+                clearTimeout(this.barcodeTimeout);
+            }
+
+            // Add character to buffer
+            if (e.key === 'Enter') {
+                // Process the complete barcode
+                if (this.barcodeBuffer.length > 0) {
+                    this.processScannedBarcode(this.barcodeBuffer);
+                    this.barcodeBuffer = '';
+                }
+            } else {
+                this.barcodeBuffer += e.key;
+                
+                // Set timeout to clear buffer if no more input
+                this.barcodeTimeout = setTimeout(() => {
+                    this.barcodeBuffer = '';
+                }, 100);
+            }
+        });
+    }
+
+    async processScannedBarcode(barcode) {
+        if (!this.scannerActive || !barcode.trim()) {
+            return;
+        }
+
+        try {
+            const response = await fetch('{{ route("process_barcode_search") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ barcode: barcode.trim() })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                await this.addToCart(data.product.prod_code);
+                // Visual feedback
+                this.showToast(`${data.product.name} added to cart`, 'success');
+            } else {
+                this.showToast(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error processing scanned barcode:', error);
+            this.showToast('Error processing barcode scan', 'error');
+        }
     }
 
     startRealTimeClock() {
@@ -800,9 +862,6 @@ class KioskSystem {
 
         container.innerHTML = pillsHTML;
     }
-
-
-
 
     selectCategory(categoryId) {
         this.activeCategory = categoryId;
@@ -1054,7 +1113,7 @@ class KioskSystem {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0H17M9 19a2 2 0 11-4 0 2 2 0 014 0zM20 19a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
                     <p class="text-gray-600 text-sm">Your cart is empty</p>
-                    <p class="text-gray-500 text-xs">Tap on products to add them</p>
+                    <p class="text-gray-500 text-xs">Scan products or tap to add them</p>
                 </div>
             `;
             return;
@@ -1108,36 +1167,8 @@ class KioskSystem {
     }
 
     async searchByBarcode() {
-        const barcode = document.getElementById('barcodeInput').value.trim();
-        
-        if (!barcode) {
-            this.showToast('Please enter a barcode', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch('{{ route("process_barcode_search") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ barcode: barcode })
-            });
-
-            const data = await response.json();
-            
-            if (data.success) {
-                this.hideModal('barcodeModal');
-                document.getElementById('barcodeInput').value = '';
-                await this.addToCart(data.product.prod_code);
-            } else {
-                this.showToast(data.message, 'error');
-            }
-        } catch (error) {
-            console.error('Error searching barcode:', error);
-            this.showToast('Error searching barcode', 'error');
-        }
+        // This method is no longer needed but kept for compatibility
+        // Scanner now works automatically via initializeBarcodeScanner()
     }
 
     calculateChange() {

@@ -192,14 +192,10 @@ Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name
 
 // Store: Transaction
 // Main transactions routes
-Route::get('/store_transactions', [StoreController::class, 'index'])->name('store_transactions');
-// New routes for the enhanced functionality
-// Route::post('/search_product', [StoreController::class, 'searchProduct'])->name('search_product');
-Route::post('/start_transaction', [StoreController::class, 'startTransaction'])->name('start_transaction');
 Route::get('/store_start_transaction', [StoreController::class, 'showKioskTransaction'])->name('store_start_transaction');
-Route::post('/process_payment', [StoreController::class, 'processPayment'])->name('process_payment');
+Route::get('/store_transactions', [StoreController::class, 'index'])->name('store_transactions');
+Route::get('/report-sales-performance', [StoreController::class, 'showReports'])->name('report-sales-performance');
 
-// Kiosk Transaction Routes
 // API endpoints for kiosk functionality
 Route::get('/api/categories', [StoreController::class, 'getCategories'])->name('get_categories');
 Route::get('/api/kiosk/products', [StoreController::class, 'getKioskProducts'])->name('get_kiosk_products');
@@ -213,5 +209,6 @@ Route::get('/api/kiosk/cart', [StoreController::class, 'getCartItems'])->name('g
 
 // Barcode and payment routes
 Route::post('/api/barcode/search', [StoreController::class, 'processBarcodeSearch'])->name('process_barcode_search');
+Route::post('/process_payment', [StoreController::class, 'processPayment'])->name('process_payment');
 
 

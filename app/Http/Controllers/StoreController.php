@@ -13,8 +13,26 @@ use App\Models\Inventory;
 
 class StoreController extends Controller
 {
+    // Helper method to get current owner ID
+    private function getCurrentOwnerId()
+    {
+        if (Auth::guard('owner')->check()) {
+            return Auth::guard('owner')->user()->owner_id;
+        } elseif (Auth::guard('staff')->check()) {
+            return Auth::guard('staff')->user()->owner_id;
+        }
+        
+        return null;
+    }
+
     public function index(Request $request)
     {
+        $ownerId = $this->getCurrentOwnerId();
+        
+        if (!$ownerId) {
+            abort(403, 'Unauthorized access');
+        }
+
         $date = $request->get('date');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
@@ -28,6 +46,7 @@ class StoreController extends Controller
                 DB::raw('SUM(receipt_item.item_quantity) as items_quantity'),
                 DB::raw('SUM(receipt_item.item_quantity * products.selling_price) as total_amount')
             )
+            ->where('receipt.owner_id', $ownerId) // CRITICAL FIX
             ->groupBy('receipt.receipt_id', 'receipt.receipt_date')
             ->orderBy('receipt.receipt_date', 'desc');
    
@@ -55,48 +74,55 @@ class StoreController extends Controller
     // View receipt details
     public function getReceiptDetails($receiptId)
     {
-    try {
-        $receipt = DB::table('receipt')
-            ->leftJoin('owners', 'receipt.owner_id', '=', 'owners.owner_id')
-            ->leftJoin('staff', 'receipt.staff_id', '=', 'staff.staff_id')
-            ->select('receipt.*', 'owners.firstname as owner_name', 'staff.firstname as staff_name')
-            ->where('receipt.receipt_id', $receiptId)
-            ->first();
+        try {
+            $ownerId = $this->getCurrentOwnerId();
+            
+            if (!$ownerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
 
-        if (!$receipt) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Receipt not found'
-            ], 404);
-        }
+            $receipt = DB::table('receipt')
+                ->leftJoin('owners', 'receipt.owner_id', '=', 'owners.owner_id')
+                ->leftJoin('staff', 'receipt.staff_id', '=', 'staff.staff_id')
+                ->select('receipt.*', 'owners.firstname as owner_name', 'staff.firstname as staff_name')
+                ->where('receipt.receipt_id', $receiptId)
+                ->where('receipt.owner_id', $ownerId) // CRITICAL FIX
+                ->first();
 
-        $items = DB::table('receipt_item')
-            ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
-            ->select('receipt_item.*', 'products.name as product_name', 'products.selling_price')
-            ->where('receipt_item.receipt_id', $receiptId)
-            ->get();
+            if (!$receipt) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Receipt not found or access denied'
+                ], 404);
+            }
 
-        $storeInfo = null;
-        if ($receipt->owner_id) {
+            $items = DB::table('receipt_item')
+                ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
+                ->select('receipt_item.*', 'products.name as product_name', 'products.selling_price')
+                ->where('receipt_item.receipt_id', $receiptId)
+                ->get();
+
             $storeInfo = DB::table('owners')
                 ->select('store_name', 'store_address', 'contact')
-                ->where('owner_id', $receipt->owner_id)
+                ->where('owner_id', $ownerId)
                 ->first();
+
+            return response()->json([
+                'success' => true,
+                'receipt' => $receipt,
+                'items' => $items,
+                'store_info' => $storeInfo
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading receipt: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'receipt' => $receipt,
-            'items' => $items,
-            'store_info' => $storeInfo
-        ]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error loading receipt: ' . $e->getMessage()
-        ], 500);
-    }
     }
 
     // Show the kiosk-style transaction interface
@@ -105,27 +131,26 @@ class StoreController extends Controller
         session()->forget('transaction_items');
         
         $user_firstname = null;
-        $owner_id = null;
-        $store_info = null;
+        $owner_id = $this->getCurrentOwnerId();
+        
+        if (!$owner_id) {
+            abort(403, 'Unauthorized access');
+        }
         
         if (Auth::guard('owner')->check()) {
             $user_firstname = Auth::guard('owner')->user()->firstname;
-            $owner_id = Auth::guard('owner')->user()->owner_id;
         } elseif (Auth::guard('staff')->check()) {
             $user_firstname = Auth::guard('staff')->user()->firstname;
-            $owner_id = Auth::guard('staff')->user()->owner_id;
         }
         
         // Get store information
-        if ($owner_id) {
-            $store_info = DB::table('owners')
-                ->select('store_name', 'store_address', 'contact')
-                ->where('owner_id', $owner_id)
-                ->first();
-        }
+        $store_info = DB::table('owners')
+            ->select('store_name', 'store_address', 'contact')
+            ->where('owner_id', $owner_id)
+            ->first();
 
         return view('store_start_transaction', [
-            'receipt_no' => $this->generateReceiptNumber(),
+            'receipt_no' => $this->generateReceiptNumber($owner_id),
             'user_firstname' => $user_firstname,
             'store_info' => $store_info
         ]);
@@ -135,8 +160,18 @@ class StoreController extends Controller
     public function getCategories()
     {
         try {
+            $ownerId = $this->getCurrentOwnerId();
+            
+            if (!$ownerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+
             $categories = DB::table('categories')
                 ->select('category_id', 'category')
+                ->where('owner_id', $ownerId) // CRITICAL FIX
                 ->orderBy('category')
                 ->get();
             
@@ -156,12 +191,26 @@ class StoreController extends Controller
     public function getKioskProducts(Request $request)
     {
         try {
+            $ownerId = $this->getCurrentOwnerId();
+            
+            if (!$ownerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+
             $categoryId = $request->get('category_id');
             $search = $request->get('search');
             
+            // ASSUMPTION: Products table should have owner_id column
+            // If not, you need to add it via migration
             $query = DB::table('products')
                 ->join('categories', 'products.category_id', '=', 'categories.category_id')
-                ->leftJoin('inventory', 'products.prod_code', '=', 'inventory.prod_code')
+                ->leftJoin('inventory', function($join) use ($ownerId) {
+                    $join->on('products.prod_code', '=', 'inventory.prod_code')
+                         ->where('inventory.owner_id', '=', $ownerId); // CRITICAL FIX
+                })
                 ->select(
                     'products.prod_code',
                     'products.name',
@@ -173,6 +222,7 @@ class StoreController extends Controller
                     'categories.category as category_name',
                     DB::raw('COALESCE(SUM(inventory.stock), 0) as stock')
                 )
+                ->where('products.owner_id', $ownerId) // CRITICAL FIX (add this column if missing)
                 ->groupBy(
                     'products.prod_code',
                     'products.name',
@@ -213,29 +263,40 @@ class StoreController extends Controller
     // Add item to kiosk cart
     public function addToKioskCart(Request $request)
     {
-
         $request->validate([
             'prod_code' => 'required|exists:products,prod_code',
             'quantity' => 'required|integer|min:1'
         ]);
 
         try {
+            $ownerId = $this->getCurrentOwnerId();
             
-            $product = Product::find($request->prod_code);
+            if (!$ownerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+            
+            // Verify product belongs to this owner
+            $product = Product::where('prod_code', $request->prod_code)
+                              ->where('owner_id', $ownerId) // CRITICAL FIX
+                              ->first();
             
             if (!$product) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Product not found.'
+                    'message' => 'Product not found or access denied.'
                 ], 404);
             }
 
-            $totalStock = Inventory::where('prod_code', $product->prod_code)->sum('stock');
+            $totalStock = Inventory::where('prod_code', $product->prod_code)
+                                   ->where('owner_id', $ownerId) // CRITICAL FIX
+                                   ->sum('stock');
 
             $currentItems = session()->get('transaction_items', []);
             $currentQuantity = 0;
             
-            // Check if item already exists in cart
             foreach ($currentItems as $item) {
                 if ($item['prod_code'] == $request->prod_code) {
                     $currentQuantity = $item['quantity'];
@@ -252,7 +313,6 @@ class StoreController extends Controller
                 ], 400);
             }
 
-            // Update or add item to session
             $itemFound = false;
             foreach ($currentItems as &$item) {
                 if ($item['prod_code'] == $request->prod_code) {
@@ -271,8 +331,7 @@ class StoreController extends Controller
 
             session()->put('transaction_items', $currentItems);
 
-            // Prepare response data
-            $cartItems = $this->getFormattedCartItems($currentItems);
+            $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
 
             return response()->json([
                 'success' => true,
@@ -301,17 +360,26 @@ class StoreController extends Controller
         ]);
 
         try {
+            $ownerId = $this->getCurrentOwnerId();
+            
+            if (!$ownerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+
             $currentItems = session()->get('transaction_items', []);
             
             if ($request->quantity == 0) {
-                // Remove item from cart
                 $currentItems = array_filter($currentItems, function($item) use ($request) {
                     return $item['prod_code'] != $request->prod_code;
                 });
-                $currentItems = array_values($currentItems); // Re-index array
+                $currentItems = array_values($currentItems);
             } else {
-                // Check stock availability
-                $totalStock = Inventory::where('prod_code', $request->prod_code)->sum('stock');
+                $totalStock = Inventory::where('prod_code', $request->prod_code)
+                                       ->where('owner_id', $ownerId) // CRITICAL FIX
+                                       ->sum('stock');
                 
                 if ($totalStock < $request->quantity) {
                     return response()->json([
@@ -320,7 +388,6 @@ class StoreController extends Controller
                     ], 400);
                 }
 
-                // Update quantity
                 foreach ($currentItems as &$item) {
                     if ($item['prod_code'] == $request->prod_code) {
                         $item['quantity'] = $request->quantity;
@@ -331,7 +398,7 @@ class StoreController extends Controller
 
             session()->put('transaction_items', $currentItems);
             
-            $cartItems = $this->getFormattedCartItems($currentItems);
+            $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
 
             return response()->json([
                 'success' => true,
@@ -368,7 +435,8 @@ class StoreController extends Controller
 
             session()->put('transaction_items', $currentItems);
             
-            $cartItems = $this->getFormattedCartItems($currentItems);
+            $ownerId = $this->getCurrentOwnerId();
+            $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
 
             return response()->json([
                 'success' => true,
@@ -392,8 +460,9 @@ class StoreController extends Controller
     public function getCartItems()
     {
         try {
+            $ownerId = $this->getCurrentOwnerId();
             $currentItems = session()->get('transaction_items', []);
-            $cartItems = $this->getFormattedCartItems($currentItems);
+            $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
 
             return response()->json([
                 'success' => true,
@@ -420,7 +489,18 @@ class StoreController extends Controller
         ]);
 
         try {
-            $product = Product::where('barcode', $request->barcode)->first();
+            $ownerId = $this->getCurrentOwnerId();
+            
+            if (!$ownerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+
+            $product = Product::where('barcode', $request->barcode)
+                              ->where('owner_id', $ownerId) // CRITICAL FIX
+                              ->first();
 
             if (!$product) {
                 return response()->json([
@@ -429,7 +509,9 @@ class StoreController extends Controller
                 ], 404);
             }
 
-            $totalStock = Inventory::where('prod_code', $product->prod_code)->sum('stock');
+            $totalStock = Inventory::where('prod_code', $product->prod_code)
+                                   ->where('owner_id', $ownerId) // CRITICAL FIX
+                                   ->sum('stock');
 
             return response()->json([
                 'success' => true,
@@ -452,7 +534,7 @@ class StoreController extends Controller
         }
     }
 
-    // Process payment (reusing existing logic)
+    // Process payment
     public function processPayment(Request $request)
     {
         $request->validate([
@@ -472,19 +554,20 @@ class StoreController extends Controller
         DB::beginTransaction();
 
         try {
-            $owner_id = null;
+            $owner_id = $this->getCurrentOwnerId();
             $staff_id = null;
             
-            if (Auth::guard('owner')->check()) {
-                $owner_id = Auth::guard('owner')->user()->owner_id;
-            } elseif (Auth::guard('staff')->check()) {
+            if (!$owner_id) {
+                throw new \Exception('Unauthorized access');
+            }
+            
+            if (Auth::guard('staff')->check()) {
                 $staff_id = Auth::guard('staff')->user()->staff_id;
-                $owner_id = Auth::guard('staff')->user()->owner_id;
             }
 
             $receipt = Receipt::create([
                 'receipt_date' => now(),
-                'owner_id' => $owner_id ?? 1,
+                'owner_id' => $owner_id,
                 'staff_id' => $staff_id
             ]);
 
@@ -493,13 +576,18 @@ class StoreController extends Controller
             $receiptItems = [];
 
             foreach ($items as $item) {
-                $product = Product::find($item['prod_code']);
+                // Verify product belongs to owner
+                $product = Product::where('prod_code', $item['prod_code'])
+                                  ->where('owner_id', $owner_id)
+                                  ->first();
                 
                 if (!$product) {
-                    throw new \Exception("Product not found: " . $item['prod_code']);
+                    throw new \Exception("Product not found or access denied: " . $item['prod_code']);
                 }
 
-                $totalStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
+                $totalStock = Inventory::where('prod_code', $item['prod_code'])
+                                       ->where('owner_id', $owner_id)
+                                       ->sum('stock');
                 
                 if ($totalStock < $item['quantity']) {
                     throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
@@ -511,9 +599,12 @@ class StoreController extends Controller
                     'receipt_id' => $receipt->receipt_id
                 ]);
 
-                $this->decrementInventoryStock($item['prod_code'], $item['quantity']);
+                $this->decrementInventoryStock($item['prod_code'], $item['quantity'], $owner_id);
                 
-                $remainingStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
+                $remainingStock = Inventory::where('prod_code', $item['prod_code'])
+                                           ->where('owner_id', $owner_id)
+                                           ->sum('stock');
+                                           
                 if ($remainingStock <= $product->stock_limit) {
                     $lowStockProducts[] = [
                         'name' => $product->name,
@@ -525,7 +616,6 @@ class StoreController extends Controller
                 $itemTotal = $product->selling_price * $item['quantity'];
                 $totalAmount += $itemTotal;
 
-                // Store receipt item for response
                 $receiptItems[] = [
                     'product' => $product,
                     'quantity' => $item['quantity'],
@@ -565,16 +655,21 @@ class StoreController extends Controller
     }
 
     // Helper method to format cart items
-    private function getFormattedCartItems($items)
+    private function getFormattedCartItems($items, $ownerId)
     {
         $formattedItems = [];
         $totalAmount = 0;
         $totalQuantity = 0;
 
         foreach ($items as $item) {
-            $product = Product::find($item['prod_code']);
+            $product = Product::where('prod_code', $item['prod_code'])
+                              ->where('owner_id', $ownerId)
+                              ->first();
+                              
             if ($product) {
-                $currentStock = Inventory::where('prod_code', $item['prod_code'])->sum('stock');
+                $currentStock = Inventory::where('prod_code', $item['prod_code'])
+                                         ->where('owner_id', $ownerId)
+                                         ->sum('stock');
                 $itemTotal = $product->selling_price * $item['quantity'];
                 
                 $formattedItems[] = [
@@ -596,15 +691,16 @@ class StoreController extends Controller
         ];
     }
 
-    private function decrementInventoryStock($prod_code, $quantity)
+    private function decrementInventoryStock($prod_code, $quantity, $ownerId)
     {
         $remainingQuantity = $quantity;
         
         $inventoryItems = Inventory::where('prod_code', $prod_code)
-                                 ->where('stock', '>', 0)
-                                 ->orderBy('date_added', 'asc')
-                                 ->orderBy('inven_code', 'asc')
-                                 ->get();
+                                   ->where('owner_id', $ownerId) // CRITICAL FIX
+                                   ->where('stock', '>', 0)
+                                   ->orderBy('date_added', 'asc')
+                                   ->orderBy('inven_code', 'asc')
+                                   ->get();
 
         if ($inventoryItems->isEmpty()) {
             throw new \Exception("No inventory records found for product code: {$prod_code}");
@@ -629,9 +725,22 @@ class StoreController extends Controller
         }
     }
 
-    private function generateReceiptNumber()
+    private function generateReceiptNumber($ownerId)
     {
-        $lastReceipt = Receipt::orderBy('receipt_id', 'desc')->first();
+        $lastReceipt = Receipt::where('owner_id', $ownerId)
+                              ->orderBy('receipt_id', 'desc')
+                              ->first();
         return $lastReceipt ? $lastReceipt->receipt_id + 1 : 1;
+    }
+
+    public function showReports()
+    {
+    $ownerId = $this->getCurrentOwnerId();
+    
+    if (!$ownerId) {
+        abort(403, 'Unauthorized access');
+    }
+    
+    return view('dashboards.owner.report-sales-performance');
     }
 }
