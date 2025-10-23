@@ -335,7 +335,6 @@ class StoreController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Item added to cart successfully!',
                 'cart_items' => $cartItems['items'],
                 'cart_summary' => [
                     'total_quantity' => $cartItems['total_quantity'],
