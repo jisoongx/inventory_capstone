@@ -12,6 +12,9 @@
         <!-- tables dapit -->
         <div class="space-y-4">
             @livewire('comparative-analysis')
+
+            @livewire('stock-alert')
+            
             @livewire('product-analysis')
         </div>
     </div>

@@ -1,13 +1,13 @@
-<div x-data="{ tab: 'basket' }" class="w-full px-4">
+<div x-data="{ tab: 'association' }" class="w-full px-4">
 
     <div class="flex space-x-1">
         <button 
-            @click="tab = 'basket'"
-            :class="tab === 'basket' 
+            @click="tab = 'association'"
+            :class="tab === 'association' 
                 ? 'bg-green-50 text-black border-green-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
-            Basket Analysis
+            Product Association
         </button>
 
         <button 
@@ -21,15 +21,15 @@
         
     </div>
 
-    <div class="border bg-white p-4 rounded-b-lg mb-3 h-[40rem]"
+    <div class="border bg-white p-4 rounded-b-lg h-[41rem]"
         :class="{
-            'border-green-500 bg-green-50': tab === 'basket',
+            'border-green-500 bg-green-50': tab === 'association',
             'border-red-500 bg-red-50': tab === 'frequency'
         }">
 
 
-        <!-- BASKET ANALYSIS -->
-        <div x-show="tab === 'basket'">
+        <!-- Product Association -->
+        <div x-show="tab === 'association'">
 
             <div class="">
                 <div class="flex items-center justify-between mb-2">
@@ -65,16 +65,16 @@
                 </div>
 
 
-                <div class="overflow-y-auto scrollbar-custom h-[33rem]">
+                <div class="overflow-y-auto scrollbar-custom h-[35rem]">
                     <table class="w-full border-collapse text-sm">
                         <thead>
                             <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
-                                <th class="p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Product A</th>
-                                <th class="p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Product B</th>
-                                <th class="p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Times Bought Together</th>
-                                <th class="p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Association Strength</th>
-                                <th class="p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Relationship Score</th>
-                                <th class="p-3 text-left font-semibold text-gray-700 text-xs w-[20rem] sticky top-0">Insights</th>
+                                <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Product A</th>
+                                <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Product B</th>
+                                <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Times Bought Together</th>
+                                <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Association Strength</th>
+                                <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Relationship Score</th>
+                                <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs w-[20rem] sticky top-0">Insights</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -82,8 +82,8 @@
                                 @foreach ($results as $row)
                                     @if (is_array($row))
                                         <tr class="border-b border-gray-200 hover:bg-gray-50">
-                                            <td class="p-3 text-gray-800 font-medium text-xs">{{ $row['productA'] ?? '' }}</td>
-                                            <td class="p-3 text-gray-800 font-medium text-xs">{{ $row['productB'] ?? '' }}</td>
+                                            <td class="p-3 text-gray-800 text-xs">{{ $row['productA'] ?? '' }}</td>
+                                            <td class="p-3 text-gray-800 text-xs">{{ $row['productB'] ?? '' }}</td>
                                             <td class="p-3 text-center text-gray-700 text-xs">{{ $row['supportCount'] ?? '' }}</td>
                                             <td class="p-3 text-center text-gray-700 text-xs">{{ $row['confidenceText'] ?? '' }}</td>
                                             <td class="p-3 text-center text-gray-700 text-xs">{{ $row['lift'] ?? '' }}</td>
@@ -106,7 +106,7 @@
                                         <td colspan="6" class="p-6 py-52 text-center text-gray-500 text-xs">
                                             <div class="flex flex-col justify-center items-center space-y-3">
                                                 <span class="material-symbols-rounded-semibig text-gray-400">ads_click</span>
-                                                <span class="text-gray-500 text-xs">No data yet. Click “Generate Report” to start analysis.</span>
+                                                <span class="text-gray-500 text-xs">Click “Generate Report” to start analysis.</span>
                                             </div>
                                         </td>
                                     </tr>
@@ -121,8 +121,37 @@
         </div>
 
         <!-- PURCHASE FREQUENCY -->
-        <div x-show="tab === 'frequency'">
-            <p class="text-gray-700">⚡ <b>Purchase Frequency</b> report content goes here.</p>
+        <div x-show="tab === 'frequency'" class="space-y-4">
+            <div class="flex items-center gap-5">
+                <select wire:model="frequencySelectMonth" wire:change="frequencyTransac" class="border border-gray-300 rounded px-3 py-2 text-xs">
+                    @for ($m = 1; $m <= 12; $m++)
+                        <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
+                    @endfor
+                </select>
+            </div>
+            
+            <div class="overflow-y-auto scrollbar-custom h-[33rem]">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
+                            <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Date</th>
+                            <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Transactions</th>
+                            <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Total Sales (₱)</th>
+                            <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Avg Transaction Value (₱)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($frequency as $row)
+                                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                    <td class="p-3 text-gray-800 text-xs">{{ $row->date }}</td>
+                                    <td class="p-3 text-gray-800 text-xs">{{ $row->total_transaction }}</td>
+                                    <td class="p-3 text-center text-gray-700 text-xs">₱{{ number_format($row->total_sales, 2) }}</td>
+                                    <td class="p-3 text-center text-gray-700 text-xs">₱{{ number_format($row->average_sales, 2) }}</td>
+                                </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

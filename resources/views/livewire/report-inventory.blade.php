@@ -30,7 +30,7 @@
         
     </div>
 
-    <div class="border bg-white p-4 rounded-b-lg mb-3 h-[40rem]"
+    <div class="border bg-white p-4 rounded-b-lg mb-3 h-[41rem]"
         :class="{
             'border-green-500 bg-green-50': tab === 'expiring',
             'border-yellow-500 bg-yellow-50': tab === 'top-selling',

@@ -35,6 +35,7 @@ Route::view('/welcome/to/shoplytix', 'landing-page');
 
 
 Route::view('/owner/dashboard', 'dashboards.owner.dashboard')->name('dashboards.owner.dashboard');
+Route::view('/staff/dashboard', 'dashboards.staff.dashboard')->name('staff.dashboard');
 
 // Route::get('/expense_record', [MonthlyController::class, 'index'])->name('dashboards.owner.expense_record');
 // Route::post('/expense_record/add', [MonthlyController::class, 'add'])->name('dashboards.owner.expense_record_add');
@@ -77,6 +78,8 @@ Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-c
 // ->name('dashboards.super_admin.technical');
 
 Route::view('/super/technical-support', 'dashboards.super_admin.technical')->name('dashboards.super_admin.technical');
+
+
 
 // Route::get('/super/technical-support', [TechnicalController::class, 'index'])->name('dashboards.super_admin.technical');
 // Route::get('/super/technical-support/chat/{req_id?}', [TechnicalController::class, 'show'])->name('dashboards.super_admin.technical_show');
@@ -123,7 +126,7 @@ Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->na
 //Different user dashboards used as layout
 Route::get('/super-admin/dashboard', fn() => view('dashboards.super_admin.super_admin'))->name('super_admin.dashboard');
 // Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('dashboards.owner.dashboard');
-Route::get('/staff/dashboard', [DashboardController::class, 'index_staff'])->name('staff.dashboard');
+// Route::get('/staff/dashboard', [DashboardController::class, 'index_staff'])->name('staff.dashboard');
 
 //subscription plan management
 Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');

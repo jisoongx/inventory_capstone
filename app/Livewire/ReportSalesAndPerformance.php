@@ -28,6 +28,8 @@ class ReportSalesAndPerformance extends Component
     public $searchWord;
     public $suggestedCategories;
 
+    public $perf;
+
 
     public function mount() {
         $this->currentMonth = now()->month;
@@ -190,6 +192,8 @@ class ReportSalesAndPerformance extends Component
  
     }
 
+
+
     public function peakHour() {
 
         // $date = $this->selectedYears ?: now()->toDateString(); // ✅ String: "2025-10-03"
@@ -249,11 +253,66 @@ class ReportSalesAndPerformance extends Component
 
     }
 
+
+    public function prodPerformance() {
+
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+        $latestYear = now()->year;
+        $month = now()->month;
+
+        $this->perf = collect(DB::select("
+            SELECT 
+                p.prod_code,
+                p.name AS product_name,
+                c.category AS category,
+                COALESCE(SUM(ri.item_quantity), 0) AS unit_sold,
+                COALESCE(SUM(p.selling_price * ri.item_quantity), 0) AS total_sales,
+                COALESCE(SUM(p.cost_price * ri.item_quantity), 0) AS cogs,
+                (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0)) AS profit,
+                (
+                    (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
+                    / NULLIF(COALESCE(SUM(p.selling_price * ri.item_quantity), 0), 0)
+                ) * 100 AS profit_margin_percent,
+                (
+                    COALESCE(SUM(p.selling_price * ri.item_quantity), 0) / NULLIF((
+                        SELECT 
+                            SUM(p2.selling_price * ri2.item_quantity)
+                        FROM receipt r2
+                        JOIN receipt_item ri2 ON r2.receipt_id = ri2.receipt_id
+                        JOIN products p2 ON ri2.prod_code = p2.prod_code
+                        WHERE 
+                            r2.owner_id = ?
+                            AND MONTH(r2.receipt_date) = ?
+                            AND YEAR(r2.receipt_date) = ?
+                    ), 0)
+                ) * 100 AS contribution_percent
+            FROM products AS p
+            LEFT JOIN categories AS c 
+                ON p.category_id = c.category_id
+            LEFT JOIN receipt_item AS ri 
+                ON ri.prod_code = p.prod_code
+            LEFT JOIN receipt AS r 
+                ON r.receipt_id = ri.receipt_id
+                AND r.owner_id = ?
+                AND MONTH(r.receipt_date) = ?
+                AND YEAR(r.receipt_date) = ?
+            WHERE p.owner_id = ?
+            GROUP BY 
+                p.prod_code, 
+                p.name, 
+                c.category, 
+                p.owner_id
+            order by p.name asc;
+
+        ", [$owner_id, $month, $latestYear, $owner_id, $month, $latestYear, $owner_id]));
+    }
+
     public function render()
     {
         $this->peakHour();
         $this->salesByCategory();
         $this->displayYears();
+        $this->prodPerformance();
         return view('livewire.report-sales-and-performance');
     }
 }

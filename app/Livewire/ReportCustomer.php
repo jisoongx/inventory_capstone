@@ -16,11 +16,17 @@ class ReportCustomer extends Component
     public $loading = false;
     public $type = "Nothing";
 
+    public $frequency= [];
+    public $frequencySelectMonth;
+
     public function mount()
     {
         $this->ownerId = Auth::guard('owner')->user()->owner_id;
         $this->month = now()->month;
         $this->year = now()->year;
+
+        $this->frequencySelectMonth = now()->month;
+        $this->frequencyTransac();
     }
 
     public function generateReport()
@@ -223,12 +229,6 @@ class ReportCustomer extends Component
     }
 
 
-
-
-
-
-
-
     private function calculateItemsetSupport($itemset, $dataset)
     {
         $count = 0;
@@ -304,6 +304,35 @@ class ReportCustomer extends Component
         }
         
         return $insights[array_rand($insights)];
+    }
+
+
+
+    public function updatedFrequencySelectMonth()
+    {
+        $this->frequencyTransac();
+    }
+
+    public function frequencyTransac() {
+        $month = $this->frequencySelectMonth ?? now()->month;
+        
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+        // $month = now()->month;
+        $year = now()->year;
+
+        $this->frequency = collect(DB::select("
+            select DATE(r.receipt_date) as date,
+                count(DISTINCT(r.receipt_id)) as total_transaction, 
+                sum(ri.item_quantity * p.selling_price) as total_sales,
+                (SUM(ri.item_quantity * p.selling_price) / COUNT(DISTINCT(r.receipt_id))) AS average_sales
+            from receipt r 
+            join receipt_item ri on r.receipt_id = ri.receipt_id
+            join products p on ri.prod_code = p.prod_code 
+            where month(r.receipt_date) = ?
+            and year(r.receipt_date) = ?
+            and r.owner_id = ?
+            group by DATE(r.receipt_date);
+        ", [ $month, $year, $owner_id]));
     }
 
     public function render()

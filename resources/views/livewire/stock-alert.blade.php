@@ -1,0 +1,193 @@
+<div class="flex justtify-between space-x-4 pt-5">
+
+    <!-- STOCK ALERT -->
+    <div class="w-full max-w-sm bg-white rounded-2xl shadow-md relative">
+        <div class="relative">
+            <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 w-3/5 z-10">
+                <div class="bg-red-600 text-white text-center py-3 px-6 rounded-full shadow-lg">
+                    <span class="text-sm font-semibold uppercase tracking-wide">Stock Alert</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hidden" wire:poll.keep-alive="stockAlert()"></div>
+        <div class="bg-white rounded shadow-lg overflow-hidden pt-5" x-data="{ open: false }">
+            <div class="p-4 space-y-3 scrollbar-custom transition-all duration-300 ease-in-out max-h-[27rem]"
+                :class="open ? 'overflow-y-auto' : 'overflow-hidden'">
+
+                @forelse ($prod as $i => $p)
+                    <div x-show="open || {{ $i }} < 5" x-transition
+                        class="rounded-xl p-2 flex items-center gap-4 border
+                        {{ $p->status === 'Critical' ? 'border-red-500 text-red-600' : '' }}
+                        {{ $p->status === 'Reorder' ? 'border-orange-500 text-orange-600' : '' }}
+                        {{ $p->status === 'Normal' ? 'border-slate-500 text-slate-600' : '' }}">
+                        
+                        <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
+                            class="w-16 h-16 object-cover rounded text-xs">
+                        
+                        <div class="flex-1">
+                            <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
+                            <p class="text-xs font-medium">{{ $p->remaining_stock }} items left</p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full
+                                {{ $p->status === 'Critical' ? 'bg-red-500' : '' }}
+                                {{ $p->status === 'Reorder' ? 'bg-orange-500' : '' }}
+                                {{ $p->status === 'Normal' ? 'bg-slate-500' : '' }}"></span>
+                            <span class="font-semibold text-xs">{{ $p->status }}</span>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-xs text-gray-500">Nothing to show...</p>
+                @endforelse
+
+            </div>
+
+            @if ($prod->count() > 3)
+                <div class="px-4 pb-4 border-t">
+                    <button @click="open = !open"
+                            class="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-600 font-semibold py-2 transition">
+                        <span class="text-xs" x-text="open ? 'Show less' : `View all ({{ $prod->count() }})`"></span>
+                        <span class="material-symbols-rounded-premium transition-transform duration-300"
+                            :class="open ? 'rotate-180' : ''">expand_more</span>
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+
+
+    <!-- EXPIRATION -->
+    <div class="w-full max-w-sm bg-white rounded-2xl shadow-md relative">
+        <div class="relative">
+            <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 w-3/5 z-10">
+                <div class="bg-blue-800 text-white text-center py-3 px-6 rounded-full shadow-lg">
+                    <span class="text-sm font-semibold uppercase tracking-wide">Expiration Notice</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hidden" wire:poll.keep-alive="expirationNotice()"></div>
+        <div class="bg-white rounded shadow-lg overflow-hidden pt-5" x-data="{ open: false }">
+            <div class="p-4 space-y-3 scrollbar-custom transition-all duration-300 ease-in-out max-h-[27rem]"
+                :class="open ? 'overflow-y-auto' : 'overflow-hidden'">
+
+                @forelse ($expiry as $i => $p)
+                    <div x-show="open || {{ $i }} < 5" x-transition
+                        class="rounded-xl p-2 flex items-center gap-4 border
+                        {{ $p->status === 'Expired' ? 'border-red-900 text-red-900' : '' }}
+                        {{ $p->status === 'Critical' ? 'border-red-500 text-red-600' : '' }}
+                        {{ $p->status === 'Warning' ? 'border-orange-500 text-orange-600' : '' }}
+                        {{ $p->status === 'Monitor' ? 'border-yellow-500 text-yellow-500' : '' }}">
+                        
+                        <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
+                            class="w-16 h-16 object-cover rounded text-xs">
+                        
+                        <div class="flex-1">
+                            <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
+                            <p class="text-xs font-medium">{{ $p->expired_stock }} items</p>
+                            <p class="text-xs font-bold">{{ $p->days_until_expiry }} days left!</p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full
+                                {{ $p->status === 'Expired' ? 'bg-red-900' : '' }}
+                                {{ $p->status === 'Critical' ? 'bg-red-500' : '' }}
+                                {{ $p->status === 'Warning' ? 'bg-orange-500' : '' }}
+                                {{ $p->status === 'Monitor' ? 'bg-yellow-500' : '' }}"></span>
+                            <span class="font-semibold text-xs">{{ $p->status }}</span>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-xs text-gray-500">Nothing to show...</p>
+                @endforelse
+
+            </div>
+
+            @if ($prod->count() > 3)
+                <div class="px-4 pb-4 border-t">
+                    <button @click="open = !open"
+                            class="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-600 font-semibold py-2 transition">
+                        <span class="text-xs" x-text="open ? 'Show less' : `View all ({{ $expiry->count() }})`"></span>
+                        <span class="material-symbols-rounded-premium transition-transform duration-300"
+                            :class="open ? 'rotate-180' : ''">expand_more</span>
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+
+
+    <!-- TOP SELLING PRODUCT -->
+    <div class="w-full bg-white rounded shadow-md relative">
+
+        <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 border-b border-green-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xs font-semibold text-white">Top Selling Products</h2>
+                    <p class="text-green-100 text-xs mt-0.5">Best performers this month</p>
+                </div>
+                <div class="bg-green-800 px-4 py-2 rounded-full flex items-center">
+                    <span class="text-sm font-bold text-white">{{ $topProd->count() }}</span>
+                    <span class="text-green-200 text-xs ml-1">items</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hidden" wire:poll.keep-alive="topSelling()"></div>
+                <div class="p-2 space-y-3 overflow-y-auto scrollbar-custom transition-all duration-300 ease-in-out max-h-[26rem]">
+                    
+                    <div class="p-4 space-y-3 transition-all duration-300 ease-in-out">
+
+                        @forelse ($topProd as $index => $p)
+                            @if ($loop->first)
+                                <div x-show="open || {{ $index }} < 5" x-transition
+                                    class="relative rounded-xl p-4 flex items-center gap-4 border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-amber-50 shadow-sm hover:shadow-md transition-shadow">
+
+                                    <div class="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 font-bold text-[11px] px-3 py-1 rounded-full shadow-md">
+                                        #1 BEST SELLER
+                                    </div>
+
+                                    <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
+                                        class="w-16 h-16 object-cover rounded-lg shadow">
+
+                                    <div class="flex-1">
+                                        <h3 class="text-sm font-bold text-gray-900">{{ $p->prod_name }}</h3>
+                                        <div class="flex items-center gap-3 mt-2">
+                                            <span class="text-xs font-semibold text-gray-700">{{ $p->unit_sold }} sold</span>
+                                            <span class="text-xs font-semibold text-green-700">₱{{ number_format($p->total_sales,2) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                {{-- 🧾 Other products — slate/white background --}}
+                                <div x-show="open || {{ $index }} < 5" x-transition
+                                    class="rounded-xl p-4 flex items-center gap-4 border border-slate-200 bg-white hover:border-blue-300 hover:shadow-md transition-all">
+
+                                    <div class="bg-slate-100 text-slate-700 font-bold text-sm px-3 py-1 rounded-lg">
+                                        #{{ $loop->iteration }}
+                                    </div>
+
+                                    <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
+                                        class="w-16 h-16 object-cover rounded-lg">
+
+                                    <div class="flex-1">
+                                        <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
+                                        <div class="flex items-center gap-3 mt-1.5">
+                                            <span class="text-xs text-gray-600">{{ $p->unit_sold }} sold</span>
+                                            <span class="text-xs font-semibold text-green-600">₱{{ number_format($p->total_sales,2) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        @empty
+                            <p class="text-xs text-gray-500">Nothing to show...</p>
+                        @endforelse
+                    </div>
+                </div>
+        
+        </div>
+    </div>
+
+</div>

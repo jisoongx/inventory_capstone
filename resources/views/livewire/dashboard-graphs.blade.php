@@ -9,19 +9,19 @@
 
             <div class="flex gap-3 mb-3 w-full" wire:poll.keep-alive="currencySales()">
                 <div class="bg-white border-t-4 border-red-900 p-4 shadow-lg rounded flex-[2] text-center">
-                    <p class="text-red-800 text-xl font-bold">₱{{ number_format($dailySales->dailySales, 2) }}</p>
+                    <p class="text-red-800 text-2xl font-bold">₱{{ number_format($dailySales->dailySales, 2) }}</p>
                     <span class="text-gray-600 text-xs font-bold">Daily Sales</span>
                 </div>
 
                 <div class="bg-white border-t-4 border-red-700 p-4 shadow-lg rounded flex-[1] text-center" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
-                    <p class="text-red-600 text-xl font-bold" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
+                    <p class="text-red-600 text-2xl font-bold" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
                         ₱{{ $weeklySales->weeklySales >= 1000 ? number_format($weeklySales->weeklySales / 1000, 1) . 'k' : number_format($weeklySales->weeklySales, 2) }}
                     </p>
                     <span class="text-gray-600 text-xs">Last 7 days</span>
                 </div>
 
                 <div class="bg-white border-t-4 border-red-500 p-4 shadow-lg rounded flex-[1] text-center" title="₱{{ number_format($monthSales->monthSales, 2) }}">
-                    <p class="text-red-400 text-xl font-bold" title="₱{{ number_format($monthSales->monthSales, 2) }}">
+                    <p class="text-red-400 text-2xl font-bold" title="₱{{ number_format($monthSales->monthSales, 2) }}">
                         ₱{{ $monthSales->monthSales >= 1000 ? number_format($monthSales->monthSales / 1000, 1) . 'k' : number_format($monthSales->monthSales, 2) }}
                     </p>
                     <span class="text-gray-600 text-xs">This Month's Sales</span>
@@ -83,7 +83,7 @@
                 </div>
 
                 <!-- sales vs loss -->
-                <div class="bg-white p-5 rounded shadow border w-[50%]">
+                <div class="bg-white p-5 rounded shadow border w-[50%] h-[26rem]">
                     <p class="text-left text-black font-semibold text-xs">Sales VS Loss - {{ $dateDisplay->format('F') }}</p>
                     <div class="mt-3">
                         @if((end($losses) ?? 0) == 0 && (end($sales) ?? 0) == 0)
@@ -92,7 +92,7 @@
                                 <p class="mt-2 text-xs font-semibold">No sales or losses recorded for this month yet.</p>
                             </div>
                         @else
-                            <div class="py-5 space-y-5">
+                            <div class="py-5 space-y-4">
                                 <div class="flex justify-center items-stretch gap-4">
                                     <div class="flex flex-col justify-center text-center px-4">
                                         <p class="text-2xl font-bold text-green-700 leading-none">{{$salesPercentage}}%</p>
@@ -120,9 +120,9 @@
                                     <canvas ></canvas>
                                 </div>
                                     
-                                <div class="mt-6 space-y-4">
-                                    <div class="flex items-start text-[11px] text-gray-700">
-                                        <span class="shrink-0 inline-block px-2 py-[1px] rounded-full text-[10px] font-medium w-16 text-center
+                                <div class="mt-5 space-y-4">
+                                    <div class="flex items-start text-xs text-gray-700">
+                                        <span class="shrink-0 inline-block px-2 py-[1px] rounded-full text-xs font-medium w-16 text-center
                                             @if($performanceLabel === 'Excellent') bg-green-500 text-white
                                             @elseif($performanceLabel === 'Good') bg-yellow-400 text-black
                                             @elseif($performanceLabel === 'Warning') bg-orange-500 text-white
@@ -130,24 +130,24 @@
                                             @else bg-gray-400 text-white @endif">
                                             {{ $performanceLabel }}
                                         </span>
-                                        <span class="ml-2 leading-tight text-[11px]">
+                                        <span class="ml-2 leading-tight text-xs">
                                             {{ $insight }}
                                         </span>
                                     </div>
-                                    <div class="flex items-start text-[11px] text-gray-700">
-                                        <span class="shrink-0 inline-block px-2 py-[1px] rounded-full text-[10px] font-medium w-16 text-center
+                                    <div class="flex items-start text-xs text-gray-700">
+                                        <span class="shrink-0 inline-block px-2 py-[1px] rounded-full text-xs font-medium w-16 text-center
                                             @if($salesState === 'Positive') bg-green-50 text-green-500 border-green-100 border
                                             @elseif($salesState === 'Negative') bg-red-50 text-red-500 border-red-100 border
                                             @elseif($salesState === 'Start') bg-blue-50 text-blue-500 border-blue-100 border
                                             @else bg-orange-50 text-orange-500 border-orange-100 border @endif">
                                             {{ $salesState }}
                                         </span>
-                                        <span class="ml-2 leading-tight text-[11px]">
+                                        <span class="ml-2 leading-tight text-xs">
                                             {{ $salesInsights }}
                                         </span>
                                     </div>
                                     <div class="flex items-start text-xs text-gray-700">
-                                        <span class="shrink-0 inline-block px-2 py-[1px] rounded-full text-[10px] font-medium w-16 text-center
+                                        <span class="shrink-0 inline-block px-2 py-[1px] rounded-full text-xs font-medium w-16 text-center
                                             @if($lossState === 'Positive') bg-green-50 text-green-500 border-green-100 border
                                             @elseif($lossState === 'Negative') bg-red-50 text-red-500 border-red-100 border
                                             @elseif($lossState === 'Warning') bg-rose-50 text-rose-500 border-rose-100 border
@@ -155,7 +155,7 @@
                                             @else bg-yellow-50 text-yellow-600 border-yellow-100 border @endif">
                                             {{ $lossState }}
                                         </span>
-                                        <span class="ml-2 leading-tight text-[11px]">
+                                        <span class="ml-2 leading-tight text-xs">
                                             {{ $lossInsights }}
                                         </span>
                                     </div>
