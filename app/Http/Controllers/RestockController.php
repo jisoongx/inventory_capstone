@@ -55,15 +55,14 @@ class RestockController extends Controller
                 'inventory.inven_code',
                 'products.name',
                 'inventory.stock',
-                'products.cost_price' // 👈 add this
+                'products.cost_price'
             )
             ->get();
-
 
         // All categories for filter
         $categories = DB::table('categories')->get();
 
-        // Products with suggested restock, excluding already finalized ones
+        // --- Main product + sales data
         $products = DB::table('products')
             ->join('inventory', 'products.prod_code', '=', 'inventory.prod_code')
             ->join('categories', 'products.category_id', '=', 'categories.category_id')
@@ -99,10 +98,10 @@ class RestockController extends Controller
             ->get()
             ->map(function ($product) {
 
-                // --- Average daily sales ---
+                // --- Average daily sales
                 $avgDailySales = $product->total_sold / 365;
 
-                // --- Dynamic lead time ---
+                // --- Dynamic lead time based on sales velocity
                 if ($avgDailySales >= 10) {
                     $leadTime = 1; // very fast-moving
                 } elseif ($avgDailySales >= 5) {
@@ -113,27 +112,27 @@ class RestockController extends Controller
                     $leadTime = 5; // slow-moving
                 }
 
-                // --- Reorder point ---
-                $reorderPoint = max(round($avgDailySales * $leadTime), 3);
+                // --- Suggested reorder formula (limit + sales lead)
+                $suggestedQuantity = max(
+                    ($product->stock_limit + ($avgDailySales * $leadTime)) - $product->stock,
+                    0
+                );
 
-                // --- EOQ suggested quantity ---
-                $eoq = round(sqrt((2 * $product->total_sold * $product->cost_price) / 1));
-                $suggestedQuantity = max($eoq - $product->stock, 0);
-
-                // Attach computed values
+                // --- Attach computed values
                 $product->lead_time_days = $leadTime;
-                $product->reorder_point = $reorderPoint;
-                $product->suggested_quantity = $suggestedQuantity;
-                $product->eoq = $eoq;
+                $product->avg_daily_sales = round($avgDailySales, 2);
+                $product->suggested_quantity = round($suggestedQuantity);
 
                 return $product;
             })
-            ->filter(fn($product) => $product->suggested_quantity > 0) 
+            // Only include products that are low or below limit
+            ->filter(fn($product) => $product->stock <= $product->stock_limit)
             ->sortByDesc('suggested_quantity')
             ->values();
 
         return view('dashboards.owner.restock_suggestion', compact('products', 'allProducts', 'currentYear', 'categories'));
     }
+
 
 
     public function finalize(Request $request)
