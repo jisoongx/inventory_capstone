@@ -124,14 +124,13 @@
         </div>
         
         <div class="hidden" wire:poll.keep-alive="topSelling()"></div>
-                <div class="p-2 space-y-3 overflow-y-auto scrollbar-custom transition-all duration-300 ease-in-out max-h-[26rem]">
+                <div class="p-2 mb-4 space-y-3 overflow-y-auto scrollbar-custom transition-all duration-300 ease-in-out h-[28rem]">
                     
                     <div class="p-4 space-y-3 transition-all duration-300 ease-in-out">
-
                         @forelse ($topProd as $index => $p)
                             @if ($loop->first)
                                 <div x-show="open || {{ $index }} < 5" x-transition
-                                    class="relative rounded-xl p-4 flex items-center gap-4 border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-amber-50 shadow-sm hover:shadow-md transition-shadow">
+                                    class="relative rounded-xl p-2 flex items-center gap-4 border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-amber-50 shadow-sm hover:shadow-md transition-shadow">
 
                                     <div class="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 font-bold text-[11px] px-3 py-1 rounded-full shadow-md">
                                         #1 BEST SELLER
@@ -151,7 +150,7 @@
                             @else
                             
                                 <div x-show="open || {{ $index }} <= 5" x-transition
-                                    class="rounded-xl p-4 flex items-center gap-4 border border-slate-200 bg-white hover:border-blue-300 hover:shadow-md transition-all">
+                                    class="rounded-xl p-2 flex items-center gap-4 border border-slate-200 bg-white hover:border-blue-300 hover:shadow-md transition-all">
 
                                     <div class="bg-slate-100 text-slate-700 font-bold text-sm px-3 py-1 rounded-lg">
                                         #{{ $loop->iteration }}

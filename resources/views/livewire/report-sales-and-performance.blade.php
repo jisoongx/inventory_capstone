@@ -132,57 +132,57 @@
 
 
             <div class="overflow-y-auto scrollbar-custom h-[35rem]">
-                <table x-data="{ showTopProductUnit: false, showTopProductSales: false }" class="min-w-full divide-y divide-gray-200 text-xs">
-                    <thead class="bg-gray-50 h-[4rem]">
-                        <tr class="text-gray-700 uppercase text-xs tracking-wider border-b">
-                            <th class="px-2 py-3 text-left font-semibold text-xs sticky top-0 bg-gray-50 w-[20%]">Category</th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50  w-[12%]">                                    
-                                <button @click="showTopProductUnit = !showTopProductUnit" type="button" class="text-xs">
+                <table x-data="{ showTopProductUnit: false, showTopProductSales: false }" class="w-full text-xs text-left shadow-sm">
+                    <thead class="uppercase text-xs font-semibold bg-gray-100 text-gray-600">
+                        <tr>
+                            <th class="cursor-pointer px-4 py-4 text-left sticky top-0 bg-gray-50 w-[20%]">Category</th>
+                            <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Units Sold
+                                <!-- <button @click="showTopProductUnit = !showTopProductUnit" type="button" class="text-xs">
                                     <div class="flex items-center justify-end space-x-1">
                                         <span>UNITS SOLD</span>
                                         <span class="material-symbols-rounded-small text-gray-400">
                                             keyboard_double_arrow_right
                                         </span>
                                     </div>
-                                </button>
+                                </button> -->
                             </th>
-                            <th class="px-2 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductUnit" x-cloak>
+                            <!-- <th class="px-4 py-4 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductUnit" x-cloak>
                                 Top Product by Unit
-                            </th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[12%]">                                    
-                                <button @click="showTopProductSales = !showTopProductSales" type="button" class="text-xs">
+                            </th> -->
+                            <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Total Sales (₱)
+                                <!-- <button @click="showTopProductSales = !showTopProductSales" type="button" class="text-xs">
                                     <div class="flex items-center justify-end space-x-1">
                                         <span>SALES (₱)</span>
                                         <span class="material-symbols-rounded-small text-gray-400">
                                             keyboard_double_arrow_right
                                         </span>
                                     </div>
-                                </button>
+                                </button> -->
                             </th>
-                            <th class="px-2 py-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductSales" x-cloak>
+                            <!-- <th class="px-4 py-4 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductSales" x-cloak>
                                 Top Product by Sales
-                            </th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[10%]">COGS (₱)</th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50 w-[13%]">GROSS MARGIN</th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50"></th>
+                            </th> -->
+                            <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">COGS</th>
+                            <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Gross Margin</th>
+                            <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Insight</th>
                         </tr>
                     </thead>
 
                     <tbody class="divide-y divide-gray-200 text-xs">
                         @forelse($sbc as $input)
                             <tr class="hover:bg-gray-50 transition">
-                                <td class="px-2 py-4 font-medium text-gray-900">{{ $input->category }}</td>
-                                <td class="px-2 py-4 text-left font-medium text-gray-900">{{ $input->unit_sold }}</td>
+                                <td class="py-3 px-4 font-medium text-gray-900">{{ $input->category }}</td>
+                                <td class="py-3 px-4 text-left font-medium text-gray-900">{{ $input->unit_sold }}</td>
                                 <td x-show="showTopProductUnit" x-cloak class="px-3 py-4 text-left font-medium text-gray-900 bg-gray-50">
                                     {{ $input->top_product_unit }}
                                 </td>
-                                <td class="px-2 py-4 text-left font-medium text-gray-900">₱{{ number_format($input->total_sales, 2 )}}</td>
+                                <td class="py-3 px-4 text-left font-medium text-gray-900">₱{{ number_format($input->total_sales, 2 )}}</td>
                                 <td x-show="showTopProductSales" x-cloak class="px-3 py-4 text-left font-medium text-gray-900 bg-gray-50">
                                     {{ $input->top_product_sales }}
                                 </td>
-                                <td class="px-2 py-4 text-left font-medium text-gray-900">₱{{ number_format($input->cogs, 2 )}}</td>
-                                <td class="px-2 py-4 text-left font-medium text-gray-900">{{ number_format($input->gross_margin, 0) }}%</td>
-                                <td class="px-2 py-4 text-center font-medium text-white text-[10px]
+                                <td class="py-3 px-4 text-left font-medium text-gray-900">₱{{ number_format($input->cogs, 2 )}}</td>
+                                <td class="py-3 px-4 text-left font-medium text-gray-900">{{ number_format($input->gross_margin, 0) }}%</td>
+                                <td class="py-3 px-4 text-center font-medium text-white text-[10px]
                                     @if($input->number == 1) bg-green-600
                                     @elseif($input->number == 2) bg-yellow-600
                                     @elseif($input->number == 3) bg-blue-600
@@ -206,105 +206,70 @@
 
         <!-- PRODUCT PERFORMANCE -->
         <div x-show="tab === 'product-performance'">
-            <div class="overflow-y-auto scrollbar-custom h-[39rem]">
-                <select wire:model.live="selectedCategory" class="border border-gray-300 rounded px-3 py-2 text-xs mb-4">
-                    <option value="all">All</option>
+            <div class="h-[39rem]">
+                <select wire:model.live="selectedCategory" class="border border-gray-300 px-3 py-2 text-xs mb-4 rounded">
+                    <option value="all" class="text-gray-500">Show All Categories</option>
                     @foreach ($category as $c)
                         <option value="{{ $c->cat_id }}">{{ $c->cat_name }}</option>
                     @endforeach
                 </select>
 
-                <table id="analysis-table" class="w-full text-xs text-left text-gray-700 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                    <thead class="uppercase text-xs font-semibold bg-gray-100 text-gray-600">
-                        <tr>
-                            <th class="cursor-pointer px-4 py-4 text-left" wire:click="sortBy('product_name')">Product ↓☰↑</th>
-                            <th class="cursor-pointer px-4 py-4">Unit Sold</th>
-                            <th class="cursor-pointer px-4 py-4">Total Sales</th>
-                            <th class="cursor-pointer px-4 py-4">COGS</th>
-                            <th class="cursor-pointer px-4 py-4">Profit</th>
-                            <th class="cursor-pointer px-4 py-4">% Profit Margin</th>
-                            <th class="cursor-pointer px-4 py-4">% Share</th>
-                        </tr>
-                    </thead>
-
-                    <tbody class="divide-y divide-gray-100">
-                        @forelse ($perf as $row)
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="py-3 px-4">{{ $row->product_name }}</td>
-                                <td class="py-3 px-4">{{ $row->unit_sold }} sold, only {{ $row->remaining_stocks }} remain</td>
-                                <td class="py-3 px-4">₱{{ number_format($row->total_sales, 2) }}</td>
-                                <td class="py-3 px-4">₱{{ number_format($row->cogs, 2) }}</td>
-                                <td class="py-3 px-4">₱{{ number_format($row->profit, 2) }}</td>
-                                <td class="py-3 px-4">{{ number_format($row->profit_margin_percent, 0) }}%</td>
-                                <td class="py-3 px-4">{{ number_format($row->contribution_percent, 1) }}%</td>
-                            </tr>
-                        @empty
+                <div class="hidden" wire:poll.keep-alive="prodPerformance()"></div>
+                <div class="overflow-y-auto scrollbar-custom h-[35rem]">
+                    <table id="analysis-table" class="w-full text-xs text-left shadow-sm">
+                        <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                             <tr>
-                                <td colspan="8" class="text-center">
-                                    <div class="flex flex-col justify-center items-center space-y-1 p-8">
-                                        <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
-                                        <span class="text-gray-500">Nothing to show.</span>
-                                    </div>
-                                </td>
+                                <th class="cursor-pointer px-4 py-4 text-left sticky top-0 bg-gray-50" wire:click="sortBy('product_name')">Product ↓☰↑</th>
+                                <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Unit Sold</th>
+                                <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Total Sales</th>
+                                <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">COGS</th>
+                                <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Profit</th>
+                                <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">% Profit Margin</th>
+                                <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">% Share</th>
+                                <th class="cursor-pointer px-4 py-4 sticky top-0 bg-gray-50">Insight</th>
                             </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse ($perf as $row)
+                                <tr class="hover:bg-gray-50 transition">
+                                    <td class="py-3 px-4">{{ $row->product_name }}</td>
+                                    <td class="py-3 px-4">
+                                        <span class="font-medium">{{ $row->unit_sold }} sold, </span>
+                                        {{ $row->remaining_stocks < 10 ? 'only' : ($row->remaining_stocks < 30 ? 'around' : 'about') }} 
+                                        {{ $row->remaining_stocks }} remain
+                                    </td>
+                                    <td class="py-3 px-4">₱{{ number_format($row->total_sales, 2) }}</td>
+                                    <td class="py-3 px-4">₱{{ number_format($row->cogs, 2) }}</td>
+                                    <td class="py-3 px-4">₱{{ number_format($row->profit, 2) }}</td>
+                                    <td class="py-3 px-4">{{ number_format($row->profit_margin_percent, 0) }}%</td>
+                                    <td class="py-3 px-4">{{ number_format($row->contribution_percent, 1) }}%</td>
+                                    <td class="py-3 px-4 text-center font-medium shadow-sm text-[10px]
+                                        @if($row->insight === 'High demand and profitable') bg-green-600 text-white
+                                        @elseif($row->insight === 'Moderate profit, steady demand') bg-blue-600 text-white
+                                        @elseif($row->insight === 'Low margin — consider price review') bg-yellow-600 text-white
+                                        @elseif($row->insight === 'Unprofitable — needs attention') bg-red-600 text-white
+                                        @elseif($row->insight === 'No sales yet') bg-gray-600 text-white
+                                        @else bg-purple-600 text-white
+                                        @endif
+                                    ">
+                                        {{ $row->insight }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center">
+                                        <div class="flex flex-col justify-center items-center space-y-1 p-8">
+                                            <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                            <span class="text-gray-500">Nothing to show.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-
-        <!-- PEAK HOURS -->
-        <!-- <div x-show="tab === 'peak-hours'">
-        
-            <div class="relative flex items-center text-gray-400 mb-4">
-                <input type="date" wire:model.live="dateChoice"
-                    class="text-xs border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"/>
-            </div>
-            <div class="overflow-y-auto scrollbar-custom h-[35rem]">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="sticky top-0 bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 sticky top-0 text-left text-xs font-medium uppercase tracking-wider">
-                                Day
-                            </th>
-                            <th scope="col" class="px-6 py-3 sticky top-0 text-left text-xs font-medium uppercase tracking-wider">
-                                Time Slot
-                            </th>
-
-                            <th scope="col" class="px-6 py-3 sticky top-0 text-right text-xs font-medium uppercase tracking-wider">
-                                Transactions
-                            </th>
-                            <th scope="col" class="px-6 py-3 sticky top-0 text-right text-xs font-medium uppercase tracking-wider">
-                                Sales (₱)
-                            </th>
-                            <th scope="col" class="px-6 py-3 sticky top-0 text-right text-xs font-medium uppercase tracking-wider">
-                                Avg. Sales Value (₱)
-                            </th>
-                        </tr>
-                    </thead>
-                    
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($peak as $pk)
-                            <tr class="">
-                                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900">{{ $pk->dayName }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900">{{ $pk->time_slot }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-xs text-right">{{ $pk->transactions }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-xs font-medium text-green-600 text-right">₱{{ number_format($pk->sales, 2) }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-xs text-right">₱{{ number_format($pk->avg_value, 2) }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center">
-                                    <div class="flex flex-col justify-center items-center space-y-1 p-24">
-                                        <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
-                                        <span class="text-gray-400 text-xs">Nothing to show.</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div> -->
     </div>
 </div>

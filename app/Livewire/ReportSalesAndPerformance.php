@@ -294,21 +294,17 @@ class ReportSalesAndPerformance extends Component
         $month = now()->month;
 
         $perf = collect(DB::select("
-            SELECT 
-                p.prod_code,
-                p.name AS product_name,
-                c.category AS category,
-                c.category_id,
+            SELECT p.prod_code, p.name AS product_name, c.category AS category,c.category_id,
+
                 COALESCE(SUM(ri.item_quantity), 0) AS unit_sold,
                 COALESCE(SUM(p.selling_price * ri.item_quantity), 0) AS total_sales,
                 COALESCE(SUM(p.cost_price * ri.item_quantity), 0) AS cogs,
                 (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0)) AS profit,
-                (
-                    (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
-                    / NULLIF(COALESCE(SUM(p.selling_price * ri.item_quantity), 0), 0)
-                ) * 100 AS profit_margin_percent,
-                (
-                    COALESCE(SUM(p.selling_price * ri.item_quantity), 0) / NULLIF((
+
+                ((COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
+                    / NULLIF(COALESCE(SUM(p.selling_price * ri.item_quantity), 0), 0)) * 100 AS profit_margin_percent,
+
+                (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) / NULLIF((
                         SELECT 
                             SUM(p2.selling_price * ri2.item_quantity)
                         FROM receipt r2
@@ -318,12 +314,49 @@ class ReportSalesAndPerformance extends Component
                             r2.owner_id = ?
                             AND MONTH(r2.receipt_date) = ?
                             AND YEAR(r2.receipt_date) = ?
-                    ), 0)
-                ) * 100 AS contribution_percent,
-                COALESCE(sum(i.stock), 0) as remaining_stocks
+                    ), 0)) * 100 AS contribution_percent,
+
+                COALESCE(SUM(i.stock), 0) AS remaining_stocks,
+                COALESCE(DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1, 0) AS days_active,
+
+                CASE 
+                    WHEN COALESCE(DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1, 0) > 0 
+                    THEN COALESCE(SUM(ri.item_quantity), 0) / (DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1)
+                    ELSE 0 
+                END AS daily_sales_rate,
+
+                CASE 
+                    WHEN COALESCE(SUM(p.selling_price * ri.item_quantity), 0) = 0 THEN 'No sales yet'
+
+                    WHEN (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0)) <= 0 
+                        THEN 'Unprofitable — needs attention'
+
+                    WHEN (
+                        (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
+                        / NULLIF(COALESCE(SUM(p.selling_price * ri.item_quantity), 0), 0)
+                    ) * 100 >= 20
+                        AND (COALESCE(SUM(ri.item_quantity), 0) / NULLIF(DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1, 1)) >= 3
+                        THEN 'High demand and profitable'
+
+                    WHEN (
+                        (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
+                        / NULLIF(COALESCE(SUM(p.selling_price * ri.item_quantity), 0), 0)
+                    ) * 100 >= 15 
+                        THEN 'Moderate profit, steady demand'
+
+                    WHEN (
+                        (COALESCE(SUM(p.selling_price * ri.item_quantity), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
+                        / NULLIF(COALESCE(SUM(p.selling_price * ri.item_quantity), 0), 0)
+                    ) * 100 < 10 
+                        THEN 'Low margin — consider price review'
+
+                    ELSE 'Stable performer'
+                END AS insight
+
+
             FROM products AS p
             LEFT JOIN inventory i 
-                on p.prod_code = i.prod_code
+                ON p.prod_code = i.prod_code
             LEFT JOIN categories AS c 
                 ON p.category_id = c.category_id
             LEFT JOIN receipt_item AS ri 
@@ -333,12 +366,11 @@ class ReportSalesAndPerformance extends Component
                 AND r.owner_id = ?
                 AND MONTH(r.receipt_date) = ?
                 AND YEAR(r.receipt_date) = ?
+
             WHERE p.owner_id = ?
-            GROUP BY 
-                p.prod_code, 
-                p.name, 
-                c.category, 
-                p.owner_id, c.category_id
+            GROUP BY p.prod_code, p.name, c.category, p.owner_id, c.category_id
+            ORDER BY profit DESC;
+
         ", [$owner_id, $month, $latestYear, $owner_id, $month, $latestYear, $owner_id]));
 
         if (!empty($this->selectedCategory) && $this->selectedCategory !== 'all') {
