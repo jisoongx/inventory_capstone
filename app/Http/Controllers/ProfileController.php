@@ -44,8 +44,15 @@ class ProfileController extends Controller
     public function showOwnerProfile()
     {
         $owner = Auth::guard('owner')->user();
-        return view('dashboards.owner.owner_profile', compact('owner'));
+
+        // Get active subscription (with its related plan info)
+        $subscription = $owner->activeSubscription()
+            ->with('planDetails')
+            ->first();
+
+        return view('dashboards.owner.owner_profile', compact('owner', 'subscription'));
     }
+
 
     public function updateOwnerProfile(Request $request)
     {

@@ -125,12 +125,16 @@
                             <span class="text-base font-medium text-slate-500">Free for 1 month</span>
                         </p>
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Access to platform updates</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock suggestion list</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Daily sales tracking</li>
-                            <li class="flex items-start gap-3 text-slate-400"><span class="material-symbols-rounded mt-0.5">cancel</span><span class="line-through">Advanced sales analytics</span></li>
-                            <li class="flex items-start gap-3 text-slate-400"><span class="material-symbols-rounded mt-0.5">cancel</span><span class="line-through"> Comparative sales analysis</span></li>
-                            <li class="flex items-start gap-3 text-slate-400"><span class="material-symbols-rounded mt-0.5">cancel</span><span class="line-through"> staff</span></li>
+                            <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Daily, weekly, and monthly sales tracking</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Comparative sales analysis</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Monthly net profit overview</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales by category and loss analysis</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Up to 50 inventory products with 10 categories & units</li>
+
+                            </ul>
+
+
                         </ul>
                     </div>
                     <div class="mt-8">
@@ -160,14 +164,16 @@
                             <span class="text-base font-medium text-slate-500">/6 months</span>
                         </p>
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Access to platform updates</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock suggestion list</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Daily sales tracking</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Basic Plan</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 products, 30 categories & units)</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock alert & expiration notice</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Top selling products dashboard</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock suggestion report</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs</li>
 
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Comparative sales analysis</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Hold ony 1 staff</li>
-                            <li class="flex items-start gap-3 text-slate-400"><span class="material-symbols-rounded mt-0.5">cancel</span><span class="line-through">Advanced sales analytics</span></li>
                         </ul>
+
+
                     </div>
                     <div class="mt-8">
                         <button onclick="openModal(1, 'Standard', 250)" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors text-sm shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30">
@@ -188,13 +194,17 @@
                             <span class="text-base font-medium text-slate-500">/year</span>
                         </p>
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Access to platform updates</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock suggestion list</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Daily sales tracking</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Advanced sales analytics</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Comparative sales analysis</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Hold multiple staffs</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Standard Plan</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product performance analysis</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales & performance reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Customer & behavior insights</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Seasonal trend analysis</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs for both owner & staff</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Unlimited inventory, categories, and units</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Add and manage multiple staff</li>
                         </ul>
+
                     </div>
                     <div class="mt-8">
                         <button onclick="openModal(2, 'Premium', 500)" class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors text-sm shadow-lg shadow-red-500/20 hover:shadow-xl hover:shadow-red-500/30">
@@ -203,6 +213,9 @@
                     </div>
                 </div>
             </div>
+            <p class="mt-10 text-center text-sm text-slate-300">
+                All plans include access to the core POS system, regular updates, and customer support.
+            </p>
         </main>
     </div>
 

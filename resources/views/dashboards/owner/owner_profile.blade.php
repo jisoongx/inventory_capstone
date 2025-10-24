@@ -44,24 +44,62 @@
             <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 pb-6 border-b border-slate-200">
                 <img src="{{ asset('assets/user.png') }}" alt="Profile Picture" class="w-24 h-24 rounded-full object-cover ring-2 ring-offset-2 ring-indigo-500">
                 <div class="text-center sm:text-left flex-grow">
-                    <h2 class="text-xl font-bold text-slate-900">{{ $owner->firstname }} {{ $owner->middlename ?? '' }} {{ $owner->lastname }}</h2>
-                    <p class="text-sm text-slate-500 mt-1">{{ $owner->email }}</p>
+                    <h2 class="text-xl mb-2 font-bold text-slate-900">{{ $owner->firstname }} {{ $owner->middlename ?? '' }} {{ $owner->lastname }}</h2>
+                    @if ($subscription)
+                    @php
+                    $plan = strtolower($subscription->planDetails->plan_title);
+                    $icon = 'magic_button';
+                    $gradient = 'from-yellow-400 to-yellow-500';
+                    $textColor = 'text-yellow-50';
 
-                    <div class="mt-2 space-y-1">
-                        <a href="{{ route('owner.show.staff') }}" class="block text-indigo-600 hover:text-indigo-800 underline text-sm font-medium">
+                    if ($plan === 'standard') {
+                    $icon = 'star';
+                    $gradient = 'from-orange-400 to-orange-500';
+                    $textColor = 'text-orange-50';
+                    } elseif ($plan === 'premium') {
+                    $icon = 'diamond';
+                    $gradient = 'from-rose-400 to-rose-500';
+                    $textColor = 'text-rose-50';
+                    }
+                    @endphp
+
+                    <div class="mt-2 sm:mt-0 flex items-center gap-3">
+                        <p class="text-sm text-slate-500">{{ $owner->email }}</p>
+
+                        <div
+                            class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold {{ $textColor }} bg-gradient-to-r {{ $gradient }} shadow-sm shadow-slate-200/40">
+                            <span class="material-symbols-rounded text-sm">{{ $icon }}</span>
+                            <span class="uppercase tracking-wide">{{ $subscription->planDetails->plan_title }}</span>
+                        </div>
+                    </div>
+
+                    @endif
+
+                    <div class="mt-2 mb-3 flex items-center gap-6">
+                        <a href="{{ route('owner.show.staff') }}"
+                            class="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 underline text-sm font-medium">
+                            <span class="material-symbols-rounded text-base">group</span>
                             View Staff List
                         </a>
-                        <a href="{{ route('billing.history2') }}" class="block text-indigo-600 hover:text-indigo-800 underline text-sm font-medium">
+
+                        <a href="{{ route('billing.history2') }}"
+                            class="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 underline text-sm font-medium">
+                            <span class="material-symbols-rounded text-base">receipt_long</span>
                             Billing History
                         </a>
                     </div>
+
+
                 </div>
+
 
                 <div class="flex items-center gap-2 pt-2">
                     <button type="button" id="editProfileButton" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Edit Profile</button>
                     <button type="button" id="togglePasswordSection" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Change Password</button>
                     <button type="button" id="toggleStaffCreationSection" class="px-4 py-2 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors duration-200">Create Staff</button>
+
                 </div>
+
             </div>
 
             {{-- Profile Details Form --}}

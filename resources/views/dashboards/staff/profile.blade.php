@@ -45,7 +45,7 @@
                 <img src="{{ asset('assets/user.png') }}" alt="Profile Picture" class="w-24 h-24 rounded-full object-cover ring-2 ring-offset-2 ring-indigo-500">
                 <div class="text-center sm:text-left flex-grow">
                     <h2 class="text-xl font-bold text-slate-900">{{ $staff->firstname }} {{ $staff->middlename ?? '' }} {{ $staff->lastname }}</h2>
-                    <p class="text-sm text-slate-500 mt-1">{{ $staff->email }}</p>
+                    <p class="text-sm text-slate-500 mt-1">Store staff</p>
                 </div>
                 <div class="flex items-center gap-2 pt-2">
                     <button type="button" id="editProfileButton" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Edit Profile</button>
