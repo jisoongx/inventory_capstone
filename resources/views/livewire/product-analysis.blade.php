@@ -54,7 +54,7 @@
                         <td class="py-3 px-4">{{ $analy->unit_sold }}</td>
                         <td class="py-3 px-4">₱{{ number_format($analy->total_sales, 2) }}</td>
                         <td class="py-3 px-4">₱{{ number_format($analy->cogs, 2) }}</td>
-                        <td class="py-3 px-4">₱{{ number_format($analy->profit) }}</td>
+                        <td class="py-3 px-4">₱{{ number_format($analy->profit, 2) }}</td>
                         <td class="py-3 px-4">{{ number_format($analy->profit_margin_percent, 0) }}%</td>
                         <td class="py-3 px-4">{{ number_format($analy->contribution_percent, 0) }}%</td>
                     </tr>

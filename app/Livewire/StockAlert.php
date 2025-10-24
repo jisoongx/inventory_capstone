@@ -58,8 +58,12 @@ class StockAlert extends Component
             SELECT 
                 p.name AS prod_name, i.stock as expired_stock, p.prod_image,
                 i.expiration_date,
-                DATEDIFF(i.expiration_date, CURDATE()) AS days_until_expiry,
+                CASE 
+                    WHEN i.expiration_date IS NULL THEN NULL
+                    ELSE DATEDIFF(i.expiration_date, CURDATE())
+                END AS days_until_expiry,
                 CASE
+                    WHEN i.expiration_date IS NULL THEN 'No Expiry'
                     WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 0 THEN 'Expired'
                     WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 7 THEN 'Critical'
                     WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 30 THEN 'Warning'
@@ -69,7 +73,8 @@ class StockAlert extends Component
             FROM inventory i
             JOIN products p ON i.prod_code = p.prod_code
             WHERE p.owner_id = ?
-                AND DATEDIFF(i.expiration_date, CURDATE()) <= 60
+                AND i.expiration_date IS NOT NULL 
+                AND DATEDIFF(i.expiration_date, CURDATE()) BETWEEN 0 AND 60
                 and i.stock > 0
             ORDER BY days_until_expiry ASC;
         ", [$owner_id]);

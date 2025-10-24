@@ -15,6 +15,10 @@ class ReportSalesAndPerformance extends Component
     public $g;
 
     public $category;
+    public $selectedCategory;
+    public $sortField = 'product_name';
+    public $order = 'asc';
+
 
     public $monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     public $years;
@@ -32,7 +36,16 @@ class ReportSalesAndPerformance extends Component
 
 
     public function mount() {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+
         $this->currentMonth = now()->month;
+
+        $this->category = collect(DB::select("
+            select category_id as cat_id, 
+                category as cat_name
+            from categories
+            where owner_id = ? 
+        ", [$owner_id]));
     }
 
 
@@ -254,17 +267,38 @@ class ReportSalesAndPerformance extends Component
     }
 
 
+
+
+
+    public function updatedSelectedCategory() {
+        $this->prodPerformance();
+    }
+
+    public function sortBy($field)
+    {
+        if ($this->sortField === $field) {
+            $this->order = $this->order === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->order = 'asc';
+        }
+
+        $this->sortField = $field;
+        $this->prodPerformance();
+    }
+
+
     public function prodPerformance() {
 
         $owner_id = Auth::guard('owner')->user()->owner_id;
         $latestYear = now()->year;
         $month = now()->month;
 
-        $this->perf = collect(DB::select("
+        $perf = collect(DB::select("
             SELECT 
                 p.prod_code,
                 p.name AS product_name,
                 c.category AS category,
+                c.category_id,
                 COALESCE(SUM(ri.item_quantity), 0) AS unit_sold,
                 COALESCE(SUM(p.selling_price * ri.item_quantity), 0) AS total_sales,
                 COALESCE(SUM(p.cost_price * ri.item_quantity), 0) AS cogs,
@@ -285,8 +319,11 @@ class ReportSalesAndPerformance extends Component
                             AND MONTH(r2.receipt_date) = ?
                             AND YEAR(r2.receipt_date) = ?
                     ), 0)
-                ) * 100 AS contribution_percent
+                ) * 100 AS contribution_percent,
+                COALESCE(sum(i.stock), 0) as remaining_stocks
             FROM products AS p
+            LEFT JOIN inventory i 
+                on p.prod_code = i.prod_code
             LEFT JOIN categories AS c 
                 ON p.category_id = c.category_id
             LEFT JOIN receipt_item AS ri 
@@ -301,10 +338,20 @@ class ReportSalesAndPerformance extends Component
                 p.prod_code, 
                 p.name, 
                 c.category, 
-                p.owner_id
-            order by p.name asc;
-
+                p.owner_id, c.category_id
         ", [$owner_id, $month, $latestYear, $owner_id, $month, $latestYear, $owner_id]));
+
+        if (!empty($this->selectedCategory) && $this->selectedCategory !== 'all') {
+            $perf = $perf->where('category_id', (int) $this->selectedCategory);
+        }
+
+        $perf = $perf->sortBy(function ($item) {
+            return $item->{$this->sortField};
+        }, SORT_REGULAR, $this->order === 'desc')->values();
+
+
+        $this->perf = $perf->values();
+
     }
 
     public function render()

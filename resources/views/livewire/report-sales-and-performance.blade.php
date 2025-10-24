@@ -28,14 +28,14 @@
             Product Performance
         </button>
 
-        <button 
+        <!-- <button 
             @click="tab = 'peak-hours'"
             :class="tab === 'peak-hours' 
                 ? 'bg-blue-50 text-black border-blue-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
             Peak Hours Operational
-        </button>
+        </button> -->
     </div>
 
     <div class="border bg-white p-4 rounded-b-lg mb-3 h-[41rem]"
@@ -207,17 +207,23 @@
         <!-- PRODUCT PERFORMANCE -->
         <div x-show="tab === 'product-performance'">
             <div class="overflow-y-auto scrollbar-custom h-[39rem]">
+                <select wire:model.live="selectedCategory" class="border border-gray-300 rounded px-3 py-2 text-xs mb-4">
+                    <option value="all">All</option>
+                    @foreach ($category as $c)
+                        <option value="{{ $c->cat_id }}">{{ $c->cat_name }}</option>
+                    @endforeach
+                </select>
+
                 <table id="analysis-table" class="w-full text-xs text-left text-gray-700 border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                     <thead class="uppercase text-xs font-semibold bg-gray-100 text-gray-600">
                         <tr>
                             <th class="cursor-pointer px-4 py-4 text-left" wire:click="sortBy('product_name')">Product ↓☰↑</th>
-                            <th class="px-4 py-4">Category</th>
-                            <th class="cursor-pointer px-4 py-4" wire:click="sortBy('unit_sold')">Unit Sold ↓☰↑</th>
-                            <th class="cursor-pointer px-4 py-4" wire:click="sortBy('total_sales')">Total Sales ↓☰↑</th>
-                            <th class="cursor-pointer px-4 py-4" wire:click="sortBy('cogs')">COGS ↓☰↑</th>
-                            <th class="cursor-pointer px-4 py-4" wire:click="sortBy('profit')">Profit ↓☰↑</th>
-                            <th class="cursor-pointer px-4 py-4" wire:click="sortBy('profit_margin_percent')">% Profit Margin ↓☰↑</th>
-                            <th class="cursor-pointer px-4 py-4" wire:click="sortBy('contribution_percent')">% Share ↓☰↑</th>
+                            <th class="cursor-pointer px-4 py-4">Unit Sold</th>
+                            <th class="cursor-pointer px-4 py-4">Total Sales</th>
+                            <th class="cursor-pointer px-4 py-4">COGS</th>
+                            <th class="cursor-pointer px-4 py-4">Profit</th>
+                            <th class="cursor-pointer px-4 py-4">% Profit Margin</th>
+                            <th class="cursor-pointer px-4 py-4">% Share</th>
                         </tr>
                     </thead>
 
@@ -225,11 +231,10 @@
                         @forelse ($perf as $row)
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="py-3 px-4">{{ $row->product_name }}</td>
-                                <td class="py-3 px-4">{{ $row->category }}</td>
-                                <td class="py-3 px-4">{{ $row->unit_sold }}</td>
+                                <td class="py-3 px-4">{{ $row->unit_sold }} sold, only {{ $row->remaining_stocks }} remain</td>
                                 <td class="py-3 px-4">₱{{ number_format($row->total_sales, 2) }}</td>
                                 <td class="py-3 px-4">₱{{ number_format($row->cogs, 2) }}</td>
-                                <td class="py-3 px-4">₱{{ number_format($row->profit) }}</td>
+                                <td class="py-3 px-4">₱{{ number_format($row->profit, 2) }}</td>
                                 <td class="py-3 px-4">{{ number_format($row->profit_margin_percent, 0) }}%</td>
                                 <td class="py-3 px-4">{{ number_format($row->contribution_percent, 1) }}%</td>
                             </tr>
@@ -249,7 +254,7 @@
         </div>
 
         <!-- PEAK HOURS -->
-        <div x-show="tab === 'peak-hours'">
+        <!-- <div x-show="tab === 'peak-hours'">
         
             <div class="relative flex items-center text-gray-400 mb-4">
                 <input type="date" wire:model.live="dateChoice"
@@ -300,6 +305,6 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div> -->
     </div>
 </div>
