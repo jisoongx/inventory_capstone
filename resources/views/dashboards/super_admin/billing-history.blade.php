@@ -1,7 +1,7 @@
 @php
 if (!function_exists('getBadgeClasses')) {
 function getBadgeClasses($type, $value) {
-$base = 'inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md text-white';
+$base = 'inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-md text-white w-28';
 switch (ucfirst(strtolower(trim($value)))) {
 case 'Basic':
 return $base . ' bg-gradient-to-r from-yellow-500 to-yellow-600';
@@ -125,9 +125,11 @@ return $base . ' bg-gradient-to-r from-gray-400 to-gray-500';
                             </select>
                             <select name="plan" class="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-all shadow-sm">
                                 <option value="">All Plans</option>
+                                <option value="basic" {{ request('plan') == 'basic' ? 'selected' : '' }}>Basic</option>
                                 <option value="standard" {{ request('plan') == 'standard' ? 'selected' : '' }}>Standard</option>
                                 <option value="premium" {{ request('plan') == 'premium' ? 'selected' : '' }}>Premium</option>
                             </select>
+
                         </form>
                     </div>
                 </div>
@@ -137,13 +139,24 @@ return $base . ' bg-gradient-to-r from-gray-400 to-gray-500';
             <div id="billing-table-content">
                 @php
                 $filtersApplied = request('search') || request('date') || request('status') || request('plan');
+
+                // Count total table rows (all payments for all subscriptions for all matched owners)
+                $totalDisplayedRecords = 0;
+                foreach($clients as $owner){
+                foreach ($owner->subscriptions->when(request('status'), function ($q) {
+                return $q->where('status', request('status'));
+                }) as $subscription){
+                $totalDisplayedRecords += $subscription->payments->count();
+                }
+                }
                 @endphp
 
                 @if($filtersApplied)
                 <div id="pagination-summary" class="p-4 rounded-lg bg-indigo-50 mb-5 border border-indigo-200 text-sm text-indigo-800">
-                    Showing {{ $clients->total() }} record(s) matching your filters
+                    Showing {{ $totalDisplayedRecords }} record(s) matching your filters
                 </div>
                 @endif
+
 
 
                 @if($clients->isEmpty())

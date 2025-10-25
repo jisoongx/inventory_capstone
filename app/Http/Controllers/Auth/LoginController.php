@@ -32,6 +32,18 @@ class LoginController extends Controller
         if (Auth::guard('owner')->attempt($request->only('email', 'password'))) {
             $request->session()->regenerate();
             $owner = Auth::guard('owner')->user();
+
+            if (is_null($owner->email_verified_at)) {
+                Auth::guard('owner')->logout();
+
+                // Store email in session for resend
+                session(['unverified_email' => $request->email]);
+                
+                return back()->withErrors([
+                    'email' => 'Please verify your email to continue.'
+                ])->withInput($request->only('email'));
+            }
+
             ActivityLogController::log('Login', 'owner', $owner, $request->ip());
 
             $latestSub = $owner->latestSubscription;

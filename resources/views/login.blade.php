@@ -13,7 +13,7 @@
 
     <!-- Login Card -->
     <div class="w-full max-w-md bg-white backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8">
-        
+
         <!-- Logo Section -->
         <div class="text-center mb-8">
             <img src="{{ asset('assets/logo.png') }}" class="w-14 mx-auto drop-shadow-md mb-4" alt="ShopLytix Logo">
@@ -34,10 +34,19 @@
                     </span>
                 </div>
                 <p class="text-gray-700 mb-4">{{ $msg }}</p>
+                @if(str_contains($msg, 'verify your email'))
+                <button onclick="window.location.href='{{ route('owner.resend.verification') }}'"
+                    class="px-6 py-2 rounded-lg text-white font-medium transition bg-red-600 hover:bg-red-700">
+                    Resend Verification Link
+                </button>
+                @else
                 <button onclick="document.getElementById('messageModal').remove()"
                     class="px-6 py-2 rounded-lg text-white font-medium transition {{ $isSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700' }}">
                     OK
                 </button>
+                @endif
+
+
             </div>
         </div>
         @endif
@@ -48,7 +57,7 @@
 
             <!-- Email Input -->
             <div>
-              
+
                 <div class="relative">
                     <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl">person</span>
                     <input type="email" name="email" placeholder="Enter your email" required
@@ -58,7 +67,7 @@
 
             <!-- Password Input -->
             <div>
-              
+
                 <div class="relative">
                     <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl">lock</span>
                     <input type="password" id="password" name="password" placeholder="Enter your password" required
@@ -71,8 +80,8 @@
 
             <!-- Forgot Password -->
             <div class="text-right">
-                <a href="{{route('password.request')}}" 
-                   class="text-sm text-red-600 hover:text-red-700 font-medium transition-colors">
+                <a href="{{route('password.request')}}"
+                    class="text-sm text-red-600 hover:text-red-700 font-medium transition-colors">
                     Forgot password?
                 </a>
             </div>
@@ -87,7 +96,7 @@
         <!-- Sign Up Link -->
         <div class="mt-6 pt-6 border-t border-gray-200 text-center">
             <p class="text-sm text-gray-600">
-                Don't have an account? 
+                Don't have an account?
                 <a href="{{ route('signup') }}" class="text-red-600 hover:text-red-700 font-semibold hover:underline transition-colors">
                     Sign up
                 </a>

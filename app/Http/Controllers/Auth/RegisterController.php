@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Owner;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\VerifyEmail;
 
 class RegisterController extends Controller
 {
@@ -73,6 +75,62 @@ class RegisterController extends Controller
             'created_on'    => now(),
         ]);
 
-        return redirect()->route('login')->with('success', 'Registration successful! Please log in.');
+        // 🧩 3. Generate verification token
+        $owner->generateVerificationToken();
+
+        // 🧩 4. Send verification email
+        try {
+            Mail::to($owner->email)->send(new VerifyEmail($owner));
+        } catch (\Exception $e) {
+            // Optional: log if email fails
+            \Log::error('Email verification failed: ' . $e->getMessage());
+        }
+
+        // 🧩 5. Redirect user with success message
+        return redirect()
+            ->route('login')
+            ->with('success', 'Registration successful! Please check your email to verify your account.');
+    }
+
+
+    public function verifyEmail($token)
+    {
+        $owner = Owner::where('verification_token', $token)->first();
+
+        if (!$owner) {
+            return redirect()->route('login')->with('error', 'Invalid or expired verification link.');
+        }
+
+        $owner->markEmailAsVerified();
+
+        return redirect()->route('login')->with('success', 'Email verified successfully! You may now log in.');
+    }
+
+    public function resendVerification()
+    {
+        $email = session('unverified_email');
+
+        if (!$email) {
+            return redirect()->route('login')->with('error', 'Email not found in session.');
+        }
+
+        $owner = Owner::where('email', $email)->first();
+
+        if (!$owner) {
+            return redirect()->route('login')->with('error', 'Email not found.');
+        }
+
+        if ($owner->hasVerifiedEmail()) {
+            return redirect()->route('login')->with('info', 'Your email is already verified.');
+        }
+
+        // Generate new token if missing
+        if (!$owner->verification_token) {
+            $owner->generateVerificationToken();
+        }
+
+        Mail::to($owner->email)->send(new VerifyEmail($owner));
+
+        return redirect()->route('login')->with('success', 'Verification email resent successfully! Please check your inbox.');
     }
 }

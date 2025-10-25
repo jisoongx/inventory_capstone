@@ -58,13 +58,13 @@ class SubscriptionController extends Controller
             if ($status === 'upcoming' && $range) {
                 switch ($range) {
                     case 'urgent':
-                        $q->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(7)]);
+                        $q->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(3)]);
                         break;
                     case 'soon':
-                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(8), Carbon::today()->addDays(14)]);
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(4), Carbon::today()->addDays(7)]);
                         break;
                     case 'later':
-                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(15), Carbon::today()->addDays(30)]);
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(8), Carbon::today()->addDays(14)]);
                         break;
                 }
             }
@@ -73,7 +73,7 @@ class SubscriptionController extends Controller
     
         $query->with(['subscriptions' => function ($q) use ($status, $planId, $startDate, $range) {
             if ($status === 'upcoming') {
-                $q->where('status', 'active')->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(30)]);
+                $q->where('status', 'active')->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(14)]);
             } else {
                 $q->where('status', $status);
             }
@@ -82,13 +82,13 @@ class SubscriptionController extends Controller
             if ($status === 'upcoming' && $range) {
                 switch ($range) {
                     case 'urgent':
-                        $q->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(7)]);
+                        $q->whereBetween('subscription_end', [Carbon::today(), Carbon::today()->addDays(3)]);
                         break;
                     case 'soon':
-                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(8), Carbon::today()->addDays(14)]);
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(4), Carbon::today()->addDays(7)]);
                         break;
                     case 'later':
-                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(15), Carbon::today()->addDays(30)]);
+                        $q->whereBetween('subscription_end', [Carbon::today()->addDays(8), Carbon::today()->addDays(14)]);
                         break;
                 }
             }
@@ -109,7 +109,7 @@ class SubscriptionController extends Controller
         
         $activeCount = Subscription::where('status', 'active')->count();
         $expiredCount = Subscription::where('status', 'expired')->count();
-        $upcomingCount = Subscription::where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(30)])->count();
+        $upcomingCount = Subscription::where('status', 'active')->whereBetween('subscription_end', [now(), now()->addDays(14)])->count();
 
         return view('dashboards.super_admin.subscribers', compact(
             'clients',

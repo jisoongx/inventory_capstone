@@ -248,13 +248,13 @@
             // 🟡 Special case: BASIC plan (no PayPal)
             // 🟡 Special case: BASIC plan (no PayPal)
             if (planName.trim().toLowerCase() === "basic") {
-                paypalContainer.innerHTML = `
-        <div class="text-center py-4 text-slate-600">
-            Activating your free plan...
-        </div>
-    `;
+                // Hide all views first
+                paymentFormView.classList.add('hidden');
+                successView.classList.add('hidden');
 
-                // ✅ Use the same controller and route for Basic plan
+                // Show a temporary message while checking eligibility
+                paypalContainer.innerHTML = `<div class="text-center py-4 text-slate-600">Checking your free plan eligibility...</div>`;
+
                 fetch(`/subscribe/${planId}`, {
                         method: "POST",
                         credentials: "same-origin",
@@ -262,34 +262,45 @@
                             "Content-Type": "application/json",
                             "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
                         },
-                        body: JSON.stringify({}) // no PayPal data for free plan
-                    }).then(async response => {
+                        body: JSON.stringify({})
+                    })
+                    .then(async response => {
                         let data = {};
                         try {
                             data = await response.json();
                         } catch (e) {
-                            console.error("Invalid JSON from server", e);
+                            console.error(e);
                         }
 
                         if (response.ok && data.success) {
-                            paymentFormView.classList.add('hidden');
-                            successView.classList.remove('hidden');
-                            document.querySelector("#successView h2").textContent = "Basic Plan Activated!";
-                            document.querySelector("#successView p").textContent = data.message || "Your 1-month free access is now active.";
-                            setTimeout(() => window.location.href = "/owner/dashboard", 2000);
+                            // ✅ First-time user → show activating message
+                            paymentFormView.classList.remove('hidden');
+                            paypalContainer.innerHTML = `<div class="text-center py-4 text-slate-600">Activating your free plan...</div>`;
+
+                            setTimeout(() => {
+                                paymentFormView.classList.add('hidden');
+                                successView.classList.remove('hidden');
+                                document.querySelector("#successView h2").textContent = "Basic Plan Activated!";
+                                document.querySelector("#successView p").textContent = data.message || "Your 1-month free access is now active.";
+                                setTimeout(() => window.location.href = "/owner/dashboard", 2000);
+                            }, 1000);
+
                         } else {
-                            // 🟡 Always show the server's message, even on 409/500
-                            alert(data.message || `Error ${response.status}: Unable to activate plan.`);
-                            console.error("Activation error:", data);
+                            // ❌ Already used → ONLY show alert or notice, do NOT show Confirm Purchase
+                            alert(data.message || "You have already used our one-time free Basic plan.");
+                            // optionally close modal automatically:
+                            modal.classList.add('opacity-0');
+                            setTimeout(() => modal.classList.add('hidden'), 300);
                         }
                     })
                     .catch(err => {
-                        alert("Something went wrong activating the Basic plan.");
+                        alert("Something went wrong checking the Basic plan.");
                         console.error(err);
                     });
 
-                return; // ✅ Stop here (no PayPal needed)
+                return; // Stop here, no PayPal needed
             }
+
 
 
             // 🟢 For Standard / Premium plans → render PayPal buttons

@@ -29,6 +29,10 @@ Route::get('/', function () {
     return view('login');
 });
 
+Route::get('/verify-email/{token}', [RegisterController::class, 'verifyEmail'])->name('owner.verify');
+Route::get('/resend-verification', [RegisterController::class, 'resendVerification'])
+    ->name('owner.resend.verification');
+
 
 
 Route::view('/welcome/to/shoplytix', 'landing-page');
@@ -109,12 +113,11 @@ Route::get('/privacy-policy',  fn() => view('privacy_policy'))->name('privacy.')
 
 
 //forgot password
-Route::get('/forgot-password', fn() => view('forgot-password'))->name('password.request');
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])->name('password.email');
-Route::get('/reset-password/{token}', function (string $token) {
-    return view('reset-password', ['token' => $token]);
-})->name('password.reset');
-Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
+Route::get('/forgot-password', [PasswordResetController::class, 'showRequestForm'])->name('password.request');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
+Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->name('password.update');
+
 
 
 //Subscription

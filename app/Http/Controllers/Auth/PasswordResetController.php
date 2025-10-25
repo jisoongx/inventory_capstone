@@ -3,82 +3,73 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Owner;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+
 
 class PasswordResetController extends Controller
 {
-    // Map brokers to their custom password columns
-    protected $passwordColumns = [
-        'super_admins' => 'super_pass',
-        'owners'       => 'owner_pass',
-        'staff'        => 'staff_pass',
-    ];
+    public function showRequestForm()
+{
+    return view('forgot-password');
+}
 
-    /**
-     * Send password reset link email.
-     */
-    public function sendResetLinkEmail(Request $request)
+
+    public function sendResetLink(Request $request)
     {
         $request->validate(['email' => 'required|email']);
 
-        $found = false;
+        $owner = Owner::where('email', $request->email)->first();
 
-        foreach (['super_admins', 'owners', 'staff'] as $broker) {
-            $status = Password::broker($broker)->sendResetLink(
-                $request->only('email')
-            );
-
-            if ($status === Password::RESET_LINK_SENT) {
-                $found = true;
-                break; // Stop at the first broker that matches
-            }
+        if (!$owner) {
+            return back()->withErrors(['email' => 'No account found with that email.']);
         }
 
-        if ($found) {
-            return back()->with('status', 'A password reset link has been sent to your email!');
-        }
+        $token = $owner->generatePasswordResetToken();
 
-        return back()->withErrors(['email' => 'We couldn’t find an account with that email.']);
+        $resetUrl = url("/reset-password/{$token}?email=" . urlencode($owner->email));
+
+        // You can make a custom Mailable later, but let's use a simple example:
+        Mail::send('emails.password-reset', ['owner' => $owner, 'resetUrl' => $resetUrl], function ($message) use ($owner) {
+            $message->to($owner->email)
+                ->subject('Reset Your ShopLytix Password');
+        });
+
+
+        return back()->with('status', 'Password reset link sent to your email!');
     }
 
-    /**
-     * Handle password reset.
-     */
-    public function reset(Request $request)
+    public function showResetForm($token, Request $request)
+    {
+        $email = $request->query('email');
+
+        return view('reset-password', ['token' => $token, 'email' => $email]);
+    }
+
+    public function resetPassword(Request $request)
     {
         $request->validate([
-            'token' => 'required',
             'email' => 'required|email',
+            'token' => 'required',
             'password' => 'required|min:8|confirmed',
         ]);
 
-        foreach (['super_admins', 'owners', 'staff'] as $broker) {
-            $user = Password::broker($broker)->getUser($request->only('email'));
+        $owner = Owner::where('email', $request->email)
+            ->where('reset_token', $request->token)
+            ->where('reset_token_expires_at', '>', now())
+            ->first();
 
-            if ($user) {
-                $passwordColumn = $this->passwordColumns[$broker];
-
-                $status = Password::broker($broker)->reset(
-                    $request->only('email', 'password', 'password_confirmation', 'token'),
-                    function ($user, $password) use ($passwordColumn) {
-                        // Update only the custom password column
-                        $user->{$passwordColumn} = Hash::make($password);
-                        $user->setRememberToken(Str::random(60)); // optional if you want "remember me"
-                        $user->save();
-                    }
-                );
-
-                if ($status === Password::PASSWORD_RESET) {
-                    return redirect()->route('login')->with('success', 'Password reset successfully! You can now log in.');
-                } else {
-                    return back()->withErrors(['email' => [__($status)]]);
-                }
-            }
+        if (!$owner) {
+            return back()->withErrors(['email' => 'Invalid or expired reset link.']);
         }
 
-        return back()->withErrors(['email' => 'Invalid reset token or email.']);
+        $owner->owner_pass = Hash::make($request->password);
+        $owner->clearPasswordResetToken();
+        $owner->save();
+
+        return redirect()->route('login')->with('success', 'Password reset successful! You can now log in.');
     }
 }

@@ -22,11 +22,11 @@ return $base . ' ' . (trim($value) === 'active'
 : 'bg-gradient-to-r from-red-500 to-red-600');
 case 'days':
 $base .= ' w-24';
-if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
-    if ($value <=7) return $base . ' bg-gradient-to-r from-red-500 to-red-600' ;
-    if ($value <=14) return $base . ' bg-gradient-to-r from-orange-500 to-orange-600' ;
-    if ($value <=30) return $base . ' bg-gradient-to-r from-yellow-500 to-amber-500' ;
-    return $base . ' bg-gradient-to-r from-gray-500 to-gray-600' ;
+if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ; // Expired
+    if ($value <=3) return $base . ' bg-gradient-to-r from-red-500 to-red-600' ; // Urgent
+    if ($value <=7) return $base . ' bg-gradient-to-r from-orange-500 to-orange-600' ; // Soon
+    if ($value <=14) return $base . ' bg-gradient-to-r from-yellow-500 to-amber-500' ; // Later
+    return $base . ' bg-gradient-to-r from-gray-500 to-gray-600' ; // Beyond 14 days
     }
     }
     }
@@ -227,7 +227,12 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                 </div>
                 @endif
 
-                @if($clients->isNotEmpty())
+                @php
+                $totalSubscriptions = $clients->sum(fn($client) => $client->subscriptions->count());
+                @endphp
+
+
+                @if($totalSubscriptions > 0)
                 <div class="bg-white rounded-lg shadow-lg overflow-hidden ">
                     <div class="overflow-x-auto">
                         <table class="min-w-full">
@@ -323,6 +328,8 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ;
                     <p class="text-sm text-slate-500 mb-4">No subscriptions match the current filters.</p>
                 </div>
                 @endif
+
+
             </div>
 
             @if (!request()->ajax())
