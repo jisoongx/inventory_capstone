@@ -54,7 +54,7 @@ function initProfitChart()
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 300 },
+                animation: { duration: 200 },
                 plugins: {
                     legend: { display: false },
                     zoom: {

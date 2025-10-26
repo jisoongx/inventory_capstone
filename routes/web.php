@@ -19,6 +19,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Livewire\ExpenseRecord;
 
 
+
 use App\Livewire\TechnicalRequest;
 use App\Http\Controllers\InventoryOwnerSettingsController;
 
@@ -59,6 +60,7 @@ Route::view('/owner/technical-request', 'dashboards.owner.technical_request')->n
 Route::view('/reports/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('dashboards.owner.rsp');
 Route::view('/reports/inventory-reports', 'dashboards.owner.report-inventory-reports')->name('dashboards.owner.inven_reports');
 Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-customer-and-behavior')->name('dashboards.owner.customer_behavior');
+Route::view('/report/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('report.sales.performance');
 
 
 

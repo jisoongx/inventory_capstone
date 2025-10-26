@@ -10,7 +10,7 @@
         @livewire('dashboard-graphs')
 
         <!-- tables dapit -->
-        <div class="space-y-4">
+        <div class="space-y-4 w-full">
             @livewire('comparative-analysis')
 
             @livewire('stock-alert')

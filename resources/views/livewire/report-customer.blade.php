@@ -67,14 +67,14 @@
 
                 <div class="overflow-y-auto scrollbar-custom h-[35rem]">
                     <table class="w-full border-collapse text-sm">
-                        <thead>
+                        <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                             <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
-                                <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Product A</th>
-                                <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Product B</th>
-                                <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Times Bought Together</th>
-                                <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Association Strength</th>
-                                <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Relationship Score</th>
-                                <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs w-[20rem] sticky top-0">Insights</th>
+                                <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-left">Product A</th>
+                                <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-left">Product B</th>
+                                <th class="cursor-pointer p-3 sticky top-0 bg-gray-50">Times Bought Together</th>
+                                <th class="cursor-pointer p-3 sticky top-0 bg-gray-50">Association Strength</th>
+                                <th class="cursor-pointer p-3 sticky top-0 bg-gray-50">Relationship Score</th>
+                                <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 w-[20rem]">Insights</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -132,23 +132,30 @@
             
             <div class="overflow-y-auto scrollbar-custom h-[33rem]">
                 <table class="w-full border-collapse text-sm">
-                    <thead>
+                    <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                         <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
-                            <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Date</th>
-                            <th class="uppercase p-3 text-left font-semibold text-gray-700 text-xs sticky top-0">Transactions</th>
-                            <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Total Sales (₱)</th>
-                            <th class="uppercase p-3 text-center font-semibold text-gray-700 text-xs sticky top-0">Avg Transaction Value (₱)</th>
+                            <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-left">Date</th>
+                            <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">Transactions</th>
+                            <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">Total Sales (₱)</th>
+                            <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">Avg Transaction Value (₱)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($frequency as $row)
-                                <tr class="border-b border-gray-200 hover:bg-gray-50">
-                                    <td class="p-3 text-gray-800 text-xs">{{ $row->date }}</td>
-                                    <td class="p-3 text-gray-800 text-xs">{{ $row->total_transaction }}</td>
-                                    <td class="p-3 text-center text-gray-700 text-xs">₱{{ number_format($row->total_sales, 2) }}</td>
-                                    <td class="p-3 text-center text-gray-700 text-xs">₱{{ number_format($row->average_sales, 2) }}</td>
-                                </tr>
-                        @endforeach
+                        @forelse ($frequency as $row)
+                            <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="p-3 text-gray-800 text-xs">{{ $row->date }}</td>
+                                <td class="p-3 text-gray-800 text-xs text-right">{{ $row->total_transaction }}</td>
+                                <td class="p-3 text-gray-700 text-xs text-right">₱{{ number_format($row->total_sales, 2) }}</td>
+                                <td class="p-3 text-gray-700 text-xs text-right">₱{{ number_format($row->average_sales, 2) }}</td>
+                            </tr>
+                        @empty
+                            <td colspan="6" class="p-6 py-52 text-center text-gray-500 text-xs">
+                                <div class="flex flex-col justify-center items-center space-y-3">
+                                    <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                    <span class="text-gray-500 text-xs">There are no transactions recorded for this month.</span>
+                                </div>
+                            </td>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

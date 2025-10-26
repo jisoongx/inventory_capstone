@@ -100,7 +100,6 @@ class Notifications extends Component
 
     public function openModal($id, $title, $message, $created) {
 
-        $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
         $user_email = Auth::guard('owner')->check() 
             ? Auth::guard('owner')->user()->email 
             : Auth::guard('staff')->user()->email;
@@ -123,16 +122,8 @@ class Notifications extends Component
             and n.notif_id = ?
             group by n.notif_id
         ', [$id]))->first();
-        
 
-        // foreach ($this->notifs as &$notif) {
-        //     if ($notif->notif_id == $id) {
-        //         $notif->usernotif_is_read = 1;
-        //         break;
-        //     }
-        // }
-
-        $this->loadNotifs();
+        // $this->loadNotifs();
 
         $this->notifTitle = $title;
         $this->notifMessage = $message;

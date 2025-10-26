@@ -511,3 +511,111 @@ use Carbon\Carbon;
 //     }
 // }
 
+
+
+
+
+
+
+katong filter para sa sales by category 
+
+
+<div class="relative">
+    <button @click="open = !open" type="button" class="py-2 px-3 border border-orange-500 rounded hover:bg-orange-50">
+        <div class="flex justify-center gap-1">
+            <span class="material-symbols-rounded-premium text-orange-700" title="Filter">discover_tune</span>
+            <span class="text-orange-700 text-xs font-semibold">Filter</span>
+        </div>
+    </button>
+
+</div>
+
+<div x-show="open" x-cloak @click.away="open = false" 
+    class="absolute top-full right-0 mt-2 w-64 bg-white border border-orange-200 rounded-xl shadow-lg z-50 p-4 space-y-4">
+
+    <div>
+        <span class="text-[11px] font-semibold text-orange-700">Year:</span>
+        <div class="grid grid-cols-3 gap-2 mt-2">
+            @foreach($years as $yr)
+                <label class="flex items-center justify-center cursor-pointer">
+                    <input type="radio" name="selectedYear" value="{{ $yr->year }}" wire:model="selectedYearSingle" class="hidden peer">
+                    <span class="peer-checked:bg-orange-600 peer-checked:text-white 
+                                text-orange-600 bg-orange-100 hover:bg-orange-200 
+                                rounded-full py-1 px-2 text-center text-[11px] transition">
+                        {{ $yr->year }}
+                    </span>
+                </label>
+            @endforeach
+        </div>
+    </div>
+
+    <div>
+        <span class="text-[11px] font-semibold text-orange-700">Months:</span>
+        <div class="grid grid-cols-3 gap-2 mt-2">
+            @foreach($monthNames as $index => $name)
+                <label class="flex items-center justify-center cursor-pointer">
+                    <input 
+                        type="checkbox" 
+                        value="{{ $index + 1 }}" 
+                        wire:model="selectedMonths"
+                        class="hidden peer"
+                    >
+                    <span class="peer-checked:bg-orange-600 peer-checked:text-white 
+                                text-orange-600 bg-orange-100 hover:bg-orange-200 
+                                rounded-full py-1 px-2 text-center text-[11px] transition">
+                        {{ $name }}
+                    </span>
+                </label>
+            @endforeach
+        </div>
+    </div>
+
+    <div class="flex gap-2 mt-3">
+        <button wire:click="salesByCategory" 
+            class="flex-1 bg-orange-700 hover:bg-orange-800 text-white text-[11px] py-2 rounded-lg transition">
+            Proceed
+        </button>
+        <button wire:click="resetFilters" 
+            class="flex-1 bg-orange-100 hover:bg-orange-200 text-orange-700 text-[11px] py-2 rounded-lg transition">
+            Reset
+        </button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if ($this->lossPercentage < 2) {
+    $this->insight = "Good job! Strong sales with almost no losses.";
+    $this->performanceLabel = "Excellent";
+
+} elseif ($this->lossPercentage < 5) {
+    $this->insight = "Healthy performance. Sales are strong and losses are well-controlled.";
+    $this->performanceLabel = "Good";
+
+} elseif ($this->lossPercentage < 10) {
+    $this->insight = "Fair. Some losses are noticeable, monitor stock and expiries.";
+    $this->performanceLabel = "Moderate";
+
+} elseif ($this->lossPercentage < 18) {
+    $this->insight = "Losses are cutting into profits. Review inventory handling.";
+    $this->performanceLabel = "Warning";
+
+} elseif ($this->lossPercentage < 25) {
+    $this->insight = "Losses are significantly impacting sales. Take corrective action.";
+    $this->performanceLabel = "Critical";
+
+} else {
+    $this->insight = "Very high losses are severely affecting performance. Act immediately!";
+    $this->performanceLabel = "Critical";
+}

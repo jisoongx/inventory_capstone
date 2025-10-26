@@ -1,5 +1,6 @@
-<div class="flex justtify-between space-x-5 pt-5">
+<div class="flex justtify-between gap-4 pt-5">
 
+    <div wire:poll.15s="pollAll" wire:keep-alive class="hidden"></div>
     <!-- STOCK ALERT -->
     <div class="w-full max-w-sm bg-white shadow-md relative border">
         <div class="relative">
@@ -10,10 +11,9 @@
             </div>
         </div>
         
-        <div class="hidden" wire:poll.keep-alive="stockAlert()"></div>
+        <!-- <div class="hidden" wire:poll.keep-alive="stockAlert()"></div> -->
         <div class="mt-5 p-4 space-y-3 scrollbar-custom transition-all duration-300 ease-in-out h-[29rem]" 
             :class="open ? 'overflow-y-auto' : 'overflow-hidden'">
-
             @forelse ($prod as $p)
                 <div class="rounded-xl p-2 flex items-center gap-4 border
                     {{ $p->status === 'Critical' ? 'border-red-500 text-red-600' : '' }}
@@ -62,7 +62,7 @@
             </div>
         </div>
         
-        <div class="hidden" wire:poll.keep-alive="expirationNotice()"></div>
+        <!-- <div class="hidden" wire:poll.keep-alive="expirationNotice()"></div> -->
         <div class="mt-5 p-4 space-y-3 overflow-y-auto scrollbar-custom transition-all duration-300 h-[29rem]">
 
             @forelse ($expiry as $p)
@@ -123,7 +123,7 @@
             </div>
         </div>
         
-        <div class="hidden" wire:poll.keep-alive="topSelling()"></div>
+        <!-- <div class="hidden" wire:poll.keep-alive="topSelling()"></div> -->
                 <div class="p-2 mb-4 space-y-3 overflow-y-auto scrollbar-custom transition-all duration-300 ease-in-out h-[28rem]">
                     
                     <div class="p-4 space-y-3 transition-all duration-300 ease-in-out">

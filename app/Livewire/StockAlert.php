@@ -9,16 +9,9 @@ use Illuminate\Support\Facades\DB;
 class StockAlert extends Component
 {
     public $prod; 
-    public $showAll = false;
-
     public $expiry;
-
     public $topProd;
 
-    public function toggleViewAll()
-    {
-        $this->showAll = !$this->showAll;
-    }
 
     public function stockAlert() {
 
@@ -122,11 +115,16 @@ class StockAlert extends Component
     }
 
 
-    public function render()
-    {
+    public function pollAll() {
         $this->stockAlert();
         $this->expirationNotice();
         $this->topSelling();
+    }
+
+
+    public function render()
+    {   
+        $this->pollAll();
         return view('livewire.stock-alert');
     }
 }

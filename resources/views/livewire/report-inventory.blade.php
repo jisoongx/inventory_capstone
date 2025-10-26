@@ -30,7 +30,7 @@
         
     </div>
 
-    <div class="border bg-white p-4 rounded-b-lg mb-3 h-[41rem]"
+    <div class="border bg-white p-4 rounded-b-lg h-[41rem]"
         :class="{
             'border-green-500 bg-green-50': tab === 'expiring',
             'border-yellow-500 bg-yellow-50': tab === 'top-selling',
@@ -43,8 +43,118 @@
         </div>
 
         <!-- EXPIRING PRODUCTS -->
+        <div wire:poll.15s="expired" wire:keep-alive class="hidden"></div>
         <div x-show="tab === 'expiring'">
-            <p class="text-gray-700">📊 <b>Expiring</b> report content goes here.</p>
+                <div class="flex justify-between items-center mb-4">
+                    <div class="space-x-1 flex">
+                        <div class="border border-gray-300 rounded-tl-lg rounded-bl-lg px-3 py-2 text-xs">
+                            Expiring within:
+                        </div>
+                        <select wire:model.live="selectedRange" class="border border-gray-300 rounded-tr-lg rounded-br-lg px-3 py-2 text-xs">
+                            <option value="60">60 days</option>
+                            <option value="30">30 days</option>
+                            <option value="14">14 days</option>
+                            <option value="7">7 days</option>
+                            <option value="0">Already Expired items</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="h-[39rem]">
+                    <div class="hidden"></div>
+                    <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[35rem]">
+                        <table id="analysis-table" class="w-full text-xs text-left shadow-sm  w-[115rem]">
+                            <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
+                                <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
+                                    <th class="p-3 text-left sticky top-0 bg-gray-50 w-[1rem]"></th>
+                                    <th class="p-3 text-left sticky top-0 bg-gray-50 w-[14rem]">Batch #</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 w-[14rem]">Product Name</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50">Category</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-right">Expiration Date</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-right">Days Until Expiry</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-right">Quantity</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-right">Cost per Unit (₱)</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-right">Total Loss (₱)</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-center">Will Sell?</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-center w-[16rem]">To Do</th>
+                                    <!-- <th class=" p-3 sticky top-0 bg-gray-50">Status</th> -->
+                                </tr>
+                            </thead>
+
+                            <tbody class="divide-y divide-gray-200">
+                                @forelse ($expiredProd as $row)
+                                    <tr class="transition hover:bg-red-100 {{ $row->days_until_expiry <= 10 ? 'bg-rose-50' : '' }} {{ $row->days_until_expiry <=0 ? 'bg-red-200' : '' }}">
+                                        <td class="py-3 px-4 text-left">
+                                            @if ($row->days_until_expiry <= 10)
+                                            <span class="material-symbols-rounded-premium text-red-500">priority_high</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3 px-4 text-left">{{ $row->batch_num }}</td>
+                                        <td class="py-3 px-4">{{ $row->prod_name }}</td>
+                                        <td class="py-3 px-4">{{ $row->cat_name }}</td>
+                                        <td class="py-3 px-4 text-right">{{ $row->date }}</td>
+                                        <td class="py-3 px-4 text-right">
+                                            @if($row->days_until_expiry < 0)
+                                                Expired {{ abs($row->days_until_expiry) }} days ago
+                                            @elseif($row->days_until_expiry == 0)
+                                                Expires today
+                                            @elseif($row->days_until_expiry == 1)
+                                                Expires tomorrow
+                                            @else
+                                                {{ $row->days_until_expiry }} days left
+                                            @endif
+                                        </td>
+                                        <td class="py-3 px-4 text-right">{{ $row->expired_stock }}</td>
+                                        <td class="py-3 px-4 text-right">₱{{ number_format($row->cost, 2) }}</td>
+                                        <td class="py-3 px-4 text-right">₱{{ number_format($row->total_loss, 2) }}</td>
+                                        <td class="py-3 px-4 text-center text-[10px]
+                                            @if(str_contains($row->will_sell_before_expiry, 'No sales recorded'))
+                                                bg-rose-100 text-red-600 font-medium
+                                            @elseif(str_contains($row->will_sell_before_expiry, 'Already expired'))
+                                                bg-red-800 text-white font-medium
+                                            @elseif(str_contains($row->will_sell_before_expiry, 'At risk'))
+                                                bg-orange-100 text-orange-600 font-medium
+                                            @elseif(str_contains($row->will_sell_before_expiry, 'Will likely sell out'))
+                                                bg-green-100 text-green-600 font-medium
+                                            @endif
+                                        ">
+                                            {{ $row->will_sell_before_expiry }}
+                                        </td>
+
+                                        <td class="py-3 px-4 text-center text-[10px]
+                                            @if(str_contains($row->insight, 'Expired'))
+                                                bg-gray-800 text-white font-medium
+                                            @elseif(str_contains($row->insight, 'Critical') || str_contains($row->insight, 'Urgent'))
+                                                bg-red-600 text-white font-medium
+                                            @elseif(str_contains($row->insight, 'Action needed'))
+                                                bg-orange-500 text-white font-medium
+                                            @elseif(str_contains($row->insight, 'Warning') || str_contains($row->insight, 'Sales pace too slow'))
+                                                bg-yellow-500 text-white font-medium
+                                            @elseif(str_contains($row->insight, 'week left') || str_contains($row->insight, 'weeks left'))
+                                                bg-blue-500 text-white font-medium
+                                            @elseif(str_contains($row->insight, 'month left'))
+                                                bg-indigo-500 text-white font-medium
+                                            @else
+                                                bg-green-600 text-white font-medium
+                                            @endif
+                                        ">
+                                            {{ $row->insight }}
+                                        </td>
+                                    </tr>
+                                @empty 
+                                    <tr>
+                                        <td colspan="8" class="text-center">
+                                            <div class="flex flex-col justify-center items-center space-y-1 p-8">
+                                                <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                                <span class="text-gray-500">Nothing to show.</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
         </div>
 
         <!-- EXPIRED PRODUCTS / DAMAGED/ LOSS -->

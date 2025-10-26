@@ -4,7 +4,7 @@
         
         <div x-init="setTimeout(() => { $el.scrollLeft = $el.scrollWidth }, 100)" class="overflow-x-auto scrollbar-custom">
             <table class="text-sm text-left text-slate-700 border-collapse table-auto w-full"
-                wire:poll.keep-alive="comparativeAnalysis">
+                wire:poll.15s="comparativeAnalysis" wire:keep-alive>
                 <thead>
                     <tr class="bg-red-700 text-xs text-slate-500 uppercase">
                         <th class="sticky left-0 z-10 bg-red-700 shadow px-4 py-3 border-b border-slate-300 text-white">Metric</th>
