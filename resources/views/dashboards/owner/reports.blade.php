@@ -25,12 +25,12 @@
             <div class="flex-1 min-w-0">
                 <h2 class="text-gray-800 text-base md:text-lg font-semibold">Wondering what to restock?</h2>
                 <p class="text-gray-600 mt-1 text-xs md:text-sm leading-relaxed">Get intelligent suggestions for your store so you never run out of popular products.</p>
-                <a  href="{{ $expired ? '' : route('restock_suggestion') }}"
+                <a href="{{ $expired ? '' : route('restock_suggestion') }}"
                     class="mt-3 inline-block px-4 py-2 rounded-lg font-medium text-sm shadow transition-all
                         {{ $expired 
                             ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
                             : 'bg-green-500 text-white hover:bg-green-600 hover:shadow-md' }}"
-                            onclick="{{ $expired ? 'event.preventDefault();' : '' }}">
+                    onclick="{{ $expired ? 'event.preventDefault();' : '' }}">
                     Generate List
                 </a>
             </div>
@@ -56,14 +56,13 @@
             <div class="flex-1 min-w-0">
                 <h2 class="text-gray-800 text-base md:text-lg font-semibold">Spot the Season’s Must-Have Products</h2>
                 <p class="text-gray-600 mt-1 text-xs md:text-sm leading-relaxed">Discover trending items and see what’s in high demand this season.</p>
-                <a 
+                <a
                     href="{{ $expired ? '' : route('seasonal_trends') }}"
                     class="mt-3 inline-block px-4 py-2 rounded-lg font-medium text-sm shadow transition-all
                         {{ $expired 
                             ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
                             : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md' }}"
-                            onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
-                >
+                    onclick="{{ $expired ? 'event.preventDefault();' : '' }}">
                     View Seasonal Trends
                 </a>
             </div>
@@ -74,6 +73,9 @@
             </div>
         </div>
 
+    </div>
+    <div class="space-y-4">
+        @livewire('product-analysis')
     </div>
 </div>
 @endsection

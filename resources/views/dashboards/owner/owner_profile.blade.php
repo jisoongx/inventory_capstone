@@ -63,15 +63,55 @@
                     }
                     @endphp
 
+                    {{-- Plan Display --}}
                     <div class="mt-2 sm:mt-0 flex items-center gap-3">
                         <p class="text-sm text-slate-500">{{ $owner->email }}</p>
 
-                        <div
-                            class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold {{ $textColor }} bg-gradient-to-r {{ $gradient }} shadow-sm shadow-slate-200/40">
+                        {{-- Clickable plan badge --}}
+                        <button
+                            class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold {{ $textColor }} bg-gradient-to-r {{ $gradient }} shadow-sm shadow-slate-200/40 hover:opacity-90 transition"
+                            onclick="document.getElementById('planModal').classList.remove('hidden')">
                             <span class="material-symbols-rounded text-sm">{{ $icon }}</span>
                             <span class="uppercase tracking-wide">{{ $subscription->planDetails->plan_title }}</span>
+                            <span class="material-symbols-rounded text-base ml-1">info</span>
+                        </button>
+                    </div>
+
+                    {{-- Plan Modal --}}
+                    <div id="planModal"
+                        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+                            {{-- Close button --}}
+                            <button class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 transition"
+                                onclick="document.getElementById('planModal').classList.add('hidden')">
+                                <span class="material-symbols-rounded text-lg">close</span>
+                            </button>
+
+                            {{-- Modal Content --}}
+                            <div class="text-center mt-2">
+                                <h2 class="text-lg font-semibold text-slate-800">
+                                    {{ ucfirst($subscription->planDetails->plan_title) }} Plan
+                                </h2>
+                                <p class="text-sm text-slate-500 mt-1">
+                                    Active until {{ \Carbon\Carbon::parse($subscription->end_date)->format('F j, Y') }}
+                                </p>
+
+                                <p class="mt-4 text-xs text-slate-500 leading-snug">
+                                    Note: Downgrading to a lower plan will not include any refund for the remaining time on your current
+                                    subscription.
+                                </p>
+                            </div>
+
+                            <div class="mt-6 flex justify-center">
+                                <a href="{{ route('owner.upgrade') }}"
+                                    class="inline-flex items-center px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">
+                                    <span class="material-symbols-rounded text-base mr-1">upgrade</span>
+                                    Change / Upgrade Plan
+                                </a>
+                            </div>
                         </div>
                     </div>
+
 
                     @endif
 

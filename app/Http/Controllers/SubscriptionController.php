@@ -191,50 +191,25 @@ class SubscriptionController extends Controller
         }
     }
 
+    public function upgrade()
+    {
+        $ownerId = Auth::guard('owner')->user()->owner_id;
 
-    // public function subscribeBasic(Request $request)
-    // {
-    //     $ownerId = Auth::guard('owner')->id();
-    //     $plan = Plan::where('plan_title', 'Basic')->first();
+        // Get current active subscription
+        $current = Subscription::where('owner_id', $ownerId)
+            ->where('status', 'active')
+            ->first();
 
-    //     if (!$plan) {
-    //         return response()->json(['error' => 'Plan not found'], 404);
-    //     }
+        // 1️⃣ Terminate current subscription (if any)
+        if ($current) {
+            $current->update([
+                'status' => 'expired',
+                'subscription_end' => now(),
+            ]);
+        }
 
-    //     DB::beginTransaction();
-
-    //     try {
-    //         // 1️⃣ Create the subscription
-    //         $subscriptionId = DB::table('subscriptions')->insertGetId([
-    //             'owner_id' => $ownerId,
-    //             'plan_id' => $plan->plan_id,
-    //             'subscription_start' => now(),
-    //             'subscription_end' => now()->addMonth(),
-    //             'status' => 'active',
-             
-    //         ]);
-
-    //         // 2️⃣ Create the payment record (ensure table name is correct)
-    //         $paymentId = DB::table('payment')->insertGetId([ // ← likely plural
-    //             'owner_id' => $ownerId,
-    //             'subscription_id' => $subscriptionId,
-    //             'payment_mode' => 'Free Trial',
-    //             'payment_amount' => 0,
-    //             'payment_acc_number' => '0',
-    //             'payment_date' => now(),
-          
-    //         ]);
-
-    //         DB::commit();
-
-    //         return response()->json([
-    //             'message' => 'Basic plan activated successfully',
-    //             'subscription_id' => $subscriptionId,
-    //             'payment_id' => $paymentId,
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         return response()->json(['error' => $e->getMessage()], 500);
-    //     }
-    // }
+        // 2️⃣ Redirect to subscription plans page (user chooses and pays again)
+        return redirect()->route('subscription.selection')
+            ->with('info', 'Your current subscription has been ended. Please choose a new plan to continue.');
+    }
 }

@@ -123,6 +123,8 @@ Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']
 //Subscription
 Route::get('/subscription/select', [SubscriptionController::class, 'create'])->name('subscription.selection');
 Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store');
+Route::get('/owner/upgrade/', [SubscriptionController::class, 'upgrade'])->name('owner.upgrade');
+
 // Route::post('/subscribe/basic', [SubscriptionController::class, 'subscribeBasic'])
 //     ->name('owner.subscribe.basic');
 

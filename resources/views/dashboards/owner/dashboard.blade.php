@@ -15,7 +15,7 @@
 
             @livewire('stock-alert')
             
-            @livewire('product-analysis')
+           
         </div>
     </div>
 
