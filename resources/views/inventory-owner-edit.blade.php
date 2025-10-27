@@ -6,7 +6,7 @@
 <div class="px-4">
     @livewire('expiration-container')
 </div>
-<div class="max-w-3xl mx-auto mt-4 mb-6">
+<div class="max-w-4xl mx-auto mt-4 mb-6">
     <div class="bg-white rounded-2xl shadow-lg p-4 space-y-2">
 
         <!-- Page Title -->
@@ -109,9 +109,9 @@
                         </select>
                     </div>
 
-                    <!-- Stock Limit -->
+                    <!-- Minimum Stock Limit -->
                     <div class="bg-white p-2 rounded-lg border shadow-md">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Stock Limit</label>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Minimum Stock Limit</label>
                         <input type="number" name="stock_limit" value="{{ old('stock_limit', $product->stock_limit) }}"
                             class="w-full border-gray-200 focus:border-blue-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-100">
                     </div>
@@ -128,14 +128,26 @@
 
                     <!-- Pricing -->
                     <div class="bg-white p-2 rounded-lg border shadow-md flex flex-col">
-                        <h3 class="font-semibold text-xs text-center mb-1">Pricing</h3>
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="font-sembold text-xs text-gray-800">Pricing</h3>
+                            <a href="{{ route('inventory-owner-pricing-history', $product->prod_code) }}"
+                            class="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">query_stats</span>
+                                View History
+                            </a>
+                        </div>
 
+                        <!-- Cost Price -->
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Cost Price</label>
                         <input type="number" step="0.01" min="0" name="cost_price" id="costPrice"
                             value="{{ old('cost_price', $product->cost_price) }}"
-                            class="w-full px-2 py-1 mb-1 border-gray-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100 rounded text-sm" placeholder="Cost Price" required>
+                            class="w-full px-2 py-1 mb-2 border-gray-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100 rounded text-sm"
+                            placeholder="Cost Price" required>
 
-                        <div class="flex space-x-2 mb-1">
-                            <select id="markupType" class="w-1/2 px-2 py-1 border-gray-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100 rounded text-sm">
+                        <!-- Markup -->
+                        <div class="flex space-x-2 mb-2">
+                            <select id="markupType"
+                                    class="w-1/2 px-2 py-1 border-gray-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100 rounded text-sm">
                                 <option value="percentage">Percentage %</option>
                                 <option value="fixed">Fixed ₱</option>
                             </select>
@@ -143,11 +155,35 @@
                                 class="w-1/2 px-2 py-1 border-gray-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100 rounded text-sm">
                         </div>
 
-                        <input 
-                            type="number" step="0.01" name="selling_price" id="sellingPrice" value="{{ old('selling_price', number_format($product->selling_price, 2, '.', '')) }}"
-                            class="w-full px-2 py-1 border-gray-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100 rounded text-sm" readonly
-                        >
+                        <!-- Selling Price -->
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Selling Price</label>
+                        <input type="number" step="0.01" name="selling_price" id="selling_price"
+                            value="{{ old('selling_price', $product->selling_price) }}"
+                            class="w-full px-2 py-1 mb-2 border-gray-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100 rounded text-sm">
 
+                        <!-- Hidden inputs to store selected previous price and cost -->
+                        <input type="hidden" name="previous_prices" id="previous_prices_hidden">
+                        <input type="hidden" name="previous_cost_price" id="previous_cost_price_hidden">
+
+                        <!-- Previous Selling Prices -->
+                        @if($priceHistory->count())
+                            <p class="text-[10px] text-gray-500 mt-1">or select from Previous Selling Prices</p>
+                            <select id="previous_prices_dropdown"
+                                    class="w-full text-xs border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-100">
+                                <option value="">Select previous price...</option>
+                                @foreach($priceHistory as $history)
+                                    @if($history->effective_to)
+                                        <option value="{{ $history->old_selling_price }}" 
+                                                data-cost-price="{{ $history->old_cost_price }}"
+                                                data-selling-price="{{ $history->old_selling_price }}">
+                                            ₱{{ number_format($history->old_selling_price, 2) }} 
+                                            (Cost: ₱{{ number_format($history->old_cost_price, 2) }})
+                                            — {{ \Carbon\Carbon::parse($history->effective_from)->format('M d, Y') }}
+                                        </option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -164,14 +200,11 @@
     </div>
 </div>
 
-{{-- JS for Image Preview, Auto Pricing & Status Toggle --}}
+{{-- JS for Image Preview, Auto Pricing, Status Toggle, and Enhanced Pricing Control --}}
 <script>
+    // === PRODUCT IMAGE PREVIEW ===
     const input = document.getElementById('prod_image');
     const preview = document.getElementById('imagePreview');
-    const costPrice = document.getElementById('costPrice');
-    const markupType = document.getElementById('markupType');
-    const markupValue = document.getElementById('markupValue');
-    const sellingPrice = document.getElementById('sellingPrice');
 
     preview.addEventListener('click', () => input.click());
 
@@ -182,7 +215,15 @@
         }
     });
 
-       
+    // === PRICING CALCULATION ===
+    const costPrice = document.getElementById('costPrice');
+    const markupType = document.getElementById('markupType');
+    const markupValue = document.getElementById('markupValue');
+    const sellingPrice = document.getElementById('selling_price');
+    const previousPricesDropdown = document.getElementById('previous_prices_dropdown');
+    const previousPricesHidden = document.getElementById('previous_prices_hidden');
+    const previousCostPriceHidden = document.getElementById('previous_cost_price_hidden');
+
     function calculateSellingPrice() {
         const cost = parseFloat(costPrice.value) || 0;
         const markup = parseFloat(markupValue.value) || 0;
@@ -195,15 +236,96 @@
         }
 
         sellingPrice.value = result.toFixed(2);
+        
+        // Clear previous prices selection when manually calculating
+        if (previousPricesDropdown) {
+            previousPricesDropdown.value = '';
+        }
+        if (previousPricesHidden) {
+            previousPricesHidden.value = '';
+        }
+        if (previousCostPriceHidden) {
+            previousCostPriceHidden.value = '';
+        }
     }
 
-    // Only trigger on changes, not on page load
+    // Trigger only on user input
     costPrice.addEventListener('input', calculateSellingPrice);
     markupValue.addEventListener('input', calculateSellingPrice);
     markupType.addEventListener('change', calculateSellingPrice);
 
+    // === OLD PRICE SELECTION HANDLING ===
+    if (previousPricesDropdown) {
+        previousPricesDropdown.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            
+            if (this.value && selectedOption) {
+                const costPriceValue = selectedOption.getAttribute('data-cost-price');
+                const sellingPriceValue = selectedOption.getAttribute('data-selling-price');
+                
+                // Update both cost price and selling price fields
+                costPrice.value = costPriceValue;
+                sellingPrice.value = sellingPriceValue;
+                
+                // Set hidden inputs
+                previousPricesHidden.value = sellingPriceValue;
+                previousCostPriceHidden.value = costPriceValue;
 
-   // Product status toggle
+                // Clear markup fields to avoid confusion
+                markupValue.value = '';
+                
+                // Visual indication that we're using a previous price
+                costPrice.classList.add('bg-blue-50', 'border-blue-200');
+                sellingPrice.classList.add('bg-blue-50', 'border-blue-200');
+            } else {
+                // Clear the hidden inputs
+                previousPricesHidden.value = '';
+                previousCostPriceHidden.value = '';
+                
+                // Remove visual indication
+                costPrice.classList.remove('bg-blue-50', 'border-blue-200');
+                sellingPrice.classList.remove('bg-blue-50', 'border-blue-200');
+            }
+        });
+    }
+
+    // Clear previous prices selection when user manually edits cost price
+    if (costPrice) {
+        costPrice.addEventListener('input', function() {
+            if (previousPricesDropdown) {
+                previousPricesDropdown.value = '';
+            }
+            if (previousPricesHidden) {
+                previousPricesHidden.value = '';
+            }
+            if (previousCostPriceHidden) {
+                previousCostPriceHidden.value = '';
+            }
+            // Remove visual indication
+            costPrice.classList.remove('bg-blue-50', 'border-blue-200');
+            sellingPrice.classList.remove('bg-blue-50', 'border-blue-200');
+        });
+    }
+
+    // Clear previous prices selection when user manually edits selling price
+    if (sellingPrice) {
+        sellingPrice.addEventListener('input', function() {
+            if (previousPricesDropdown) {
+                previousPricesDropdown.value = '';
+            }
+            if (previousPricesHidden) {
+                previousPricesHidden.value = '';
+            }
+            if (previousCostPriceHidden) {
+                previousCostPriceHidden.value = '';
+            }
+            // Remove visual indication
+            costPrice.classList.remove('bg-blue-50', 'border-blue-200');
+            sellingPrice.classList.remove('bg-blue-50', 'border-blue-200');
+        });
+    }
+
+    // === PRODUCT STATUS TOGGLE ===
     const toggle = document.getElementById("statusToggle");
     const circle = document.getElementById("statusCircle");
     const label = document.getElementById("statusLabel");
@@ -226,5 +348,15 @@
             label.textContent = "Selling";
         }
     });
+
+    // === VIEW PRICING HISTORY REDIRECT ===
+    // const viewHistoryBtn = document.getElementById('viewPricingHistoryBtn');
+    // if (viewHistoryBtn) {
+    //     viewHistoryBtn.addEventListener('click', function() {
+    //         const prodCode = this.dataset.prodCode;
+    //         window.location.href = `/inventory-owner/pricing-history/${prodCode}`;
+    //     });
+    // }
 </script>
+
 @endsection

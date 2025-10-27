@@ -116,8 +116,14 @@
                 <button id="addProductBtn" {{ $expired ? 'disabled' : '' }}
                         class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 transform hover:scale-105
                         {{ $expired ? 'cursor-not-allowed' : '' }}">
-                    Add Product
+                    Register Product
                 </button>
+                <button id="addStockBtn" {{ $expired ? 'disabled' : '' }}
+                        class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-all duration-200 transform hover:scale-105
+                        {{ $expired ? 'cursor-not-allowed' : '' }}">
+                    Add Stock
+                </button>
+
             </div>
         </div>
 
@@ -323,43 +329,206 @@
         </div>
     </div>
 
-    <!-- Type Barcode Modal -->
-    <div id="typeBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
-        <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
 
-            <!-- Red Top Bar -->
-            <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-                <h2 class="text-white text-lg font-medium">Enter Product Barcode</h2>
-                <button onclick="closeTypeModal()" class="text-white hover:text-gray-200">
-                    <span class="material-symbols-outlined text-white">close</span>
-                </button>
-            </div>
 
-            <!-- Modal Content Center -->
-            <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 mb-16">
-                <div class="mb-4">
-                    <img src="{{ asset('assets/type-barcode.png') }}" alt="Type Barcode" class="h-32 mx-auto">
-                </div>
+<!-- Choose Category Modal -->
+<div id="chooseCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-8 w-[90%] max-w-4xl shadow-xl relative">
+    <!-- Close Button -->
+    <button id="closeChooseCategoryModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition">
+      <span class="material-symbols-outlined">close</span>
+    </button>
 
-                <form id="barcodeForm" class="w-2/4 space-y-4">
-                    <input
-                        type="text"
-                        name="barcode"
-                        id="barcodeInput"
-                        placeholder="Enter barcode here"
-                        class="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:border-red-600 mb-4 placeholder:text-sm" 
-                        inputmode="numeric"
-                        pattern="[0-9]*"
-                        required 
-                    >
+    <!-- Header -->
+    <h2 class="text-xl font-bold text-center text-[#B50612] mb-6">Choose Category</h2>
 
-                    <button type="submit" class="w-2/6 bg-black mx-auto block text-white py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105">
-                        Submit
-                    </button>
-                </form>
-            </div>
+    <!-- Categories Grid -->
+    <div class="grid grid-cols-4 gap-6 max-h-[420px] overflow-y-auto pr-2">
+      <!-- New Category -->
+      <div onclick="openAddCategoryModal()"
+           class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-[#FFF5F5] border border-[#F5B5B5] hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
+        <span class="material-symbols-outlined text-4xl text-[#B50612] mb-2">add_circle</span>
+        <p class="font-semibold text-gray-700">New Category</p>
+      </div>
+
+      <!-- Category Items -->
+      @foreach($categories as $category)
+        <div onclick="onCategorySelected('{{ $category->category_id }}', '{{ e($category->category) }}')"
+             class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-white border border-gray-200 hover:border-[#B50612] hover:bg-[#FFF7F7] hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
+          <p class="font-semibold text-gray-700 text-center">{{ $category->category }}</p>
+        </div>
+      @endforeach
+    </div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div id="addCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-8 w-[90%] max-w-md shadow-xl relative">
+    <!-- Close Button -->
+    <button id="closeAddCategoryModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+
+    <!-- Header -->
+    <h2 class="text-xl font-bold text-center text-[#B50612] mb-6">Add New Category</h2>
+
+    <!-- Form -->
+    <form id="addCategoryForm" method="POST">
+      @csrf
+      <div class="mb-4">
+        <label for="newCategoryName" class="block text-sm font-medium text-gray-700 mb-1">
+          Category Name
+        </label>
+        <input type="text" id="newCategoryName" name="category" required placeholder="Enter category name"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring- focus:ring-[#B50612] focus:border-[#B50612] placeholder-gray-400 text-sm">
+      </div>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button type="button" id="cancelAddCategory"
+                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="px-4 py-2 bg-[#B50612] text-white font-medium rounded-lg hover:bg-[#9E0410] transition">
+          Save Category
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+
+<!-- Choose Products Modal -->
+<div id="chooseProductsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-6 w-[95%] max-w-4xl shadow-xl relative">
+    <button id="closeChooseProductsModal" class="absolute top-4 right-4 text-gray-500">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+
+    <!-- Title -->
+    <h2 class="text-xl font-semibold text-center text-[#B50612] mb-1">Choose Products to Restock</h2>
+    <!-- Category Label -->
+    <p id="selectedCategoryLabel" class="text-center text-sm text-gray-500 mb-4"></p>
+
+    <div class="mb-4 flex justify-between items-center">
+        <div class="text-sm text-gray-700" id="chooseProductsInfo"></div>
+        <div class="flex gap-2">
+            <button onclick="selectAllProducts()" class="px-4 py-1.5 text-sm font-medium rounded-md bg-yellow-500 text-white hover:bg-yellow-600 transition-colors duration-200">Select All</button>
+            <button onclick="deselectAllProducts()" class="px-4 py-1.5 text-sm font-medium rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors duration-200">Clear</button>
         </div>
     </div>
+
+
+    <div class="max-h-[360px] overflow-y-auto border rounded p-2">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-100 sticky top-0">
+          <tr>
+            <th class="p-2 text-left">Select</th>
+            <th class="p-2 text-left">Product</th>
+            <th class="p-2 text-center">Current Stock</th>
+          </tr>
+        </thead>
+        <tbody id="categoryProductsList"></tbody>
+      </table>
+    </div>
+
+    <div class="mt-4 flex justify-end">
+      <button id="proceedToRestockBtn" onclick="proceedToRestock()" class="bg-[#B50612] text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105">
+        Next
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Restock Details Modal -->
+<div id="restockDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-6 w-[95%] max-w-4xl shadow-xl relative">
+    <button id="closeRestockDetailsModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <h2 class="text-xl font-semibold text-center text-[#B50612] mb-4">Restock Details</h2>
+
+    <form id="bulkRestockForm" method="POST">
+      @csrf
+      <input type="hidden" name="category_id" id="restockCategoryId">
+
+      <div class="max-h-[360px] overflow-y-auto border rounded p-2">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-100 sticky top-0">
+            <tr>
+              <th class="p-2 text-left">Product</th>
+              <th class="p-2 text-center">Current Stock</th>
+              <th class="p-2 text-center">Add Qty</th>
+              <th class="p-2 text-center">Expiration Date</th>
+              <th class="p-2 text-center">
+                <span class="font-semibold">Batch No.</span> 
+                <span class="font-normal text-gray-500 text-xs">(auto-filled)</span>
+              </th>
+              <th class="p-2 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="restockRowsContainer"></tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 flex justify-end gap-2">
+        <button type="button" onclick="closeRestockDetails()" 
+          class="px-4 py-2 border rounded bg-gray-300 hover:bg-gray-400 transition">
+          Cancel
+        </button>
+        <button type="submit" 
+          class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-all duration-200 transform hover:scale-105">
+          Save Restock
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+
+<!-- Type Barcode Modal -->
+<div id="typeBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+    <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
+
+        <!-- Red Top Bar -->
+        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
+            <h2 class="text-white text-lg font-medium">Enter Product Barcode</h2>
+            <button onclick="closeTypeModal()" class="text-white hover:text-gray-200">
+                <span class="material-symbols-outlined text-white">close</span>
+            </button>
+        </div>
+
+        <!-- Modal Content Center -->
+        <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 mb-16">
+            <div class="mb-4">
+                <img src="{{ asset('assets/type-barcode.png') }}" alt="Type Barcode" class="h-32 mx-auto">
+            </div>
+
+            <form id="barcodeForm" class="w-2/4 space-y-4">
+                <input
+                    type="text"
+                    name="barcode"
+                    id="barcodeInput"
+                    placeholder="Enter barcode here"
+                    class="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:border-red-600 mb-4 placeholder:text-sm" 
+                    inputmode="text"
+                    title="Only letters and numbers are allowed"
+                    maxlength="25"
+                    pattern="[A-Za-z0-9]+"
+                    required 
+                >
+
+                <button type="submit" class="w-2/6 bg-black mx-auto block text-white py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105">
+                    Submit
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
 
 
     <!-- Scan Barcode Modal -->
@@ -519,6 +688,46 @@
         </div>
     </div>
 
+<!-- Barcode Already Exists Modal -->
+<div id="barcodeAlreadyExistsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+    <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
+
+        <!-- Red Top Bar -->
+        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
+            <h2 class="text-white text-lg font-medium">Barcode Already Exists</h2>
+            <button onclick="closeBarcodeExistsModal()" class="text-white hover:text-gray-200">
+                <span class="material-symbols-outlined text-white">close</span>
+            </button>
+        </div>
+
+        <!-- Modal Content Center -->
+        <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 mb-16">
+            <div class="mb-10">
+                <img src="{{ asset('assets/warning-icon.png') }}" alt="Warning" class="h-20 mx-auto">
+            </div>
+
+            <p class="font-medium text-base text-black text-center mb-8">
+                Product barcode <span class="font-bold text-red-500">already exists</span> in your inventory
+            </p>
+
+            <div class="flex justify-center gap-6">
+                <button 
+                    onclick="closeBarcodeExistsModal()" 
+                    class="w-32 bg-gray-300 text-gray-800 text-sm py-3 rounded-3xl hover:bg-gray-400 transition-all duration-200 transform hover:scale-105"
+                >
+                    Go Back
+                </button>
+                <button 
+                    onclick="goToInventory()" 
+                    class="w-32 bg-[#B50612] text-white text-sm py-3 rounded-3xl hover:bg-red-700 transition-all duration-200 transform hover:scale-105"
+                >
+                    Exit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <!-- Register New Product Modal -->
 <div id="registerProductModal" 
     class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
@@ -585,7 +794,7 @@
                 </div>
 
                 <!-- Stock Limit -->
-                <input type="number" name="stock_limit" placeholder="Stock Limit" min="0" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                <input type="number" name="stock_limit" placeholder="Minimum Stock Limit" min="0" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
                     class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
 
                 <!-- Pricing -->
@@ -599,8 +808,8 @@
                     <!-- Markup Type -->
                     <div class="flex space-x-2 mb-2">
                         <select id="markupType" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
-                            <option value="percentage">Percentage</option>
-                            <option value="fixed">Fixed</option>
+                            <option value="percentage">Percentage %</option>
+                            <option value="fixed">Fixed ₱</option>
                         </select>
                         <input type="number" id="markupValue" placeholder="Markup Value" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
                             class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
@@ -645,94 +854,6 @@
         </div>
     </div>
 </div>
-
-
-
-
-    <!-- Restock Product Modal -->
-<div id="restockProductModal" 
-    class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
-
-    <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
-
-        <!-- Red Top Bar -->
-        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-            <h2 class="text-white text-lg font-medium">RESTOCK PRODUCT</h2>
-            <button onclick="closeRestockModal()" class="text-white hover:text-gray-200">
-                <span class="material-symbols-outlined text-white">close</span>
-            </button>
-        </div>
-
-        <!-- Scrollable Modal Content -->
-        <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
-
-            <!-- Left Side (Form Fields) -->
-            <form id="restockForm" class="w-1/2 space-y-3">
-                @csrf
-                <!-- Hidden Inputs for Product Info -->
-                <input type="hidden" name="prod_code" id="restockProdCode">
-                <input type="hidden" name="category_id" id="restockCategoryId">
-
-                <!-- Last Batch Number -->
-                <label class="block text-sm font-semibold text-gray-800">Last Batch No.</label>
-                <input type="text" id="last_batch_number" readonly
-                    class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-sm font-mono tracking-widest">
-
-                <!-- Next Batch Number -->
-                <label for="batch_number" class="block text-sm font-semibold text-gray-800">New Batch No.</label>
-                <input type="text" name="batch_number" id="batch_number" readonly
-                    class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-sm font-mono tracking-widest">
-
-
-                <!-- Quantity -->
-                <label for="restockQuantityInput" class="block text-sm font-semibold text-gray-800">Quantity</label>
-                <div class="flex items-center border border-gray-300 rounded px-2 py-1">
-                    <button type="button" onclick="decreaseRestockQuantity()" class="px-2 text-base font-bold">−</button>
-                    <input type="number" name="stock" id="restockQuantityInput" value="1" min="1"
-                        class="w-full text-center outline-none border-0 text-sm">
-                    <button type="button" onclick="increaseRestockQuantity()" class="px-2 text-base font-bold">+</button>
-                </div>
-
-                <!-- Date Added -->
-                <label for="date_added" class="block text-sm font-semibold text-gray-800">Date Added</label>
-                <input type="date" name="date_added" id="date_added"
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-xs" required>
-
-                <!-- Expiration Date -->
-                <label for="expiration_date" class="block text-sm font-semibold text-gray-800">Expiration Date</label>
-                <input type="date" name="expiration_date" id="expiration_date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-xs">
-            </form>
-
-            <!-- Right Side (Preview & Submit) -->
-            <div class="flex flex-col items-center w-1/2 space-y-10">
-
-                <!-- Product Image Preview -->
-                <div class="flex flex-col items-center space-y-2.5">
-                    <img id="restockProdImage" 
-                        src="{{ asset('assets/no-product-image.png') }}" 
-                        class="w-32 h-32 object-cover rounded-lg" />
-                </div>
-
-
-                <!-- Barcode Display -->
-                <div class="flex flex-col items-center space-y-1">
-                    <img id="restockBarcodeImage" src="{{ asset('assets/barcode.png') }}" 
-                        alt="Barcode Preview" class="w-48 object-contain">
-                    <div id="restockBarcode" class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest"></div>
-                    <span class="text-xs text-gray-500">(auto-filled from product barcode)</span>
-                </div>
-
-                <!-- Submit Button -->
-                <button type="submit" form="restockForm"
-                    class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
-                    Restock
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 
 
 
@@ -849,68 +970,485 @@
         }
     </script>
 
-
-    <!-- Type Barcode Modal JavaScript -->
     <script>
-        function openTypeModal() {
-            const modal = document.getElementById('typeBarcodeModal');
-            if (modal) modal.classList.remove('hidden');
+    document.addEventListener('DOMContentLoaded', function () {
+    const addStockBtn = document.getElementById('addStockBtn');
+    const chooseCategoryModal = document.getElementById('chooseCategoryModal');
+    const chooseProductsModal = document.getElementById('chooseProductsModal');
+    const restockDetailsModal = document.getElementById('restockDetailsModal');
+    const bulkRestockForm = document.getElementById('bulkRestockForm');
+
+    // === Open Choose Category ===
+    addStockBtn?.addEventListener('click', () => {
+        chooseCategoryModal.classList.remove('hidden');
+        chooseCategoryModal.classList.add('flex');
+    });
+    document.getElementById('closeChooseCategoryModal')?.addEventListener('click', () => {
+        chooseCategoryModal.classList.add('hidden');
+    });
+
+    // === Open Add Category Modal ===
+    window.openAddCategoryModal = function() {
+        document.getElementById('chooseCategoryModal').classList.add('hidden');
+        const modal = document.getElementById('addCategoryModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.getElementById('newCategoryName').focus();
+    };
+
+    // === Close Add Category Modal ===
+    function closeAddCategoryModal() {
+        const modal = document.getElementById('addCategoryModal');
+        modal.classList.add('hidden');
+    }
+
+    // === Reopen Choose Category Modal ===
+    function reopenChooseCategoryModal() {
+        const chooseModal = document.getElementById('chooseCategoryModal');
+        chooseModal.classList.remove('hidden');
+        chooseModal.classList.add('flex');
+    }
+
+    // === Close Buttons ===
+    document.getElementById('closeAddCategoryModal')?.addEventListener('click', () => {
+        closeAddCategoryModal();
+        reopenChooseCategoryModal();
+    });
+
+    document.getElementById('cancelAddCategory')?.addEventListener('click', () => {
+        closeAddCategoryModal();
+        reopenChooseCategoryModal();
+    });
+
+    // === Handle Add Category Form Submission ===
+    document.getElementById('addCategoryForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const categoryName = document.getElementById('newCategoryName').value.trim();
+        if (!categoryName) {
+        alert('Please enter a category name.');
+        return;
         }
 
-        function closeTypeModal() {
-            const modal = document.getElementById('typeBarcodeModal');
-            if (modal) modal.classList.add('hidden');
+        const formData = new FormData(this);
+
+        try {
+        const response = await fetch('/inventory/add-category', {
+            method: 'POST',
+            headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Set flag to reopen modal after reload
+            sessionStorage.setItem('openChooseCategoryModal', 'true');
+
+            alert('Category added successfully!');
+            window.location.reload(); // reload page to get new category with proper ID
+        } else {
+            alert('⚠️ ' + data.message);
         }
-
-        function closeAllModals() {
-            const modalIds = ['typeBarcodeModal', 'barcodeExistsModal', 'barcodeNotFoundModal', 'registerProductModal'];
-            modalIds.forEach(id => {
-                const modal = document.getElementById(id);
-                if (modal) modal.classList.add('hidden');
-            });
+        } catch (err) {
+        console.error(err);
+        alert('Something went wrong while adding category.');
         }
+    });
 
-        function reopenTypeModal() {
-            closeAllModals();
-            openTypeModal();
+    // === Auto-open Choose Category Modal after reload if needed ===
+    window.addEventListener('DOMContentLoaded', () => {
+        if (sessionStorage.getItem('openChooseCategoryModal') === 'true') {
+        sessionStorage.removeItem('openChooseCategoryModal'); // clear flag
+        const chooseCategoryModal = document.getElementById('chooseCategoryModal');
+        chooseCategoryModal.classList.remove('hidden');
+        chooseCategoryModal.classList.add('flex');
         }
+    });
 
-        function openRegisterModal() {
-            closeAllModals();
-            const modal = document.getElementById('registerProductModal');
-            if (modal) modal.classList.remove('hidden');
-        }
 
-        function checkBarcode() {
-            const barcodeInput = document.getElementById('barcodeInput');
-            const barcode = barcodeInput ? barcodeInput.value.trim() : '';
+    // === Category Click ===
+    window.onCategorySelected = function(categoryId, categoryName) {
+        chooseCategoryModal.classList.add('hidden');
+        fetchCategoryProducts(categoryId, categoryName);
+    };
 
-            if (!barcode) {
-                alert("Please enter a barcode.");
-                return;
-            }
+    // === AJAX: Fetch Category Products ===
+    function fetchCategoryProducts(categoryId, categoryName) {
+        document.getElementById('selectedCategoryLabel').textContent = `Category: ${categoryName}`;
+        const list = document.getElementById('categoryProductsList');
+        list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">Loading…</td></tr>';
 
-            fetch('/check-barcode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ barcode })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
+        fetch(`/inventory/category-products/${categoryId}`)
+            .then(r => r.json())
             .then(data => {
-                closeAllModals();
+            list.innerHTML = '';
+            if (!data || data.length === 0) {
+                list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">No products found.</td></tr>';
+            } else {
+                data.forEach(p => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="p-2"><input type="checkbox" class="selectProductCheckbox" data-prod="${p.prod_code}" data-cat="${p.category_id}" data-name="${escapeHtml(p.name)}" data-stock="${p.stock}"></td>
+                    <td class="p-2">${escapeHtml(p.name)}</td>
+                    <td class="p-2 text-center">${p.stock}</td>
+                `;
+                list.appendChild(row);
+                });
+            }
+            chooseProductsModal.classList.remove('hidden');
+            chooseProductsModal.classList.add('flex');
+            document.getElementById('restockCategoryId').value = categoryId;
+            })
+            .catch(err => {
+            console.error(err);
+            list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">Error loading products.</td></tr>';
+            });
+    }
 
-                if (data.exists === true && data.product) {
-                    // ✅ Show the "Barcode Exists" modal
+
+    document.getElementById('closeChooseProductsModal')?.addEventListener('click', () => {
+        chooseProductsModal.classList.add('hidden');
+    });
+
+    window.selectAllProducts = function() {
+        document.querySelectorAll('.selectProductCheckbox').forEach(cb => cb.checked = true);
+    };
+    window.deselectAllProducts = function() {
+        document.querySelectorAll('.selectProductCheckbox').forEach(cb => cb.checked = false);
+    };
+
+    // === Proceed to Restock Details ===
+    window.proceedToRestock = function() {
+    const checked = Array.from(document.querySelectorAll('.selectProductCheckbox:checked'));
+    if (checked.length === 0) {
+        alert('Please select at least one product to restock.');
+        return;
+    }
+
+    const container = document.getElementById('restockRowsContainer');
+    container.innerHTML = '';
+    const categoryId = document.getElementById('restockCategoryId').value;
+    let index = 0;
+
+    const promises = checked.map(cb => {
+        const prodCode = cb.dataset.prod;
+        const prodName = cb.dataset.name;
+        const currentStock = cb.dataset.stock ?? 0;
+
+        return fetch(`/inventory/get-latest-batch/${prodCode}`)
+        .then(r => r.json())
+        .then(batchResp => {
+            const nextBatch = batchResp.next_batch || 'BATCH-1';
+            addRestockRow(prodCode, prodName, categoryId, currentStock, nextBatch, index++);
+        });
+    });
+
+    Promise.all(promises).then(() => {
+        chooseProductsModal.classList.add('hidden');
+        restockDetailsModal.classList.remove('hidden');
+        restockDetailsModal.classList.add('flex');
+    }).catch(err => {
+        console.error(err);
+        alert('Failed to prepare restock details.');
+    });
+    };
+
+    // === Add Restock Row Function ===
+    window.addRestockRow = function(prodCode, prodName, categoryId, currentStock, batchNum, index) {
+    const container = document.getElementById('restockRowsContainer');
+    const tr = document.createElement('tr');
+    tr.classList.add('border-b');
+
+    tr.innerHTML = `
+        <td class="p-2">
+        ${escapeHtml(prodName)}
+        <input type="hidden" name="items[${index}][prod_code]" value="${prodCode}">
+        <input type="hidden" name="items[${index}][category_id]" value="${categoryId}">
+        </td>
+        <td class="p-2 text-center">${currentStock}</td>
+        <td class="p-2 text-center">
+        <input type="number" min="1" required name="items[${index}][qty]" 
+            class="border rounded px-2 py-1 w-20 text-sm text-center">
+        </td>
+        <td class="p-2 text-center">
+        <input type="date" name="items[${index}][expiration_date]" 
+            class="border rounded px-2 py-1 w-36 text-sm text-center">
+        </td>
+        <td class="p-2 text-center">
+        <input type="text" readonly name="items[${index}][batch_number]" 
+            value="${batchNum}" 
+            class="border rounded px-2 py-1 text-sm text-center bg-gray-50">
+        </td>
+        <td class="p-2">
+        <div class="flex justify-center gap-2">
+            <button 
+            type="button" 
+            class="flex-1 bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-blue-700 transition"
+            onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
+            Add Batch
+            </button>
+            <button 
+            type="button" 
+            class="flex-1 bg-red-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-red-700 transition"
+            onclick="this.closest('tr').remove()">
+            Remove
+            </button>
+        </div>
+        </td>
+    `;
+    container.appendChild(tr);
+    };
+
+    // === Duplicate Row for the Same Product (increments batch) ===
+    window.duplicateBatchRow = function(button, prodCode, prodName, categoryId, currentStock) {
+    const container = document.getElementById('restockRowsContainer');
+    const rows = container.querySelectorAll('tr');
+    let highestBatch = 0;
+    let lastSameProductRow = null;
+
+    rows.forEach(row => {
+        const batchInput = row.querySelector(`input[name*="[batch_number]"]`);
+        const prodInput = row.querySelector(`input[name*="[prod_code]"]`);
+        if (prodInput && prodInput.value === prodCode && batchInput) {
+            lastSameProductRow = row; // keep updating to get the last occurrence
+            const match = batchInput.value.match(/BATCH-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > highestBatch) highestBatch = num;
+            }
+        }
+    });
+
+    const nextBatch = 'BATCH-' + (highestBatch + 1);
+    const newIndex = container.querySelectorAll('tr').length;
+
+    // Create the new row
+    const tr = document.createElement('tr');
+    tr.classList.add('border-b');
+    tr.innerHTML = `
+        <td class="p-2">
+            ${escapeHtml(prodName)}
+            <input type="hidden" name="items[${newIndex}][prod_code]" value="${prodCode}">
+            <input type="hidden" name="items[${newIndex}][category_id]" value="${categoryId}">
+        </td>
+        <td class="p-2 text-center">${currentStock}</td>
+        <td class="p-2 text-center">
+            <input type="number" min="1" required name="items[${newIndex}][qty]" 
+                class="border rounded px-2 py-1 w-20 text-sm text-center">
+        </td>
+        <td class="p-2 text-center">
+            <input type="date" name="items[${newIndex}][expiration_date]" 
+                class="border rounded px-2 py-1 w-36 text-sm text-center">
+        </td>
+        <td class="p-2 text-center">
+            <input type="text" readonly name="items[${newIndex}][batch_number]" 
+                value="${nextBatch}" 
+                class="border rounded px-2 py-1 text-sm text-center bg-gray-50">
+        </td>
+        <td class="p-2">
+            <div class="flex justify-center gap-2">
+                <button 
+                    type="button" 
+                    class="flex-1 bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-blue-700 transition"
+                    onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
+                    Add Batch
+                </button>
+                <button 
+                    type="button" 
+                    class="flex-1 bg-red-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-red-700 transition"
+                    onclick="this.closest('tr').remove()">
+                    Remove
+                </button>
+            </div>
+        </td>
+    `;
+
+    // Insert after the last row with the same product, or append if none found
+    if (lastSameProductRow) {
+        if (lastSameProductRow.nextSibling) {
+            container.insertBefore(tr, lastSameProductRow.nextSibling);
+        } else {
+            container.appendChild(tr);
+        }
+    } else {
+        container.appendChild(tr);
+    }
+};
+
+
+
+    // === Close Restock Modal ===
+    window.closeRestockDetails = function() {
+    const modal = document.getElementById('restockDetailsModal');
+    if (modal) modal.classList.add('hidden');
+    };
+
+    document.getElementById('closeRestockDetailsModal')?.addEventListener('click', window.closeRestockDetails);
+
+    // === Helper: Escape HTML ===
+    function escapeHtml(text) {
+    if (!text) return '';
+    return ('' + text)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // === Bulk Restock Submit Handling ===
+    if (bulkRestockForm) {
+    bulkRestockForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(bulkRestockForm);
+
+        fetch('/inventory/bulk-restock', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+        body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.href = '/inventory-owner';
+        } else {
+            alert('⚠️ ' + data.message);
+        }
+        })
+        .catch(err => {
+        console.error(err);
+        alert('Something went wrong. Please try again.');
+        });
+    });
+    }
+
+    });
+</script>
+
+
+  
+
+
+<!-- Type Barcode Modal JavaScript -->
+<script>
+    function openTypeModal() {
+        const modal = document.getElementById('typeBarcodeModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            // Clear input and focus when opening modal
+            const barcodeInput = document.getElementById('barcodeInput');
+            if (barcodeInput) {
+                barcodeInput.value = '';
+                barcodeInput.focus();
+            }
+        }
+    }
+
+    function closeTypeModal() {
+        const modal = document.getElementById('typeBarcodeModal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    function openBarcodeExistsModal() {
+        closeAllModals();
+        const modal = document.getElementById('barcodeAlreadyExistsModal');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeBarcodeExistsModal() {
+        const modal = document.getElementById('barcodeAlreadyExistsModal');
+        if (modal) modal.classList.add('hidden');
+        // Reopen the type barcode modal so user can try again
+        openTypeModal();
+    }
+
+    function goToInventory() {
+        // Redirect to inventory page
+        window.location.href = "{{ route('inventory-owner') }}";
+    }
+
+    function closeAllModals() {
+        const modalIds = ['typeBarcodeModal', 'barcodeExistsModal', 'barcodeNotFoundModal', 'registerProductModal', 'barcodeAlreadyExistsModal'];
+        modalIds.forEach(id => {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden');
+        });
+    }
+
+    function reopenTypeModal() {
+        closeAllModals();
+        openTypeModal();
+    }
+
+    // Your existing function - keep this exactly as is
+    function openRegisterModal(barcode) {
+        closeAllModals();
+        const modal = document.getElementById('registerProductModal');
+        if (modal) modal.classList.remove('hidden');
+
+        // Auto-fill barcode in the register modal
+        const barcodeElement = document.getElementById('autoFilledBarcode');
+        if (barcodeElement) barcodeElement.textContent = barcode || '';
+    }
+
+    // Function to detect if we're in registration context - IMPROVED
+    function isRegistrationContext() {
+        // Check URL for registration-related paths
+        const currentPath = window.location.pathname;
+        const isRegistrationPath = currentPath.includes('register') || 
+                                 currentPath.includes('add-product') || 
+                                 currentPath.includes('create');
+        
+        // Check if we have a register product modal that's meant to be used
+        const registerModal = document.getElementById('registerProductModal');
+        const hasRegisterModal = registerModal !== null;
+        
+        // If we're on the main inventory page but have a register modal, 
+        // we're likely in registration context
+        return isRegistrationPath || hasRegisterModal;
+    }
+
+    function checkBarcode() {
+        const barcodeInput = document.getElementById('barcodeInput');
+        const barcode = barcodeInput ? barcodeInput.value.trim() : '';
+
+        if (!barcode) {
+            alert("Please enter a barcode.");
+            return;
+        }
+
+        console.log('Checking barcode:', barcode);
+        console.log('Registration context:', isRegistrationContext());
+
+        fetch('/check-barcode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ barcode })
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(data => {
+            console.log('Barcode check response:', data);
+            closeAllModals();
+
+            if (data.exists === true && data.product) {
+                // Barcode exists - show appropriate modal based on context
+                if (isRegistrationContext()) {
+                    console.log('Showing barcode exists modal for registration');
+                    openBarcodeExistsModal();
+                } else {
+                    console.log('Showing barcode exists modal for restocking');
                     const existsModal = document.getElementById('barcodeExistsModal');
                     if (existsModal) existsModal.classList.remove('hidden');
 
-                    // ✅ Attach the product info dynamically to the Restock button
+                    // Attach the product info dynamically to the Restock button
                     const restockBtn = document.getElementById('barcodeExistsRestockBtn');
                     if (restockBtn) {
                         restockBtn.onclick = function () {
@@ -924,40 +1462,60 @@
                             );
                         };
                     }
-                } else if (data.exists === false) {
+                }
+            } else if (data.exists === false) {
+                // Barcode doesn't exist
+                console.log('Barcode not found in database');
+                
+                if (isRegistrationContext()) {
+                    // If in registration context, proceed with registration
+                    console.log('Opening register modal with barcode:', barcode);
+                    openRegisterModal(barcode);
+                } else {
+                    // If in inventory context, show not found modal
+                    console.log('Showing barcode not found modal');
                     const notFoundModal = document.getElementById('barcodeNotFoundModal');
                     if (notFoundModal) notFoundModal.classList.remove('hidden');
-                } else {
-                    console.warn('Unexpected response structure:', data);
                 }
-            })
-            .catch(error => {
-                console.error('Error checking barcode:', error);
-                alert('Something went wrong while checking the barcode.');
+            } else {
+                console.warn('Unexpected response structure:', data);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking barcode:', error);
+            alert('Something went wrong while checking the barcode.');
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("barcodeForm");
+        const barcodeInput = document.getElementById("barcodeInput");
+
+        if (form) {
+            form.addEventListener("submit", function (e) {
+                e.preventDefault(); // prevent page reload
+                checkBarcode();     // call your barcode check function
             });
         }
 
+        // Allow Enter key to submit the form
+        if (barcodeInput) {
+            barcodeInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    checkBarcode();
+                }
+            });
+        }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const form = document.getElementById("barcodeForm");
-            const barcodeInput = document.getElementById("barcodeInput");
+        // Debug: Log modal states
+        console.log('Type Barcode Modal loaded');
+        console.log('Register Product Modal exists:', document.getElementById('registerProductModal') !== null);
+        console.log('Current path:', window.location.pathname);
+    });
 
-            // Allow only digits (0–9) while typing
-            if (barcodeInput) {
-                barcodeInput.addEventListener("input", function () {
-                    this.value = this.value.replace(/[^0-9]/g, '');
-                });
-            }
+</script>
 
-            if (form) {
-                form.addEventListener("submit", function (e) {
-                    e.preventDefault(); // prevent page reload
-                    checkBarcode();     // call your barcode check function
-                });
-            }
-        });
-
-    </script>
 
     <!-- Scan Barcode Modal JavaScript -->
     <script>
@@ -1124,12 +1682,6 @@
 </script>
 
 
-
-
-
-
-
-
    <!-- Register New Product Modal JavaScript -->
     <script>
         function openRegisterModal(barcode) {
@@ -1285,83 +1837,32 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <script>
-    function openRestockModal(prodCode, prodName, prodImage, categoryId, barcode) {
-        // Fill hidden inputs
-        document.getElementById('restockProdCode').value = prodCode;
-        document.getElementById('restockCategoryId').value = categoryId;
-
-        // Product Image Preview
-        const restockImg = document.getElementById('restockProdImage');
-        if (prodImage) {
-            restockImg.src = '/storage/' + prodImage;
-            // 👇 If the file is missing, fallback automatically
-            restockImg.onerror = () => restockImg.src = '/assets/no-product-image.png';
-        } else {
-            restockImg.src = '/assets/no-product-image.png';
-        }
-
-
-
-        // Auto-filled barcode number
-        document.getElementById('restockBarcode').textContent = barcode || prodCode || '';
-
-        // Reset quantity
-        document.getElementById('restockQuantityInput').value = 1;
-
-        // Fetch latest batch number from server
-        fetch(`/inventory/latest-batch/${prodCode}`)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('last_batch_number').value = data.last_batch_number || 'None';
-                document.getElementById('batch_number').value = data.next_batch_number || 'BATCH-1';
-            })
-            .catch(err => {
-                console.error('Error fetching latest batch:', err);
-                document.getElementById('last_batch_number').value = 'None';
-                document.getElementById('batch_number').value = 'BATCH-1';
-        });
-
-
-        // Show modal
-        document.getElementById('restockProductModal').classList.remove('hidden');
+function openBulkRestockModal() {
+    let selected = document.querySelectorAll('input[name="productSelect"]:checked');
+    if (selected.length === 0) {
+        alert("Please select at least one product!");
+        return;
     }
 
-    function closeRestockModal() {
-        document.getElementById('restockProductModal').classList.add('hidden');
-    }
+    // Collect IDs
+    let ids = [];
+    selected.forEach(cb => ids.push(cb.value));
+    document.getElementById("selectedProductIds").value = ids.join(',');
 
-    function increaseRestockQuantity() {
-        const input = document.getElementById('restockQuantityInput');
-        if (input) input.value = parseInt(input.value || 0) + 1;
-    }
-    function decreaseRestockQuantity() {
-        const input = document.getElementById('restockQuantityInput');
-        if (input && parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
-    }
+    document.getElementById("bulkRestockModal").classList.remove("hidden");
+}
 
-    // Handle form submission
-    document.getElementById('restockForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
+function closeBulkRestockModal() {
+    document.getElementById("bulkRestockModal").classList.add("hidden");
+}
 
-        fetch('/inventory/restock', {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRF-TOKEN': document.querySelector('input[name=_token]').value }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message || 'Stock added successfully!');
-                closeRestockModal();
-                location.reload();
-            } else {
-                alert('Error: ' + (data.message || 'Something went wrong.'));
-            }
-        })
-        .catch(err => console.error(err));
+function toggleSelectAll(masterCheckbox) {
+    document.querySelectorAll('input[name="productSelect"]').forEach(cb => {
+        cb.checked = masterCheckbox.checked;
     });
+}
 </script>
+
 
 <!-- Archive, Unarchive JavaScript -->
 <script>

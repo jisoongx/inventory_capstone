@@ -52,7 +52,7 @@
                     <span class="px-2.5 py-0.5 text-xs bg-red-100 text-red-700 font-medium rounded-full shadow-sm">
                         Out of Stock
                     </span>
-                @elseif($totalStock <= $lowStockThreshold)
+                @elseif($totalStock <= $product->stock_limit)
                     <span class="px-2.5 py-0.5 text-xs bg-yellow-100 text-yellow-700 font-medium rounded-full shadow-sm">
                         Low Stock
                     </span>

@@ -181,9 +181,21 @@ Route::patch('/inventory-owner-settings/category/{id}', [InventoryOwnerSettingsC
 Route::post('/inventory-owner-settings/unit', [InventoryOwnerSettingsController::class, 'storeUnit'])->name('owner.unit.store');
 Route::patch('/inventory-owner-settings/unit/{id}', [InventoryOwnerSettingsController::class, 'updateUnit'])->name('owner.unit.update');
 
-
 Route::get('/inventory-owner/edit/{prodCode}', [InventoryOwnerController::class, 'edit'])->name('inventory-owner-edit');
 Route::put('/inventory-owner/update/{prodCode}', [InventoryOwnerController::class, 'update'])->name('inventory-owner-update');
+
+// Category -> product listing (AJAX)
+Route::get('/inventory/category-products/{categoryId}', [InventoryOwnerController::class, 'getCategoryProducts'])->name('inventory.categoryProducts');
+// Get latest batch for a product (AJAX)
+Route::get('/inventory/get-latest-batch/{prod_code}', [InventoryOwnerController::class, 'getLatestBatch'])->name('inventory.getLatestBatch');
+// Bulk restock submit
+Route::post('/inventory/bulk-restock', [InventoryOwnerController::class, 'bulkRestock'])->name('inventory.bulkRestock');
+// Add New Category in Choose Category Modal
+Route::post('/inventory/add-category', [InventoryOwnerController::class, 'addCategory']);
+Route::get('/inventory-owner/pricing-history/{prodCode}', [InventoryOwnerController::class, 'pricingHistory'])->name('inventory-owner-pricing-history');
+
+
+
 
 
 

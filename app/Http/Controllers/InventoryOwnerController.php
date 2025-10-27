@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class InventoryOwnerController extends Controller
 {
@@ -118,91 +119,192 @@ class InventoryOwnerController extends Controller
         // Get all restock records
         $restocks = DB::table('inventory')
             ->where('prod_code', $prodCode)
-            ->whereNotNull('batch_number') // only restocks
-            ->orderBy('date_added', 'desc')
+            ->whereNotNull('batch_number')
+            ->orderBy('date_added', 'desc')     // newest date first
+            ->orderBy('batch_number', 'desc')   // within same date, highest batch first
             ->get();
 
         // Calculate total stock
         $totalStock = $restocks->sum('stock');
 
-        // Compute threshold = 20% of stock_limit
-        $lowStockThreshold = $product->stock_limit * 0.2;
-
-        return view('inventory-owner-product-info', compact('product', 'restocks', 'totalStock', 'lowStockThreshold'));
+        return view('inventory-owner-product-info', compact('product', 'restocks', 'totalStock'));
     }
 
-
-    public function edit($prodCode)
-    {
-        $product = DB::table('products')
-            ->join('units', 'products.unit_id', '=', 'units.unit_id')
-            ->select('products.*', 'units.unit as unit')
-            ->where('products.prod_code', $prodCode)
-            ->first();
-
-        if (!$product) {
-            abort(404, 'Product not found');
-        }
-
-        $units = DB::table('units')->get(); // dropdown
-        $statuses = ['active', 'archived']; // for prod_status dropdown
-
-        return view('inventory-owner-edit', compact('product', 'units', 'statuses'));
-    }
-
-    public function update(Request $request, $prodCode)
+    public function pricingHistory($prodCode)
     {
         $ownerId = session('owner_id');
 
-        $validated = $request->validate([
-            'name'          => 'required|string|max:100',
-            'barcode'       => 'nullable|string|max:50',
-            'cost_price'    => 'required|numeric|min:0',
-            'selling_price' => 'required|numeric|min:0',
-            'description'   => 'nullable|string',
-            'unit_id'       => 'required|integer',
-            'stock_limit'   => 'nullable|integer|min:0',
-            'prod_image'    => 'nullable|image|max:2048',
-            'prod_status'   => 'required|in:active,archived', // ✅ added validation
-        ]);
-
-        // Handle photo upload
-        $photoPath = null;
-        if ($request->hasFile('prod_image')) {
-            $photoPath = $request->file('prod_image')->store('product_images', 'public');
-        }
-
-        // Prepare update data
-        $updateData = [
-            'name'          => $validated['name'],
-            'barcode'       => $validated['barcode'],
-            'cost_price'    => $validated['cost_price'],
-            'selling_price' => $validated['selling_price'],
-            'unit_id'       => $validated['unit_id'],
-            'stock_limit'   => $validated['stock_limit'],
-            'description'   => $validated['description'] ?? null,
-            'prod_status'   => $validated['prod_status'], // ✅ added here
-        ];
-
-        if ($photoPath) {
-            $updateData['prod_image'] = $photoPath;
-        }
-
-        DB::table('products')
-            ->where('prod_code', $prodCode)
-            ->update($updateData);
-
-        ActivityLogController::log(
-            'Updated product: ' . $validated['name'],
-            'owner',
-            Auth::guard('owner')->user(),
-            request()->ip()
-        );
+        $priceHistory = DB::select("
+            SELECT 
+                ph.price_history_id,
+                ph.prod_code,
+                ph.old_cost_price,
+                ph.old_selling_price,
+                ph.effective_from,
+                ph.effective_to,
+                ph.updated_by,
+                ph.owner_id,
+                IFNULL(SUM(
+                    CASE 
+                        WHEN r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        THEN ri.item_quantity
+                        ELSE 0
+                    END
+                ), 0) AS total_sold,
+                IFNULL(SUM(
+                    CASE 
+                        WHEN r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        THEN ri.item_quantity * ph.old_selling_price
+                        ELSE 0
+                    END
+                ), 0) AS total_sales
+            FROM pricing_history ph
+            LEFT JOIN receipt_item ri ON ri.prod_code = ph.prod_code
+            LEFT JOIN receipt r ON r.receipt_id = ri.receipt_id
+            WHERE ph.prod_code = ? 
+            AND ph.owner_id = ? 
+            AND ph.effective_to IS NOT NULL   -- ✅ only show completed/old prices
+            GROUP BY 
+                ph.price_history_id,
+                ph.prod_code,
+                ph.old_cost_price,
+                ph.old_selling_price,
+                ph.effective_from,
+                ph.effective_to,
+                ph.updated_by,
+                ph.owner_id
+            ORDER BY ph.effective_to DESC, ph.effective_from DESC
+        ", [$prodCode, $ownerId]);
 
 
-        return redirect()->route('inventory-owner')
-            ->with('success', 'Product updated successfully.');
+
+        return view('inventory-owner-pricing-history', compact('priceHistory', 'prodCode'));
     }
+
+public function edit($prodCode)
+{
+    $product = DB::table('products')
+        ->join('units', 'products.unit_id', '=', 'units.unit_id')
+        ->select('products.*', 'units.unit as unit')
+        ->where('products.prod_code', $prodCode)
+        ->first();
+
+    if (!$product) {
+        abort(404, 'Product not found');
+    }
+
+    $units = DB::table('units')->get();
+    $statuses = ['active', 'archived'];
+
+    // ✅ Fetch price history for dropdown
+    $priceHistory = DB::table('pricing_history')
+        ->where('prod_code', $prodCode)
+        ->where('owner_id', session('owner_id'))
+        ->orderBy('effective_from', 'desc')
+        ->limit(5)
+        ->get();
+
+    return view('inventory-owner-edit', compact('product', 'units', 'statuses', 'priceHistory'));
+}
+
+
+public function update(Request $request, $prodCode)
+{
+    $ownerId = session('owner_id');
+
+    // 🔹 Updated validation to include previous_cost_price
+    $validated = $request->validate([
+        'name'             => 'required|string|max:100',
+        'barcode'          => 'nullable|string|max:50',
+        'cost_price'       => 'required|numeric|min:0',
+        'selling_price'    => 'nullable|numeric|min:0',
+        'previous_prices'  => 'nullable|numeric|min:0',
+        'previous_cost_price' => 'nullable|numeric|min:0', // 🔹 NEW
+        'description'      => 'nullable|string',
+        'unit_id'          => 'required|integer',
+        'stock_limit'      => 'nullable|integer|min:0',
+        'prod_image'       => 'nullable|image|max:2048',
+        'prod_status'      => 'required|in:active,archived',
+    ]);
+
+    // Fetch current product data
+    $product = DB::table('products')
+        ->where('prod_code', $prodCode)
+        ->first();
+
+    if (!$product) {
+        return redirect()->route('inventory-owner')->with('error', 'Product not found.');
+    }
+
+    // Handle image upload if present
+    $photoPath = null;
+    if ($request->hasFile('prod_image')) {
+        $photoPath = $request->file('prod_image')->store('product_images', 'public');
+    }
+
+    // 🔹 Determine which prices to use (new input or previous selection)
+    $finalSellingPrice = $request->previous_prices ?: $request->selling_price;
+    $finalCostPrice = $request->previous_cost_price ?: $request->cost_price;
+
+    // 🔹 Validate that at least one selling price is provided
+    if (!$finalSellingPrice) {
+        return back()->with('error', 'Please provide or select a selling price.')->withInput();
+    }
+
+    // Prepare updated product data
+    $updateData = [
+        'name'          => $validated['name'],
+        'barcode'       => $validated['barcode'],
+        'cost_price'    => $finalCostPrice, // 🔹 Use the determined cost price
+        'selling_price' => $finalSellingPrice,
+        'unit_id'       => $validated['unit_id'],
+        'stock_limit'   => $validated['stock_limit'],
+        'description'   => $validated['description'] ?? null,
+        'prod_status'   => $validated['prod_status'],
+    ];
+
+    if ($photoPath) {
+        $updateData['prod_image'] = $photoPath;
+    }
+
+    // 🔹 Check if price changed compared to current product
+    if ($product->cost_price != $finalCostPrice || $product->selling_price != $finalSellingPrice) {
+
+        // Close the current active price record (old price)
+        DB::table('pricing_history')
+            ->where('prod_code', $prodCode)
+            ->where('owner_id', $ownerId)
+            ->whereNull('effective_to')
+            ->update(['effective_to' => now()]);
+
+        // Insert the new active price record (new price)
+        DB::table('pricing_history')->insert([
+            'prod_code'         => $prodCode,
+            'old_cost_price'    => $finalCostPrice,    // 🔹 Use final cost price
+            'old_selling_price' => $finalSellingPrice, // 🔹 Use final selling price
+            'owner_id'          => $ownerId,
+            'updated_by'        => session('staff_id') ?? null,
+            'effective_from'    => now(),
+            'effective_to'      => null,  // active price
+        ]);
+    }
+
+    // Update product table
+    DB::table('products')
+        ->where('prod_code', $prodCode)
+        ->update($updateData);
+
+    // Log activity
+    ActivityLogController::log(
+        'Updated product "' . $validated['name'] . '".',
+        'owner',
+        Auth::guard('owner')->user(),
+        request()->ip()
+    );
+
+    return redirect()->route('inventory-owner')
+        ->with('success', 'Product updated successfully.');
+}
 
 
     public function archive($prodCode)
@@ -306,7 +408,7 @@ class InventoryOwnerController extends Controller
         'batch_number' => 'nullable|string|max:50'
     ]);
 
-    // ✅ Handle category
+    // Handle category
     if ($validated['category_id'] === 'other' && !empty($validated['custom_category'])) {
         $categoryId = DB::table('categories')->insertGetId([
             'category' => $validated['custom_category'],
@@ -316,7 +418,7 @@ class InventoryOwnerController extends Controller
         $categoryId = $validated['category_id'];
     }
 
-    // ✅ Handle unit
+    // Handle unit
     if ($validated['unit_id'] === 'other' && !empty($validated['custom_unit'])) {
         $unitId = DB::table('units')->insertGetId([
             'unit' => $validated['custom_unit'],
@@ -326,7 +428,7 @@ class InventoryOwnerController extends Controller
         $unitId = $validated['unit_id'];
     }
 
-    // ✅ Handle photo upload with default fallback
+    // Handle photo upload with default fallback
     if ($request->hasFile('photo')) {
         $photoPath = $request->file('photo')->store('product_images', 'public');
     } else {
@@ -335,7 +437,7 @@ class InventoryOwnerController extends Controller
     }
 
 
-    // ✅ Check if product exists
+    // Check if product exists
     $product = DB::table('products')
         ->where('barcode', $validated['barcode'])
         ->where('owner_id', $ownerId)
@@ -371,6 +473,17 @@ class InventoryOwnerController extends Controller
         'batch_number' => $validated['batch_number'] ?? null,
     ]);
 
+    // Insert initial pricing record for the newly registered product
+    DB::table('pricing_history')->insert([
+        'prod_code'         => $prodCode,
+        'old_cost_price'    => $validated['cost_price'],
+        'old_selling_price' => $validated['selling_price'],
+        'owner_id'          => $ownerId,
+        'updated_by'        => session('staff_id') ?? null,
+        'effective_from'    => now(),
+        'effective_to'      => null, // current active price
+    ]);
+
         $ip = $request->ip();
         $guard = 'owner';
         $user = Auth::guard('owner')->user();
@@ -385,65 +498,150 @@ class InventoryOwnerController extends Controller
 }
 
 
-
-
-   public function restockProduct(Request $request)
+public function addCategory(Request $request)
 {
-    $prodCode = $request->input('prod_code');
-    $quantity = $request->input('stock');          // from modal input
-    $expiryDate = $request->input('expiration_date');     // from modal input
-    $dateAdded = $request->input('date_added');       // from modal input
+    $ownerId = session('owner_id');
+    $categoryName = trim($request->input('category'));
 
-    // Get the latest batch
-    $latestBatch = DB::table('inventory')
-        ->where('prod_code', $prodCode)
-        ->orderBy('inven_code', 'desc')
-        ->first();
+    if (empty($categoryName)) {
+        return response()->json(['success' => false, 'message' => 'Category name cannot be empty.']);
+    }
 
-    $nextBatchNumber = $latestBatch && $latestBatch->batch_number
-        ? 'BATCH-' . (((int) str_replace('BATCH-', '', $latestBatch->batch_number)) + 1)
-        : 'BATCH-1';
+    // Check for duplicates
+    $exists = DB::table('categories')
+        ->where('owner_id', $ownerId)
+        ->whereRaw('LOWER(category) = ?', [strtolower($categoryName)])
+        ->exists();
 
-    DB::table('inventory')->insert([
-        'prod_code' => $prodCode,
-        'stock' => $quantity,                 
-        'expiration_date' => $expiryDate,
-        'batch_number' => $nextBatchNumber,
-        'date_added' => $dateAdded,           
-        'last_updated' => now(),               
-        'owner_id' => session('owner_id'),
-        'category_id' => DB::table('products')->where('prod_code', $prodCode)->value('category_id'),
+    if ($exists) {
+        return response()->json(['success' => false, 'message' => 'Category already exists.']);
+    }
+
+    // Insert new category (your table only has 3 columns)
+    DB::table('categories')->insert([
+        'category' => $categoryName,
+        'owner_id' => $ownerId,
     ]);
 
-    return response()->json([
-        'success' => true,
-        'batch_number' => $nextBatchNumber,
-        'message' => "Product restocked successfully under $nextBatchNumber"
-    ]);
+    return response()->json(['success' => true, 'message' => 'Category added successfully.']);
 }
 
 
 
-public function getLatestBatch($prodCode)
+
+public function getCategoryProducts($categoryId)
 {
+    try {
+        $ownerId = session('owner_id');
+
+        if (!$ownerId) {
+            return response()->json(['error' => 'Unauthorized. Please log in again.'], 403);
+        }
+
+        $products = DB::select("
+            SELECT 
+                p.prod_code,
+                p.name,
+                p.category_id,
+                COALESCE(SUM(i.stock), 0) AS stock
+            FROM products p
+            LEFT JOIN inventory i ON p.prod_code = i.prod_code
+            WHERE p.category_id = :category_id
+            AND p.owner_id = :owner_id
+            GROUP BY p.prod_code, p.name, p.category_id
+            ORDER BY p.name ASC
+        ", [
+            'category_id' => $categoryId,
+            'owner_id' => $ownerId
+        ]);
+
+        return response()->json($products);
+
+    } catch (\Exception $e) {
+        \Log::error('Error fetching products by category: ' . $e->getMessage());
+        return response()->json(['error' => 'Server error. Please check logs.'], 500);
+    }
+}
+
+
+
+// Return the next batch identifier for a product (e.g. BATCH-3)
+public function getLatestBatch($prod_code)
+{
+    $ownerId = session('owner_id');
+
     $lastBatch = DB::table('inventory')
-        ->where('prod_code', $prodCode)
+        ->where('prod_code', $prod_code)
+        ->where('owner_id', $ownerId)
         ->orderBy('inven_code', 'desc')
         ->value('batch_number');
 
-    if ($lastBatch && preg_match('/BATCH-(\d+)/', $lastBatch, $matches)) {
-        $nextBatch = 'BATCH-' . (((int) $matches[1]) + 1);
+    // Parse BATCH-# if present, else default to BATCH-0 then +1
+    if ($lastBatch && preg_match('/BATCH-(\d+)/', $lastBatch, $m)) {
+        $next = 'BATCH-' . (((int)$m[1]) + 1);
     } else {
-        $nextBatch = 'BATCH-1';
+        $next = 'BATCH-1';
     }
 
-    return response()->json([
-        'success' => true,
-        'last_batch_number' => $lastBatch ?: 'None',
-        'next_batch_number' => $nextBatch,
-    ]);
+    return response()->json(['next_batch' => $next, 'last_batch' => $lastBatch]);
 }
 
+public function bulkRestock(Request $request)
+{
+    $ownerId = session('owner_id');
+    $items = $request->input('items', []);
+
+    if (empty($items)) {
+        return response()->json(['success' => false, 'message' => 'No products provided for restocking.']);
+    }
+
+    DB::beginTransaction();
+    try {
+        foreach ($items as $it) {
+            $prodCode = $it['prod_code'] ?? null;
+            $qty = (int) ($it['qty'] ?? 0);
+            $expiration = $it['expiration_date'] ?? null;
+            $categoryId = $it['category_id'] ?? null;
+
+            if (!$prodCode || $qty <= 0) continue;
+
+            // Always increment the batch per new restock entry
+            $latestBatch = DB::table('inventory')
+                ->where('prod_code', $prodCode)
+                ->where('owner_id', $ownerId)
+                ->orderBy('inven_code', 'desc')
+                ->value('batch_number');
+
+            $nextBatchNumber = ($latestBatch && preg_match('/BATCH-(\d+)/', $latestBatch, $m))
+                ? 'BATCH-' . (((int)$m[1]) + 1)
+                : 'BATCH-1';
+
+            DB::table('inventory')->insert([
+                'prod_code' => $prodCode,
+                'category_id' => $categoryId,
+                'stock' => $qty,
+                'batch_number' => $nextBatchNumber,
+                'expiration_date' => $expiration,
+                'owner_id' => $ownerId,
+                'date_added' => now(),
+                'last_updated' => now(),
+            ]);
+        }
+
+        DB::commit();
+
+        $ip = $request->ip();
+        $guard = 'owner';
+        $user = Auth::guard('owner')->user();
+        ActivityLogController::log('Bulk Restock Products', $guard, $user, $ip);
+
+        return response()->json(['success' => true, 'message' => 'Restock saved successfully.']);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Bulk restock error: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'Failed to save bulk restock. Check logs.']);
+    }
+}
 
 
 

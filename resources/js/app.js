@@ -570,3 +570,5 @@ window.generateBarcode = function() {
 document.getElementById("generateNewBarcodeBtn")?.addEventListener("click", () => {
     generateBarcode();
 });
+
+

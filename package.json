@@ -33,7 +33,7 @@
         "call-bind-apply-helpers": "^1.0.2",
         "caniuse-lite": "^1.0.30001726",
         "chalk": "^4.1.2",
-        "chart.js": "^4.5.0",
+        "chart.js": "^4.5.1",
         "chartjs-plugin-zoom": "^2.2.0",
         "chownr": "^3.0.0",
         "cliui": "^8.0.1",
