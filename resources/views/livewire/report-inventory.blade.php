@@ -47,7 +47,7 @@
         <div x-show="tab === 'expiring'">
                 <div class="flex justify-between items-center mb-4">
                     <div class="space-x-1 flex">
-                        <div class="border border-gray-300 rounded-tl-lg rounded-bl-lg px-3 py-2 text-xs">
+                        <div class="border border-gray-300 rounded-tl-lg rounded-bl-lg px-3 py-2 text-xs bg-slate-50">
                             Expiring within:
                         </div>
                         <select wire:model.live="selectedRange" class="border border-gray-300 rounded-tr-lg rounded-br-lg px-3 py-2 text-xs">
@@ -63,12 +63,13 @@
                 <div class="h-[39rem]">
                     <div class="hidden"></div>
                     <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[35rem]">
-                        <table id="analysis-table" class="w-full text-xs text-left shadow-sm  w-[115rem]">
+                        <table class="w-full text-xs text-left shadow-sm 
+                            {{ $lossRep->isNotEmpty() ? 'w-[116rem]' : 'w-full' }}">
                             <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                                 <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
                                     <th class="p-3 text-left sticky top-0 bg-gray-50 w-[1rem]"></th>
-                                    <th class="p-3 text-left sticky top-0 bg-gray-50 w-[14rem]">Batch #</th>
-                                    <th class="p-3 sticky top-0 bg-gray-50 w-[14rem]">Product Name</th>
+                                    <th class="p-3 text-left sticky top-0 bg-gray-50">Batch #</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 ">Product Name</th>
                                     <th class="p-3 sticky top-0 bg-gray-50">Category</th>
                                     <th class="p-3 sticky top-0 bg-gray-50 text-right">Expiration Date</th>
                                     <th class="p-3 sticky top-0 bg-gray-50 text-right">Days Until Expiry</th>
@@ -76,7 +77,7 @@
                                     <th class="p-3 sticky top-0 bg-gray-50 text-right">Cost per Unit (₱)</th>
                                     <th class="p-3 sticky top-0 bg-gray-50 text-right">Total Loss (₱)</th>
                                     <th class="p-3 sticky top-0 bg-gray-50 text-center">Will Sell?</th>
-                                    <th class="p-3 sticky top-0 bg-gray-50 text-center w-[16rem]">To Do</th>
+                                    <th class="p-3 sticky top-0 bg-gray-50 text-center">To Do</th>
                                     <!-- <th class=" p-3 sticky top-0 bg-gray-50">Status</th> -->
                                 </tr>
                             </thead>
@@ -108,7 +109,7 @@
                                         <td class="py-3 px-4 text-right">₱{{ number_format($row->cost, 2) }}</td>
                                         <td class="py-3 px-4 text-right">₱{{ number_format($row->total_loss, 2) }}</td>
                                         <td class="py-3 px-4 text-center text-[10px]
-                                            @if(str_contains($row->will_sell_before_expiry, 'No sales recorded'))
+                                            @if(str_contains($row->will_sell_before_expiry, 'unlikely to sell'))
                                                 bg-rose-100 text-red-600 font-medium
                                             @elseif(str_contains($row->will_sell_before_expiry, 'Already expired'))
                                                 bg-red-800 text-white font-medium
@@ -143,8 +144,8 @@
                                     </tr>
                                 @empty 
                                     <tr>
-                                        <td colspan="8" class="text-center">
-                                            <div class="flex flex-col justify-center items-center space-y-1 p-8">
+                                        <td colspan="11" class="text-center">
+                                            <div class="flex flex-col justify-center items-center space-y-1 p-8 sticky top-1/2">
                                                 <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
                                                 <span class="text-gray-500">Nothing to show.</span>
                                             </div>
@@ -159,7 +160,85 @@
 
         <!-- EXPIRED PRODUCTS / DAMAGED/ LOSS -->
         <div x-show="tab === 'loss'">
-            <p class="text-gray-700">⚡ <b>Loss</b> report content goes here.</p>
+
+            <div class="flex items-center mb-4 space-x-2 relative justify-between">
+                <div class="space-x-1">
+                    <button wire:click="showAll" class="border rounded px-3 py-2 text-xs transition-colors
+                            {{ is_null($selectedMonths) && is_null($selectedYears) 
+                                ? 'bg-red-600 text-white border-red-600' 
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">
+                        Show All 
+                    </button>
+                    <select wire:model.live="selectedMonths" class="border border-gray-300 rounded px-3 py-2 text-xs">
+                        @foreach ($monthNames as $index => $name)
+                            <option value="{{ $index + 1 }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+
+                    <select wire:model.live="selectedYears" class="border border-gray-300 rounded px-3 py-2 text-xs">
+                            @forelse ($years as $y)
+                            <option value="{{ $y }}">{{ $y }}</option>
+                        @empty
+                            <option value="{{ now()->year }}">{{ now()->year }}</option>
+                        @endforelse
+                    </select>
+                </div>                
+            </div>
+            
+            <div class="h-[39rem]">
+                <div class="hidden"></div>
+                <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[35rem]">
+                    <table class="w-full text-xs text-left shadow-sm 
+                        {{ $lossRep->isNotEmpty() ? 'w-[100rem]' : 'w-full' }}">
+                        <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
+                            <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
+                                <th class="p-3 text-left sticky top-0 bg-gray-50">Date Reported</th>
+                                <th class="p-3 sticky top-0 bg-gray-50">Product Name</th>
+                                <th class="p-3 sticky top-0 bg-gray-50">Category</th>
+                                <th class="p-3 sticky top-0 bg-gray-50 text-center">Loss Type</th>
+                                <th class="p-3 sticky top-0 bg-gray-50 text-right">Quantity Lost</th>
+                                <th class="p-3 sticky top-0 bg-gray-50 text-right">Unit Cost (₱)</th>
+                                <th class="p-3 sticky top-0 bg-gray-50 text-right">Total Loss (₱)</th>
+                                <th class="p-3 sticky top-0 bg-gray-50 text-right">Reported By</th>
+                                <th class="p-3 sticky top-0 bg-gray-50 text-center">Remarks</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-gray-200">
+                            @forelse ($lossRep as $row)
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="py-3 px-4 text-left">{{ \Carbon\Carbon::parse($row->date_reported)->format('M d, Y') }}</td>
+                                    <td class="py-3 px-4">{{ $row->prod_name }}</td>
+                                    <td class="py-3 px-4">{{ $row->cat_name }}</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <span class="px-2 py-1 rounded text-[10px] font-medium
+                                            @if(strtolower($row->type) === 'expired') bg-red-100 text-red-700
+                                            @elseif(strtolower($row->type) === 'damaged') bg-orange-100 text-orange-700
+                                            @else bg-gray-100 text-gray-700
+                                            @endif">
+                                            {{ ucfirst($row->type) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-medium">{{ number_format($row->qty) }}</td>
+                                    <td class="py-3 px-4 text-right">₱{{ number_format($row->unit_cost, 2) }}</td>
+                                    <td class="py-3 px-4 text-right font-semibold text-red-600">₱{{ number_format($row->total_loss, 2) }}</td>
+                                    <td class="py-3 px-4 text-right">{{ ucwords($row->reported_by) }}</td>
+                                    <td class="py-3 px-4 text-gray-600 text-center">{{ $row->remarks ?? '—' }}</td>
+                                </tr>
+                            @empty 
+                                <tr>
+                                    <td colspan="9" class="text-center">
+                                        <div class="flex flex-col justify-center items-center space-y-1 p-8 sticky top-1/2">
+                                            <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                            <span class="text-gray-500">Nothing to show.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>

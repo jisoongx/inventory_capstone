@@ -33,7 +33,7 @@
 
             <div class="">
                 <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
                         <select wire:model="month" class="border border-gray-300 rounded px-3 py-2 text-xs">
                             @for ($m = 1; $m <= 12; $m++)
                                 <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
@@ -122,11 +122,17 @@
 
         <!-- PURCHASE FREQUENCY -->
         <div x-show="tab === 'frequency'" class="space-y-4">
-            <div class="flex items-center gap-5">
-                <select wire:model="frequencySelectMonth" wire:change="frequencyTransac" class="border border-gray-300 rounded px-3 py-2 text-xs">
-                    @for ($m = 1; $m <= 12; $m++)
-                        <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
-                    @endfor
+            <div class="flex items-center gap-2">
+                <select wire:model.live="frequencySelectMonth" class="border border-gray-300 rounded px-3 py-2 text-xs">
+                    @foreach ($monthNames as $index => $name)
+                        <option value="{{ $index + 1 }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="frequencySelectYear" class="border border-gray-300 rounded px-3 py-2 text-xs">
+                    @foreach ($years as $y)
+                        <option value="{{ $y }}">{{ $y }}</option>
+                    @endforeach
                 </select>
             </div>
             
@@ -138,23 +144,36 @@
                             <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">Transactions</th>
                             <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">Total Sales (₱)</th>
                             <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">Avg Transaction Value (₱)</th>
+                            <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">
+                                <div class="flex gap-1 justify-end">
+                                    <span>Sales Change (%)</span>
+                                    <span class="material-symbols-rounded-premium text-gray-400 text-sm" title="Sales change is continuous and may include comparisons from previous months.">info</span>
+                                </div>
+                            </th>
+                            <th class="cursor-pointer p-3 sticky top-0 bg-gray-50 text-right">Peak Hour</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($frequency as $row)
-                            <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <tr class="border-b border-gray-200 hover:bg-gray-50" wire:key="freq-{{ $row->date }}">
                                 <td class="p-3 text-gray-800 text-xs">{{ $row->date }}</td>
                                 <td class="p-3 text-gray-800 text-xs text-right">{{ $row->total_transaction }}</td>
                                 <td class="p-3 text-gray-700 text-xs text-right">₱{{ number_format($row->total_sales, 2) }}</td>
                                 <td class="p-3 text-gray-700 text-xs text-right">₱{{ number_format($row->average_sales, 2) }}</td>
+                                <td class="p-3 text-gray-700 text-xs text-right">{{ number_format($row->sales_change_percent, 1) }}%</td>
+                                <td class="p-3 text-gray-700 text-xs text-right">
+                                    {{ $row->peak_hour !== null ? date('g A', mktime($row->peak_hour)) . ' – ' . date('g A', mktime(($row->peak_hour + 1) % 24)) : '—' }}
+                                </td>
                             </tr>
                         @empty
-                            <td colspan="6" class="p-6 py-52 text-center text-gray-500 text-xs">
-                                <div class="flex flex-col justify-center items-center space-y-3">
-                                    <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
-                                    <span class="text-gray-500 text-xs">There are no transactions recorded for this month.</span>
-                                </div>
-                            </td>
+                            <tr wire:key="freq-empty">
+                                <td colspan="6" class="p-6 py-52 text-center text-gray-500 text-xs">
+                                    <div class="flex flex-col justify-center items-center space-y-3">
+                                        <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                        <span class="text-gray-500 text-xs">There are no transactions recorded for this month.</span>
+                                    </div>
+                                </td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>

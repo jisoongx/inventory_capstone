@@ -10,19 +10,23 @@ class ReportInventory extends Component
 {
     public $expiredProd;
     public $selectedCategory;
-    public $selectedMonth;
-    public $selectedYear;
     public $selectedRange = 60; 
 
     public $category;
     public $years;
+
+    public $lossRep;
+    public $monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    public $selectedMonths = null;
+    public $selectedYears  = null;
 
 
     public function mount() {
 
         $owner_id = Auth::guard('owner')->user()->owner_id;
 
-        $this->displayYears();
+        $this->selectedMonths = now()->month;
+        $this->selectedYears = now()->year;
 
         $this->category = collect(DB::select("
             select category_id as cat_id,
@@ -32,12 +36,6 @@ class ReportInventory extends Component
             order by category
         ", [$owner_id]));
 
-
-    }
-    
-    public function displayYears() {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
-
         $this->years = collect(DB::select("
             SELECT DISTINCT(YEAR(receipt_date)) AS year
             FROM receipt
@@ -46,12 +44,9 @@ class ReportInventory extends Component
             [$owner_id]
         ))->pluck('year');
 
-        if ($this->years->isEmpty()) {
-            $this->years = collect([(object)['year' => now()->year]]);
-        }
-
     }
     
+
 
 
 
@@ -62,8 +57,6 @@ class ReportInventory extends Component
     public function expired() {
         
         $owner_id = Auth::guard('owner')->user()->owner_id;
-        $latestYear = $this->selectedYear ?? now()->year;
-        $month = $this->selectedMonth ?? now()->month;
 
         DB::statement("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
         
@@ -104,7 +97,7 @@ class ReportInventory extends Component
                         WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
                         THEN ri.item_quantity ELSE 0 
                     END) / 30.0, 0) = 0 THEN 
-                        'No sales recorded, will not sell.'
+                        'No sales, unlikely to sell.'
                     WHEN CEIL(i.stock / (SUM(CASE 
                         WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
                         THEN ri.item_quantity ELSE 0 
@@ -116,58 +109,58 @@ class ReportInventory extends Component
                 
 
                 CASE 
-                -- Already expired
-                WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 0 THEN 
-                    'Expired, remove from display and update stock records.'
-                
+                    -- Already expired
+                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 0 THEN 
+                        'Expired, remove from display and update stock records.'
                     
-                WHEN COALESCE(SUM(CASE 
-                    WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
-                    THEN ri.item_quantity ELSE 0 
-                END), 0) = 0 AND DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
-                    'Critical! No sales in 30 days, apply 50% discount.'
-                
-                WHEN COALESCE(SUM(CASE 
-                    WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
-                    THEN ri.item_quantity ELSE 0 
-                END), 0) = 0 THEN 
-                    'Warning: No sales in 30 days, reposition or start discounting.'
-                
+                        
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
+                        THEN ri.item_quantity ELSE 0 
+                    END), 0) = 0 AND DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
+                        'Critical! No sales in 30 days, apply 50% discount.'
                     
-                
-                WHEN CEIL(i.stock / NULLIF(SUM(CASE 
-                    WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
-                    THEN ri.item_quantity ELSE 0 
-                END) / 30.0, 0)) > DATEDIFF(i.expiration_date, CURDATE()) 
-                AND DATEDIFF(i.expiration_date, CURDATE()) <= 7 THEN 
-                    'Urgent! Selling too slow, apply 40-50% discount now.'
-                
-                WHEN CEIL(i.stock / NULLIF(SUM(CASE 
-                    WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
-                    THEN ri.item_quantity ELSE 0 
-                END) / 30.0, 0)) > DATEDIFF(i.expiration_date, CURDATE()) 
-                AND DATEDIFF(i.expiration_date, CURDATE()) <= 14 THEN 
-                    'Action needed! Stock will not clear in time, offer 30% discount.'
-                
-                WHEN CEIL(i.stock / NULLIF(SUM(CASE 
-                    WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
-                    THEN ri.item_quantity ELSE 0 
-                END) / 30.0, 0)) > DATEDIFF(i.expiration_date, CURDATE()) 
-                AND DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
-                    'Sales pace too slow, start promoting now to avoid wastage.'
-                
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
+                        THEN ri.item_quantity ELSE 0 
+                    END), 0) = 0 THEN 
+                        'Warning: No sales in 30 days, reposition or start discounting.'
+                    
+                        
+                    
+                    WHEN CEIL(i.stock / NULLIF(SUM(CASE 
+                        WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
+                        THEN ri.item_quantity ELSE 0 
+                    END) / 30.0, 0)) > DATEDIFF(i.expiration_date, CURDATE()) 
+                    AND DATEDIFF(i.expiration_date, CURDATE()) <= 7 THEN 
+                        'Urgent! Selling too slow, apply 40-50% discount now.'
+                    
+                    WHEN CEIL(i.stock / NULLIF(SUM(CASE 
+                        WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
+                        THEN ri.item_quantity ELSE 0 
+                    END) / 30.0, 0)) > DATEDIFF(i.expiration_date, CURDATE()) 
+                    AND DATEDIFF(i.expiration_date, CURDATE()) <= 14 THEN 
+                        'Action needed! Stock will not clear in time, offer 30% discount.'
+                    
+                    WHEN CEIL(i.stock / NULLIF(SUM(CASE 
+                        WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
+                        THEN ri.item_quantity ELSE 0 
+                    END) / 30.0, 0)) > DATEDIFF(i.expiration_date, CURDATE()) 
+                    AND DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
+                        'Sales pace too slow, start promoting now to avoid wastage.'
+                    
 
-                WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 7 THEN 
-                    'One week left, apply discount or bundle to clear stock.'
-                WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 14 THEN 
-                    'Two weeks left, check sales pace and consider promotion.'
-                WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
-                    'Three weeks left, monitor closely and plan promotion if needed.'
-                WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 30 THEN 
-                    'One month left, review sales and adjust restock plans.'
-                ELSE 
-                    'Monitor stock levels regularly.'
-            END AS insight
+                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 7 THEN 
+                        'One week left, apply discount or bundle to clear stock.'
+                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 14 THEN 
+                        'Two weeks left, check sales pace and consider promotion.'
+                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
+                        'Three weeks left, monitor closely and plan promotion if needed.'
+                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 30 THEN 
+                        'One month left, review sales and adjust restock plans.'
+                    ELSE 
+                        'Monitor stock levels regularly.'
+                END AS insight
 
             FROM inventory i
             JOIN products p ON i.prod_code = p.prod_code
@@ -204,8 +197,68 @@ class ReportInventory extends Component
 
     }
 
+
+
+
+    public function showAll() {
+        $this->selectedMonths = null;
+        $this->selectedYears = null;
+        $this->loss();
+    }
+
+    public function updatedSelectedMonths() {
+        $this->loss();
+    }
+
+    public function updatedSelectedYears() {
+        $this->loss();
+    }
+
+    public function loss() {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        $whereClause = "WHERE p.owner_id = ?";
+        $bindings = [$owner_id];
+
+        if (!is_null($this->selectedMonths)) {
+            $whereClause .= " AND MONTH(di.damaged_date) = ?";
+            $bindings[] = $this->selectedMonths;
+        }
+
+        if (!is_null($this->selectedYears)) {
+            $whereClause .= " AND YEAR(di.damaged_date) = ?";
+            $bindings[] = $this->selectedYears;
+        }
+
+        $this->lossRep = collect(DB::select("
+            SELECT 
+                di.damaged_id,
+                di.damaged_date AS date_reported, 
+                di.damaged_type AS type, 
+                di.damaged_quantity AS qty,
+                di.damaged_reason AS remarks,
+                p.name AS prod_name, 
+                c.category AS cat_name,
+                p.cost_price AS unit_cost,
+                (p.cost_price * di.damaged_quantity) AS total_loss,
+                CASE 
+                    WHEN s.staff_id IS NOT NULL 
+                    THEN s.firstname 
+                    ELSE o.firstname
+                END AS reported_by
+            FROM damaged_items di
+            JOIN products p ON p.prod_code = di.prod_code
+            JOIN categories c ON c.category_id = p.category_id
+            LEFT JOIN owners o ON o.owner_id = di.owner_id
+            LEFT JOIN staff s ON s.staff_id = di.staff_id
+            {$whereClause}
+            ORDER BY di.damaged_date DESC
+        ", $bindings));
+    }
+
     public function render()
     {
+        $this->loss();
         $this->expired();
         return view('livewire.report-inventory');
     }

@@ -18,23 +18,52 @@ class StockAlert extends Component
         $owner_id = Auth::guard('owner')->user()->owner_id;
 
         $results = DB::select("
-            SELECT 
-                p.name AS prod_name,
-                p.prod_image, 
-                p.stock_limit,
-                sum(i.stock) AS remaining_stock,
+            SELECT p.name AS prod_name, p.prod_image, p.stock_limit,
+                
+                SUM(i.stock) AS total_stock,
+                
+                -- Usable stock (not expired)
+                SUM(CASE 
+                    WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                    THEN i.stock 
+                    ELSE 0 
+                END) AS remaining_stock,
+                
+                -- Expired stock
+                SUM(CASE 
+                    WHEN i.expiration_date <= CURDATE() 
+                    THEN i.stock 
+                    ELSE 0 
+                END) AS expired_stock,
+                
                 CASE
-                    WHEN sum(i.stock) <= 3 THEN 'Critical'
-                    WHEN sum(i.stock) <= p.stock_limit THEN 'Reorder'
+                    WHEN SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END) = 0 THEN 'Critical'
+                    WHEN SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END) <= 3 THEN 'Critical'
+                    WHEN SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END) <= p.stock_limit THEN 'Reorder'
                     ELSE 'Normal'
                 END AS status
+                
             FROM products p
             JOIN inventory i ON p.prod_code = i.prod_code
             WHERE p.owner_id = ?
             GROUP BY p.prod_code, p.name, p.stock_limit, p.prod_image
-            Having status in ('Critical', 'Reorder')
+            HAVING status IN ('Critical', 'Reorder')
             ORDER BY remaining_stock ASC
         ", [$owner_id]);
+
+
 
         $this->prod = collect($results)->map(function ($item) {
             $item->image_url = asset('storage/' . ltrim($item->prod_image, '/'));

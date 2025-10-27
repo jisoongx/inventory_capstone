@@ -81,14 +81,38 @@
                     <thead class="uppercase text-xs font-semibold bg-gray-100 text-gray-600">
                         <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
                             <th class=" p-3 text-left sticky top-0 bg-gray-50 w-[20%]">Category</th>
-                            <th class=" p-3 sticky top-0 bg-gray-50">Units Sold</th>
+                            <th class=" p-3 sticky top-0 bg-gray-50">Units Sold
+                                <!-- <button @click="showTopProductUnit = !showTopProductUnit" type="button" class="text-xs">
+                                    <div class="flex items-center justify-end space-x-1">
+                                        <span>UNITS SOLD</span>
+                                        <span class="material-symbols-rounded-small text-gray-400">
+                                            keyboard_double_arrow_right
+                                        </span>
+                                    </div>
+                                </button> -->
+                            </th>
                             <th class="p-3 sticky top-0 bg-gray-50">
                                 <div class="flex gap-1">
                                     <span>Stock Left</span>
                                     <span class="material-symbols-rounded-premium text-gray-400 text-sm" title="Reflects the latest available stock in inventory.">info</span>
                                 </div>
                             </th>
-                            <th class=" p-3 sticky top-0 bg-gray-50">Total Sales (₱) </th>
+                            <!-- <th class="p-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductUnit" x-cloak>
+                                Top Product by Unit
+                            </th> -->
+                            <th class=" p-3 sticky top-0 bg-gray-50">Total Sales (₱)
+                                <!-- <button @click="showTopProductSales = !showTopProductSales" type="button" class="text-xs">
+                                    <div class="flex items-center justify-end space-x-1">
+                                        <span>SALES (₱)</span>
+                                        <span class="material-symbols-rounded-small text-gray-400">
+                                            keyboard_double_arrow_right
+                                        </span>
+                                    </div>
+                                </button> -->
+                            </th>
+                            <!-- <th class="p-3 text-left text-gray-500 font-semibold text-xs sticky top-0 bg-gray-50 w-[12%]" x-show="showTopProductSales" x-cloak>
+                                Top Product by Sales
+                            </th> -->
                             <th class=" p-3 sticky top-0 bg-gray-50">COGS</th>
                             <th class=" p-3 sticky top-0 bg-gray-50">Gross Margin</th>
                             <th class=" p-3 sticky top-0 bg-gray-50">Insight</th>
@@ -101,7 +125,13 @@
                                 <td class="py-3 px-4 text-gray-900">{{ $input->category }}</td>
                                 <td class="py-3 px-4 text-left text-gray-900">{{ $input->unit_sold }}</td>
                                 <td class="py-3 px-4 text-left text-gray-900">{{ $input->stock_left }}</td>
+                                <!-- <td x-show="showTopProductUnit" x-cloak class="px-3 py-4 text-left text-gray-900 bg-gray-50">
+                                    {{ $input->top_product_unit }}
+                                </td> -->
                                 <td class="py-3 px-4 text-left text-gray-900">₱{{ number_format($input->total_sales, 2 )}}</td>
+                                <!-- <td x-show="showTopProductSales" x-cloak class="px-3 py-4 text-left text-gray-900 bg-gray-50">
+                                    {{ $input->top_product_sales }}
+                                </td> -->
                                 <td class="py-3 px-4 text-left text-gray-900">₱{{ number_format($input->cogs, 2 )}}</td>
                                 <td class="py-3 px-4 text-left text-gray-900">{{ number_format($input->gross_margin, 0) }}%</td>
                                 <td class="py-3 px-4 text-center font-medium text-[10px] text-white w-[20rem]
@@ -131,12 +161,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-gray-400">
-                                    <div class="flex flex-col justify-center items-center space-y-1 p-8">
-                                        <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
-                                        <span class="text-gray-500">Nothing to show.</span>
-                                    </div>
-                                </td>
+                                <td colspan="7" class="text-center py-4 text-gray-400">Nothing to show.</td>
                             </tr>
                         @endforelse
                     </tbody>

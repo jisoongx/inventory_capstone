@@ -9,28 +9,43 @@ use Phpml\Association\Apriori;
 
 class ReportCustomer extends Component
 {
-    public $ownerId;
     public $month;
     public $year;
+    public $years;
     public $results = [];
     public $loading = false;
     public $type = "Nothing";
 
     public $frequency= [];
     public $frequencySelectMonth;
+    public $frequencySelectYear;
+
+    public $monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
     public function mount()
     {
-        $this->ownerId = Auth::guard('owner')->user()->owner_id;
+        $owner_id = Auth::guard('owner')->user()->owner_id;
         $this->month = now()->month;
         $this->year = now()->year;
 
         $this->frequencySelectMonth = now()->month;
+        $this->frequencySelectYear = now()->year;
+
         $this->frequencyTransac();
+
+        $this->years = collect(DB::select("
+            SELECT DISTINCT(YEAR(receipt_date)) AS year
+            FROM receipt
+            WHERE owner_id = ?
+            ORDER BY year DESC", 
+            [$owner_id]
+        ))->pluck('year');
     }
 
     public function generateReport()
     {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+
         $this->loading = true;
         $this->results = [];
 
@@ -44,7 +59,7 @@ class ReportCustomer extends Component
             AND MONTH(r.receipt_date) = ? 
             AND YEAR(r.receipt_date) = ?
             GROUP BY r.receipt_id
-        ", [$this->ownerId, $this->month, $this->year]);
+        ", [$owner_id, $this->month, $this->year]);
 
         $dataset = [];
         foreach ($transactions as $t) {
@@ -179,6 +194,7 @@ class ReportCustomer extends Component
 
     private function runCoOccurrenceAnalysis($totalTransactions)
     {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
         
         $pairs = DB::select("
             SELECT 
@@ -198,7 +214,7 @@ class ReportCustomer extends Component
             HAVING times_bought_together >= 2
             ORDER BY times_bought_together DESC
             LIMIT 15
-        ", [$this->ownerId, $this->month, $this->year]);
+        ", [$owner_id, $this->month, $this->year]);
 
         if (empty($pairs)) {
             return [];
@@ -284,28 +300,6 @@ class ReportCustomer extends Component
         }
     }
 
-    private function getActionableInsight($productA, $productB, $confidencePercent, $lift)
-    {
-        $insights = [];
-        
-        if ($confidencePercent >= 70 && $lift >= 2.0) {
-            $insights[] = "Place <b>{$productA}</b> and <b>{$productB}</b> near each other in your store";
-            $insights[] = "Create a combo deal or bundle discount for these items";
-            $insights[] = "When <b>{$productA}</b> is running low, ensure <b>{$productB}</b> is well-stocked";
-        } elseif ($confidencePercent >= 60 && $lift >= 1.5) {
-            $insights[] = "Consider placing <b>{$productB}</b> in the same aisle as <b>{$productA}</b>";
-            $insights[] = "Suggest <b>{$productB}</b> to customers buying <b>{$productA}</b>";
-            $insights[] = "Stock these items together during busy hours";
-        } elseif ($confidencePercent >= 50) {
-            $insights[] = "Monitor this pattern - it may become stronger over time";
-            $insights[] = "Display <b>{$productB}</b> prominently when promoting <b>{$productA}</b>";
-        } else {
-            $insights[] = "Track this relationship to see if it strengthens with more data";
-        }
-        
-        return $insights[array_rand($insights)];
-    }
-
 
 
     public function updatedFrequencySelectMonth()
@@ -313,30 +307,53 @@ class ReportCustomer extends Component
         $this->frequencyTransac();
     }
 
-    public function frequencyTransac() {
-        $month = $this->frequencySelectMonth ?? now()->month;
-        
-        $owner_id = Auth::guard('owner')->user()->owner_id;
-        // $month = now()->month;
-        $year = now()->year;
+    public function updatedFrequencySelectYear()
+    {
+        $this->frequencyTransac();
+    }
 
+    public function frequencyTransac() {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        $this->frequencySelectMonth = (int) $this->frequencySelectMonth ?: now()->month;
+        $this->frequencySelectYear = (int) $this->frequencySelectYear ?: now()->year;
+
+        DB::statement("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+        
         $this->frequency = collect(DB::select("
-            select DATE(r.receipt_date) as date,
-                count(DISTINCT(r.receipt_id)) as total_transaction, 
-                sum(ri.item_quantity * p.selling_price) as total_sales,
-                (SUM(ri.item_quantity * p.selling_price) / COUNT(DISTINCT(r.receipt_id))) AS average_sales
-            from receipt r 
-            join receipt_item ri on r.receipt_id = ri.receipt_id
-            join products p on ri.prod_code = p.prod_code 
-            where month(r.receipt_date) = ?
-            and year(r.receipt_date) = ?
-            and r.owner_id = ?
-            group by DATE(r.receipt_date);
-        ", [ $month, $year, $owner_id]));
+                SELECT *
+                FROM (
+                    SELECT 
+                        DATE(r.receipt_date) AS date,
+                        COUNT(DISTINCT r.receipt_id) AS total_transaction,
+                        SUM(ri.item_quantity * p.selling_price) AS total_sales,
+                        (SUM(ri.item_quantity * p.selling_price) / COUNT(DISTINCT r.receipt_id)) AS average_sales,
+                        (
+                            (
+                                SUM(ri.item_quantity * p.selling_price)
+                                - LAG(SUM(ri.item_quantity * p.selling_price)) OVER (ORDER BY DATE(r.receipt_date))
+                            ) / NULLIF(
+                                LAG(SUM(ri.item_quantity * p.selling_price)) OVER (ORDER BY DATE(r.receipt_date)),
+                                0
+                            )
+                        ) * 100 AS sales_change_percent,
+                        HOUR(r.receipt_date) AS peak_hour
+                    FROM receipt r
+                    JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+                    JOIN products p ON ri.prod_code = p.prod_code
+                    WHERE r.owner_id = ?
+                    GROUP BY DATE(r.receipt_date)
+                ) AS full_data
+                WHERE MONTH(full_data.date) = ?
+                AND YEAR(full_data.date) = ?
+                ORDER BY full_data.date;
+                ", [$owner_id, $this->frequencySelectMonth, $this->frequencySelectYear]));
+
     }
 
     public function render()
     {
+        
         return view('livewire.report-customer');
     }
 }

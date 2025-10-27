@@ -86,16 +86,12 @@ class ReportSalesAndPerformance extends Component
             [$owner_id]
         ))->pluck('year');
 
-        if ($this->years->isEmpty()) {
-            $this->years = collect([(object)['year' => now()->year]]);
-        }
-
     }
 
     
     
     public function salesByCategory() {
-        $years = $this->selectedYears ? [$this->selectedYears] : [now()->month];
+        $years = $this->selectedYears ? [$this->selectedYears] : [now()->year];
         $months = $this->selectedMonths ? [$this->selectedMonths] : [now()->month];
 
         $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
