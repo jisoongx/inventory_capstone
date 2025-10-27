@@ -93,7 +93,7 @@
                                     {{ ucfirst($subscription->planDetails->plan_title) }} Plan
                                 </h2>
                                 <p class="text-sm text-slate-500 mt-1">
-                                    Active until {{ \Carbon\Carbon::parse($subscription->end_date)->format('F j, Y') }}
+                                    Active until {{ \Carbon\Carbon::parse($subscription->subscription_end)->format('F j, Y') }}
                                 </p>
 
                                 <p class="mt-4 text-xs text-slate-500 leading-snug">
