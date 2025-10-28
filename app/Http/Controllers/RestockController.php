@@ -46,91 +46,90 @@ class RestockController extends Controller
     {
         $ownerId = Auth::guard('owner')->id();
         $currentYear = now()->year;
+        $currentMonth = now()->month;
 
-        // All products for custom restock dropdown
-        $allProducts = DB::table('inventory')
-            ->join('products', 'inventory.prod_code', '=', 'products.prod_code')
-            ->where('inventory.owner_id', $ownerId)
-            ->select(
-                'inventory.inven_code',
-                'products.name',
-                'inventory.stock',
-                'products.cost_price'
-            )
+        // 1️⃣ Categories (owner-based)
+        $categories = DB::table('categories')
+            ->where('owner_id', $ownerId)
             ->get();
 
-        // All categories for filter
-        $categories = DB::table('categories')->get();
-
-        // --- Main product + sales data
+        // 2️⃣ Products + sales
         $products = DB::table('products')
             ->join('inventory', 'products.prod_code', '=', 'inventory.prod_code')
             ->join('categories', 'products.category_id', '=', 'categories.category_id')
-            ->leftJoin(DB::raw("(
-            SELECT
-                ri.prod_code,
-                SUM(ri.item_quantity) as total_sold,
-                COUNT(DISTINCT r.receipt_id) as order_count
-            FROM receipt_item ri
-            INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
-            WHERE YEAR(r.receipt_date) = {$currentYear}
-            GROUP BY ri.prod_code
-        ) as sales"), 'products.prod_code', '=', 'sales.prod_code')
-            ->leftJoin('restock_item as ri_finalized', 'inventory.inven_code', '=', 'ri_finalized.inven_code')
-            ->leftJoin('restock as r_finalized', 'ri_finalized.restock_id', '=', 'r_finalized.restock_id')
+            ->leftJoin(DB::raw("
+            (
+                SELECT 
+                    ri.prod_code,
+                    SUM(
+                        CASE 
+                            WHEN YEAR(r.receipt_date) = {$currentYear} 
+                            AND MONTH(r.receipt_date) = {$currentMonth} 
+                            THEN ri.item_quantity 
+                            ELSE 0 
+                        END
+                    ) AS sold_this_month,
+                    SUM(
+                        CASE 
+                            WHEN YEAR(r.receipt_date) = {$currentYear} 
+                            THEN ri.item_quantity 
+                            ELSE 0 
+                        END
+                    ) AS sold_this_year
+                FROM receipt_item ri
+                INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
+                GROUP BY ri.prod_code
+            ) AS sales
+        "), 'products.prod_code', '=', 'sales.prod_code')
             ->where('products.owner_id', $ownerId)
-            ->whereNull('ri_finalized.item_id') // exclude products already finalized
             ->select(
                 'inventory.inven_code',
-                'products.category_id',
                 'products.prod_code',
                 'products.name',
+                'categories.category',
+                'products.category_id',
                 'products.cost_price',
                 'products.selling_price',
-                'products.description',
                 'inventory.stock',
                 'products.stock_limit',
-                'inventory.batch_number',
-                'categories.category',
-                DB::raw('COALESCE(sales.total_sold, 0) as total_sold'),
-                DB::raw('COALESCE(sales.order_count, 0) as order_count')
+                DB::raw('COALESCE(sales.sold_this_month, 0) as sold_this_month'),
+                DB::raw('COALESCE(sales.sold_this_year, 0) as sold_this_year')
             )
             ->get()
             ->map(function ($product) {
+                // 3️⃣ Suggested quantity logic
+                $suggestedQty = max(($product->stock_limit * 2) - $product->stock, 0);
 
-                // --- Average daily sales
-                $avgDailySales = $product->total_sold / 365;
+                // 4️⃣ Determine reason (Low Stock / Top Selling)
+                $reason = null;
 
-                // --- Dynamic lead time based on sales velocity
-                if ($avgDailySales >= 10) {
-                    $leadTime = 1; // very fast-moving
-                } elseif ($avgDailySales >= 5) {
-                    $leadTime = 2; // medium-moving
-                } elseif ($avgDailySales >= 2) {
-                    $leadTime = 3; // slow-medium
-                } else {
-                    $leadTime = 5; // slow-moving
+                if ($product->stock <= $product->stock_limit) {
+                    $reason = '⚠️ Low Stock';
                 }
 
-                // --- Suggested reorder formula (limit + sales lead)
-                $suggestedQuantity = max(
-                    ($product->stock_limit + ($avgDailySales * $leadTime)) - $product->stock,
-                    0
-                );
+                if ($product->sold_this_month >= 20) {
+                    $reason = $reason ? $reason . ' + 🚀 Top Selling' : '🚀 Top Selling';
+                }
 
-                // --- Attach computed values
-                $product->lead_time_days = $leadTime;
-                $product->avg_daily_sales = round($avgDailySales, 2);
-                $product->suggested_quantity = round($suggestedQuantity);
+                $product->suggested_quantity = $suggestedQty;
+                $product->reason = $reason ?? '✅ Normal Stock';
+
+                // 5️⃣ Optional: color badge logic
+                if (str_contains($product->reason, '⚠️')) {
+                    $product->reason_badge = 'background-color:#fef3c7;color:#92400e;';
+                } elseif (str_contains($product->reason, '🚀')) {
+                    $product->reason_badge = 'background-color:#dcfce7;color:#166534;';
+                } else {
+                    $product->reason_badge = 'background-color:#e2e8f0;color:#334155;';
+                }
 
                 return $product;
             })
-            // Only include products that are low or below limit
-            ->filter(fn($product) => $product->stock <= $product->stock_limit)
-            ->sortByDesc('suggested_quantity')
+            ->filter(fn($product) => $product->reason !== '✅ Normal Stock')
+            ->sortByDesc('sold_this_month')
             ->values();
 
-        return view('dashboards.owner.restock_suggestion', compact('products', 'allProducts', 'currentYear', 'categories'));
+        return view('dashboards.owner.restock_suggestion', compact('products', 'categories', 'currentYear', 'currentMonth'));
     }
 
 
@@ -237,15 +236,18 @@ class RestockController extends Controller
     {
         $ownerId = Auth::guard('owner')->id();
         $categoryId = $request->input('category_id');
-        $topN = $request->input('top_n', 20); // default top 20
+        $topN = $request->input('top_n', 20); // default Top 20
 
         $now = Carbon::now();
         $currentMonth = $now->month;
         $currentYear = $now->year;
 
-        //  same month sales from the past 3 years
+        // Analyze the same month from the past 3 years
         $years = [$currentYear - 1, $currentYear - 2, $currentYear - 3];
 
+        /**
+         * 1️⃣ Fetch Past 3-Year Same-Month Sales
+         */
         $pastSales = DB::table('receipt_item as ri')
             ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
             ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
@@ -263,7 +265,9 @@ class RestockController extends Controller
             ->groupBy('p.prod_code', 'p.name', 'p.prod_image', 'year')
             ->get();
 
-        //  Compute average sales (same month, past 3 years)
+        /**
+         * 2️⃣ Compute 3-Year Average Past Sales
+         */
         $pastAverages = $pastSales
             ->groupBy('prod_code')
             ->map(function ($group) {
@@ -273,11 +277,13 @@ class RestockController extends Controller
                     'prod_code' => $first->prod_code,
                     'name' => $first->name,
                     'prod_image' => $first->prod_image,
-                    'average_past' => (int) round($avg)
+                    'average_past' => (int) round($avg),
                 ];
             });
 
-        // Current month sales
+        /**
+         * 3️⃣ Fetch Current Month Sales
+         */
         $currentSales = DB::table('receipt_item as ri')
             ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
             ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
@@ -295,44 +301,62 @@ class RestockController extends Controller
             ->get()
             ->keyBy('prod_code');
 
-        //  Combine data
-        $topProducts = $pastAverages->map(function ($product) use ($currentSales) {
-            $currentData = $currentSales[$product->prod_code] ?? null;
-            $current = $currentData->total_sold ?? 0;
+        /**
+         * 4️⃣ Combine and Forecast Demand
+         */
+        $allProducts = DB::table('products')
+            ->where('owner_id', $ownerId)
+            ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
+            ->select('prod_code', 'name', 'prod_image')
+            ->get();
 
-            // Exponential smoothing (α = 0.5)
-            $alpha = 0.5;
-            $expectedDemand = round($alpha * $current + (1 - $alpha) * $product->average_past);
+        $topProducts = $allProducts->map(function ($product) use ($pastAverages, $currentSales) {
+            $past = $pastAverages[$product->prod_code]->average_past ?? 0;
+            $current = $currentSales[$product->prod_code]->total_sold ?? 0;
 
-            // Growth rate
-            $growth = $product->average_past > 0
-                ? (($expectedDemand - $product->average_past) / $product->average_past) * 100
-                : 0;
+            // If no past or current sales, skip growth calc
+            $alpha = 0.5; // exponential smoothing weight
+            $forecasted = round($alpha * $current + (1 - $alpha) * $past);
+
+            // Growth rate (based on forecasted vs past)
+            $growth = $past > 0
+                ? round((($forecasted - $past) / $past) * 100, 2)
+                : ($current > 0 ? 100 : 0); // assume 100% growth if new product sells this month
 
             return (object)[
                 'prod_code' => $product->prod_code,
                 'name' => $product->name,
                 'prod_image' => $product->prod_image,
-                'average_past' => (int) $product->average_past,
+                'average_past' => (int) $past,
                 'current_month_sold' => (int) $current,
-                'forecasted_demand' => (int) round($expectedDemand),
-                'growth_rate' => round($growth, 2)
+                'forecasted_demand' => (int) $forecasted,
+                'growth_rate' => $growth,
             ];
         });
 
-        // Sort by past 3-year average sales (highest to lowest)
+        /**
+         * 5️⃣ Sort and Limit to Top N
+         */
         $topProducts = $topProducts
-            ->sortByDesc('average_past')
+            ->sortByDesc('forecasted_demand')
             ->take($topN)
             ->values();
 
-        $categories = DB::table('categories')->get();
+        /**
+         * 6️⃣ Fetch Categories (Owner-Based)
+         */
+        $categories = DB::table('categories')
+            ->where('owner_id', $ownerId)
+            ->get();
 
+        /**
+         * 7️⃣ Return View
+         */
         return view('dashboards.owner.seasonal_trends', [
             'topProducts' => $topProducts,
             'categories' => $categories,
             'categoryId' => $categoryId,
-            'topN' => $topN
+            'topN' => $topN,
         ]);
     }
 }

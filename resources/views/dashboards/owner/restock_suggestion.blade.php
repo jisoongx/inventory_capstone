@@ -168,6 +168,10 @@
                             <th class="p-4 text-center font-semibold">Total Sold</th>
                             <th class="p-4 text-center font-semibold">Current Stock</th>
                             <th class="p-4 text-center font-semibold">Suggested Restock</th>
+                           
+
+                            <th class="p-4 text-center font-semibold">Reason</th>
+
                         </tr>
                     </thead>
                     <tbody id="productTableBody" class="divide-y divide-slate-100">
@@ -193,8 +197,12 @@
                                 <span class="badge badge-success">₱{{ number_format($product->cost_price, 2) }}</span>
                             </td>
                             <td class="p-4 text-center">
-                                <span class="badge badge-success">{{ $product->total_sold }} sold</span>
+                                <div class="flex flex-col items-center">
+                                    <span class="badge badge-success">{{ $product->sold_this_month }} sold this month</span>
+                                    <span class="text-xs text-slate-500 mt-0.5">{{ $product->sold_this_year }} total this year</span>
+                                </div>
                             </td>
+
                             <td class="p-4 text-center">
                                 <span class="font-semibold text-slate-700">{{ $product->stock }}</span>
                                 @if($product->stock <= 10)
@@ -208,6 +216,18 @@
                                     {{ $product->suggested_quantity }}
                                 </span>
                             </td>
+                            
+
+                            <td class="p-4 text-center">
+                                @if($product->reason)
+                                <span class="badge" style="{{ $product->reason_badge }}">
+                                    {{ $product->reason }}
+                                </span>
+                                @else
+                                <span class="text-slate-400 text-xs italic">—</span>
+                                @endif
+                            </td>
+
                         </tr>
                         @empty
                         <tr id="emptyState">
