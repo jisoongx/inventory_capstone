@@ -136,7 +136,7 @@
                 @if ($loop->first)
                     <!-- #1 Best Seller Card -->
                     <div class="relative rounded-xl p-2 flex items-center gap-4 border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-amber-50 shadow-sm hover:shadow-md transition-shadow">
-                        <div class="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 font-bold text-[11px] px-3 py-1 rounded-full shadow-md">
+                        <div class="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 font-bold text-xs px-3 py-1 rounded-full shadow-md">
                             #1 BEST SELLER
                         </div>
 
@@ -172,7 +172,7 @@
                 @endif
             @empty
                 <div class="flex flex-col justify-center items-center h-full text-center space-y-2 px-8">
-                    <span class="material-symbols-rounded text-6xl text-gray-400">sentiment_dissatisfied</span>
+                    <span class="material-symbols-rounded-semibig text-gray-400">workspace_premium</span>
                     <p class="text-xs text-gray-500">Nothing to show.</p>
                 </div>
             @endforelse

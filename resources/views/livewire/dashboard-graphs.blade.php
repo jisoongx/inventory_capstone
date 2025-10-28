@@ -49,16 +49,19 @@
                                 <span class="text-xs">{{ $year[1] ?? '' }}</span>
                             </span>
                         @endif
-                            <span class="flex items-center gap-1">
-                                <span class="w-3 h-3 bg-yellow-300 inline-block"></span>
-                            <span class="text-xs">Average</span>
+                            @if(($year[0] ?? false) || ($year[1] ?? false))
+                                <span class="flex items-center gap-1">
+                                    <span class="w-3 h-3 bg-yellow-300 inline-block"></span>
+                                    <span class="text-xs">Average</span>
+                                </span>
+                            @endif
                         </span>
                     </div>
                         @if(empty($year[0]))
-                                <div class="flex flex-col items-center justify-center py-24 px-8 text-gray-500 text-center">
-                                    <span class="material-symbols-rounded-big text-slate-400">bar_chart</span>
-                                    <p class="mt-2 text-xs font-semibold">No sales by category found for this year.</p>
-                                </div>
+                            <div class="flex flex-col items-center justify-center py-24 px-8 text-gray-500 text-center">
+                                <span class="material-symbols-rounded-big text-slate-400">bar_chart</span>
+                                <p class="mt-2 text-xs font-semibold">No sales by category found for this year.</p>
+                            </div>
                         @else
                             <div class="overflow-x-auto mt-2 scrollbar-custom" >
                                 <div id="productChart" 

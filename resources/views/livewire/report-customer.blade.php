@@ -41,9 +41,11 @@
                         </select>
 
                         <select wire:model="year" class="border border-gray-300 rounded px-3 py-2 text-xs">
-                            @for ($y = now()->year; $y >= now()->year - 3; $y--)
+                                @forelse ($years as $y)
                                 <option value="{{ $y }}">{{ $y }}</option>
-                            @endfor
+                            @empty
+                                <option value="{{ now()->year }}">{{ now()->year }}</option>
+                            @endforelse
                         </select>
 
                         <button wire:click="generateReport"
@@ -130,9 +132,11 @@
                 </select>
 
                 <select wire:model.live="frequencySelectYear" class="border border-gray-300 rounded px-3 py-2 text-xs">
-                    @foreach ($years as $y)
+                        @forelse ($years as $y)
                         <option value="{{ $y }}">{{ $y }}</option>
-                    @endforeach
+                    @empty
+                        <option value="{{ now()->year }}">{{ now()->year }}</option>
+                    @endforelse
                 </select>
             </div>
             
