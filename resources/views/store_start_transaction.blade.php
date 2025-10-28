@@ -1,8 +1,41 @@
 @extends('dashboards.owner.owner')
 @section('content')
+
+<!-- Scanner Status Toast (Auto-dismiss) -->
+<div id="scannerToast" class="fixed top-4 right-4 z-[9999] transform transition-all duration-300 translate-x-full opacity-0">
+    <div class="bg-white rounded-lg shadow-2xl border-l-4 p-4 min-w-[320px] max-w-md">
+        <div class="flex items-start gap-3">
+            <div id="toastIcon" class="flex-shrink-0"></div>
+            <div class="flex-1">
+                <h4 id="toastTitle" class="font-bold text-sm mb-1"></h4>
+                <p id="toastMessage" class="text-xs text-gray-600"></p>
+            </div>
+            <button onclick="kioskSystem.hideScannerToast()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="toastProgress" class="mt-3 h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div class="h-full bg-current transition-all duration-[3000ms] ease-linear w-0"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Scanner Ready Indicator -->
+<div id="scannerIndicator" class="fixed bottom-4 left-4 z-50 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 transform transition-all duration-300 translate-y-20 opacity-0">
+    <div class="relative">
+        <div class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+        <div class="absolute inset-0 w-3 h-3 bg-white rounded-full animate-ping"></div>
+    </div>
+    <span class="text-sm font-medium">Scanner Ready</span>
+</div>
+
 <div class="px-4 mb-2">
     @livewire('expiration-container')
 </div>
+
+<!-- Rest of your existing blade content... -->
 <div class="px-4">
     <!-- Top Navigation Bar -->
     <div class="bg-white shadow-lg rounded-lg mb-4 p-4">
@@ -12,19 +45,24 @@
                 <!-- Search Bar -->
                 <div class="relative flex-1 max-w-md">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
                     </div>
-                    <input type="text" id="searchInput" placeholder="Search products by name or barcode..." 
-                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
+                    <input type="text" id="searchInput" placeholder="Search products by name or barcode" 
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
                 </div>
             </div>
 
             <!-- Right Section - Report/Transactions Button -->
             <div class="ml-4 flex items-center space-x-3">
-                
                 @if(Auth::guard('owner')->check())
                     <!-- Owner: Report Button -->
                     <a href="{{ route('report-sales-performance') }}" 
-                       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+                        class="px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors text-white"
+                        style="background-color: #336055;"
+                        onmouseover="this.style.backgroundColor='#2a4d44'"
+                        onmouseout="this.style.backgroundColor='#336055'">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
@@ -52,7 +90,6 @@
             <div class="bg-white shadow-lg rounded-lg p-3 overflow-x-auto flex-shrink-0">
                 <div id="categoryPills" class="flex space-x-2">
                     <button class="category-pill active" data-category="">
-                        <span class="bg-gray-500 rounded-full"></span>
                         All Categories
                     </button>
                     <!-- Categories will be loaded here dynamically -->
@@ -89,7 +126,7 @@
             </div>
        </div>
 
-        <!-- Right Side - Cart Items (Expanded) -->
+        <!-- Right Side - Cart Items -->
         <div class="bg-white rounded-lg shadow-lg flex flex-col min-h-0">
             <!-- Receipt Info Header -->
             <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 flex-shrink-0">
@@ -130,35 +167,13 @@
 
                 <!-- Action Buttons -->
                 <div class="space-y-2">
-                    <button id="processPaymentBtn" disabled {{ $expired ? 'disabled' : '' }}
-                            class="text-xs w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg font-bold text-base transition-all duration-300 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed
-                            {{ $expired ? 'cursor-not-allowed hover:bg-red-500' : '' }}">
+                    <button id="processPaymentBtn" 
+                             {{ $expired ? 'disabled' : '' }}
+                            data-expired="{{ $expired ? 'true' : 'false' }}"
+                            class="text-xs w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg font-bold text-base transition-all duration-300 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed {{ $expired ? 'cursor-not-allowed' : '' }}">
                         Process Payment
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Barcode Scanner Warning Modal -->
-<div id="barcodeWarningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-orange-600">Product Not Detected</h3>
-            <button id="closeBarcodeWarning" class="text-gray-400 hover:text-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        <div class="space-y-4">
-            <div class="bg-orange-50 border-2 border-orange-200 rounded-lg p-6 text-center">
-                <svg class="mx-auto mb-3 w-16 h-16 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                </svg>
-                <p class="text-gray-700 font-medium mb-2">Barcode scanner did not detected a product</p>
-                <p class="text-sm text-gray-600">Please connect your scanner or select products manually from the grid below.</p>
             </div>
         </div>
     </div>
@@ -195,171 +210,14 @@
     </div>
 </div>
 
-<!-- Receipt Display Modal -->
-<div id="receiptModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
-    <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[200vh] flex flex-col">
-        <!-- Receipt Header -->
-        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg flex-shrink-0">
-            <div class="text-center">
-                <h3 class="text-xl font-bold mb-2">Payment Successful!</h3>
-                <p class="text-sm text-red-100">Transaction completed successfully</p>
-            </div>
-        </div>
-
-        <!-- Receipt Content - Scrollable -->
-        <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
-            <div class="p-6">
-                <!-- Store Info -->
-                <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
-                    <h2 id="storeNameReceipt" class="text-xl font-bold text-gray-800">{{ $store_info->store_name ?? 'Store Name' }}</h2>
-                </div>
-
-                <!-- Transaction Details -->
-                <div class="mb-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
-                        <span id="receiptNumber" class="text-sm font-bold text-gray-900">{{ $receipt_no ?? '0' }}</span>
-                    </div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Date & Time:</span>
-                        <span id="receiptTransactionDate" class="text-sm text-gray-900"></span>
-                    </div>
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-sm font-medium text-gray-700">Cashier:</span>
-                        <span class="text-sm text-gray-900">{{ $user_firstname ?? 'User' }}</span>
-                    </div>
-                </div>
-
-                <!-- Items List -->
-                <div class="mb-4">
-                    <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
-                    <div id="receiptItemsList" class="space-y-2">
-                        <!-- Items will be populated here -->
-                    </div>
-                </div>
-
-                <!-- Totals -->
-                <div class="border-t-2 border-gray-300 pt-4 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Total Items:</span>
-                        <span id="receiptTotalItems" class="text-sm font-bold text-gray-900">0</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-lg font-bold text-gray-900">Total Amount:</span>
-                        <span id="receiptTotalAmount" class="text-lg font-bold text-red-600">₱0.00</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
-                        <span id="receiptAmountPaid" class="text-sm text-gray-900">₱0.00</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Change:</span>
-                        <span id="receiptChange" class="text-sm font-bold text-green-600">₱0.00</span>
-                    </div>
-                </div>
-
-                <!-- Footer Message -->
-                <div class="text-center mt-6 pt-4 border-t border-gray-200">
-                    <p class="text-xs text-gray-500">Thank you for your purchase!</p>
-                    <p class="text-xs text-gray-500">Please keep this receipt for your records.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Action Buttons - Fixed at bottom -->
-        <div class="p-4 border-t bg-gray-50 flex gap-3 rounded-b-lg flex-shrink-0">
-            <button id="printReceiptBtn" class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-blue-700 transition-colors">
-                <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                </svg>
-                Print Receipt
-            </button>
-            <button id="finishTransactionBtn" class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors">
-                <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Close
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Payment Modal -->
-<div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold">Process Payment</h3>
-            <button id="closePaymentModal" class="text-gray-400 hover:text-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        <div class="space-y-4">
-            <!-- Payment Summary -->
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm font-medium">Total Items:</span>
-                    <span id="paymentTotalQuantity" class="text-sm font-bold">0</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-lg font-bold">Amount Due:</span>
-                    <span id="paymentTotalAmount" class="text-lg font-bold text-red-600">₱0.00</span>
-                </div>
-            </div>
-
-            <!-- Amount Received Input -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Amount Received</label>
-                <input type="number" id="amountReceived" step="0.01" min="0" 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-lg"
-                       placeholder="Enter amount received">
-            </div>
-
-            <!-- Insufficient Amount Warning -->
-            <div id="warningDisplay" class="bg-red-50 p-4 rounded-lg border border-red-200 hidden">
-                <div class="flex items-center mb-2">
-                    <svg class="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                    </svg>
-                    <span class="text-lg font-bold text-red-700">Insufficient Amount</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-sm font-medium text-red-700">Still needed:</span>
-                    <span id="warningAmount" class="text-lg font-bold text-red-700">₱0.00</span>
-                </div>
-                <p class="text-xs text-red-600 mt-2">Please enter an amount equal to or greater than the total due.</p>
-            </div>
-
-            <!-- Change Display -->
-            <div id="changeDisplay" class="bg-green-50 p-4 rounded-lg border border-green-200 hidden">
-                <div class="flex justify-between items-center">
-                    <span class="text-lg font-bold text-green-700">Change:</span>
-                    <span id="changeAmount" class="text-lg font-bold text-green-700">₱0.00</span>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex gap-2">
-                <button id="completePaymentBtn" class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors opacity-50 cursor-not-allowed" disabled>
-                    Complete Payment
-                </button>
-                <button id="cancelPaymentBtn" class="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
-/* Category Pills */
+/* Existing styles... */
 .category-pill {
     padding: 10px 12px;
     border-radius: 8px;
     border: 2px solid #e5e7eb;
     background-color: white;
-    color: #374151;
+    color: white;
     font-size: 0.75rem;
     font-weight: 500;
     transition: all 0.2s ease;
@@ -369,12 +227,12 @@
     cursor: pointer;
     text-align: center;
     min-height: 40px;
+    white-space: nowrap;
 }
 
 .category-pill:hover:not(.active) {
-    background-color: #f9fafb;
-    border-color: #9ca3af;
     transform: translateY(-1px);
+    opacity: 0.9;
 }
 
 .category-pill.active {
@@ -384,7 +242,6 @@
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
-/* Product Cards */
 .product-card {
     background: white;
     border: 2px solid #e5e7eb;
@@ -412,7 +269,7 @@
 
 .product-card.out-of-stock:hover {
     transform: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2 4px rgba(0, 0, 0, 0.05);
     border-color: #e5e7eb;
 }
 
@@ -446,7 +303,6 @@
     background: white;
 }
 
-/* Cart Items */
 .cart-item {
     border: 1px solid #e5e7eb;
     border-radius: 12px;
@@ -502,7 +358,6 @@
     background-color: #fef2f2;
 }
 
-/* Loading animation */
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -511,7 +366,6 @@
     animation: spin 1s linear infinite;
 }
 
-/* Toast notification styles */
 .toast {
     position: fixed;
     top: 16px;
@@ -541,12 +395,10 @@
     background-color: #3b82f6;
 }
 
-/* Modal backdrop blur */
 body.modal-open {
     overflow: hidden;
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
     width: 6px;
 }
@@ -565,40 +417,35 @@ body.modal-open {
     background: #94a3b8;
 }
 
-/* Receipt Modal Specific Scrolling */
-#receiptModal .overflow-y-auto {
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 #f1f5f9;
+/* Scanner Indicator Animation */
+@keyframes slideUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
-#receiptModal .overflow-y-auto::-webkit-scrollbar {
-    width: 8px;
+@keyframes slideDown {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(100px);
+        opacity: 0;
+    }
 }
 
-#receiptModal .overflow-y-auto::-webkit-scrollbar-track {
-    background: #f8fafc;
-    border-radius: 4px;
-    margin: 8px 0;
+#scannerIndicator.show {
+    animation: slideUp 0.3s ease-out forwards;
 }
 
-#receiptModal .overflow-y-auto::-webkit-scrollbar-thumb {
-    background: #94a3b8;
-    border-radius: 4px;
-    border: 2px solid #f8fafc;
-}
-
-#receiptModal .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
-}
-
-/* Ensure items list has proper spacing for scrolling */
-#receiptItemsList {
-    max-height: none;
-    padding-bottom: 8px;
-}
-
-#receiptItemsList .border-b:last-child {
-    border-bottom: none;
+#scannerIndicator.hide {
+    animation: slideDown 0.3s ease-in forwards;
 }
 </style>
 
@@ -615,6 +462,11 @@ class KioskSystem {
         this.barcodeBuffer = '';
         this.barcodeTimeout = null;
         this.scannerActive = true;
+        this.scannerDetected = false;
+        this.scannerCheckTimeout = null;
+        this.isExpired = {{ $expired ? 'true' : 'false' }};
+        this.toastTimeout = null;
+        this.toastProgressInterval = null;
         
         this.init();
     }
@@ -629,7 +481,7 @@ class KioskSystem {
     }
 
     bindEvents() {
-        // Category pills
+        // Existing event bindings...
         document.addEventListener('click', (e) => {
             if (e.target.closest('.category-pill')) {
                 const pill = e.target.closest('.category-pill');
@@ -637,21 +489,33 @@ class KioskSystem {
             }
         });
 
-        // Search input
         document.getElementById('searchInput').addEventListener('input', 
             this.debounce(() => this.loadProducts(), 300));
 
-        // Barcode warning modal events
-        document.getElementById('closeBarcodeWarning').addEventListener('click', () => {
-            this.hideModal('barcodeWarningModal');
-        });
-
-        // Cart actions
         document.getElementById('processPaymentBtn').addEventListener('click', () => {
-            this.showPaymentModal();
+            if (this.isExpired) {
+                this.showScannerToast(
+                    'Subscription Expired',
+                    'Your subscription has expired. Please renew to continue.',
+                    'error',
+                    3000
+                );
+                return;
+            }
+            
+            if (this.cartItems.length === 0) {
+                this.showScannerToast(
+                    'Cart Empty',
+                    'Please add items to cart before processing payment.',
+                    'warning',
+                    3000
+                );
+                return;
+            }
+            
+            window.location.href = '{{ route("store_payment_processor") }}';
         });
 
-        // Remove reason modal
         document.getElementById('closeRemoveModal').addEventListener('click', () => {
             this.hideModal('removeReasonModal');
         });
@@ -663,59 +527,47 @@ class KioskSystem {
             });
         });
 
-        // Payment modal
-        document.getElementById('closePaymentModal').addEventListener('click', () => {
-            this.hideModal('paymentModal');
+        document.getElementById('removeReasonModal').addEventListener('click', (e) => {
+            if (e.target.id === 'removeReasonModal') {
+                this.hideModal('removeReasonModal');
+            }
         });
 
-        document.getElementById('cancelPaymentBtn').addEventListener('click', () => {
-            this.hideModal('paymentModal');
-        });
-
-        document.getElementById('completePaymentBtn').addEventListener('click', () => {
-            this.processPayment();
-        });
-
-        document.getElementById('amountReceived').addEventListener('input', () => {
-            this.calculateChange();
-        });
-
-        // Receipt modal
-        document.getElementById('printReceiptBtn').addEventListener('click', () => {
-            this.printReceipt();
-        });
-
-        document.getElementById('finishTransactionBtn').addEventListener('click', () => {
-            window.location.href = '{{ route("store_transactions") }}';
-        });
-
-        // Close modals on outside click
-        ['barcodeWarningModal', 'removeReasonModal', 'paymentModal', 'receiptModal'].forEach(modalId => {
-            document.getElementById(modalId).addEventListener('click', (e) => {
-                if (e.target.id === modalId) {
-                    this.hideModal(modalId);
-                }
-            });
-        });
-
-        // ESC key to close modals
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                ['barcodeWarningModal', 'removeReasonModal', 'paymentModal', 'receiptModal'].forEach(modalId => {
-                    this.hideModal(modalId);
-                });
+                this.hideModal('removeReasonModal');
+                this.hideScannerToast();
             }
         });
     }
 
     initializeBarcodeScanner() {
-        // Test for scanner availability on page load
-        let scannerDetected = false;
-        const testTimeout = setTimeout(() => {
-            if (!scannerDetected) {
-                this.showModal('barcodeWarningModal');
+        console.log('%c[SCANNER]%c Initializing barcode scanner...', 
+            'background: #3b82f6; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold',
+            'color: #3b82f6');
+        
+        // Show scanner ready indicator
+        this.showScannerIndicator();
+        
+        // Auto-hide scanner indicator after 3 seconds
+        setTimeout(() => {
+            this.hideScannerIndicator();
+        }, 3000);
+
+        // Check for scanner within 2 seconds of page load
+        this.scannerCheckTimeout = setTimeout(() => {
+            if (!this.scannerDetected) {
+                console.log('%c⚠️%c Scanner not detected within timeout', 
+                    'font-size: 16px',
+                    'color: #f59e0b; margin-left: 5px');
+                this.showScannerToast(
+                    'Scanner Not Detected',
+                    'Please connect your barcode scanner or select products manually from the grid.',
+                    'warning',
+                    3000
+                );
             }
-        }, 2000); // Wait 2 seconds to detect scanner
+        }, 2000);
 
         // Listen for keypress events (barcode scanners simulate keyboard input)
         document.addEventListener('keypress', (e) => {
@@ -724,8 +576,21 @@ class KioskSystem {
                 return;
             }
 
-            scannerDetected = true;
-            clearTimeout(testTimeout);
+            // Scanner detected!
+            if (!this.scannerDetected) {
+                this.scannerDetected = true;
+                clearTimeout(this.scannerCheckTimeout);
+                console.log('%c✓%c Scanner detected!', 
+                    'color: #10b981; font-size: 16px; font-weight: bold',
+                    'color: #10b981; margin-left: 5px');
+                
+                this.showScannerToast(
+                    'Scanner Connected',
+                    'Barcode scanner is ready. Start scanning products!',
+                    'success',
+                    2000
+                );
+            }
 
             // Clear previous timeout
             if (this.barcodeTimeout) {
@@ -736,6 +601,10 @@ class KioskSystem {
             if (e.key === 'Enter') {
                 // Process the complete barcode
                 if (this.barcodeBuffer.length > 0) {
+                    console.log('%c📋%c Barcode scanned: %c' + this.barcodeBuffer, 
+                        'font-size: 16px',
+                        'color: #6366f1; margin-left: 5px',
+                        'background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-family: monospace');
                     this.processScannedBarcode(this.barcodeBuffer);
                     this.barcodeBuffer = '';
                 }
@@ -755,6 +624,11 @@ class KioskSystem {
             return;
         }
 
+        console.log('%c🔍%c Processing barcode: %c' + barcode, 
+            'font-size: 16px',
+            'color: #8b5cf6; margin-left: 5px',
+            'background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-family: monospace');
+
         try {
             const response = await fetch('{{ route("process_barcode_search") }}', {
                 method: 'POST',
@@ -768,16 +642,149 @@ class KioskSystem {
             const data = await response.json();
             
             if (data.success) {
+                console.log('%c✓%c Product found: %c' + data.product.name, 
+                    'color: #10b981; font-size: 16px; font-weight: bold',
+                    'color: #10b981; margin-left: 5px',
+                    'background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 3px; font-weight: 600');
                 await this.addToCart(data.product.prod_code);
-                // Visual feedback
-                this.showToast(`${data.product.name} added to cart`, 'success');
+                
+                this.showScannerToast(
+                    'Product Added',
+                    `${data.product.name} has been added to your cart.`,
+                    'success',
+                    2000
+                );
             } else {
-                this.showToast(data.message, 'error');
+                console.log('%c✕%c Product not found for barcode: %c' + barcode, 
+                    'color: #ef4444; font-size: 16px; font-weight: bold',
+                    'color: #ef4444; margin-left: 5px',
+                    'background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 3px; font-family: monospace');
+                this.showScannerToast(
+                    'Product Not Found',
+                    `No product found with barcode: ${barcode}`,
+                    'error',
+                    3000
+                );
             }
         } catch (error) {
-            console.error('Error processing scanned barcode:', error);
-            this.showToast('Error processing barcode scan', 'error');
+            console.error('%c✕%c Error processing scanned barcode:', 
+                'color: #ef4444; font-size: 16px; font-weight: bold',
+                'color: #ef4444; margin-left: 5px',
+                error);
+            this.showScannerToast(
+                'Scan Error',
+                'Failed to process barcode. Please try again.',
+                'error',
+                3000
+            );
         }
+    }
+
+    showScannerIndicator() {
+        const indicator = document.getElementById('scannerIndicator');
+        indicator.classList.remove('translate-y-20', 'opacity-0');
+        indicator.classList.add('show');
+    }
+
+    hideScannerIndicator() {
+        const indicator = document.getElementById('scannerIndicator');
+        indicator.classList.add('translate-y-20', 'opacity-0');
+        indicator.classList.remove('show');
+    }
+
+    showScannerToast(title, message, type = 'info', duration = 3000) {
+        // Clear existing toast
+        this.hideScannerToast();
+
+        const toast = document.getElementById('scannerToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+        const progressBar = document.querySelector('#toastProgress > div');
+
+        // Set content
+        toastTitle.textContent = title;
+        toastMessage.textContent = message;
+
+        // Set colors and icons based on type
+        const configs = {
+            success: {
+                borderColor: 'border-green-500',
+                titleColor: 'text-green-800',
+                iconBg: 'bg-green-100',
+                iconColor: 'text-green-600',
+                progressColor: 'bg-green-500',
+                icon: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+            },
+            error: {
+                borderColor: 'border-red-500',
+                titleColor: 'text-red-800',
+                iconBg: 'bg-red-100',
+                iconColor: 'text-red-600',
+                progressColor: 'bg-red-500',
+                icon: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>'
+            },
+            warning: {
+                borderColor: 'border-orange-500',
+                titleColor: 'text-orange-800',
+                iconBg: 'bg-orange-100',
+                iconColor: 'text-orange-600',
+                progressColor: 'bg-orange-500',
+                icon: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>'
+            },
+            info: {
+                borderColor: 'border-blue-500',
+                titleColor: 'text-blue-800',
+                iconBg: 'bg-blue-100',
+                iconColor: 'text-blue-600',
+                progressColor: 'bg-blue-500',
+                icon: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+            }
+        };
+
+        const config = configs[type] || configs.info;
+
+        // Apply styles
+        toast.className = `fixed top-4 right-4 z-[9999] transform transition-all duration-300`;
+        toast.querySelector('.bg-white').className = `bg-white rounded-lg shadow-2xl ${config.borderColor} border-l-4 p-4 min-w-[320px] max-w-md`;
+        toastTitle.className = `font-bold text-sm mb-1 ${config.titleColor}`;
+        toastIcon.className = `flex-shrink-0 w-10 h-10 rounded-full ${config.iconBg} ${config.iconColor} flex items-center justify-center`;
+        toastIcon.innerHTML = config.icon;
+        progressBar.className = `h-full ${config.progressColor} transition-all duration-[${duration}ms] ease-linear w-0`;
+
+        // Show toast with animation
+        setTimeout(() => {
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            toast.classList.add('translate-x-0', 'opacity-100');
+        }, 10);
+
+        // Start progress bar animation
+        setTimeout(() => {
+            progressBar.style.width = '100%';
+        }, 50);
+
+        // Auto hide after duration
+        this.toastTimeout = setTimeout(() => {
+            this.hideScannerToast();
+        }, duration);
+    }
+
+    hideScannerToast() {
+        const toast = document.getElementById('scannerToast');
+        const progressBar = document.querySelector('#toastProgress > div');
+        
+        if (this.toastTimeout) {
+            clearTimeout(this.toastTimeout);
+            this.toastTimeout = null;
+        }
+
+        toast.classList.remove('translate-x-0', 'opacity-100');
+        toast.classList.add('translate-x-full', 'opacity-0');
+        
+        // Reset progress bar
+        setTimeout(() => {
+            progressBar.style.width = '0';
+        }, 300);
     }
 
     startRealTimeClock() {
@@ -796,10 +803,7 @@ class KioskSystem {
             document.getElementById('receiptDateTime').textContent = formattedDateTime;
         };
         
-        // Update immediately
         updateDateTime();
-        
-        // Update every second
         setInterval(updateDateTime, 1000);
     }
 
@@ -834,17 +838,13 @@ class KioskSystem {
         const container = document.getElementById('categoryPills');
 
         const colors = [
-            'red', 'blue', 'green', 'yellow', 
-            'purple', 'pink', 'indigo', 'orange',
-            'teal', 'cyan', 'lime', 'emerald',
-            'violet', 'fuchsia', 'rose', 'skyblue',
-            'gold', 'slategray'
+            '#dc2626', '#2563eb', '#16a34a', '#ca8a04', '#9333ea', '#db2777',
+            '#4f46e5', '#ea580c', '#0d9488', '#0891b2', '#65a30d', '#059669',
+            '#7c3aed', '#c026d3', '#e11d48', '#0284c7', '#ca8a04', '#475569'
         ];
 
         let pillsHTML = `
-            <button class="category-pill px-4 py-2 rounded-full text-white mr-4"
-                style="background-color: gray;"
-                data-category="">
+            <button class="category-pill active" data-category="">
                 All Categories
             </button>
         `;
@@ -852,8 +852,8 @@ class KioskSystem {
         this.categories.forEach((category, index) => {
             const bgColor = colors[index % colors.length];
             pillsHTML += `
-                <button class="category-pill px-4 py-2 rounded-full text-white mr-4"
-                    style="background-color: ${bgColor};"
+                <button class="category-pill" 
+                    style="background-color: ${bgColor}; color: white; border-color: ${bgColor};"
                     data-category="${category.category_id}">
                     ${category.category}
                 </button>
@@ -866,14 +866,11 @@ class KioskSystem {
     selectCategory(categoryId) {
         this.activeCategory = categoryId;
         
-        // Update active state
         document.querySelectorAll('.category-pill').forEach(pill => {
             pill.classList.remove('active');
         });
         
         document.querySelector(`[data-category="${categoryId}"]`).classList.add('active');
-        
-        // Load products for selected category
         this.loadProducts();
     }
 
@@ -962,7 +959,7 @@ class KioskSystem {
                      </svg>`
                 }
             </div>
-            <div class="flex-1 flex flex-col justify-between">
+            <div class="flex-1 flex flex-column justify-between">
                 <h4 class="font-semibold text-[13px] text-gray-900 mb-2 line-clamp-2" title="${product.name}">
                     ${product.name}
                 </h4>
@@ -1154,202 +1151,19 @@ class KioskSystem {
 
     updateButtons() {
         const processBtn = document.getElementById('processPaymentBtn');
+        if (!processBtn) return;
 
-        processBtn.disabled = {{ $expired ? 'true' : 'false' }} || this.cartItems.length === 0;
+        const shouldDisable = this.isExpired || this.cartItems.length === 0;
+        
+        processBtn.disabled = shouldDisable;
 
-        if (this.cartItems.length === 0) {
-            processBtn.classList.add('opacity-50','cursor-not-allowed',
-                {!! $expired ? "'cursor-not-allowed','hover:bg-red-500','disabled'" : "" !!}
-            );
+        if (shouldDisable) {
+            processBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            processBtn.classList.remove('hover:from-red-700', 'hover:to-red-800');
         } else {
             processBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            processBtn.classList.add('hover:from-red-700', 'hover:to-red-800');
         }
-    }
-
-    async searchByBarcode() {
-        // This method is no longer needed but kept for compatibility
-        // Scanner now works automatically via initializeBarcodeScanner()
-    }
-
-    calculateChange() {
-        const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
-        const change = amountReceived - this.totalAmount;
-        
-        const changeDisplay = document.getElementById('changeDisplay');
-        const changeAmount = document.getElementById('changeAmount');
-        const warningDisplay = document.getElementById('warningDisplay');
-        const warningAmount = document.getElementById('warningAmount');
-        const completeBtn = document.getElementById('completePaymentBtn');
-        
-        if (amountReceived > 0 && amountReceived < this.totalAmount) {
-            const shortage = this.totalAmount - amountReceived;
-            warningAmount.textContent = `₱${shortage.toFixed(2)}`;
-            warningDisplay.classList.remove('hidden');
-            changeDisplay.classList.add('hidden');
-            completeBtn.disabled = true;
-            completeBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        } else if (amountReceived >= this.totalAmount && amountReceived > 0) {
-            changeAmount.textContent = `₱${change.toFixed(2)}`;
-            changeDisplay.classList.remove('hidden');
-            warningDisplay.classList.add('hidden');
-            completeBtn.disabled = false;
-            completeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        } else {
-            changeDisplay.classList.add('hidden');
-            warningDisplay.classList.add('hidden');
-            completeBtn.disabled = true;
-            completeBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-    }
-
-    async processPayment() {
-        const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
-        
-        if (amountReceived <= 0) {
-            this.showToast('Please enter a valid amount', 'error');
-            document.getElementById('amountReceived').focus();
-            return;
-        }
-        
-        if (amountReceived < this.totalAmount) {
-            this.showToast('Amount received is less than total amount due', 'error');
-            document.getElementById('amountReceived').focus();
-            return;
-        }
-
-        const completeBtn = document.getElementById('completePaymentBtn');
-        const originalText = completeBtn.textContent;
-        
-        completeBtn.disabled = true;
-        completeBtn.textContent = 'Processing...';
-        completeBtn.classList.add('opacity-50');
-
-        try {
-            const response = await fetch('{{ route("process_payment") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    payment_method: 'cash',
-                    amount_received: amountReceived
-                })
-            });
-
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showToast('Payment completed successfully!', 'success');
-                // Hide payment modal and show receipt modal
-                this.hideModal('paymentModal');
-                this.showReceiptModal(data);
-                
-                // Reset cart
-                this.cartItems = [];
-                this.totalAmount = 0;
-                this.totalQuantity = 0;
-                this.renderCart();
-                this.updateCartSummary();
-                this.updateButtons();
-            } else {
-                this.showToast(data.message, 'error');
-            }
-        } catch (error) {
-            console.error('Error processing payment:', error);
-            this.showToast('Error processing payment', 'error');
-        } finally {
-            completeBtn.disabled = false;
-            completeBtn.textContent = originalText;
-            completeBtn.classList.remove('opacity-50');
-        }
-    }
-
-    showReceiptModal(paymentData) {
-        // Populate receipt data
-        document.getElementById('receiptNumber').textContent = paymentData.receipt_id || '{{ $receipt_no ?? "0" }}';
-        document.getElementById('receiptTotalItems').textContent = paymentData.total_quantity;
-        document.getElementById('receiptTotalAmount').textContent = `₱${paymentData.total_amount.toFixed(2)}`;
-        document.getElementById('receiptAmountPaid').textContent = `₱${paymentData.amount_received.toFixed(2)}`;
-        document.getElementById('receiptChange').textContent = `₱${paymentData.change.toFixed(2)}`;
-        
-        // Set transaction date/time
-        const now = new Date();
-        const options = {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        };
-        document.getElementById('receiptTransactionDate').textContent = now.toLocaleString('en-US', options);
-        
-        // Populate items list using the receipt items from server response
-        const itemsList = document.getElementById('receiptItemsList');
-        if (paymentData.receipt_items && paymentData.receipt_items.length > 0) {
-            itemsList.innerHTML = paymentData.receipt_items.map(item => `
-                <div class="flex justify-between items-start py-2 border-b border-gray-100 last:border-b-0">
-                    <div class="flex-1 pr-2">
-                        <div class="text-sm font-medium text-gray-900">${item.product.name}</div>
-                        <div class="text-xs text-gray-500">${item.quantity} × ₱${parseFloat(item.product.selling_price).toFixed(2)}</div>
-                    </div>
-                    <div class="text-sm font-bold text-gray-900">₱${item.amount.toFixed(2)}</div>
-                </div>
-            `).join('');
-        } else {
-            itemsList.innerHTML = '<div class="text-center py-4 text-gray-500">No items found</div>';
-        }
-        
-        // Show low stock warning if any
-        if (paymentData.low_stock_warning && paymentData.low_stock_warning.length > 0) {
-            const warningHtml = paymentData.low_stock_warning.map(product => 
-                `<p class="text-xs text-orange-600">⚠️ ${product.name}: ${product.remaining_stock} left</p>`
-            ).join('');
-            
-            const warningDiv = document.createElement('div');
-            warningDiv.className = 'mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg';
-            warningDiv.innerHTML = `
-                <p class="text-sm font-semibold text-orange-800 mb-1">Low Stock Alert:</p>
-                ${warningHtml}
-            `;
-            
-            // Insert warning before footer message
-            const footerDiv = itemsList.parentElement.querySelector('.text-center.mt-6');
-            if (footerDiv) {
-                footerDiv.parentElement.insertBefore(warningDiv, footerDiv);
-            }
-        }
-        
-        // Show the modal
-        this.showModal('receiptModal');
-    }
-
-    printReceipt() {
-        // Temporary function - not functional yet
-        this.showToast('Print function will be implemented soon', 'info');
-    }
-
-    showPaymentModal() {
-        if (this.cartItems.length === 0) {
-            this.showToast('Cart is empty', 'error');
-            return;
-        }
-
-        document.getElementById('paymentTotalQuantity').textContent = this.totalQuantity;
-        document.getElementById('paymentTotalAmount').textContent = `₱${this.totalAmount.toFixed(2)}`;
-        
-        document.getElementById('amountReceived').value = '';
-        document.getElementById('changeDisplay').classList.add('hidden');
-        document.getElementById('warningDisplay').classList.add('hidden');
-        
-        const completeBtn = document.getElementById('completePaymentBtn');
-        completeBtn.disabled = true;
-        completeBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        
-        this.showModal('paymentModal');
-        setTimeout(() => document.getElementById('amountReceived').focus(), 300);
     }
 
     showModal(modalId) {
@@ -1396,11 +1210,17 @@ class KioskSystem {
 let kioskSystem;
 document.addEventListener('DOMContentLoaded', function() {
     kioskSystem = new KioskSystem();
+    console.log('%c🚀%c Kiosk system initialized', 
+        'font-size: 16px',
+        'color: #10b981; margin-left: 5px; font-weight: 600');
 });
 
 // Global error handling
 window.addEventListener('error', function(e) {
-    console.error('JavaScript Error:', e.error);
+    console.error('%c✕%c JavaScript Error:', 
+        'color: #ef4444; font-size: 16px; font-weight: bold',
+        'color: #ef4444; margin-left: 5px',
+        e.error);
 });
 </script>
 

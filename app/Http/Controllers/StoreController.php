@@ -46,7 +46,7 @@ class StoreController extends Controller
                 DB::raw('SUM(receipt_item.item_quantity) as items_quantity'),
                 DB::raw('SUM(receipt_item.item_quantity * products.selling_price) as total_amount')
             )
-            ->where('receipt.owner_id', $ownerId) // CRITICAL FIX
+            ->where('receipt.owner_id', $ownerId)
             ->groupBy('receipt.receipt_id', 'receipt.receipt_date')
             ->orderBy('receipt.receipt_date', 'desc');
    
@@ -89,7 +89,7 @@ class StoreController extends Controller
                 ->leftJoin('staff', 'receipt.staff_id', '=', 'staff.staff_id')
                 ->select('receipt.*', 'owners.firstname as owner_name', 'staff.firstname as staff_name')
                 ->where('receipt.receipt_id', $receiptId)
-                ->where('receipt.owner_id', $ownerId) // CRITICAL FIX
+                ->where('receipt.owner_id', $ownerId)
                 ->first();
 
             if (!$receipt) {
@@ -152,7 +152,50 @@ class StoreController extends Controller
         return view('store_start_transaction', [
             'receipt_no' => $this->generateReceiptNumber($owner_id),
             'user_firstname' => $user_firstname,
-            'store_info' => $store_info
+            'store_info' => $store_info,
+            'expired' => false // Add your subscription check logic here
+        ]);
+    }
+
+    // Show payment processor page
+    public function showPaymentProcessor()
+    {
+        $owner_id = $this->getCurrentOwnerId();
+        
+        if (!$owner_id) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Check if cart has items
+        $items = session()->get('transaction_items', []);
+        
+        if (empty($items)) {
+            return redirect()->route('store_start_transaction')
+                ->with('error', 'Cart is empty. Please add items first.');
+        }
+        
+        $user_firstname = null;
+        
+        if (Auth::guard('owner')->check()) {
+            $user_firstname = Auth::guard('owner')->user()->firstname;
+        } elseif (Auth::guard('staff')->check()) {
+            $user_firstname = Auth::guard('staff')->user()->firstname;
+        }
+        
+        // Get store information
+        $store_info = DB::table('owners')
+            ->select('store_name', 'store_address', 'contact')
+            ->where('owner_id', $owner_id)
+            ->first();
+        
+        // Get receipt number
+        $receipt_no = $this->generateReceiptNumber($owner_id);
+        
+        return view('store_payment_processor', [
+            'receipt_no' => $receipt_no,
+            'user_firstname' => $user_firstname,
+            'store_info' => $store_info,
+            'expired' => false // Add your subscription check logic here
         ]);
     }
 
@@ -171,7 +214,7 @@ class StoreController extends Controller
 
             $categories = DB::table('categories')
                 ->select('category_id', 'category')
-                ->where('owner_id', $ownerId) // CRITICAL FIX
+                ->where('owner_id', $ownerId)
                 ->orderBy('category')
                 ->get();
             
@@ -203,13 +246,11 @@ class StoreController extends Controller
             $categoryId = $request->get('category_id');
             $search = $request->get('search');
             
-            // ASSUMPTION: Products table should have owner_id column
-            // If not, you need to add it via migration
             $query = DB::table('products')
                 ->join('categories', 'products.category_id', '=', 'categories.category_id')
                 ->leftJoin('inventory', function($join) use ($ownerId) {
                     $join->on('products.prod_code', '=', 'inventory.prod_code')
-                         ->where('inventory.owner_id', '=', $ownerId); // CRITICAL FIX
+                         ->where('inventory.owner_id', '=', $ownerId);
                 })
                 ->select(
                     'products.prod_code',
@@ -222,7 +263,7 @@ class StoreController extends Controller
                     'categories.category as category_name',
                     DB::raw('COALESCE(SUM(inventory.stock), 0) as stock')
                 )
-                ->where('products.owner_id', $ownerId) // CRITICAL FIX (add this column if missing)
+                ->where('products.owner_id', $ownerId)
                 ->groupBy(
                     'products.prod_code',
                     'products.name',
@@ -280,7 +321,7 @@ class StoreController extends Controller
             
             // Verify product belongs to this owner
             $product = Product::where('prod_code', $request->prod_code)
-                              ->where('owner_id', $ownerId) // CRITICAL FIX
+                              ->where('owner_id', $ownerId)
                               ->first();
             
             if (!$product) {
@@ -291,7 +332,7 @@ class StoreController extends Controller
             }
 
             $totalStock = Inventory::where('prod_code', $product->prod_code)
-                                   ->where('owner_id', $ownerId) // CRITICAL FIX
+                                   ->where('owner_id', $ownerId)
                                    ->sum('stock');
 
             $currentItems = session()->get('transaction_items', []);
@@ -335,6 +376,7 @@ class StoreController extends Controller
 
             return response()->json([
                 'success' => true,
+                'message' => $product->name . ' added to cart successfully!',
                 'cart_items' => $cartItems['items'],
                 'cart_summary' => [
                     'total_quantity' => $cartItems['total_quantity'],
@@ -377,7 +419,7 @@ class StoreController extends Controller
                 $currentItems = array_values($currentItems);
             } else {
                 $totalStock = Inventory::where('prod_code', $request->prod_code)
-                                       ->where('owner_id', $ownerId) // CRITICAL FIX
+                                       ->where('owner_id', $ownerId)
                                        ->sum('stock');
                 
                 if ($totalStock < $request->quantity) {
@@ -498,7 +540,7 @@ class StoreController extends Controller
             }
 
             $product = Product::where('barcode', $request->barcode)
-                              ->where('owner_id', $ownerId) // CRITICAL FIX
+                              ->where('owner_id', $ownerId)
                               ->first();
 
             if (!$product) {
@@ -509,7 +551,7 @@ class StoreController extends Controller
             }
 
             $totalStock = Inventory::where('prod_code', $product->prod_code)
-                                   ->where('owner_id', $ownerId) // CRITICAL FIX
+                                   ->where('owner_id', $ownerId)
                                    ->sum('stock');
 
             return response()->json([
@@ -535,123 +577,228 @@ class StoreController extends Controller
 
     // Process payment
     public function processPayment(Request $request)
-    {
-        $request->validate([
-            'payment_method' => 'required|string',
-            'amount_received' => 'required|numeric|min:0',
+{
+    // Validate incoming request
+    $request->validate([
+        'payment_method' => 'required|string',
+        'amount_paid' => 'required|numeric|min:0',
+        'receipt_discount_type' => 'nullable|in:percent,amount', // Changed from 'fixed' to 'amount'
+        'receipt_discount_value' => 'nullable|numeric|min:0',
+        'vat_enabled' => 'nullable|boolean',
+        'vat_rate' => 'nullable|numeric|min:0|max:100',
+        'item_discounts' => 'nullable|array'
+    ]);
+
+    $items = session()->get('transaction_items', []);
+    
+    if (empty($items)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No items found for transaction.'
+        ], 400);
+    }
+
+    DB::beginTransaction();
+
+    try {
+        $owner_id = $this->getCurrentOwnerId();
+        $staff_id = null;
+        
+        if (!$owner_id) {
+            throw new \Exception('Unauthorized access');
+        }
+        
+        if (Auth::guard('staff')->check()) {
+            $staff_id = Auth::guard('staff')->user()->staff_id;
+        }
+
+        // Get discount and VAT values - Convert 'fixed' to 'amount' for database
+        $receiptDiscountType = $request->input('receipt_discount_type', 'percent');
+        if ($receiptDiscountType === 'fixed') {
+            $receiptDiscountType = 'amount';
+        }
+        
+        $receiptDiscountValue = $request->input('receipt_discount_value', 0);
+        $vatEnabled = $request->input('vat_enabled', false);
+        $vatRate = $request->input('vat_rate', 0);
+        $itemDiscounts = $request->input('item_discounts', []);
+
+        $lowStockProducts = [];
+        $receiptItems = [];
+        $subtotal = 0;
+
+        // Validate stock and calculate subtotal
+        foreach ($items as $item) {
+            $product = Product::where('prod_code', $item['prod_code'])
+                              ->where('owner_id', $owner_id)
+                              ->first();
+            
+            if (!$product) {
+                throw new \Exception("Product not found or access denied: " . $item['prod_code']);
+            }
+
+            $totalStock = Inventory::where('prod_code', $item['prod_code'])
+                                   ->where('owner_id', $owner_id)
+                                   ->sum('stock');
+            
+            if ($totalStock < $item['quantity']) {
+                throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
+            }
+
+            $itemTotal = $product->selling_price * $item['quantity'];
+            $subtotal += $itemTotal;
+
+            $receiptItems[] = [
+                'product' => $product,
+                'quantity' => $item['quantity'],
+                'amount' => $itemTotal
+            ];
+        }
+
+        // Calculate total with discounts
+        $totalItemDiscounts = 0;
+        foreach ($items as $item) {
+            $product = Product::where('prod_code', $item['prod_code'])->first();
+            $itemTotal = $product->selling_price * $item['quantity'];
+            
+            if (isset($itemDiscounts[$item['prod_code']])) {
+                $discount = $itemDiscounts[$item['prod_code']];
+                $discountType = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
+                
+                if ($discountType === 'percent') {
+                    $totalItemDiscounts += $itemTotal * ($discount['value'] / 100);
+                } else {
+                    $totalItemDiscounts += $discount['value'];
+                }
+            }
+        }
+
+        $afterItemDiscounts = $subtotal - $totalItemDiscounts;
+
+        // Apply receipt-level discount
+        $receiptDiscountAmount = 0;
+        if ($receiptDiscountType === 'percent') {
+            $receiptDiscountAmount = $afterItemDiscounts * ($receiptDiscountValue / 100);
+        } else {
+            $receiptDiscountAmount = $receiptDiscountValue;
+        }
+
+        $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
+
+        // Calculate VAT
+        $vatAmount = 0;
+        if ($vatEnabled) {
+            $vatAmount = $afterReceiptDiscount * ($vatRate / 100);
+        }
+
+        $totalAmount = $afterReceiptDiscount + $vatAmount;
+
+        // Validate amount paid
+        if ($request->amount_paid < $totalAmount) {
+            throw new \Exception("Amount paid (₱" . number_format($request->amount_paid, 2) . ") is less than total amount (₱" . number_format($totalAmount, 2) . ")");
+        }
+
+        // Create receipt
+        $receipt = Receipt::create([
+            'receipt_date' => now(),
+            'owner_id' => $owner_id,
+            'staff_id' => $staff_id,
+            'amount_paid' => $request->amount_paid,
+            'discount_type' => $receiptDiscountType, // Now correctly 'percent' or 'amount'
+            'discount_value' => $receiptDiscountValue
         ]);
 
-        $items = session()->get('transaction_items', []);
-        
-        if (empty($items)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No items found for transaction.'
-            ], 400);
-        }
+        // Process each item
+        foreach ($items as $item) {
+            $product = Product::where('prod_code', $item['prod_code'])
+                              ->where('owner_id', $owner_id)
+                              ->first();
 
-        DB::beginTransaction();
-
-        try {
-            $owner_id = $this->getCurrentOwnerId();
-            $staff_id = null;
+            // Get item discount - Convert 'fixed' to 'amount'
+            $itemDiscountType = 'percent';
+            $itemDiscountValue = 0;
             
-            if (!$owner_id) {
-                throw new \Exception('Unauthorized access');
-            }
-            
-            if (Auth::guard('staff')->check()) {
-                $staff_id = Auth::guard('staff')->user()->staff_id;
+            if (isset($itemDiscounts[$item['prod_code']])) {
+                $itemDiscountType = $itemDiscounts[$item['prod_code']]['type'];
+                if ($itemDiscountType === 'fixed') {
+                    $itemDiscountType = 'amount';
+                }
+                $itemDiscountValue = $itemDiscounts[$item['prod_code']]['value'];
             }
 
-            $receipt = Receipt::create([
-                'receipt_date' => now(),
-                'owner_id' => $owner_id,
-                'staff_id' => $staff_id
+            // Calculate VAT per item (proportional)
+            $itemTotal = $product->selling_price * $item['quantity'];
+            $itemProportion = $subtotal > 0 ? $itemTotal / $subtotal : 0;
+            $itemVatAmount = $vatEnabled ? $vatAmount * $itemProportion : 0;
+
+            // Create receipt item
+            ReceiptItem::create([
+                'item_quantity' => $item['quantity'],
+                'prod_code' => $item['prod_code'],
+                'receipt_id' => $receipt->receipt_id,
+                'item_discount_type' => $itemDiscountType, // Now correctly 'percent' or 'amount'
+                'item_discount_value' => $itemDiscountValue,
+                'vat_amount' => $itemVatAmount
             ]);
 
-            $totalAmount = 0;
-            $lowStockProducts = [];
-            $receiptItems = [];
-
-            foreach ($items as $item) {
-                // Verify product belongs to owner
-                $product = Product::where('prod_code', $item['prod_code'])
-                                  ->where('owner_id', $owner_id)
-                                  ->first();
-                
-                if (!$product) {
-                    throw new \Exception("Product not found or access denied: " . $item['prod_code']);
-                }
-
-                $totalStock = Inventory::where('prod_code', $item['prod_code'])
+            // Decrement inventory
+            $this->decrementInventoryStock($item['prod_code'], $item['quantity'], $owner_id);
+            
+            // Check for low stock
+            $remainingStock = Inventory::where('prod_code', $item['prod_code'])
                                        ->where('owner_id', $owner_id)
                                        ->sum('stock');
-                
-                if ($totalStock < $item['quantity']) {
-                    throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
-                }
-
-                ReceiptItem::create([
-                    'item_quantity' => $item['quantity'],
-                    'prod_code' => $item['prod_code'],
-                    'receipt_id' => $receipt->receipt_id
-                ]);
-
-                $this->decrementInventoryStock($item['prod_code'], $item['quantity'], $owner_id);
-                
-                $remainingStock = Inventory::where('prod_code', $item['prod_code'])
-                                           ->where('owner_id', $owner_id)
-                                           ->sum('stock');
-                                           
-                if ($remainingStock <= $product->stock_limit) {
-                    $lowStockProducts[] = [
-                        'name' => $product->name,
-                        'remaining_stock' => $remainingStock,
-                        'stock_limit' => $product->stock_limit
-                    ];
-                }
-                
-                $itemTotal = $product->selling_price * $item['quantity'];
-                $totalAmount += $itemTotal;
-
-                $receiptItems[] = [
-                    'product' => $product,
-                    'quantity' => $item['quantity'],
-                    'amount' => $itemTotal
+                                       
+            if ($remainingStock <= $product->stock_limit) {
+                $lowStockProducts[] = [
+                    'name' => $product->name,
+                    'remaining_stock' => $remainingStock,
+                    'stock_limit' => $product->stock_limit
                 ];
             }
-
-            session()->forget('transaction_items');
-
-            DB::commit();
-
-            $response = [
-                'success' => true,
-                'message' => 'Transaction completed successfully!',
-                'receipt_id' => $receipt->receipt_id,
-                'total_amount' => $totalAmount,
-                'amount_received' => $request->amount_received,
-                'change' => $request->amount_received - $totalAmount,
-                'receipt_items' => $receiptItems,
-                'total_quantity' => array_sum(array_column($items, 'quantity'))
-            ];
-
-            if (!empty($lowStockProducts)) {
-                $response['low_stock_warning'] = $lowStockProducts;
-            }
-
-            return response()->json($response);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Transaction failed: ' . $e->getMessage()
-            ], 500);
         }
+
+        // Clear session
+        session()->forget('transaction_items');
+
+        DB::commit();
+
+        $response = [
+            'success' => true,
+            'message' => 'Transaction completed successfully!',
+            'receipt_id' => $receipt->receipt_id,
+            'subtotal' => $subtotal,
+            'total_item_discounts' => $totalItemDiscounts,
+            'receipt_discount_amount' => $receiptDiscountAmount,
+            'vat_amount' => $vatAmount,
+            'total_amount' => $totalAmount,
+            'amount_paid' => $request->amount_paid,
+            'change' => $request->amount_paid - $totalAmount,
+            'receipt_items' => $receiptItems,
+            'total_quantity' => array_sum(array_column($items, 'quantity'))
+        ];
+
+        if (!empty($lowStockProducts)) {
+            $response['low_stock_warning'] = $lowStockProducts;
+        }
+
+        return response()->json($response);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        // Log the error for debugging
+        \Log::error('Payment processing error: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'request_data' => $request->all()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Transaction failed: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     // Helper method to format cart items
     private function getFormattedCartItems($items, $ownerId)
@@ -695,7 +842,7 @@ class StoreController extends Controller
         $remainingQuantity = $quantity;
         
         $inventoryItems = Inventory::where('prod_code', $prod_code)
-                                   ->where('owner_id', $ownerId) // CRITICAL FIX
+                                   ->where('owner_id', $ownerId)
                                    ->where('stock', '>', 0)
                                    ->orderBy('date_added', 'asc')
                                    ->orderBy('inven_code', 'asc')
@@ -732,14 +879,95 @@ class StoreController extends Controller
         return $lastReceipt ? $lastReceipt->receipt_id + 1 : 1;
     }
 
-    public function showReports()
+    public function showReports(Request $request)
     {
-    $ownerId = $this->getCurrentOwnerId();
-    
-    if (!$ownerId) {
-        abort(403, 'Unauthorized access');
-    }
-    
-    return view('dashboards.owner.report-sales-performance');
+        $ownerId = $this->getCurrentOwnerId();
+        
+        if (!$ownerId) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Get filter parameters for transactions
+        $date = $request->get('date');
+        $start_date = $request->get('start_date');
+        $end_date = $request->get('end_date');
+        
+        // Build transactions query
+        $transactionsQuery = DB::table('receipt')
+            ->join('receipt_item', 'receipt.receipt_id', '=', 'receipt_item.receipt_id')
+            ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
+            ->select(
+                'receipt.receipt_id',
+                'receipt.receipt_date',
+                DB::raw('SUM(receipt_item.item_quantity) as items_quantity'),
+                DB::raw('SUM(receipt_item.item_quantity * products.selling_price) as total_amount')
+            )
+            ->where('receipt.owner_id', $ownerId)
+            ->groupBy('receipt.receipt_id', 'receipt.receipt_date')
+            ->orderBy('receipt.receipt_date', 'desc');
+        
+        // Apply date filters
+        if ($date) {
+            $transactionsQuery->whereDate('receipt.receipt_date', $date);
+        }
+        
+        if ($start_date && $end_date) {
+            $transactionsQuery->whereBetween('receipt.receipt_date', [
+                Carbon::parse($start_date)->startOfDay(),
+                Carbon::parse($end_date)->endOfDay()
+            ]);
+        }
+        
+        $transactions = $transactionsQuery->get();
+        
+        // Get data for Sales by Category tab
+        $years = DB::table('receipt')
+            ->select(DB::raw('DISTINCT YEAR(receipt_date) as year'))
+            ->where('owner_id', $ownerId)
+            ->orderBy('year', 'desc')
+            ->get();
+        
+        $monthNames = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        
+        // Placeholder for sales by category data
+        $sbc = collect();
+        
+        // Get data for Peak Hours tab
+        $dateChoice = $request->get('dateChoice', now()->toDateString());
+        $peak = DB::table('receipt')
+            ->select(
+                DB::raw('DAYNAME(receipt_date) as dayName'),
+                DB::raw('HOUR(receipt_date) as hour'),
+                DB::raw('CONCAT(HOUR(receipt_date), ":00 - ", HOUR(receipt_date) + 1, ":00") as time_slot'),
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('SUM((SELECT SUM(ri.item_quantity * p.selling_price) 
+                             FROM receipt_item ri 
+                             JOIN products p ON ri.prod_code = p.prod_code 
+                             WHERE ri.receipt_id = receipt.receipt_id)) as sales'),
+                DB::raw('AVG((SELECT SUM(ri.item_quantity * p.selling_price) 
+                             FROM receipt_item ri 
+                             JOIN products p ON ri.prod_code = p.prod_code 
+                             WHERE ri.receipt_id = receipt.receipt_id)) as avg_value')
+            )
+            ->where('owner_id', $ownerId)
+            ->whereDate('receipt_date', $dateChoice)
+            ->groupBy('dayName', 'hour', 'time_slot')
+            ->orderBy('hour')
+            ->get();
+        
+        return view('dashboards.owner.report-sales-performance', compact(
+            'transactions',
+            'date',
+            'start_date',
+            'end_date',
+            'years',
+            'monthNames',
+            'sbc',
+            'peak',
+            'dateChoice'
+        ));
     }
 }
