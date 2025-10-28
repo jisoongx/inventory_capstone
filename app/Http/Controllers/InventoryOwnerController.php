@@ -102,33 +102,157 @@ class InventoryOwnerController extends Controller
         return response()->json($results);
     }
 
-    //for the info button in the product list table
-    public function showProductDetails($prodCode)
-    {
-        // Get product info (include stock_limit)
-        $product = DB::table('products')
-            ->join('units', 'products.unit_id', '=', 'units.unit_id')
-            ->select('products.*', 'units.unit as unit')
-            ->where('products.prod_code', $prodCode)
-            ->first();
 
-        if (!$product) {
-            abort(404, 'Product not found');
+public function showProductDetails($prodCode)
+{
+    // Get product info
+    $product = DB::table('products')
+        ->join('units', 'products.unit_id', '=', 'units.unit_id')
+        ->select('products.*', 'units.unit as unit')
+        ->where('products.prod_code', $prodCode)
+        ->first();
+
+    if (!$product) {
+        abort(404, 'Product not found');
+    }
+
+    // Stock-in History (from inventory table) - Only batches with quantity > 0
+    $stockInHistory = DB::table('inventory')
+        ->where('prod_code', $prodCode)
+        ->where('stock', '>', 0)
+        ->whereNotNull('batch_number')
+        ->orderBy('date_added', 'desc')
+        ->orderBy('batch_number', 'desc')
+        ->get();
+
+    // Stock-out from Sales (from receipt_item table)
+    $stockOutSalesHistory = DB::table('receipt_item as ri')
+        ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
+        ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
+        ->leftJoin('staff as s', 'r.staff_id', '=', 's.staff_id')
+        ->leftJoin('owners as o', 'r.owner_id', '=', 'o.owner_id')
+        ->select(
+            'ri.item_id',
+            'ri.item_quantity as quantity_sold',
+            'ri.prod_code',
+            'r.receipt_id',
+            'r.receipt_date',
+            'p.selling_price',
+            DB::raw('(ri.item_quantity * p.selling_price) as total_amount'),
+            DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as sold_by')
+        )
+        ->where('ri.prod_code', $prodCode)
+        ->orderBy('r.receipt_date', 'desc')
+        ->get();
+
+    // Stock-out from Damaged/Expired Items
+    $stockOutDamagedHistory = DB::table('damaged_items as di')
+        ->leftJoin('staff as s', 'di.staff_id', '=', 's.staff_id')
+        ->leftJoin('owners as o', 'di.owner_id', '=', 'o.owner_id')
+        ->select(
+            'di.*',
+            DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as reported_by')
+        )
+        ->where('di.prod_code', $prodCode)
+        ->orderBy('di.damaged_date', 'desc')
+        ->get();
+
+    // Batch Stock-out History - Track inventory reductions per batch
+    $manualBatchStockOut = collect();
+
+    // Get all inventory changes for this product, ordered by batch and date
+    $inventoryChanges = DB::table('inventory')
+        ->where('prod_code', $prodCode)
+        ->whereNotNull('batch_number')
+        ->orderBy('batch_number')
+        ->orderBy('last_updated', 'asc')
+        ->get();
+
+    // Group by batch number to track each batch separately
+    $batches = $inventoryChanges->groupBy('batch_number');
+
+    foreach ($batches as $batchNumber => $batchRecords) {
+        // Sort batch records by date
+        $sortedRecords = $batchRecords->sortBy('last_updated');
+        
+        $previousStock = null;
+        
+        foreach ($sortedRecords as $record) {
+            if ($previousStock !== null && $record->stock < $previousStock) {
+                // Stock decreased - this is a stock-out event
+                $quantityOut = $previousStock - $record->stock;
+                
+                $manualBatchStockOut->push((object)[
+                    'batch_number' => $batchNumber,
+                    'date' => $record->last_updated,
+                    'quantity_out' => $quantityOut,
+                    'type' => 'sale',
+                    'reference' => 'INV-' . $record->inven_code,
+                    'sold_by' => 'System'
+                ]);
+            }
+            $previousStock = $record->stock;
         }
+    }
 
-        // Get all restock records
-        $restocks = DB::table('inventory')
+    // Add damaged items with batch number tracing
+    foreach ($stockOutDamagedHistory as $damaged) {
+        // Find which batch was active when the damage occurred
+        $batchForDamage = DB::table('inventory')
             ->where('prod_code', $prodCode)
             ->whereNotNull('batch_number')
-            ->orderBy('date_added', 'desc')     // newest date first
-            ->orderBy('batch_number', 'desc')   // within same date, highest batch first
-            ->get();
+            ->where('date_added', '<=', $damaged->damaged_date)
+            ->where(function($query) use ($damaged) {
+                $query->whereNull('expiration_date')
+                    ->orWhere('expiration_date', '>=', $damaged->damaged_date);
+            })
+            ->orderBy('date_added', 'desc')
+            ->first();
 
-        // Calculate total stock
-        $totalStock = $restocks->sum('stock');
+        $batchNumber = $batchForDamage ? $batchForDamage->batch_number : 'N/A';
 
-        return view('inventory-owner-product-info', compact('product', 'restocks', 'totalStock'));
+        $manualBatchStockOut->push((object)[
+            'batch_number' => $batchNumber,
+            'date' => $damaged->damaged_date,
+            'quantity_out' => $damaged->damaged_quantity,
+            'type' => 'damaged',
+            'reference' => 'DAMAGED-' . $damaged->damaged_id,
+            'sold_by' => $damaged->reported_by // Use the reported_by from the join
+        ]);
     }
+
+    // Sort all stock-out events by date
+    $manualBatchStockOut = $manualBatchStockOut->sortByDesc('date')->values();
+
+    // Batch grouping for stock-in
+    $batchGroups = $stockInHistory->groupBy('batch_number');
+
+    // Summary calculations
+    $totalStockIn = $stockInHistory->sum('stock');
+    $totalStockOutSold = $stockOutSalesHistory->sum('quantity_sold');
+    $totalStockOutDamaged = $stockOutDamagedHistory->sum('damaged_quantity');
+    $totalStockOut = $totalStockOutSold + $totalStockOutDamaged;
+    $currentStock = $totalStockIn - $totalStockOut;
+    $totalRevenue = $stockOutSalesHistory->sum('total_amount');
+    $turnoverRate = $totalStockIn > 0 ? ($totalStockOutSold / $totalStockIn) * 100 : 0;
+
+    return view('inventory-owner-product-info', compact(
+        'product',
+        'stockInHistory',
+        'stockOutSalesHistory',
+        'stockOutDamagedHistory',
+        'manualBatchStockOut',
+        'batchGroups',
+        'totalStockIn',
+        'totalStockOut',
+        'totalStockOutSold',
+        'totalStockOutDamaged',
+        'currentStock',
+        'totalRevenue',
+        'turnoverRate'
+    ));
+}
+
 
     public function pricingHistory($prodCode)
     {
