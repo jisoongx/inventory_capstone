@@ -47,9 +47,10 @@
   cursor: pointer;
   font-variation-settings:
   'FILL' 1,
-  'wght' 600,
-  'GRAD' 200,
-  'opsz' 20
+  'wght' 400,
+  'GRAD' 100,
+  'opsz' 10;
+  color: #FFD700;
 }
 
 .material-symbols-rounded-full {
@@ -83,6 +84,24 @@
   direction: ltr;
   font-variation-settings:
   'FILL' 0,
+  'wght' 300,
+  'GRAD' 200,
+  'opsz' 20
+}
+
+.material-symbols-rounded-smaller {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 18px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  font-variation-settings:
+  'FILL' 1,
   'wght' 300,
   'GRAD' 200,
   'opsz' 20

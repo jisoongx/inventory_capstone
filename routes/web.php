@@ -17,6 +17,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Livewire\ExpenseRecord;
+use App\Livewire\ReportSalesAndPerformance;
+
 
 
 
@@ -59,7 +61,7 @@ Route::view('/owner/technical-request', 'dashboards.owner.technical_request')->n
 // REPORTS DAPIT
 Route::view('/reports/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('dashboards.owner.rsp');
 Route::view('/reports/inventory-reports', 'dashboards.owner.report-inventory-reports')->name('dashboards.owner.inven_reports');
-Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-customer-and-behavior')->name('dashboards.owner.customer_behavior');
+Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-customer-and-behavior')->name('dashboards.owner.trend');
 Route::view('/report/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('report.sales.performance');
 
 
@@ -212,25 +214,40 @@ Route::get('/restock/list', [RestockController::class, 'list'])->name('restock.l
 Route::get('/restock', [RestockController::class, 'showRestockPage'])->name('restock.page');
 Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name('seasonal_trends');
 
+
 // Store: Transaction
 // Main transactions routes
 Route::get('/store_start_transaction', [StoreController::class, 'showKioskTransaction'])->name('store_start_transaction');
 Route::get('/store_transactions', [StoreController::class, 'index'])->name('store_transactions');
 Route::get('/report-sales-performance', [StoreController::class, 'showReports'])->name('report-sales-performance');
-
 // API endpoints for kiosk functionality
 Route::get('/api/categories', [StoreController::class, 'getCategories'])->name('get_categories');
 Route::get('/api/kiosk/products', [StoreController::class, 'getKioskProducts'])->name('get_kiosk_products');
 Route::get('/api/receipt/{receiptId}', [StoreController::class, 'getReceiptDetails']);
-
 // Cart management routes
 Route::post('/api/kiosk/cart/add', [StoreController::class, 'addToKioskCart'])->name('add_to_kiosk_cart');
 Route::post('/api/kiosk/cart/update', [StoreController::class, 'updateCartItem'])->name('update_cart_item');
 Route::post('/api/kiosk/cart/remove', [StoreController::class, 'removeCartItem'])->name('remove_cart_item');
 Route::get('/api/kiosk/cart', [StoreController::class, 'getCartItems'])->name('get_cart_items');
-
 // Barcode and payment routes
 Route::post('/api/barcode/search', [StoreController::class, 'processBarcodeSearch'])->name('process_barcode_search');
-Route::post('/process_payment', [StoreController::class, 'processPayment'])->name('process_payment');
+Route::get('/store_payment_processor', [StoreController::class, 'showPaymentProcessor'])
+    ->middleware(['auth:owner,staff'])
+    ->name('store_payment_processor');
+Route::post('/api/process_payment', [StoreController::class, 'processPayment'])
+    ->middleware(['auth:owner,staff'])
+    ->name('process_payment');
 
 
+// Sales Performance Reports Routes
+Route::middleware(['auth:owner'])->group(function() {
+    Route::get('/reports/sales-performance', function() {
+        return view('dashboards.owner.report-sales-and-performance');
+    })->name('reports.sales_performance');
+    
+    // Export route (you'll need to create this controller method)
+    Route::get('/reports/export-sales-excel', function() {
+        // TODO: Implement Excel export
+        return back()->with('info', 'Export feature coming soon');
+    })->name('export_sales_excel');
+});

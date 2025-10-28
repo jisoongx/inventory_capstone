@@ -1,28 +1,37 @@
-<div x-data="{ tab: 'top-selling' }" class="w-full px-4">
+<div x-data="{ tab: 'stock' }" class="w-full px-4">
 
     <div class="flex space-x-1">
         <button 
+            @click="tab = 'stock'"
+            :class="tab === 'stock' 
+                ? 'bg-red-50 text-black border-red-500 border-t border-l border-r rounded-t-lg' 
+                : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
+            class="px-6 py-3 font-medium text-xs">
+            Inventory Stock
+        </button>
+
+        <button 
+            @click="tab = 'expiring'"
+            :class="tab === 'expiring' 
+                ? 'bg-blue-50 text-black border-blue-500 border-t border-l border-r rounded-t-lg' 
+                : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
+            class="px-6 py-3 font-medium text-xs">
+            Expiring Poducts
+        </button>        
+
+        <button 
             @click="tab = 'top-selling'"
             :class="tab === 'top-selling' 
-                ? 'bg-yellow-50 text-black border-yellow-500 border-t border-l border-r rounded-t-lg' 
+                ? 'bg-green-50 text-black border-green-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
             Top Selling Product
         </button>
 
         <button 
-            @click="tab = 'expiring'"
-            :class="tab === 'expiring' 
-                ? 'bg-green-50 text-black border-green-500 border-t border-l border-r rounded-t-lg' 
-                : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
-            class="px-6 py-3 font-medium text-xs">
-            Expiring Poducts
-        </button>
-
-        <button 
             @click="tab = 'loss'"
             :class="tab === 'loss' 
-                ? 'bg-red-50 text-black border-red-500 border-t border-l border-r rounded-t-lg' 
+                ? 'bg-gray-50 text-black border-gray-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
             Loss Report
@@ -32,9 +41,10 @@
 
     <div class="border bg-white p-4 rounded-b-lg h-[41rem]"
         :class="{
-            'border-green-500 bg-green-50': tab === 'expiring',
-            'border-yellow-500 bg-yellow-50': tab === 'top-selling',
-            'border-red-500 bg-red-50': tab === 'loss'
+            'border-blue-500 bg-blue-50': tab === 'expiring',
+            'border-red-500 bg-red-50': tab === 'stock',
+            'border-green-500 bg-green-50': tab === 'top-selling',
+            'border-gray-900 bg-gray-50': tab === 'loss'
         }">
 
         <!-- TOP SELLING -->
@@ -42,9 +52,73 @@
             <p class="text-gray-700">⚡ <b>top selling</b> report content goes here.</p>
         </div>
 
+         <div x-show="tab === 'stock'">
+            <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[39rem]">
+                    <table class="w-full text-xs text-left shadow-sm 
+                        {{ $stock->isNotEmpty() ? 'w-[116rem]' : 'w-full' }}">
+                    <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
+                        <tr class="border-b-2 border-gray-300">
+                            <th class="p-3 text-left bg-gray-100">Product Name</th>
+                            <th class="p-3 bg-gray-100">Category</th>
+                            <th class="p-3 bg-gray-100 text-center">Alert Status</th>
+                            <th class="p-3 bg-gray-100 text-right">Current Stock</th>
+                            <th class="p-3 bg-gray-100 text-right">Stock Limit</th>
+                            <th class="p-3 bg-gray-100 text-right">Avg Daily Sales</th>
+                            <th class="p-3 bg-gray-100 text-right">Suggested Reorder</th>
+                            <th class="p-3 bg-gray-100 text-right">Last Restocked</th>
+                            <th class="p-3 bg-gray-100 text-center">Action Recommended</th>
+                        </tr>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @forelse($stock as $row)
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="p-3 font-medium text-gray-900">{{ $row->prod_name }}</td>
+                                <td class="p-3 text-gray-700">{{ $row->cat_name }}</td>
+                                <td class="p-3 text-center">
+                                    <span class="px-2 py-1 rounded text-[10px] font-semibold
+                                        @if($row->alert_status === 'Out of Stock') bg-red-600 text-white
+                                        @elseif($row->alert_status === 'Critical Low') bg-orange-600 text-white
+                                        @elseif($row->alert_status === 'Expiring Soon') bg-yellow-500 text-black
+                                        @elseif($row->alert_status === 'Reorder Soon') bg-amber-400 text-black
+                                        @elseif($row->alert_status === 'Below Minimum') bg-amber-600 text-white
+                                        @elseif($row->alert_status === 'Dead Stock') bg-gray-600 text-white
+                                        @elseif($row->alert_status === 'New Product') bg-blue-500 text-white
+                                        @elseif($row->alert_status === 'Slow Mover') bg-indigo-500 text-white
+                                        @elseif($row->alert_status === 'Overstocked') bg-green-600 text-white
+                                        @else bg-gray-400 text-white
+                                        @endif">
+                                        {{ $row->alert_status }}
+                                    </span>
+                                </td>
+                                <td class="p-3 text-right font-bold text-red-600">{{ $row->current_stock }}</td>
+                                <td class="p-3 text-right">{{ $row->stock_limit }}</td>
+                                <td class="p-3 text-right">{{ $row->avg_daily_sales }}</td>
+                                <td class="p-3 text-right font-semibold text-blue-600">{{ $row->suggested_reorder }}</td>
+                                <td class="p-3 text-right text-gray-600">{{ \Carbon\Carbon::parse($row->last_restocked)->format('F j, Y') }}</td>
+                                <td class="p-3 text-center text-gray-600">{{ $row->action_recommendation }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center">
+                                    <div class="flex flex-col justify-center items-center space-y-1 p-8 sticky top-1/2">
+                                        <span class="material-symbols-rounded-semibig text-gray-400">taunt</span>
+                                        <span class="text-gray-500">Nothing to show.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>     
+        </div>
+
+        
+
+
         <!-- EXPIRING PRODUCTS -->
         <div wire:poll.15s="expired" wire:keep-alive class="hidden"></div>
-        <div x-show="tab === 'expiring'">
+        <div x-show="tab === 'expiring'"  class="h-[39rem]">
                 <div class="flex justify-between items-center mb-4">
                     <div class="space-x-1 flex">
                         <div class="border border-gray-300 rounded-tl-lg rounded-bl-lg px-3 py-2 text-xs bg-slate-50">
@@ -60,8 +134,7 @@
                     </div>
                 </div>
 
-                <div class="h-[39rem]">
-                    <div class="hidden"></div>
+                <div>
                     <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[35rem]">
                         <table class="w-full text-xs text-left shadow-sm 
                             {{ $lossRep->isNotEmpty() ? 'w-[116rem]' : 'w-full' }}">
@@ -158,7 +231,7 @@
                 </div>
         </div>
 
-        <!-- EXPIRED PRODUCTS / DAMAGED/ LOSS -->
+        <!-- DAMAGED/ LOSS/ EXPIRED-->
         <div x-show="tab === 'loss'">
 
             <div class="flex items-center mb-4 space-x-2 relative justify-between">

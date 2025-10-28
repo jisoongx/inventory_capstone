@@ -56,7 +56,7 @@
                 <p class="text-lg font-bold text-purple-900">₱{{ number_format(collect($priceHistory)->max('total_sales'), 2) }}</p>
             </div>
             <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                <p class="text-xs text-orange-700 font-medium">Most Units Sold</p>
+                <p class="text-xs text-orange-700 font-medium">Most Items Sold</p>
                 <p class="text-lg font-bold text-orange-900">{{ collect($priceHistory)->max('total_sold') }}</p>
             </div>
         </div>

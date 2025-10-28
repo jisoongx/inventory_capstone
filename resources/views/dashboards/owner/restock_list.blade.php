@@ -76,7 +76,7 @@
                             <tr>
                                 <th class="px-4 py-3 text-left font-semibold">Product</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
-                                <th class="px-4 py-3 text-center font-semibold w-32">Cost Price</th>
+                                <!-- <th class="px-4 py-3 text-center font-semibold w-32">Cost Price</th> -->
                                 <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
                             </tr>
                         </thead>
@@ -85,7 +85,7 @@
                             <tr>
                                 <td class="px-4 py-3">{{ $item->name }}</td>
                                 <td class="px-4 py-3 text-center">{{ $item->item_quantity }}</td>
-                                <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td>
+                                <!-- <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td> -->
                                 <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
                             @endforeach
@@ -223,16 +223,83 @@
             printWindow.document.open();
             printWindow.document.write(`
             <html>
-            <head>
-                <title>Restock List</title>
-                <style>
-                    body { font-family: Arial, sans-serif; padding: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-                    th { background: #f1f1f1; }
-                    h2 { text-align: center; margin-bottom: 10px; }
-                </style>
-            </head>
+                <head>
+                    <title>Restock List</title>
+                    <style>
+                        @page {
+                            size: 58mm auto;
+                            margin: 0;
+                        }
+                        
+                        html, body {
+                            width: 58mm;
+                            margin: 0;
+                            padding: 3mm;
+                            font-family: 'Courier New', Courier, monospace;
+                            font-size: 9px;
+                            line-height: 1.4;
+                            color: #000;
+                            background: #fff;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        
+                        h2 {
+                            text-align: center;
+                            font-size: 12px;
+                            margin: 0 0 3mm 0;
+                            letter-spacing: 0.5px;
+                            font-weight: bold;
+                        }
+                        
+                        .header-info {
+                            margin-bottom: 3mm;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        .divider {
+                            border-bottom: 1px solid #000;
+                            margin: 2mm 0;
+                        }
+                        
+                        .dashed-divider {
+                            border-bottom: 1px dashed #000;
+                            margin: 2mm 0;
+                        }
+                        
+                        .item {
+                            margin-bottom: 2mm;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        .item-name {
+                            font-weight: bold;
+                            margin-bottom: 0.5mm;
+                        }
+                        
+                        .total-section {
+                            margin-top: 3mm;
+                            padding-top: 2mm;
+                            border-top: 1px solid #000;
+                            font-weight: bold;
+                            font-size: 11px;
+                        }
+                        
+                        @media print {
+                            html, body {
+                                width: 58mm;
+                                margin: 0;
+                            }
+                            
+                            * {
+                                color: #000 !important;
+                                background: transparent !important;
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
+                            }
+                        }
+                    </style>
+                </head>
             <body>
                 <h2>SHOPLYTIX RESTOCK LIST</h2>
                 ${document.getElementById('restockContent').innerHTML}
@@ -246,6 +313,10 @@
                 printWindow.print();
             };
         });
+        
+
+
+        
     });
 
     /**

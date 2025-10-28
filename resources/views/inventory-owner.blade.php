@@ -346,15 +346,15 @@
     <div class="grid grid-cols-4 gap-6 max-h-[420px] overflow-y-auto pr-2">
       <!-- New Category -->
       <div onclick="openAddCategoryModal()"
-           class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-[#FFF5F5] border border-[#F5B5B5] hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
-        <span class="material-symbols-outlined text-4xl text-[#B50612] mb-2">add_circle</span>
+           class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-orange-50 border-2 border-orange-400 hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
+        <span class="material-symbols-outlined text-4xl text-orange-400 mb-2">add_circle</span>
         <p class="font-semibold text-gray-700">New Category</p>
       </div>
 
       <!-- Category Items -->
       @foreach($categories as $category)
         <div onclick="onCategorySelected('{{ $category->category_id }}', '{{ e($category->category) }}')"
-             class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-white border border-gray-200 hover:border-[#B50612] hover:bg-[#FFF7F7] hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
+             class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-gray-50 border-2 border-gray-200 hover:border-[#B50612] hover:bg-[#FFF7F7] hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
           <p class="font-semibold text-gray-700 text-center">{{ $category->category }}</p>
         </div>
       @endforeach
@@ -363,7 +363,7 @@
 </div>
 
 <!-- Add Category Modal -->
-<div id="addCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+<div id="addCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
   <div class="bg-white rounded-2xl p-8 w-[90%] max-w-md shadow-xl relative">
     <!-- Close Button -->
     <button id="closeAddCategoryModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition">
@@ -549,7 +549,7 @@
                     <img src="{{ asset('assets/scan-barcode.png') }}" alt="Scan Barcode" class="h-32 mx-auto">
                 </div>
 
-                <p class="text-gray-600 mb-6 text-center text-xs">Place your cursor inside the field below, then scan the barcode using your barcode scanner device.</p>
+                <p class="text-gray-600 mb-6 text-center text-xs">Awaiting barcode input. Scan the product to continue.</p>
 
                 <input
                     type="text"
@@ -569,82 +569,161 @@
     </div>
 
 
-   <!-- Generate Barcode Modal -->
-<div id="generateBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
-    <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
+<!-- Choose Category Modal for Barcode Generation -->
+<div id="chooseCategoryBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+    <div class="bg-white rounded-2xl p-8 w-[90%] max-w-4xl shadow-xl relative">
+        <!-- Close Button -->
+        <button onclick="closeChooseCategoryBarcodeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition">
+            <span class="material-symbols-outlined">close</span>
+        </button>
 
-        <!-- Red Top Bar -->
-        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-            <h2 class="text-white text-lg font-medium">Generate New Barcode</h2>
-            <button onclick="closeGenerateModal()" class="text-white hover:text-gray-200">
-                <span class="material-symbols-outlined text-white">close</span>
-            </button>
-        </div>
+        <!-- Header -->
+        <h2 class="text-xl font-bold text-center text-[#B50612] mb-6">Choose Product Category</h2>
 
-        <!-- Modal Content -->
-        <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 mb-16">
-
-            <!-- Step 1: Choose Product Category -->
-            <div class="w-1/2 mb-6">
-                <select id="barcodeCategory" 
-                    class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-red-600 text-center text-sm" 
-                    required>
-                    <option value="">Select Product Category</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ strtoupper(substr($cat->category, 0, 3)) }}">
-                            {{ $cat->category }}
-                        </option>
-                    @endforeach
-                    <option value="other">Other...</option>
-                </select>
-
-                <!-- Custom Prefix (hidden initially) -->
-                <input type="text" id="customPrefixInput" maxlength="5"
-                    placeholder="Enter custom prefix (2–5 letters)"
-                    class="hidden mt-3 w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-center uppercase text-sm placeholder-gray-400"
-                >
-
-                <!-- Error Message -->
-                <p id="categoryError" class="text-red-600 text-sm text-center mt-2 hidden"></p>
+        <!-- Categories Grid -->
+        <div class="grid grid-cols-4 gap-6 max-h-[420px] overflow-y-auto pr-2">
+            <!-- New Category -->
+            <div onclick="selectCategoryForBarcode('new', 'New Category')"
+                 class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-orange-50 border-2 border-orange-400 hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
+                <span class="material-symbols-outlined text-4xl text-orange-400 mb-2">add_circle</span>
+                <p class="font-semibold text-gray-700">New Category</p>
             </div>
 
-            <!-- Generate Button (First Step) -->
-            <button id="generateBarcodeBtn"
-                class="bg-black text-white text-sm px-8 py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105">
-                Generate Barcode
-            </button>
-
-            <!-- Step 2: Display Generated Barcode (Hidden Initially) -->
-            <div id="generatedSection" class="hidden flex flex-col items-center mt-8 space-y-4">
-                <!-- Barcode Display -->
-                <div id="barcodeContainer" class="text-center">
-                    <svg id="generatedBarcode"></svg>
+            <!-- Category Items -->
+            @foreach($categories as $category)
+                <div onclick="selectCategoryForBarcode('{{ $category->category_id }}', '{{ e($category->category) }}')"
+                     class="cursor-pointer rounded-xl p-6 flex flex-col justify-center items-center bg-gray-50 border-2 border-gray-200 hover:border-[#B50612] hover:bg-[#FFF7F7] hover:shadow-md hover:-translate-y-1 transition-transform duration-200 h-36">
+                    <p class="font-semibold text-gray-700 text-center">{{ $category->category }}</p>
                 </div>
-
-                <!-- Barcode Text Display -->
-                <input type="text" id="generatedBarcodeInput" name="barcode" readonly
-                    class="w-2/3 px-4 py-3 border border-gray-300 rounded text-center bg-gray-100 font-mono text-lg tracking-widest"
-                >
-
-                <!-- Action Buttons -->
-                <div class="flex gap-4 mt-4">
-                    <button id="generateNewBarcodeBtn"
-                        class="bg-black text-white text-sm px-6 py-3 rounded-3xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105">
-                        Generate New Barcode
-                    </button>
-
-                    <button id="useBarcodeBtn"
-                        class="bg-[#B50612] text-white text-sm px-6 py-3 rounded-3xl hover:bg-red-700 transition-all duration-200 transform hover:scale-105">
-                        Use This Barcode
-                    </button>
-                </div>
-            </div>
+            @endforeach
         </div>
     </div>
 </div>
 
 
+<!-- Custom Category Modal -->
+<div id="customCategoryBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+    <div class="bg-white rounded-lg w-[40%] min-h-[300px] shadow-lg relative flex flex-col items-center">
+        <!-- Red Top Bar -->
+        <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
+            <h2 class="text-white text-lg font-medium">Enter New Category</h2>
+            <button onclick="closeCustomCategoryBarcodeModal()" class="text-white hover:text-gray-200">
+                <span class="material-symbols-outlined text-white">close</span>
+            </button>
+        </div>
 
+        <!-- Modal Content -->
+        <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 space-y-6">
+            <input type="text" id="newCategoryName" 
+                   placeholder="Enter category name"
+                   class="w-3/4 px-4 py-3 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-center text-sm"
+                   maxlength="50">
+            
+            <div class="flex gap-4">
+                <button onclick="closeCustomCategoryBarcodeModal()"
+                        class="bg-gray-500 text-white text-sm px-6 py-3 rounded-3xl hover:bg-gray-600 transition-all duration-200">
+                    Cancel
+                </button>
+                <button onclick="confirmCustomCategory()"
+                        class="bg-[#B50612] text-white text-sm px-6 py-3 rounded-3xl hover:bg-red-700 transition-all duration-200">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Barcode Modal -->
+<div id="generateBarcodeModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-50 p-4">
+    <div class="bg-white rounded-xl w-full max-w-md shadow-2xl relative flex flex-col items-center overflow-hidden">
+        
+        <!-- Header -->
+        <div class="w-full bg-[#B50612] py-4 px-5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 bg-white/20 rounded flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-sm">qr_code_2</span>
+                </div>
+                <h2 class="text-white text-lg font-bold">Generated Barcode</h2>
+            </div>
+            <button onclick="closeGenerateBarcodeModal()" class="text-white hover:bg-white/20 p-1 rounded transition-all duration-200">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="w-full flex-1 flex flex-col items-center px-5 py-6 space-y-5">
+            
+            <!-- Category Badge -->
+            <div class="text-center">
+                <div class="inline-flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                    <span class="material-symbols-outlined text-gray-500 text-xs">category</span>
+                    <span class="text-xs text-gray-600">Category:</span>
+                    <span id="selectedCategoryDisplay" class="font-semibold text-[#B50612] text-xs"></span>
+                </div>
+            </div>
+
+            <!-- Barcode Card -->
+            <div class="w-full bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                <div class="text-center space-y-4">
+                    
+                    <!-- Barcode Display -->
+                    <div class="bg-white p-3 rounded border border-gray-200">
+                        <svg id="generatedBarcode" class="mx-auto w-full max-w-xs"></svg>
+                    </div>
+                    
+                    <!-- Barcode Number -->
+                    <div class="bg-gray-50 rounded p-3 border border-gray-200">
+                        <p class="text-xs text-gray-500 mb-1 font-medium">BARCODE NUMBER</p>
+                        <input type="text" id="generatedBarcodeInput" readonly
+                            class="w-full bg-transparent border-none text-center font-mono text-base font-bold text-gray-800 tracking-widest outline-none"
+                        />
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="flex justify-center gap-4 pt-2">
+                        <button id="generateNewBarcodeBtn"
+                                class="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-600 hover:text-[#B50612] transition-colors duration-200 border border-gray-300 rounded-lg hover:border-[#B50612]">
+                            <span class="material-symbols-outlined text-xs">refresh</span>
+                            New Code
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="w-full space-y-3">
+                <!-- Print Button -->
+                <button id="printBarcodeBtn"
+                    class="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">print</span>
+                    <span class="font-medium text-sm">Print Barcode</span>
+                </button>
+
+                <!-- Secondary Actions -->
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="goBackBtn"
+                        class="bg-gray-500 text-white py-2.5 px-3 rounded-lg hover:bg-gray-600 transition-all duration-200 flex items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-sm">arrow_back</span>
+                        <span class="font-medium text-sm">Back</span>
+                    </button>
+
+                    <button id="useBarcodeBtn"
+                        class="bg-[#B50612] text-white py-2.5 px-3 rounded-lg hover:bg-red-700 transition-all duration-200 flex items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                        <span class="font-medium text-sm">Use Barcode</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer Note -->
+            <div class="text-center pt-2">
+                <p class="text-xs text-gray-400">
+                    Unique barcode for your product
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 
@@ -715,7 +794,7 @@
                     onclick="closeBarcodeExistsModal()" 
                     class="w-32 bg-gray-300 text-gray-800 text-sm py-3 rounded-3xl hover:bg-gray-400 transition-all duration-200 transform hover:scale-105"
                 >
-                    Go Back
+                    New Barcode
                 </button>
                 <button 
                     onclick="goToInventory()" 
@@ -1185,7 +1264,7 @@
         <div class="flex justify-center gap-2">
             <button 
             type="button" 
-            class="flex-1 bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-blue-700 transition"
+            class="flex-1 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded hover:bg-yellow-600 transition"
             onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
             Add Batch
             </button>
@@ -1251,7 +1330,7 @@
             <div class="flex justify-center gap-2">
                 <button 
                     type="button" 
-                    class="flex-1 bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-blue-700 transition"
+                    class="flex-1 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded hover:bg-yellow-600 transition"
                     onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
                     Add Batch
                 </button>
@@ -1517,274 +1596,648 @@
 </script>
 
 
-    <!-- Scan Barcode Modal JavaScript -->
-    <script>
-        function openScanModal() {
-            document.getElementById('scanBarcodeModal').classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('scannedBarcodeInput').focus();
-            }, 300);
-        }
-
-        function closeScanModal() {
-            document.getElementById('scanBarcodeModal').classList.add('hidden');
-            document.getElementById('scannedBarcodeInput').value = '';
-        }
-
-        // Automatically detect scanner input and process it when Enter is pressed
-        document.getElementById('scannedBarcodeInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                processScannedBarcode();
-            }
-        });
-
-        function processScannedBarcode() {
-            const barcode = document.getElementById('scannedBarcodeInput').value.trim();
-            if (!barcode) return alert("Please scan a barcode first.");
-
-            // Example: send scanned barcode to backend (AJAX or redirect)
-            console.log("Scanned barcode:", barcode);
-
-            // ✅ You can now either:
-            // Option 1: Redirect to a route that searches for that barcode
-            // window.location.href = `/products/search/${barcode}`;
-
-            // Option 2: Send via AJAX to check product details
-            // fetch(`/products/scan`, {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //         'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            //     },
-            //     body: JSON.stringify({ barcode })
-            // }).then(res => res.json())
-            // .then(data => {
-            //     console.log(data);
-            //     // Handle product data display here
-            // });
-
-            closeScanModal();
-        }
-    </script>
-
-    <!-- Generate Barcode Modal JavaScript -->
+<!-- Scan Barcode Modal JavaScript -->
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const barcodeCategory = document.getElementById("barcodeCategory");
-        const customPrefixInput = document.getElementById("customPrefixInput");
-        const categoryError = document.getElementById("categoryError");
-        const generateBtn = document.getElementById("generateBarcodeBtn");
-        const generatedSection = document.getElementById("generatedSection");
-        const barcodeContainer = document.getElementById("generatedBarcode");
-        const barcodeInput = document.getElementById("generatedBarcodeInput");
-        const generateNewBtn = document.getElementById("generateNewBarcodeBtn");
-        const useBarcodeBtn = document.getElementById("useBarcodeBtn");
+    function openScanModal() {
+        document.getElementById('scanBarcodeModal').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('scannedBarcodeInput').focus();
+        }, 300);
+    }
 
-        // Show custom prefix input when "Other..." is selected
-        barcodeCategory.addEventListener("change", () => {
-            categoryError.classList.add("hidden"); // clear error on change
-            if (barcodeCategory.value === "other") {
-                customPrefixInput.classList.remove("hidden");
-                customPrefixInput.focus();
-            } else {
-                customPrefixInput.classList.add("hidden");
-                customPrefixInput.value = "";
-            }
+    function closeScanModal() {
+        document.getElementById('scanBarcodeModal').classList.add('hidden');
+        document.getElementById('scannedBarcodeInput').value = '';
+    }
+
+    // Add this function to handle closing all modals properly
+    function closeAllModals() {
+        const modals = [
+            'addProductModal',
+            'scanBarcodeModal', 
+            'registerProductModal',
+            'barcodeAlreadyExistsModal'
+        ];
+        
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('hidden');
         });
+    }
 
-        // Generate random barcode (numeric portion)
-        function generateRandomBarcode(prefix = "XX") {
-            const randomNum = Math.floor(100000 + Math.random() * 900000); // 6 digits
-            return `${prefix}${randomNum}`;
+    // Automatically detect scanner input and process it when Enter is pressed
+    document.getElementById('scannedBarcodeInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            processScannedBarcode();
         }
-
-        // Render barcode using JsBarcode
-        function renderBarcode(code) {
-            JsBarcode(barcodeContainer, code, {
-                format: "CODE128",
-                lineColor: "#000",
-                width: 2,
-                height: 80,
-                displayValue: true,
-                fontSize: 16,
-            });
-            barcodeInput.value = code;
-            generatedSection.classList.remove("hidden");
-        }
-
-        //  Handle initial barcode generation
-        generateBtn.addEventListener("click", () => {
-            categoryError.classList.add("hidden"); // hide any previous error
-
-            let selectedCategory = barcodeCategory.value;
-
-            // Prevent proceeding if no category selected
-            if (!selectedCategory) {
-                categoryError.textContent = "Please select a product category.";
-                categoryError.classList.remove("hidden");
-                return;
-            }
-
-            let prefix = selectedCategory;
-
-            // Handle custom prefix (Other option)
-            if (prefix === "other") {
-                prefix = customPrefixInput.value.trim().toUpperCase();
-
-                if (!prefix) {
-                    categoryError.textContent = "Please enter a custom prefix (2–5 letters).";
-                    categoryError.classList.remove("hidden");
-                    return;
-                }
-
-                // Validate prefix length and letters only
-                if (!/^[A-Za-z]{2,5}$/.test(prefix)) {
-                    categoryError.textContent = "Custom prefix must contain 2 to 5 letters only.";
-                    categoryError.classList.remove("hidden");
-                    return;
-                }
-            }
-
-            const newCode = generateRandomBarcode(prefix);
-            renderBarcode(newCode);
-        });
-
-        // Generate new barcode (same prefix)
-        generateNewBtn.addEventListener("click", () => {
-            let prefix = barcodeCategory.value || "OT";
-            if (prefix === "other") prefix = customPrefixInput.value.trim().toUpperCase() || "OT";
-
-            const newCode = generateRandomBarcode(prefix);
-            renderBarcode(newCode);
-        });
-
-        // Placeholder action for "Use This Barcode"
-        useBarcodeBtn.addEventListener("click", () => {
-            alert("Barcode selected: " + barcodeInput.value);
-            // Here you can proceed to another modal or save logic (e.g., AJAX save)
-        });
-
-        // Modal open/close handlers
-        window.openGenerateModal = function() {
-            document.getElementById('generateBarcodeModal').classList.remove('hidden');
-            generatedSection.classList.add('hidden');
-            barcodeCategory.value = "";
-            customPrefixInput.classList.add('hidden');
-            customPrefixInput.value = "";
-            categoryError.classList.add("hidden");
-        };
-
-        window.closeGenerateModal = function() {
-            document.getElementById('generateBarcodeModal').classList.add('hidden');
-        };
     });
+
+    function processScannedBarcode() {
+        const barcode = document.getElementById('scannedBarcodeInput').value.trim();
+        if (!barcode) {
+            alert("Please scan a barcode first.");
+            return;
+        }
+
+        console.log("Scanned barcode:", barcode);
+
+        // Check if barcode exists via AJAX
+        fetch('/check-barcode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ barcode: barcode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                // Show barcode already exists modal
+                showBarcodeExistsModal(data.product);
+            } else {
+                // Open register product modal with scanned barcode
+                closeScanModal();
+                openRegisterModal(barcode);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking barcode:', error);
+            alert('Error checking barcode. Please try again.');
+        });
+    }
+
+    function showBarcodeExistsModal(product) {
+        closeScanModal();
+        document.getElementById('barcodeAlreadyExistsModal').classList.remove('hidden');
+        // You can display product details here if needed
+        console.log('Existing product:', product);
+    }
+
+    function closeBarcodeExistsModal() {
+        document.getElementById('barcodeAlreadyExistsModal').classList.add('hidden');
+        // Optionally reopen scan modal
+        openScanModal();
+    }
+
+    function goToInventory() {
+        window.location.href = '/inventory-owner';
+    }
 </script>
 
+<!-- Generate Barcode JavaScript -->
+<script>
+    let selectedCategoryData = {
+        id: null,
+        name: '',
+        isNew: false
+    };
+    let currentBarcode = '';
 
-   <!-- Register New Product Modal JavaScript -->
-    <script>
-        function openRegisterModal(barcode) {
+    // Open Generate Barcode Flow
+    window.openGenerateModal = function() {
+        closeAllModals();
+        document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
+    };
+
+    // Category Selection Handler
+    window.selectCategoryForBarcode = function(categoryId, categoryName) {
+        if (categoryId === 'new') {
+            // Open custom category modal
             closeAllModals();
-            const modal = document.getElementById('registerProductModal');
-            if (modal) modal.classList.remove('hidden');
+            document.getElementById('customCategoryBarcodeModal').classList.remove('hidden');
+            document.getElementById('newCategoryName').value = '';
+            document.getElementById('newCategoryName').focus();
+        } else {
+            // Proceed with existing category
+            selectedCategoryData = {
+                id: categoryId,
+                name: categoryName,
+                isNew: false
+            };
+            proceedToBarcodeGeneration();
+        }
+    };
 
-            // Auto-fill barcode in the register modal
-            const barcodeElement = document.getElementById('autoFilledBarcode');
-            if (barcodeElement) barcodeElement.textContent = barcode || '';
+    // Confirm Custom Category
+    function confirmCustomCategory() {
+        const customName = document.getElementById('newCategoryName').value.trim();
+        if (!customName) {
+            alert("Please enter a category name.");
+            return;
         }
 
-        // Update the event handler to pass the barcode from the modal
-        document.querySelector('button[onclick="openRegisterModal()"]').onclick = function() {
-            const barcode = document.getElementById('barcodeInput').value; // get barcode from input
-            openRegisterModal(barcode); // pass it to the modal
+        selectedCategoryData = {
+            id: 'new',
+            name: customName,
+            isNew: true
         };
+        proceedToBarcodeGeneration();
+    }
+
+    // Proceed to Barcode Generation Modal
+    function proceedToBarcodeGeneration() {
+        closeAllModals();
+        document.getElementById('generateBarcodeModal').classList.remove('hidden');
         
-        function closeRegisterModal() {
-            const modal = document.getElementById('registerProductModal');
-            const form = document.getElementById('registerProductForm');
-            if (modal) modal.classList.add('hidden');
-            if (form) form.reset(); // ✅ clear form when closing
-            resetPhotoPreview();
-        }
+        // Update selected category display
+        document.getElementById('selectedCategoryDisplay').textContent = selectedCategoryData.name;
+        
+        // Generate and display barcode immediately
+        generateAndDisplayBarcode();
+    }
+
+    // Generate Barcode Prefix
+    function generateBarcodePrefix(categoryName) {
+        const cleanName = categoryName.replace(/[^a-zA-Z0-9]/g, '');
+        let prefix = cleanName.substring(0, 5).toUpperCase();
+        return prefix.length < 2 ? prefix.padEnd(2, 'X') : prefix;
+    }
+
+    // Generate Random Barcode
+    function generateRandomBarcode() {
+        const prefix = generateBarcodePrefix(selectedCategoryData.name);
+        const randomNum = Math.floor(100000 + Math.random() * 900000); // 6 digits
+        return `${prefix}${randomNum}`;
+    }
+
+    // Generate and Display Barcode
+    function generateAndDisplayBarcode() {
+        const newCode = generateRandomBarcode();
+        currentBarcode = newCode;
+        
+        // Render barcode with compact sizing
+        JsBarcode("#generatedBarcode", newCode, {
+            format: "CODE128",
+            lineColor: "#000",
+            width: 1.5,
+            height: 50,
+            displayValue: false,
+            fontSize: 12,
+            margin: 3
+        });
+        
+        // Update barcode text input
+        document.getElementById("generatedBarcodeInput").value = newCode;
+    }
 
 
-        // Auto-calc Selling Price
-        function calculateSellingPrice() {
-            const cost = parseFloat(document.getElementById("costPrice").value) || 0;
-            const type = document.getElementById("markupType").value;
-            const markup = parseFloat(document.getElementById("markupValue").value) || 0;
-            let selling = cost;
-
-            if (type === "percentage") {
-                selling = cost + (cost * (markup / 100));
-            } else {
-                selling = cost + markup;
-            }
-
-            document.getElementById("sellingPrice").value = selling.toFixed(2);
-        }
-
-        ["costPrice", "markupType", "markupValue"].forEach(id => {
-            document.getElementById(id).addEventListener("input", calculateSellingPrice);
-            document.getElementById(id).addEventListener("change", calculateSellingPrice);
+    // Event Listeners
+    document.addEventListener("DOMContentLoaded", () => {
+        // Generate New Barcode
+        document.getElementById("generateNewBarcodeBtn").addEventListener("click", () => {
+            generateAndDisplayBarcode();
         });
 
-        // Reset photo preview helper
-        function resetPhotoPreview() {
-            const photoLabel = document.querySelector("label[for='productPhoto']");
-            const uploadIcon = document.getElementById("uploadIcon");
-            if (photoLabel && uploadIcon) {
-                photoLabel.style.backgroundImage = "none";
-                uploadIcon.style.display = "block";
+        // Use Barcode Button
+        document.getElementById("useBarcodeBtn").addEventListener("click", () => {
+            if (!currentBarcode) {
+                alert("No barcode generated yet.");
+                return;
             }
+            proceedToRegistration();
+        });
+
+        // Print Barcode Button
+        document.getElementById("printBarcodeBtn").addEventListener("click", () => {
+            if (!currentBarcode) {
+                alert("No barcode to print.");
+                return;
+            }
+            printBarcodeSimple(currentBarcode, selectedCategoryData.name);
+        });
+
+        // Go Back Button
+        document.getElementById("goBackBtn").addEventListener("click", () => {
+            closeGenerateBarcodeModal();
+            document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
+        });
+
+        // Enter key in custom category input
+        document.getElementById('newCategoryName')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                confirmCustomCategory();
+            }
+        });
+    });
+
+    // Proceed to Registration
+    function proceedToRegistration() {
+        closeAllModals();
+        openRegisterModal(currentBarcode);
+    }
+
+    // Close Modal Functions
+    function closeChooseCategoryBarcodeModal() {
+        document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
+    }
+
+    function closeCustomCategoryBarcodeModal() {
+        document.getElementById('customCategoryBarcodeModal').classList.add('hidden');
+        // Return to category selection
+        document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
+    }
+
+    function closeGenerateBarcodeModal() {
+        document.getElementById('generateBarcodeModal').classList.add('hidden');
+    }
+
+// Print Function - Iframe Method (Most Reliable)
+function printBarcodeSimple(barcode, categoryName) {
+    const userCopies = prompt(`How many copies would you like to print?`, '1');
+    const numCopies = parseInt(userCopies) || 1;
+    
+    if (numCopies < 1) return;
+
+    // Create iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    
+    // Build HTML with exact copies
+    let htmlContent = '';
+    for (let i = 0; i < numCopies; i++) {
+        htmlContent += `
+            <div style="
+                width: 2in; 
+                height: 1in; 
+                display: flex; 
+                flex-direction: column; 
+                justify-content: space-between; 
+                align-items: center;
+                padding: 0.05in;
+                box-sizing: border-box;
+                page-break-after: ${i < numCopies - 1 ? 'always' : 'auto'};
+            ">
+                <div style="font-size: 6px; font-weight: bold; color: #333; width: 100%; text-align: center;">
+                    ${categoryName.substring(0, 25).toUpperCase()}
+                </div>
+                <svg id="barcode-${i}"></svg>
+                <div style="font-size: 8px; font-family: monospace; font-weight: bold; width: 100%; text-align: center;">
+                    ${barcode}
+                </div>
+            </div>
+        `;
+    }
+
+    doc.open();
+    doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Barcode Labels</title>
+            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+            <style>
+                @media print {
+                    @page {
+                        margin: 0mm !important;
+                        size: 2in 1in !important;
+                    }
+                    body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: white !important;
+                    }
+                }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background: white;
+                }
+            </style>
+        </head>
+        <body>
+            ${htmlContent}
+            <script>
+                // Render all barcodes
+                for (let i = 0; i < ${numCopies}; i++) {
+                    JsBarcode("#barcode-" + i, "${barcode}", {
+                        format: "CODE128",
+                        lineColor: "#000000",
+                        width: 1.1,
+                        height: 35,
+                        displayValue: false,
+                        margin: 0
+                    });
+                }
+                
+                // Auto print
+                window.onload = function() {
+                    window.print();
+                    setTimeout(() => {
+                        window.frameElement.parentNode.removeChild(window.frameElement);
+                    }, 100);
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    doc.close();
+}
+
+
+    // Update closeAllModals to include new modals
+    function closeAllModals() {
+        const modals = [
+            'addProductModal',
+            'scanBarcodeModal', 
+            'registerProductModal',
+            'barcodeAlreadyExistsModal',
+            'chooseCategoryBarcodeModal',
+            'customCategoryBarcodeModal',
+            'generateBarcodeModal'
+        ];
+        
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('hidden');
+        });
+    }
+</script>
+
+<script>
+    // === Barcode Generation Category Functions ===
+    
+    // Open Add Category Modal for Barcode Generation
+    window.openAddCategoryModalForBarcode = function() {
+        document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
+        const modal = document.getElementById('addCategoryModal');
+        modal.classList.remove('hidden');
+        document.getElementById('newCategoryName').value = '';
+        document.getElementById('newCategoryName').focus();
+        
+        // Remove any existing event listeners and add barcode-specific ones
+        setupBarcodeCategoryForm();
+    };
+
+    // Close Add Category Modal for Barcode Generation
+    function closeAddCategoryModalForBarcode() {
+        const modal = document.getElementById('addCategoryModal');
+        modal.classList.add('hidden');
+        // Return to category selection
+        document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
+    }
+
+    // Setup form for barcode generation
+    function setupBarcodeCategoryForm() {
+        const form = document.getElementById('addCategoryForm');
+        const cancelButton = document.getElementById('cancelAddCategory');
+        const closeButton = document.getElementById('closeAddCategoryModal');
+        
+        // Remove any existing event listeners by cloning and replacing
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        const newCancelButton = cancelButton.cloneNode(true);
+        cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
+        
+        const newCloseButton = closeButton.cloneNode(true);
+        closeButton.parentNode.replaceChild(newCloseButton, closeButton);
+        
+        // Add barcode-specific event listeners
+        newForm.addEventListener('submit', handleBarcodeCategorySubmit);
+        newCancelButton.addEventListener('click', closeAddCategoryModalForBarcode);
+        newCloseButton.addEventListener('click', closeAddCategoryModalForBarcode);
+    }
+
+    // Handle category form submission for barcode generation
+    function handleBarcodeCategorySubmit(e) {
+        e.preventDefault();
+        
+        const categoryName = document.getElementById('newCategoryName').value.trim();
+        
+        if (!categoryName) {
+            alert('Category name cannot be empty.');
+            return;
         }
 
-        // Form submission with barcode handling
-        document.addEventListener("DOMContentLoaded", () => {
-            const form = document.getElementById("registerProductForm");
-            const photoInput = document.getElementById("productPhoto");
-            const photoLabel = document.querySelector("label[for='productPhoto']");
-            const uploadIcon = document.getElementById("uploadIcon");
-            const previewImage = document.getElementById("previewImage");
-            const fileName = document.getElementById("fileName");
+        // Send AJAX request to add category
+        fetch('/inventory/add-category', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ category: categoryName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Category added successfully
+                closeAddCategoryModalForBarcode();
+                
+                // Update the selected category data and proceed to barcode generation
+                selectedCategoryData = {
+                    id: 'new',
+                    name: categoryName,
+                    isNew: true
+                };
+                proceedToBarcodeGeneration();
+                
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error adding category:', error);
+            alert('Error adding category. Please try again.');
+        });
+    }
 
-            // ✅ Photo preview
+    // Update the category selection handler
+    window.selectCategoryForBarcode = function(categoryId, categoryName) {
+        if (categoryId === 'new') {
+            openAddCategoryModalForBarcode();
+        } else {
+            // Proceed with existing category
+            selectedCategoryData = {
+                id: categoryId,
+                name: categoryName,
+                isNew: false
+            };
+            proceedToBarcodeGeneration();
+        }
+    };
+
+    // Close Choose Category Modal for Barcode
+    function closeChooseCategoryBarcodeModal() {
+        document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
+    }
+</script>
+
+<!-- Register New Product Modal JavaScript -->
+<script>
+    function openRegisterModal(barcode = '') {
+        closeAllModals();
+        const modal = document.getElementById('registerProductModal');
+        if (modal) modal.classList.remove('hidden');
+
+        // Auto-fill barcode in the register modal
+        const barcodeElement = document.getElementById('autoFilledBarcode');
+        if (barcodeElement && barcode) {
+            barcodeElement.textContent = barcode;
+        }
+    }
+
+    function closeRegisterModal() {
+        const modal = document.getElementById('registerProductModal');
+        const form = document.getElementById('registerProductForm');
+        if (modal) modal.classList.add('hidden');
+        if (form) form.reset();
+        resetPhotoPreview();
+        
+        // Clear the barcode display
+        const barcodeElement = document.getElementById('autoFilledBarcode');
+        if (barcodeElement) barcodeElement.textContent = '';
+    }
+
+    // function closeAllModals() {
+    //     // Close all product-related modals
+    //     const modals = [
+    //         'addProductModal',
+    //         'scanBarcodeModal', 
+    //         'registerProductModal',
+    //         'barcodeAlreadyExistsModal'
+    //     ];
+        
+    //     modals.forEach(modalId => {
+    //         const modal = document.getElementById(modalId);
+    //         if (modal) modal.classList.add('hidden');
+    //     });
+    // }
+
+    // Auto-calc Selling Price
+    function calculateSellingPrice() {
+        const cost = parseFloat(document.getElementById("costPrice").value) || 0;
+        const type = document.getElementById("markupType").value;
+        const markup = parseFloat(document.getElementById("markupValue").value) || 0;
+        let selling = cost;
+
+        if (type === "percentage") {
+            selling = cost + (cost * (markup / 100));
+        } else {
+            selling = cost + markup;
+        }
+
+        document.getElementById("sellingPrice").value = selling.toFixed(2);
+    }
+
+    // Reset photo preview helper
+    function resetPhotoPreview() {
+        const previewImage = document.getElementById("previewImage");
+        const uploadIcon = document.getElementById("uploadIcon");
+        const fileName = document.getElementById("fileName");
+        
+        if (previewImage) {
+            previewImage.classList.add("hidden");
+        }
+        if (uploadIcon) {
+            uploadIcon.style.display = "block";
+        }
+        if (fileName) {
+            fileName.textContent = "Upload Photo";
+        }
+        
+        const photoLabel = document.querySelector("label[for='productPhoto']");
+        if (photoLabel) {
+            photoLabel.style.backgroundImage = "none";
+        }
+    }
+
+    // Form submission with barcode handling
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("registerProductForm");
+        const photoInput = document.getElementById("productPhoto");
+        const photoLabel = document.querySelector("label[for='productPhoto']");
+        const uploadIcon = document.getElementById("uploadIcon");
+        const previewImage = document.getElementById("previewImage");
+        const fileName = document.getElementById("fileName");
+
+        // Initialize event listeners for pricing calculation
+        ["costPrice", "markupType", "markupValue"].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener("input", calculateSellingPrice);
+                element.addEventListener("change", calculateSellingPrice);
+            }
+        });
+
+        // Category and Unit "Other" option handling
+        const categorySelect = document.getElementById('categorySelect');
+        const customCategory = document.getElementById('customCategory');
+        const unitSelect = document.getElementById('unitSelect');
+        const customUnit = document.getElementById('customUnit');
+
+        if (categorySelect && customCategory) {
+            categorySelect.addEventListener('change', function() {
+                customCategory.classList.toggle('hidden', this.value !== 'other');
+            });
+        }
+
+        if (unitSelect && customUnit) {
+            unitSelect.addEventListener('change', function() {
+                customUnit.classList.toggle('hidden', this.value !== 'other');
+            });
+        }
+
+        // ✅ Photo preview
+        if (photoInput) {
             photoInput.addEventListener("change", function () {
                 if (this.files && this.files[0]) {
                     const reader = new FileReader();
                     reader.onload = function (e) {
                         // Show image preview
-                        previewImage.src = e.target.result;
-                        previewImage.classList.remove("hidden"); // Make the preview visible
+                        if (previewImage) {
+                            previewImage.src = e.target.result;
+                            previewImage.classList.remove("hidden");
+                        }
                         
                         // Change the label's background to the selected image
-                        photoLabel.style.backgroundImage = `url(${e.target.result})`;
-                        photoLabel.style.backgroundSize = "cover";
-                        photoLabel.style.backgroundPosition = "center";
-                        uploadIcon.style.display = "none"; // Hide the upload icon
+                        if (photoLabel) {
+                            photoLabel.style.backgroundImage = `url(${e.target.result})`;
+                            photoLabel.style.backgroundSize = "cover";
+                            photoLabel.style.backgroundPosition = "center";
+                        }
                         
-                        // Show the selected file name
-                        fileName.textContent = this.files[0].name;
+                        if (uploadIcon) {
+                            uploadIcon.style.display = "none";
+                        }
+                        
+                        if (fileName) {
+                            fileName.textContent = this.files[0].name;
+                        }
                     };
                     reader.readAsDataURL(this.files[0]);
                 }
             });
+        }
 
+        // Form submission
+        if (form) {
             form.addEventListener("submit", function (e) {
-                e.preventDefault(); // Prevent page reload
+                e.preventDefault();
 
                 const formData = new FormData(form);
-                formData.append("barcode", document.getElementById("autoFilledBarcode").textContent); // Ensure barcode is included
+                const barcodeElement = document.getElementById("autoFilledBarcode");
+                
+                if (barcodeElement && barcodeElement.textContent) {
+                    formData.append("barcode", barcodeElement.textContent);
+                } else {
+                    alert("Barcode is required.");
+                    return;
+                }
 
-                if (photoInput.files[0]) {
+                if (photoInput && photoInput.files[0]) {
                     formData.append("photo", photoInput.files[0]);
                 }
 
                 fetch("/register-product", {
                     method: "POST",
                     headers: {
-                        "X-CSRF-TOKEN": "{{ csrf_token() }}" // Ensure CSRF token is passed
+                        "X-CSRF-TOKEN": "{{ csrf_token() }}"
                     },
                     body: formData
                 })
@@ -1795,7 +2248,7 @@
                         closeRegisterModal();
                         location.reload();
                     } else {
-                        alert("Failed: " + data.message);
+                        alert("Failed: " + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {
@@ -1803,8 +2256,9 @@
                     alert("Something went wrong.");
                 });
             });
-        });
-    </script>
+        }
+    });
+</script>
 
 <!-- JS for Custom Category/Unit Toggle -->
 <script>

@@ -20,6 +20,8 @@ class ReportInventory extends Component
     public $selectedMonths = null;
     public $selectedYears  = null;
 
+    public $stock;
+
 
     public function mount() {
 
@@ -200,7 +202,7 @@ class ReportInventory extends Component
 
 
 
-    public function showAll() {
+    public function showAll() { // show all sa loss
         $this->selectedMonths = null;
         $this->selectedYears = null;
         $this->loss();
@@ -256,10 +258,275 @@ class ReportInventory extends Component
         ", $bindings));
     }
 
+
+
+
+    public function stockAlertReport() {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        DB::statement("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+
+        $this->stock = collect((DB::select("
+            WITH sales_data AS (
+                SELECT 
+                    ri.prod_code,
+                    SUM(ri.item_quantity) AS total_sold_30,
+                    SUM(ri.item_quantity) / 30 AS avg_daily_sales
+                FROM receipt_item ri
+                JOIN receipt r ON r.receipt_id = ri.receipt_id
+                WHERE r.owner_id = ?
+                AND r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                GROUP BY ri.prod_code
+            ),
+            expiry_data AS (
+                SELECT 
+                    prod_code,
+                    MIN(expiration_date) AS nearest_expiry,
+                    DATEDIFF(MIN(expiration_date), CURDATE()) AS days_until_expiry
+                FROM inventory
+                WHERE expiration_date IS NOT NULL 
+                AND expiration_date > CURDATE()
+                GROUP BY prod_code
+            )
+            SELECT 
+                p.prod_code,
+                p.name AS prod_name,
+                p.prod_image,
+                c.category AS cat_name,
+                p.stock_limit,
+                
+                -- Current valid stock
+                COALESCE(SUM(CASE 
+                    WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                    THEN i.stock 
+                    ELSE 0 
+                END), 0) AS current_stock,
+                
+                -- Expired stock count (for awareness)
+                COALESCE(SUM(CASE 
+                    WHEN i.expiration_date IS NOT NULL AND i.expiration_date <= CURDATE() 
+                    THEN i.stock 
+                    ELSE 0 
+                END), 0) AS expired_stock,
+                
+                -- Sales velocity
+                COALESCE(sd.avg_daily_sales, 0) AS avg_daily_sales,
+                COALESCE(sd.total_sold_30, 0) AS total_sold_30_days,
+            
+                
+                -- Expiry risk indicator
+                ed.nearest_expiry,
+                ed.days_until_expiry,
+                
+                -- Dynamic lead time based on sales velocity
+                CASE
+                    WHEN COALESCE(sd.avg_daily_sales, 0) >= 10 THEN 1
+                    WHEN COALESCE(sd.avg_daily_sales, 0) >= 5 THEN 2
+                    WHEN COALESCE(sd.avg_daily_sales, 0) >= 2 THEN 3
+                    WHEN COALESCE(sd.avg_daily_sales, 0) > 0 THEN 5
+                    ELSE 7
+                END AS lead_time_days,
+                
+                -- Smart reorder quantity that considers expiration risk
+                CASE
+                    -- Dead stock: No sales in 30 days AND product exists >60 days
+                    WHEN COALESCE(sd.total_sold_30, 0) = 0 
+                    AND (SELECT MIN(date_added) FROM inventory WHERE prod_code = p.prod_code) < DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                    THEN 0  -- Don't reorder dead stock
+                    
+                    -- New product: No sales yet BUT product is new (<60 days old)
+                    WHEN COALESCE(sd.total_sold_30, 0) = 0 
+                    AND (SELECT MIN(date_added) FROM inventory WHERE prod_code = p.prod_code) >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                    THEN p.stock_limit  -- Give it a chance, reorder to minimum
+                    
+                    -- Very slow mover: <10 units sold in 30 days
+                    WHEN COALESCE(sd.total_sold_30, 0) > 0 AND COALESCE(sd.total_sold_30, 0) < 10
+                    THEN GREATEST(0, p.stock_limit - COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0))  -- Only reorder to reach minimum, no buffer
+                    
+                    -- Has expiring stock soon: Conservative reorder
+                    WHEN ed.days_until_expiry IS NOT NULL AND ed.days_until_expiry <= 14 
+                    THEN GREATEST(0, p.stock_limit - COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0))
+                    
+                    -- Normal case: stock_limit + (avg_daily_sales * lead_time) - current_stock
+                    ELSE GREATEST(0, 
+                        p.stock_limit + (
+                            COALESCE(sd.avg_daily_sales, 0) * 
+                            CASE
+                                WHEN COALESCE(sd.avg_daily_sales, 0) >= 10 THEN 1
+                                WHEN COALESCE(sd.avg_daily_sales, 0) >= 5 THEN 2
+                                WHEN COALESCE(sd.avg_daily_sales, 0) >= 2 THEN 3
+                                WHEN COALESCE(sd.avg_daily_sales, 0) > 0 THEN 5
+                                ELSE 7
+                            END
+                        ) - COALESCE(SUM(CASE 
+                            WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                            THEN i.stock 
+                            ELSE 0 
+                        END), 0)
+                    )
+                END AS suggested_reorder,
+                
+                -- Turnover rate (how many times inventory sold in 30 days)
+                CASE 
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) > 0
+                    THEN ROUND(COALESCE(sd.total_sold_30, 0) / COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 1), 2)
+                    ELSE NULL
+                END AS turnover_rate,
+                
+                -- Last restocked date
+                (SELECT MAX(date_added)
+                FROM inventory
+                WHERE prod_code = p.prod_code) AS last_restocked,
+                
+                -- Smart alert status
+                CASE
+                    -- Critical alerts
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) = 0 THEN 'Out of Stock'
+                    
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) <= 3 THEN 'Critical Low'
+                    
+                    -- Expiry warnings
+                    WHEN ed.days_until_expiry IS NOT NULL AND ed.days_until_expiry <= 7 
+                    THEN 'Expiring Soon'
+                    
+                    -- Stock warnings based on sales velocity
+                    WHEN COALESCE(sd.avg_daily_sales, 0) > 0 
+                    AND FLOOR(COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) / sd.avg_daily_sales) <= 3
+                    THEN 'Reorder Soon'
+                    
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) <= p.stock_limit 
+                    THEN 'Below Minimum'
+                    
+                    -- Dead stock: No sales AND been around >60 days
+                    WHEN COALESCE(sd.total_sold_30, 0) = 0 
+                    AND (SELECT MIN(date_added) FROM inventory WHERE prod_code = p.prod_code) < DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                    AND COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) > 0
+                    THEN 'Dead Stock'
+                    
+                    -- New product: No sales BUT recently added
+                    WHEN COALESCE(sd.total_sold_30, 0) = 0 
+                    AND (SELECT MIN(date_added) FROM inventory WHERE prod_code = p.prod_code) >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                    THEN 'New Product'
+                    
+                    -- Slow mover: Very low sales
+                    WHEN COALESCE(sd.total_sold_30, 0) > 0 
+                    AND COALESCE(sd.total_sold_30, 0) < 10
+                    THEN 'Slow Mover'
+                    
+                    -- Overstocking warnings
+                    WHEN COALESCE(sd.avg_daily_sales, 0) > 0 
+                    AND COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) / sd.avg_daily_sales > 60
+                    THEN 'Overstocked'
+                    
+                    ELSE 'Normal'
+                END AS alert_status,
+                
+                -- Action recommendation
+                CASE
+                    -- Dead stock
+                    WHEN COALESCE(sd.total_sold_30, 0) = 0 
+                    AND (SELECT MIN(date_added) FROM inventory WHERE prod_code = p.prod_code) < DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                    AND COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) > 0
+                    THEN 'No sales in 2+ months - Promote heavily or discontinue'
+                    
+                    -- New product
+                    WHEN COALESCE(sd.total_sold_30, 0) = 0 
+                    AND (SELECT MIN(date_added) FROM inventory WHERE prod_code = p.prod_code) >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                    THEN 'New product - Monitor performance and promote'
+                    
+                    -- Slow mover
+                    WHEN COALESCE(sd.total_sold_30, 0) > 0 
+                    AND COALESCE(sd.total_sold_30, 0) < 10
+                    THEN 'Slow sales - Consider small reorders only'
+                    
+                    WHEN ed.days_until_expiry IS NOT NULL AND ed.days_until_expiry <= 7
+                    THEN CONCAT('Promote urgently - ', ed.days_until_expiry, ' days to expiry')
+                    
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) = 0
+                    THEN 'Restock immediately'
+                    
+                    WHEN COALESCE(sd.avg_daily_sales, 0) > 0 
+                    AND FLOOR(COALESCE(SUM(CASE 
+                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
+                        THEN i.stock 
+                        ELSE 0 
+                    END), 0) / sd.avg_daily_sales) <= 3
+                    THEN 'Reorder within 3 days'
+                    
+                    ELSE 'Stock level OK'
+                END AS action_recommendation
+                
+            FROM products p
+            LEFT JOIN inventory i ON p.prod_code = i.prod_code
+            LEFT JOIN categories c ON c.category_id = p.category_id
+            LEFT JOIN sales_data sd ON p.prod_code = sd.prod_code
+            LEFT JOIN expiry_data ed ON p.prod_code = ed.prod_code
+            WHERE p.owner_id = ?
+            GROUP BY 
+                p.prod_code, p.name, p.stock_limit, p.prod_image, c.category,
+                sd.avg_daily_sales, sd.total_sold_30, 
+                ed.nearest_expiry, ed.days_until_expiry
+        ", [$owner_id, $owner_id])));
+
+    }
+
+
+
+
     public function render()
     {
+        $this->stockAlertReport();
         $this->loss();
         $this->expired();
+
         return view('livewire.report-inventory');
     }
 }

@@ -38,30 +38,65 @@
                     <span class="nav-label">Inventory</span>
                 </a>
 
-                <div class="relative">
+                <div class="relative" >
                     <a href="{{ route('reports') }}" class="flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-rounded">stacked_line_chart</span>
                             <span class="nav-label">Reports</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
                         </div>
                         <span id="reportsArrow" class="material-symbols-rounded cursor-pointer">keyboard_arrow_down</span>
                     </a>
 
                     <div id="reportsDropdown" class="ml-5 mt-1 space-y-1 border-l-2 border-gray-600">
+                        <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Activity Log</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                        </a>
                         <a href="{{ route('dashboards.owner.rsp') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
-                            <span class="text-xs">Sales & Performance Reports</span>
+                            <span class="text-xs">Sales Performance</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
                         </a>
                         <a href="{{ route('dashboards.owner.inven_reports') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Inventory Reports</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
                         </a>
-                        <a href="{{ route('dashboards.owner.customer_behavior') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
-                            <span class="text-xs">Customer & Behavior Reports</span>
-                        </a>
-                        <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
-                            <span class="text-xs">Activity Log</span>
+                        <a href="{{ route('dashboards.owner.trend') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Product Trends</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
                         </a>
                     </div>
                 </div>
+
+                <!-- <div class="relative" >
+                    <a href="{{ $expired || $plan === 3 ?  'javascript:void(0)': route('reports') }}" class="flex items-center justify-between p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-rounded">stacked_line_chart</span>
+                            <span class="nav-label">Reports</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
+                        </div>
+                        <span id="reportsArrow" class="material-symbols-rounded cursor-pointer">keyboard_arrow_down</span>
+                    </a>
+
+                    <div id="reportsDropdown" class="ml-5 mt-1 space-y-1 border-l-2 border-gray-600">
+                        <a href="{{ $expired || $plan === 3 ?  'javascript:void(0)': route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Activity Log</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
+                        </a>
+                        <a href="{{ $expired || $plan === 3 || $plan === 1 ?  'javascript:void(0)': route('dashboards.owner.rsp') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Sales Performance</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                        </a>
+                        <a href="{{ $expired || $plan === 3 || $plan === 1 ?  'javascript:void(0)': route('dashboards.owner.inven_reports') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Inventory Reports</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                        </a>
+                        <a href="{{ $expired || $plan === 3 || $plan === 1 ?  'javascript:void(0)': route('dashboards.owner.trend') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Product Trends</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                        </a>
+                    </div>
+                </div> -->
 
                 <a href="{{ route('store_start_transaction') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white" title="Store">
                     <span class="material-symbols-rounded">local_mall</span>
