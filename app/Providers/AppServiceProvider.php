@@ -49,8 +49,13 @@ class AppServiceProvider extends ServiceProvider
                     LIMIT 1
                 ", [$owner_id]))->first();
 
-
-                if ($owner && $owner->subscription_end <= date('Y-m-d')) {
+                if (!$owner || !$owner->plan_id) {
+                    // 🟡 Fallback: owner has no subscription yet
+                    $expired = false;
+                    $plan = null;
+                    $invenCount = 0;
+                }
+                else if ($owner && $owner->subscription_end <= date('Y-m-d')) {
                     $expired = true;
                     
                 } else {
