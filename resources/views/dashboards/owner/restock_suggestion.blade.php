@@ -165,10 +165,17 @@
                             </th>
                             <th class="p-4 text-left font-semibold">Product</th>
                             <th class="p-4 text-center font-semibold">Cost Price</th>
-                            <th class="p-4 text-center font-semibold">Total Sold</th>
+                            <th class="p-4 text-center font-semibold">
+                                Alert Level
+                                <span class="material-symbols-rounded text-slate-400 text-sm align-middle cursor-pointer"
+                                    title="When the current stock is equal or below this level, the system suggests restocking.">
+                                    info
+                                </span>
+                            </th>
+
                             <th class="p-4 text-center font-semibold">Current Stock</th>
                             <th class="p-4 text-center font-semibold">Suggested Restock</th>
-                           
+
 
                             <th class="p-4 text-center font-semibold">Reason</th>
 
@@ -177,13 +184,15 @@
                     <tbody id="productTableBody" class="divide-y divide-slate-100">
                         @forelse($products as $product)
                         <tr class="hover:bg-blue-50 transition-all product-row"
+                            data-code="{{ $product->prod_code }}"
                             data-product-name="{{ $product->name }}"
                             data-category-id="{{ $product->category_id }}"
                             data-cost="{{ $product->cost_price }}"
                             data-quantity="{{ $product->suggested_quantity }}">
                             <td class="p-4 text-center">
-                                <input type="checkbox" name="products[]" value="{{ $product->inven_code }}" class="productCheckbox rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
-                                <input type="hidden" name="quantities[{{ $product->inven_code }}]" value="{{ $product->suggested_quantity }}">
+                                <input type="checkbox" name="products[]" value="{{ $product->prod_code }}" class="productCheckbox rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
+                                <input type="hidden" name="quantities[{{ $product->prod_code }}]" value="{{ $product->suggested_quantity }}">
+
                             </td>
                             <td class="p-4">
                                 <div class="flex items-center gap-2">
@@ -196,27 +205,25 @@
                             <td class="p-4 text-center">
                                 <span class="badge badge-success">₱{{ number_format($product->cost_price, 2) }}</span>
                             </td>
-                            <td class="p-4 text-center">
-                                <div class="flex flex-col items-center">
-                                    <span class="badge badge-success">{{ $product->sold_this_month }} sold this month</span>
-                                    <span class="text-xs text-slate-500 mt-0.5">{{ $product->sold_this_year }} total this year</span>
-                                </div>
+                            <td class="p-4 text-center text-slate-700 font-semibold">
+                                {{ $product->stock_limit }}
                             </td>
 
                             <td class="p-4 text-center">
                                 <span class="font-semibold text-slate-700">{{ $product->stock }}</span>
-                                @if($product->stock <= 10)
-                                    <span class="material-symbols-rounded text-red-500 text-sm ml-1 align-middle">warning</span>
-                                    @elseif($product->stock <= 50)
-                                        <span class="material-symbols-rounded text-yellow-500 text-sm ml-1 align-middle">info</span>
-                                        @endif
+                                @if($product->stock <= $product->stock_limit)
+                                    <span class="material-symbols-rounded text-red-500 text-sm ml-1 align-middle" title="Low Stock">
+                                        warning
+                                    </span>
+                                    @endif
                             </td>
+
                             <td class="p-4 text-center">
                                 <span class="inline-flex items-center justify-center px-3 py-1 bg-red-50 text-red-700 font-bold rounded-lg border border-red-200">
                                     {{ $product->suggested_quantity }}
                                 </span>
                             </td>
-                            
+
 
                             <td class="p-4 text-center">
                                 @if($product->reason)
