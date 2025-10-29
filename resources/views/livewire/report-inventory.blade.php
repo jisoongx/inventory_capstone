@@ -1,14 +1,14 @@
-<div x-data="{ tab: 'stock' }" class="w-full px-4">
+<div x-data="{ tab: 'expiring' }" class="w-full px-4">
 
     <div class="flex space-x-1">
-        <button 
+        <!-- <button 
             @click="tab = 'stock'"
             :class="tab === 'stock' 
                 ? 'bg-red-50 text-black border-red-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
             Inventory Stock
-        </button>
+        </button> -->
 
         <button 
             @click="tab = 'expiring'"
@@ -19,14 +19,14 @@
             Expiring Poducts
         </button>        
 
-        <button 
+        <!-- <button 
             @click="tab = 'top-selling'"
             :class="tab === 'top-selling' 
                 ? 'bg-green-50 text-black border-green-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
             Top Selling Product
-        </button>
+        </button> -->
 
         <button 
             @click="tab = 'loss'"
@@ -137,7 +137,7 @@
                 <div>
                     <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[35rem]">
                         <table class="w-full text-xs text-left shadow-sm 
-                            {{ $lossRep->isNotEmpty() ? 'w-[116rem]' : 'w-full' }}">
+                            {{ $expiredProd->isNotEmpty() ? 'w-[156rem]' : 'w-full' }}">
                             <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                                 <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
                                     <th class="p-3 text-left sticky top-0 bg-gray-50 w-[1rem]"></th>
@@ -160,13 +160,13 @@
                                     <tr class="transition hover:bg-red-100 {{ $row->days_until_expiry <= 10 ? 'bg-rose-50' : '' }} {{ $row->days_until_expiry <=0 ? 'bg-red-200' : '' }}">
                                         <td class="py-3 px-4 text-left">
                                             @if ($row->days_until_expiry <= 10)
-                                            <span class="material-symbols-rounded-premium text-red-500">priority_high</span>
+                                            <span class="material-symbols-rounded-info text-red-500">priority_high</span>
                                             @endif
                                         </td>
                                         <td class="py-3 px-4 text-left">{{ $row->batch_num }}</td>
-                                        <td class="py-3 px-4">{{ $row->prod_name }}</td>
-                                        <td class="py-3 px-4">{{ $row->cat_name }}</td>
-                                        <td class="py-3 px-4 text-right">{{ $row->date }}</td>
+                                        <td class="py-3 px-4 text-left">{{ $row->prod_name }}</td>
+                                        <td class="py-3 px-4 text-left">{{ $row->cat_name }}</td>
+                                        <td class="py-3 px-4 text-right">{{ \Carbon\Carbon::parse($row->date)->format('M d, Y') }}</td>
                                         <td class="py-3 px-4 text-right">
                                             @if($row->days_until_expiry < 0)
                                                 Expired {{ abs($row->days_until_expiry) }} days ago
@@ -233,7 +233,6 @@
 
         <!-- DAMAGED/ LOSS/ EXPIRED-->
         <div x-show="tab === 'loss'">
-
             <div class="flex items-center mb-4 space-x-2 relative justify-between">
                 <div class="space-x-1">
                     <button wire:click="showAll" class="border rounded px-3 py-2 text-xs transition-colors

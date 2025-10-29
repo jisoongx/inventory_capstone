@@ -60,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
                     
                 } else {
 
-                    if ($owner->plan_id == 3) {      // basic
+                    if ($owner->plan_id == 3 || $owner->plan_id === null) {      // basic
                         $plan = 3;
                         $invenCount = 50;
                     } elseif ($owner->plan_id == 1) { // standard
@@ -68,7 +68,7 @@ class AppServiceProvider extends ServiceProvider
                         $invenCount = 200;
                     } elseif ($owner->plan_id == 2) { // premium
                         $plan = 2;
-                    }
+                    } 
                 }
             }
 
