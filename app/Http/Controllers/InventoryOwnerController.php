@@ -767,15 +767,70 @@ public function bulkRestock(Request $request)
     }
 }
 
+    public function create()
+    {
+        $ownerId = Auth::guard('owner')->id();
+
+        // ✅ Fetch all products owned by the logged-in owner
+        $products = DB::table('products')
+            ->where('owner_id', $ownerId)
+            ->select('prod_code', 'name')
+            ->get();
+
+        // Pass to view
+        return view('inventory-owner', compact('products'));
+    }
 
 
+    public function store(Request $request)
+    {
+        $ownerId = Auth::guard('owner')->id();
 
+        // ✅ Validate inputs
+        $request->validate([
+            'prod_code' => 'required|exists:products,prod_code',
+            'damaged_quantity' => 'required|integer|min:1',
+            'damaged_type' => 'required|string|max:20',
+            'damaged_reason' => 'required|string|max:255',
+        ]);
 
+        // ✅ Find inventory record
+        $inventory = DB::table('inventory')
+            ->where('prod_code', $request->prod_code)
+            ->where('owner_id', $ownerId)
+            ->first();
 
+        if (!$inventory) {
+            return back()->with('error', 'No inventory found for this product.');
+        }
 
+        // ✅ Check if damaged quantity is not greater than stock
+        if ($request->damaged_quantity > $inventory->stock) {
+            return back()->with('error', 'Damaged quantity exceeds available stock.');
+        }
 
+        // ✅ Insert into damaged_items
+        DB::table('damaged_items')->insert([
+            'prod_code' => $request->prod_code,
+            'damaged_quantity' => $request->damaged_quantity,
+            'damaged_type' => $request->damaged_type,
+            'damaged_reason' => $request->damaged_reason,
+            'owner_id' => $ownerId,
+            'damaged_date' => now(),
+        ]);
 
+        // ✅ Update inventory stock
+        DB::table('inventory')
+            ->where('inven_code', $inventory->inven_code)
+            ->update([
+                'stock' => $inventory->stock - $request->damaged_quantity,
+                'last_updated' => now(),
+            ]);
 
+        // ✅ Redirect correctly
+        return redirect()->route('inventory-owner')
+            ->with('success', 'Damaged item recorded and stock updated successfully!');
+    }
 }
 
     
