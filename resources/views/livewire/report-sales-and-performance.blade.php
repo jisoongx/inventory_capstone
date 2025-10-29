@@ -1,4 +1,4 @@
-<div x-data="{ tab: 'sales' }" class="w-full px-4">
+<div x-data="{ tab: 'sales' }" class="w-full px-4 {{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
 
     <div class="flex space-x-1">
         <button 
@@ -268,26 +268,7 @@
                             </div>
                         </div>
 
-                        <div>
-                            <span class="text-[11px] font-semibold text-orange-700">Months:</span>
-                            <div class="grid grid-cols-3 gap-2 mt-2">
-                                @foreach($monthNames as $index => $name)
-                                    <label class="flex items-center justify-center cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            value="{{ $index + 1 }}" 
-                                            wire:model="selectedMonths"
-                                            class="hidden peer"
-                                        >
-                                        <span class="peer-checked:bg-orange-600 peer-checked:text-white 
-                                                    text-orange-600 bg-orange-100 hover:bg-orange-200 
-                                                    rounded-full py-1 px-2 text-center text-[11px] transition">
-                                            {{ $name }}
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
+                        
 
                         <div class="flex gap-2 mt-3">
                             <button wire:click="salesByCategory" 
@@ -422,10 +403,10 @@
             <!-- Products Table -->
             <div class="flex-1 overflow-y-auto scrollbar-custom">
                 <table class="min-w-full divide-y divide-gray-200 text-xs">
-                    <thead class="bg-gray-50 sticky top-0">
+                    <thead class="uppercase bg-gray-50 sticky top-0">
                         <tr class="text-gray-700 uppercase tracking-wider">
-                            <th class="px-3 py-3 text-left font-semibold">
-                                <button wire:click="sortBy('product_name')" class="flex items-center gap-1 hover:text-purple-600">
+                            <th class="px-3 py-3 text-left font-semibold w-[10rem]">
+                                <button wire:click="sortBy('product_name')" class="uppercase flex items-center gap-1 hover:text-purple-600">
                                     Product Name
                                     @if($sortField === 'product_name')
                                         <span class="material-symbols-rounded text-sm">
@@ -436,7 +417,7 @@
                             </th>
                             <th class="px-3 py-3 text-left font-semibold">Category</th>
                             <th class="px-3 py-3 text-center font-semibold">
-                                <button wire:click="sortBy('unit_sold')" class="flex items-center gap-1 hover:text-purple-600">
+                                <button wire:click="sortBy('unit_sold')" class="uppercase flex items-center gap-1 hover:text-purple-600">
                                     Units Sold
                                     @if($sortField === 'unit_sold')
                                         <span class="material-symbols-rounded text-sm">
@@ -446,7 +427,7 @@
                                 </button>
                             </th>
                             <th class="px-3 py-3 text-right font-semibold">
-                                <button wire:click="sortBy('total_sales')" class="flex items-center gap-1 hover:text-purple-600">
+                                <button wire:click="sortBy('total_sales')" class="uppercase flex items-center gap-1 hover:text-purple-600">
                                     Total Sales (₱)
                                     @if($sortField === 'total_sales')
                                         <span class="material-symbols-rounded text-sm">
@@ -457,7 +438,7 @@
                             </th>
                             <th class="px-3 py-3 text-right font-semibold">COGS (₱)</th>
                             <th class="px-3 py-3 text-right font-semibold">
-                                <button wire:click="sortBy('profit')" class="flex items-center gap-1 hover:text-purple-600">
+                                <button wire:click="sortBy('profit')" class="uppercase flex items-center gap-1 hover:text-purple-600">
                                     Profit (₱)
                                     @if($sortField === 'profit')
                                         <span class="material-symbols-rounded text-sm">
@@ -467,7 +448,7 @@
                                 </button>
                             </th>
                             <th class="px-3 py-3 text-center font-semibold">
-                                <button wire:click="sortBy('profit_margin_percent')" class="flex items-center gap-1 hover:text-purple-600">
+                                <button wire:click="sortBy('profit_margin_percent')" class="uppercase flex items-center gap-1 hover:text-purple-600">
                                     Margin %
                                     @if($sortField === 'profit_margin_percent')
                                         <span class="material-symbols-rounded text-sm">
@@ -476,8 +457,8 @@
                                     @endif
                                 </button>
                             </th>
-                            <th class="px-3 py-3 text-center font-semibold">Stock</th>
-                            <th class="px-3 py-3 text-left font-semibold">Insight</th>
+                            <th class="uppercase px-3 py-3 text-center font-semibold">Stock</th>
+                            <th class="uppercase px-3 py-3 text-left font-semibold">Insight</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">

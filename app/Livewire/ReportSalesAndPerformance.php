@@ -87,6 +87,9 @@ class ReportSalesAndPerformance extends Component
         ", [$owner_id]));
     }
 
+
+    
+
     public function setQuickDateRange($range) {
         switch ($range) {
             case '7days':
@@ -125,6 +128,9 @@ class ReportSalesAndPerformance extends Component
         $this->getTransactions();
         $this->getSalesAnalytics();
     }
+
+
+
 
     public function updatedCurrentMonth() {
         $this->resetPage();
@@ -350,6 +356,10 @@ class ReportSalesAndPerformance extends Component
             })->values();
         }
     }
+
+
+
+
 
     public function getTransactions() {
         $owner_id = Auth::guard('owner')->user()->owner_id;
@@ -740,6 +750,7 @@ class ReportSalesAndPerformance extends Component
                 FROM inventory i
                 JOIN products p2 ON i.prod_code = p2.prod_code
                 WHERE p2.owner_id = ?
+                    AND (i.expiration_date IS NULL OR i.expiration_date > CURDATE())
                 GROUP BY i.prod_code
             ) inv ON inv.prod_code = p.prod_code
             LEFT JOIN categories AS c 

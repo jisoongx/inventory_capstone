@@ -3,7 +3,7 @@
     <div class="flex-1 grid grid-cols-3 gap-4 p-2">
         <div class="h-[40rem] bg-white shadow-lg p-5 rounded-lg col-span-1 flex flex-col">
             <div class="space-y-3">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between border-b pb-4">
                     <span class="font-semibold text-lg">Technical Request</span>
                     <button wire:click='addModal()' type="button">
                         <span class="material-symbols-rounded bg-slate-200 rounded-full p-2">
@@ -11,7 +11,7 @@
                         </span>
                     </button>
                 </div>
-                <div class="relative">
+                <!-- <div class="relative">
                     <span class="material-symbols-rounded absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                         search
                     </span>
@@ -19,7 +19,7 @@
                         wire:model.live.debounce.1ms="searchWord"
                         class="text-xs border border-gray-300 text-gray-900 text-sm rounded-full focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-3"
                     />
-                </div>
+                </div> -->
             </div>
                  
             <div class="overflow-y-auto mt-3 -z-1" wire:poll.keep-alive.5s>

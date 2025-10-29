@@ -227,7 +227,10 @@
                                             @if($roundedDays > 0)
                                                 {{ $roundedDays }} days left
                                             @else
-                                                Expired {{ abs($roundedDays) }} days ago
+                                                <div class="flex justify-center gap-2">
+                                                    <span>Expired {{ abs($roundedDays) }} days ago</span>
+                                                    @livewire('archive-expired-product', ['batchNumber' => $batchNumber])
+                                                </div>
                                             @endif
                                         </span>
                                     @else

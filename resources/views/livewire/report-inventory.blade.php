@@ -1,4 +1,4 @@
-<div x-data="{ tab: 'expiring' }" class="w-full px-4">
+<div x-data="{ tab: 'expiring' }" class="w-full px-4 {{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
 
     <div class="flex space-x-1">
         <!-- <button 
@@ -55,7 +55,7 @@
          <div x-show="tab === 'stock'">
             <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[39rem]">
                     <table class="w-full text-xs text-left shadow-sm 
-                        {{ $stock->isNotEmpty() ? 'w-[116rem]' : 'w-full' }}">
+                        {{ $stock->isNotEmpty() ? 'w-[120rem]' : 'w-full' }}">
                     <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                         <tr class="border-b-2 border-gray-300">
                             <th class="p-3 text-left bg-gray-100">Product Name</th>
@@ -64,7 +64,7 @@
                             <th class="p-3 bg-gray-100 text-right">Current Stock</th>
                             <th class="p-3 bg-gray-100 text-right">Stock Limit</th>
                             <th class="p-3 bg-gray-100 text-right">Avg Daily Sales</th>
-                            <th class="p-3 bg-gray-100 text-right">Suggested Reorder</th>
+                            <!-- <th class="p-3 bg-gray-100 text-right">Suggested Reorder</th> -->
                             <th class="p-3 bg-gray-100 text-right">Last Restocked</th>
                             <th class="p-3 bg-gray-100 text-center">Action Recommended</th>
                         </tr>
@@ -94,7 +94,7 @@
                                 <td class="p-3 text-right font-bold text-red-600">{{ $row->current_stock }}</td>
                                 <td class="p-3 text-right">{{ $row->stock_limit }}</td>
                                 <td class="p-3 text-right">{{ $row->avg_daily_sales }}</td>
-                                <td class="p-3 text-right font-semibold text-blue-600">{{ $row->suggested_reorder }}</td>
+                                <!-- <td class="p-3 text-right font-semibold text-blue-600">{{ $row->suggested_reorder }}</td> -->
                                 <td class="p-3 text-right text-gray-600">{{ \Carbon\Carbon::parse($row->last_restocked)->format('F j, Y') }}</td>
                                 <td class="p-3 text-center text-gray-600">{{ $row->action_recommendation }}</td>
                             </tr>
@@ -137,7 +137,7 @@
                 <div>
                     <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[35rem]">
                         <table class="w-full text-xs text-left shadow-sm 
-                            {{ $expiredProd->isNotEmpty() ? 'w-[156rem]' : 'w-full' }}">
+                            {{ $expiredProd->isNotEmpty() ? 'w-[120rem]' : 'w-full' }}">
                             <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                                 <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
                                     <th class="p-3 text-left sticky top-0 bg-gray-50 w-[1rem]"></th>
@@ -261,7 +261,7 @@
                 <div class="hidden"></div>
                 <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[35rem]">
                     <table class="w-full text-xs text-left shadow-sm 
-                        {{ $lossRep->isNotEmpty() ? 'w-[100rem]' : 'w-full' }}">
+                        {{ $lossRep->isNotEmpty() ? 'w-[120rem]' : 'w-full' }}">
                         <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                             <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
                                 <th class="p-3 text-left sticky top-0 bg-gray-50">Date Reported</th>

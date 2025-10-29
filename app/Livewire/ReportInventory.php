@@ -121,6 +121,14 @@ class ReportInventory extends Component
                         THEN ri.item_quantity ELSE 0 
                     END), 0) = 0 AND DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
                         'Critical! No sales in 30 days, might apply big discount.'
+
+                    WHEN COALESCE(SUM(CASE 
+                        WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
+                        THEN ri.item_quantity ELSE 0 
+                    END), 0) = 0 
+                    AND i.stock <= 3  
+                    AND DATEDIFF(i.expiration_date, CURDATE()) <= 21 THEN 
+                    'Critical! No sales in 30 days, apply a discount while promoting it.'
                     
                     WHEN COALESCE(SUM(CASE 
                         WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
@@ -142,7 +150,7 @@ class ReportInventory extends Component
                         THEN ri.item_quantity ELSE 0 
                     END) / 30.0, 0)) > DATEDIFF(i.expiration_date, CURDATE()) 
                     AND DATEDIFF(i.expiration_date, CURDATE()) <= 14 THEN 
-                        'Action needed! Stock will not clear in time, offer 30% discount.'
+                        'Action needed! Stock will not clear in time, offer a small discount.'
                     
                     WHEN CEIL(i.stock / NULLIF(SUM(CASE 
                         WHEN r.receipt_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 

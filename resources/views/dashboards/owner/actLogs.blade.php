@@ -53,13 +53,9 @@
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                        <a href="" 
-                            class="inline-flex items-center justify-center px-6 py-3 bg-white text-slate-700 font-semibold rounded-lg hover:bg-red-50 border-2 border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md text-sm">
-                            <span class="text-xs">View Plans</span>
-                        </a>
-                        <a href="" 
+                        <a href="{{ route('subscription.selection' )}}" 
                             class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-orange-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl group text-sm">
-                            <span class="text-xs">Upgrade to Premium</span>
+                            <span class="text-xs">Upgrade to Now!</span>
                             <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
