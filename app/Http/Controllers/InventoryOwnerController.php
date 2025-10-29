@@ -822,6 +822,7 @@ public function bulkRestock(Request $request)
         // ✅ Update inventory stock
         DB::table('inventory')
             ->where('inven_code', $inventory->inven_code)
+            ->where('owner_id', $ownerId)
             ->update([
                 'stock' => $inventory->stock - $request->damaged_quantity,
                 'last_updated' => now(),
