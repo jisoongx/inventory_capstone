@@ -131,36 +131,36 @@
 
 
 
-
-    <div class="overflow-x-auto bg-white rounded-lg shadow">
-        <table class="min-w-full table-auto border border-gray-100">
-            <thead class="bg-gray-100 text-gray-700 text-md">
-                <tr>
-                    <th class="px-4 py-3">Image</th>
-                    <th class="px-4 py-3">Barcode</th>
-                    <th class="px-4 py-3">Name</th>
-                    <th class="px-4 py-3">Cost Price</th>
-                    <th class="px-4 py-3">Selling Price</th>
-                    <th class="px-4 py-3">Unit</th>
-                    <th class="px-4 py-3">Stock</th>
-                    <th class="px-4 py-3 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="text-sm text-gray-800">
-                @forelse ($products as $product)
+            
+<div class="overflow-x-auto bg-white rounded-lg shadow">
+    <table class="min-w-full table-auto border border-gray-100">
+        <thead class="bg-gray-100 text-gray-700 text-md">
+            <tr>
+                <th class="px-4 py-3">Image</th>
+                <th class="px-4 py-3">Barcode</th>
+                <th class="px-4 py-3">Name</th>
+                <th class="px-4 py-3">Cost Price</th>
+                <th class="px-4 py-3">Selling Price</th>
+                <th class="px-4 py-3">Unit</th>
+                <th class="px-4 py-3">Current Stock</th> <!-- Changed from "Stock" to "Total Stock" -->
+                <th class="px-4 py-3 text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="text-sm text-gray-800">
+            @forelse ($products as $product)
                 <tr class="hover:bg-blue-50">
                     <!-- Product Image -->
                     <td class="px-4 py-2 border text-center">
                         @if($product->prod_image)
-                        <img src="{{ Str::startsWith($product->prod_image, 'assets/') 
-                                            ? asset($product->prod_image) 
-                                            : asset('storage/' . $product->prod_image) }}"
-                            alt="Product Image"
-                            class="h-16 w-16 object-cover rounded mx-auto">
+                            <img src="{{ Str::startsWith($product->prod_image, 'assets/') 
+                                ? asset($product->prod_image) 
+                                : asset('storage/' . $product->prod_image) }}" 
+                                alt="Product Image" 
+                                class="h-16 w-16 object-cover rounded mx-auto">
                         @else
-                        <img src="{{ asset('assets/no-product.png') }}"
-                            alt="Image Not Found"
-                            class="h-16 w-16 object-cover rounded mx-auto">
+                            <img src="{{ asset('assets/no-product.png') }}" 
+                                alt="Image Not Found" 
+                                class="h-16 w-16 object-cover rounded mx-auto">
                         @endif
                     </td>
 
@@ -183,14 +183,16 @@
                     <!-- Unit -->
                     <td class="px-4 py-2 border text-center">{{ $product->unit ?? '—' }}</td>
 
-                    <!-- Stock -->
-                    <td class="px-4 py-2 border text-center">{{ $product->stock }}</td>
+                    <!-- Total Stock -->
+                    <td class="px-4 py-2 border text-center ">
+                        {{ $product->total_stock }}
+                    </td>
 
                     <!-- Actions -->
                     <td class="px-4 py-2 border text-center space-x-2">
                         <!-- Info -->
-                        <a href="{{ route('inventory-product-info', $product->prod_code) }}"
-                            class="text-blue-500 hover:text-blue-700">
+                        <a href="{{ route('inventory-product-info', $product->prod_code) }}" 
+                        class="text-blue-500 hover:text-blue-700">
                             <span class="material-symbols-outlined">info</span>
                         </a>
 
@@ -198,50 +200,48 @@
                         <a href="{{$expired ? '' : route('inventory-owner-edit', $product->prod_code)}}"
                             onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
                             title="Edit" class="text-green-500 hover:text-green-700
-                                        {{ $expired ? 'cursor-not-allowed' : '' }}">
+                            {{ $expired ? 'cursor-not-allowed' : '' }}">
                             <span class="material-symbols-outlined">edit</span>
                         </a>
                         <!-- Archive / Unarchive Button -->
                         @if ($product->prod_status === 'active')
-                        <button type="button"
-                            class="text-red-500 hover:text-red-700 {{ $expired ? 'cursor-not-allowed' : '' }}"
-                            title="Archive"
-                            @if(!$expired)
-                            onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
-                            @else
-                            disabled
-                            @endif>
-                            <span class="material-symbols-outlined">archive</span>
-                        </button>
+                            <button type="button"
+                                class="text-red-500 hover:text-red-700 {{ $expired ? 'cursor-not-allowed' : '' }}"
+                                title="Archive"
+                                @if(!$expired)
+                                    onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                @else
+                                    disabled
+                                @endif
+                            >
+                                <span class="material-symbols-outlined">archive</span>
+                            </button>
 
                         @else
-                        <button type="button"
-                            class="text-orange-400 hover:text-orange-600 {{ $expired ? 'cursor-not-allowed' : '' }}"
-                            title="Unarchive"
-                            @if(!$expired)
-                            onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
-                            @else
-                            disabled
-                            @endif>
-                            <span class="material-symbols-outlined">unarchive</span>
-                        </button>
+                            <button type="button"
+                                class="text-orange-400 hover:text-orange-600 {{ $expired ? 'cursor-not-allowed' : '' }}"
+                                title="Unarchive"
+                                @if(!$expired)
+                                    onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                @else
+                                    disabled
+                                @endif
+                            >
+                                <span class="material-symbols-outlined">unarchive</span>
+                            </button>
 
                         @endif
-
-
                     </td>
                 </tr>
-                @empty
+            @empty
                 <tr>
                     <td colspan="8" class="text-center py-4 text-gray-500">
                         No products available.
                     </td>
                 </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
+            @endforelse
+        </tbody>
+    </table>
 </div>
 
 

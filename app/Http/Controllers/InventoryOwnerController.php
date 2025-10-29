@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 
 class InventoryOwnerController extends Controller
 {
-   public function index(Request $request)
+    public function index(Request $request)
     {
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
@@ -39,7 +39,30 @@ class InventoryOwnerController extends Controller
                 MIN(u.unit)          AS unit,
                 MIN(c.category)      AS category,
                 p.prod_status,
-                COALESCE(SUM(i.stock), 0) AS stock
+                COALESCE(SUM(i.stock), 0) AS total_stock_in,
+                COALESCE((
+                    SELECT SUM(ri.item_quantity) 
+                    FROM receipt_item ri 
+                    JOIN receipt r ON ri.receipt_id = r.receipt_id 
+                    WHERE ri.prod_code = p.prod_code
+                ), 0) AS total_stock_out_sales,
+                COALESCE((
+                    SELECT SUM(damaged_quantity) 
+                    FROM damaged_items 
+                    WHERE prod_code = p.prod_code
+                ), 0) AS total_stock_out_damaged,
+                (COALESCE(SUM(i.stock), 0) - 
+                COALESCE((
+                    SELECT SUM(ri.item_quantity) 
+                    FROM receipt_item ri 
+                    JOIN receipt r ON ri.receipt_id = r.receipt_id 
+                    WHERE ri.prod_code = p.prod_code
+                ), 0) - 
+                COALESCE((
+                    SELECT SUM(damaged_quantity) 
+                    FROM damaged_items 
+                    WHERE prod_code = p.prod_code
+                ), 0)) AS total_stock
             FROM products p
             JOIN units u       ON p.unit_id = u.unit_id
             JOIN categories c  ON p.category_id = c.category_id
@@ -236,6 +259,18 @@ public function showProductDetails($prodCode)
     $totalRevenue = $stockOutSalesHistory->sum('total_amount');
     $turnoverRate = $totalStockIn > 0 ? ($totalStockOutSold / $totalStockIn) * 100 : 0;
 
+        // Count expired items (damaged_reason = 'Expired')
+    $totalExpired = DB::table('damaged_items')
+        ->where('prod_code', $prodCode)
+        ->where('damaged_reason', 'Expired')
+        ->sum('damaged_quantity');
+
+    // Count damaged items (all except 'Expired')
+    $totalDamaged = DB::table('damaged_items')
+        ->where('prod_code', $prodCode)
+        ->where('damaged_reason', '!=', 'Expired')
+        ->sum('damaged_quantity');
+
     return view('inventory-owner-product-info', compact(
         'product',
         'stockInHistory',
@@ -247,6 +282,8 @@ public function showProductDetails($prodCode)
         'totalStockOut',
         'totalStockOutSold',
         'totalStockOutDamaged',
+        'totalExpired', 
+        'totalDamaged', 
         'currentStock',
         'totalRevenue',
         'turnoverRate'
