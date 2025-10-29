@@ -856,14 +856,7 @@ public function bulkRestock(Request $request)
             'damaged_date' => now(),
         ]);
 
-        // ✅ Update inventory stock
-        DB::table('inventory')
-            ->where('inven_code', $inventory->inven_code)
-            ->where('owner_id', $ownerId)
-            ->update([
-                'stock' => $inventory->stock - $request->damaged_quantity,
-                'last_updated' => now(),
-            ]);
+        
 
         // ✅ Redirect correctly
         return redirect()->route('inventory-owner')
