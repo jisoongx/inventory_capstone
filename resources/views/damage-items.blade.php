@@ -4,11 +4,23 @@
 <div id="alertContainer" class="fixed top-20 right-5 z-50 space-y-3"></div>
 
 <div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Back Button -->
+    <div class="flex justify-between items-center mb-5">
+        <!-- Back Button -->
 
 
-    <div class="mb-5">
-        <h1 class="text-lg font-semibold text-red-600">Record Damaged Item</h1>
-        <p class="text-gray-600">Track and manage damaged inventory items</p>
+        <!-- Title and Description -->
+        <div class="text-left">
+            <h1 class="text-lg font-semibold text-red-600">Record Damaged Item</h1>
+            <p class="text-gray-600">Track and manage damaged inventory items</p>
+        </div>
+        <div class="flex items-center">
+            <a href="{{ route('inventory-owner') }}"
+                class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+                <span class="material-symbols-outlined text-sm mr-1">assignment_return</span>
+                Back
+            </a>
+        </div>
     </div>
 
     <!-- Damage Item Form -->
@@ -34,7 +46,7 @@
                 <label for="damaged_quantity" class="block text-sm font-semibold text-gray-700 mb-2">
                     Quantity <span class="text-red-500">*</span>
                 </label>
-                <input type="number" name="damaged_quantity" id="damaged_quantity" required min="1" class="form-input w-full border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all">
+                <input type="number" name="damaged_quantity" id="damaged_quantity" required min="1" class=" text-sm form-input w-full border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all">
             </div>
         </div>
 
@@ -106,47 +118,61 @@
     </div>
 
     <!-- Table for Damage History with Scroll and Sticky Header -->
+    <!-- Table for Damage History with Scroll and Sticky Header -->
     <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
         <div class="overflow-y-auto max-h-96">
-            <table class="min-w-full table-auto border-collapse">
+            <table class="min-w-full table-auto table-fixed border-collapse" id="damageTable">
                 <thead class="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
                     <tr>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200">Product</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200">Quantity</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200">Type</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200">Reason</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200">Date</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200 w-[25%]">Product</th>
+                        <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200 w-[10%]">Quantity</th>
+                        <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200 w-[10%]">Type</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200 w-[30%]">Reason</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200 w-[15%]">Date</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-b-2 border-gray-200 w-[10%]">Batch</th>
                     </tr>
                 </thead>
+
                 <tbody class="divide-y divide-gray-200">
-                    @foreach ($damagedItems as $item)
+                    @forelse ($damagedItems as $item)
                     <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $item->product_name }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-700">{{ $item->damaged_quantity }}</td>
-                        <td class="px-6 py-4 text-sm">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900 text-left">{{ $item->product_name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 text-center">{{ $item->damaged_quantity }}</td>
+                        <td class="px-6 py-4 text-sm text-center">
                             <span class="px-3 py-1 rounded-full text-xs font-semibold
-                                {{ $item->damaged_type === 'Expired' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                {{ $item->damaged_type === 'Broken' ? 'bg-red-100 text-red-800' : '' }}
-                                {{ $item->damaged_type === 'Spoiled' ? 'bg-purple-100 text-purple-800' : '' }}">
+                            {{ $item->damaged_type === 'Expired' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                            {{ $item->damaged_type === 'Broken' ? 'bg-red-100 text-red-800' : '' }}
+                            {{ $item->damaged_type === 'Spoiled' ? 'bg-purple-100 text-purple-800' : '' }}">
                                 {{ $item->damaged_type }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-700">{{ $item->damaged_reason }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ $item->damaged_date }}</td>
+                        <td class="px-6 py-4 text-left text-sm text-gray-700">{{ $item->damaged_reason }}</td>
+                        <td class="px-6 py-4 text-left text-sm text-gray-600">{{ $item->damaged_date }}</td>
+                        <td class="px-6 py-4 text-right text-sm text-gray-600">{{ $item->batch_number }}</td>
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr id="noDataRow">
+                        <td colspan="6" class="px-6 py-6 text-center text-gray-500 text-sm italic">
+                            No damaged items recorded yet.
+                        </td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
     </div>
+
 </div>
 
 
 <script>
     document.getElementById('damageForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+        e.preventDefault(); // Prevent the form from submitting the default way
 
         const form = this;
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true; // Disable the submit button after the first click
+
         const formData = new FormData(form);
 
         fetch(form.action, {
@@ -159,13 +185,23 @@
             .then(res => res.json())
             .then(data => {
                 showAlert(data.success ? 'success' : 'error', data.message);
-                if (data.success) form.reset();
+                if (data.success) {
+                    form.reset(); // Reset the form only if submission was successful
+                }
+                submitButton.disabled = false; // Re-enable the button after response
+
+                // Reload the page after showing the alert (to refresh the table)
+                setTimeout(() => {
+                    window.location.reload(); // Reload the page to update the table with the new record
+                }, 2000); // 2-second delay before reloading to allow the alert to be seen
             })
             .catch(() => {
                 showAlert('error', 'Something went wrong. Please try again.');
+                submitButton.disabled = false; // Re-enable the button if there's an error
             });
     });
 
+    // Function to show alert (success/error messages)
     function showAlert(type, message) {
         const alertContainer = document.getElementById('alertContainer');
         const alert = document.createElement('div');
@@ -197,38 +233,62 @@
     }
 </script>
 
-
-
 <script>
-    // Simple search function to filter rows by product name
-    document.getElementById('searchInput').addEventListener('input', function() {
-        let filter = this.value.toUpperCase();
-        let rows = document.querySelectorAll('table tbody tr');
-        rows.forEach(function(row) {
-            let productCell = row.cells[0].textContent.toUpperCase();
-            row.style.display = productCell.indexOf(filter) > -1 ? '' : 'none';
-        });
-    });
+    const tableBody = document.querySelector('#damageTable tbody');
 
-    // Filter by category
-    document.getElementById('categorySelect').addEventListener('change', function() {
-        let category = this.value.toUpperCase();
-        let rows = document.querySelectorAll('table tbody tr');
-        rows.forEach(function(row) {
-            let typeCell = row.cells[2].textContent.toUpperCase();
-            row.style.display = typeCell.indexOf(category) > -1 || category === '' ? '' : 'none';
-        });
-    });
+    function filterTable() {
+        const search = document.getElementById('searchInput').value.toUpperCase();
+        const category = document.getElementById('categorySelect').value.toUpperCase();
+        const date = document.getElementById('dateSelect').value;
 
-    // Filter by date
-    document.getElementById('dateSelect').addEventListener('change', function() {
-        let selectedDate = this.value;
-        let rows = document.querySelectorAll('table tbody tr');
-        rows.forEach(function(row) {
-            let dateCell = row.cells[4].textContent.trim();
-            row.style.display = dateCell.indexOf(selectedDate) > -1 || selectedDate === '' ? '' : 'none';
+        let rows = Array.from(tableBody.querySelectorAll('tr'));
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            // Skip the permanent “no data” placeholder
+            if (row.id === 'noDataRow' || row.id === 'noResultsRow') return;
+
+            const product = row.cells[0].textContent.toUpperCase();
+            const type = row.cells[2].textContent.toUpperCase();
+            const dateCell = row.cells[4].textContent.trim();
+
+            const matchesSearch = product.includes(search) || search === '';
+            const matchesCategory = type.includes(category) || category === '';
+            const matchesDate = dateCell.includes(date) || date === '';
+
+            const visible = matchesSearch && matchesCategory && matchesDate;
+            row.style.display = visible ? '' : 'none';
+            if (visible) visibleCount++;
         });
-    });
+
+        // Remove previous “no results” message if it exists
+        const existingMsg = document.getElementById('noResultsRow');
+        if (existingMsg) existingMsg.remove();
+
+        // Check if table has any real data rows (not just placeholder)
+        const hasRealData = rows.some(r => r.id !== 'noDataRow');
+
+        // If all rows hidden but there are records → show “No matching results”
+        if (visibleCount === 0 && hasRealData) {
+            const noRow = document.createElement('tr');
+            noRow.id = 'noResultsRow';
+            noRow.innerHTML = `
+                <td colspan="6" class="px-6 py-6 text-center text-gray-500 text-sm italic animate-fade-in">
+                    No matching results found.
+                </td>
+            `;
+            tableBody.appendChild(noRow);
+        }
+    }
+
+    // Attach filter listeners
+    document.getElementById('searchInput').addEventListener('input', filterTable);
+    document.getElementById('categorySelect').addEventListener('change', filterTable);
+    document.getElementById('dateSelect').addEventListener('change', filterTable);
 </script>
+
+
+
+
 
 @endsection
