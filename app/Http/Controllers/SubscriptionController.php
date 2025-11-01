@@ -129,35 +129,131 @@ class SubscriptionController extends Controller
     }
 
 
+    // public function store(Request $request, $planId)
+    // {
+    //     $owner = Auth::guard('owner')->user();
+    //     $plan = Plan::find($planId);
+
+    //     if (!$plan) {
+    //         return response()->json(['message' => 'Plan not found.'], 404);
+    //     }
+
+    //     if (strtolower($plan->plan_title) === 'basic') {
+    //         $hasUsedBasic = Subscription::where('owner_id', $owner->owner_id)
+    //             ->whereHas('planDetails', fn($q) => $q->where('plan_title', 'Basic'))
+    //             ->exists();
+
+    //         if ($hasUsedBasic) {
+    //             // ✅ Custom 409 response — this should show in your JS alert
+    //             return response()->json([
+    //                 'message' => 'You have already used our one-time free Basic plan.'
+    //             ], 409);
+    //         }
+    //     }
+
+    //     // Check if already subscribed
+    //     if ($owner->activeSubscription()->exists()) {
+    //         return response()->json(['message' => 'You already have an active subscription.'], 409);
+    //     }
+
+    //     try {
+    //         // ✅ If Basic plan (price 0) — skip PayPal validation
+    //         if ($plan->plan_price > 0) {
+    //             $validatedData = $request->validate([
+    //                 'paypal_order_id' => 'required|string',
+    //                 'plan_id' => 'required|exists:plans,plan_id',
+    //             ]);
+    //         }
+
+    //         // Create subscription
+    //         $subscription = Subscription::create([
+    //             'owner_id' => $owner->owner_id,
+    //             'plan_id' => $plan->plan_id,
+    //             'subscription_start' => now(),
+    //             'subscription_end' => now()->addMonths($plan->plan_duration_months),
+    //             'status' => 'active',
+    //         ]);
+
+    //         // Create payment record
+    //         Payment::create([
+    //             'owner_id' => $owner->owner_id,
+    //             'subscription_id' => $subscription->subscription_id,
+    //             'payment_mode' => $plan->plan_price == 0 ? 'free trial' : 'paypal',
+    //             'payment_acc_number' => $plan->plan_price == 0 ? '0' : $request->paypal_order_id,
+    //             'payment_amount' => $plan->plan_price,
+    //             'payment_date' => now(),
+    //         ]);
+
+    //         return response()->json(['success' => true, 'message' => 'Subscription activated successfully!']);
+    //     } catch (\Exception $e) {
+    //         Log::error('Subscription or Payment creation failed: ' . $e->getMessage());
+    //         return response()->json(['message' => 'Failed to process subscription. Please try again.'], 500);
+    //     }
+    // }
+
+    // public function upgrade()
+    // {
+    //     $ownerId = Auth::guard('owner')->user()->owner_id;
+
+    //     // Get current active subscription
+    //     $current = Subscription::where('owner_id', $ownerId)
+    //         ->where('status', 'active')
+    //         ->first();
+
+    //     // 1️⃣ Terminate current subscription (if any)
+    //     if ($current) {
+    //         $current->update([
+    //             'status' => 'expired',
+    //             'subscription_end' => now(),
+    //         ]);
+    //     }
+
+    //     // 2️⃣ Redirect to subscription plans page (user chooses and pays again)
+    //     return redirect()->route('subscription.selection')
+    //         ->with('info', 'Your current subscription has been ended. Please choose a new plan to continue.');
+    // }
+
     public function store(Request $request, $planId)
     {
         $owner = Auth::guard('owner')->user();
         $plan = Plan::find($planId);
 
+        // Check if plan exists
         if (!$plan) {
             return response()->json(['message' => 'Plan not found.'], 404);
         }
 
         if (strtolower($plan->plan_title) === 'basic') {
-            $hasUsedBasic = Subscription::where('owner_id', $owner->owner_id)
-                ->whereHas('planDetails', fn($q) => $q->where('plan_title', 'Basic'))
-                ->exists();
+                    $hasUsedBasic = Subscription::where('owner_id', $owner->owner_id)
+                        ->whereHas('planDetails', fn($q) => $q->where('plan_title', 'Basic'))
+                        ->exists();
 
-            if ($hasUsedBasic) {
-                // ✅ Custom 409 response — this should show in your JS alert
-                return response()->json([
-                    'message' => 'You have already used our one-time free Basic plan.'
-                ], 409);
+                    if ($hasUsedBasic) {
+                        // ✅ Custom 409 response — this should show in your JS alert
+                        return response()->json([
+                            'message' => 'You have already used our one-time free Basic plan.'
+                        ], 409);
+                    }
+                }
+            // Get the current active subscription
+            $currentSubscription = $owner->activeSubscription()->first();
+
+        // If there's a current active subscription and the plan is different, we need to handle it
+        if ($currentSubscription) {
+            // If the user is trying to upgrade to the same plan, return an alert
+            if ($currentSubscription->plan_id == $plan->plan_id) {
+                return response()->json(['message' => 'You are already subscribed to this plan.'], 409);
             }
-        }
 
-        // Check if already subscribed
-        if ($owner->activeSubscription()->exists()) {
-            return response()->json(['message' => 'You already have an active subscription.'], 409);
+            // Expire the current subscription before upgrading to a new one
+            $currentSubscription->update([
+                'status' => 'expired',
+                'subscription_end' => now(),
+            ]);
         }
 
         try {
-            // ✅ If Basic plan (price 0) — skip PayPal validation
+            // If the plan price is greater than 0, validate PayPal order ID
             if ($plan->plan_price > 0) {
                 $validatedData = $request->validate([
                     'paypal_order_id' => 'required|string',
@@ -165,7 +261,7 @@ class SubscriptionController extends Controller
                 ]);
             }
 
-            // Create subscription
+            // Create the new subscription with the new plan
             $subscription = Subscription::create([
                 'owner_id' => $owner->owner_id,
                 'plan_id' => $plan->plan_id,
@@ -174,7 +270,7 @@ class SubscriptionController extends Controller
                 'status' => 'active',
             ]);
 
-            // Create payment record
+            // Create the payment record
             Payment::create([
                 'owner_id' => $owner->owner_id,
                 'subscription_id' => $subscription->subscription_id,
@@ -184,12 +280,16 @@ class SubscriptionController extends Controller
                 'payment_date' => now(),
             ]);
 
-            return response()->json(['success' => true, 'message' => 'Subscription activated successfully!']);
+            // Return success response
+            return response()->json(['success' => true, 'message' => 'Subscription upgraded successfully!']);
         } catch (\Exception $e) {
             Log::error('Subscription or Payment creation failed: ' . $e->getMessage());
             return response()->json(['message' => 'Failed to process subscription. Please try again.'], 500);
         }
     }
+
+
+
 
     public function upgrade()
     {
@@ -200,16 +300,9 @@ class SubscriptionController extends Controller
             ->where('status', 'active')
             ->first();
 
-        // 1️⃣ Terminate current subscription (if any)
-        if ($current) {
-            $current->update([
-                'status' => 'expired',
-                'subscription_end' => now(),
-            ]);
-        }
-
-        // 2️⃣ Redirect to subscription plans page (user chooses and pays again)
+        // Do not expire the old plan immediately
+        // Just redirect to subscription selection page
         return redirect()->route('subscription.selection')
-            ->with('info', 'Your current subscription has been ended. Please choose a new plan to continue.');
+            ->with('info', 'Your current subscription remains active. Please choose a new plan to upgrade.');
     }
 }

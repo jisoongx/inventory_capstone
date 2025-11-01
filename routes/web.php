@@ -195,6 +195,10 @@ Route::post('/inventory/bulk-restock', [InventoryOwnerController::class, 'bulkRe
 // Add New Category in Choose Category Modal
 Route::post('/inventory/add-category', [InventoryOwnerController::class, 'addCategory']);
 Route::get('/inventory-owner/pricing-history/{prodCode}', [InventoryOwnerController::class, 'pricingHistory'])->name('inventory-owner-pricing-history');
+// Route to display damage items form and history
+Route::get('/inventory/damage-items', [InventoryOwnerController::class, 'showDamageItemsForm'])->name('damage-items.form');
+
+// Route to store the damage item
 Route::post('/inventory/damage', [InventoryOwnerController::class, 'store'])->name('damaged.store');
 
 

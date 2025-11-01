@@ -345,7 +345,7 @@ class RestockController extends Controller
             ->where('owner_id', $ownerId)
             ->groupBy('prod_code');
 
-        // 3️⃣ Products + Sales + Stock
+        // 3️⃣ Products + Sales + Stock + Expired Stock
         $products = DB::table('products')
             ->join('categories', 'products.category_id', '=', 'categories.category_id')
             ->leftJoinSub($inventoryAgg, 'inventory', function ($join) {
@@ -365,6 +365,17 @@ class RestockController extends Controller
                 GROUP BY ri.prod_code
             ) AS sales
         "), 'products.prod_code', '=', 'sales.prod_code')
+            // Join expired products to adjust stock suggestions
+            ->leftJoin(DB::raw("
+            (
+                SELECT 
+                    prod_code,
+                    SUM(stock) as expired_stock
+                FROM inventory
+                WHERE expiration_date < CURDATE() AND is_expired = 1 -- Expired products
+                GROUP BY prod_code
+            ) AS expired
+        "), 'products.prod_code', '=', 'expired.prod_code')
             ->leftJoin('restock_item', 'restock_item.inven_code', '=', 'products.prod_code')
             ->whereNull('restock_item.inven_code')
             ->where('products.owner_id', $ownerId)
@@ -378,7 +389,8 @@ class RestockController extends Controller
                 DB::raw('COALESCE(inventory.total_stock, 0) as stock'),
                 'products.stock_limit',
                 DB::raw('COALESCE(sales.sold_this_month, 0) as sold_this_month'),
-                DB::raw('COALESCE(sales.sold_this_year, 0) as sold_this_year')
+                DB::raw('COALESCE(sales.sold_this_year, 0) as sold_this_year'),
+                DB::raw('COALESCE(expired.expired_stock, 0) as expired_stock')  // Include expired stock
             )
             ->get()
             ->map(function ($product) use ($daysInMonth) {
@@ -387,38 +399,26 @@ class RestockController extends Controller
                 // 🧮 STEP 1: BASE ROP CALCULATION
                 // ================================
 
-                // Average Daily Demand (ADD)
                 $avgDailyDemand = $product->sold_this_month / max($daysInMonth, 1);
-
-                // Lead Time (in days)
                 $leadTime = 5; // configurable later per supplier
-
-                // Safety Stock (use stock_limit or adaptive)
                 $safetyStock = $product->stock_limit;
-
-                // Reorder Point (ROP)
                 $reorderPoint = round(($avgDailyDemand * $leadTime) + $safetyStock);
 
                 // ==================================
                 // ⚙️ STEP 2: ADAPTIVE OLD FORMULA
                 // ==================================
 
-                // Base target stock (safe zone)
                 $targetStock = $product->stock_limit * 2;
-
-                // Boost target stock for fast sellers
                 if ($product->sold_this_month > $product->stock_limit) {
                     $targetStock *= 1.3;
                 }
 
-                // Low Stock Quantity
                 $multiplier = 1.2;
                 if ($product->sold_this_month > $product->stock_limit) {
                     $multiplier = 1.5;
                 }
                 $lowStockQty = max(($targetStock * $multiplier) - $product->stock, 0);
 
-                // Top-Selling Quantity
                 $topSellingQty = 0;
                 if ($product->sold_this_month > $product->stock_limit) {
                     $topSellingQty = max(
@@ -427,55 +427,63 @@ class RestockController extends Controller
                     );
                 }
 
-                // ==================================
+                // ================================
                 // 🚀 STEP 3: COMBINED SMART SUGGESTION
-                // ==================================
+                // ================================
 
-                // Flags
                 $isLowStock = $product->stock <= $reorderPoint;
                 $isTopSelling = $product->sold_this_month > $product->stock_limit;
 
-                // Multiplier adjustment (realistic restock scaling)
                 if ($isLowStock && $isTopSelling) {
-                    $multiplierFinal = 3.0; // aggressive restock
+                    $multiplierFinal = 3.0;
                 } elseif ($isTopSelling) {
-                    $multiplierFinal = 2.5; // proactive restock
+                    $multiplierFinal = 2.5;
                 } elseif ($isLowStock) {
-                    $multiplierFinal = 2.0; // normal ROP restock
+                    $multiplierFinal = 2.0;
                 } else {
-                    $multiplierFinal = 1.5; // safe buffer only
+                    $multiplierFinal = 1.5;
                 }
 
                 // Target stock using ROP model
                 $ropTargetStock = round($reorderPoint * $multiplierFinal);
 
-                // Final suggested quantity: combine both methods
+                // Final suggested quantity considering expired stock
                 $suggestedQty = max(
                     ($ropTargetStock - $product->stock),
                     max($lowStockQty, $topSellingQty)
                 );
 
+                // Reduce suggestion for expired products
+                if ($product->expired_stock > 0) {
+                    $suggestedQty = max($suggestedQty - ($product->expired_stock * 0.5), 0);  // Decrease suggestion based on expired stock
+                }
+
+                // Final suggestion (after rounding)
                 $suggestedQty = (int) round($suggestedQty);
 
-                // ==========================
+                // ============================
                 // 📋 STEP 4: REASON + BADGE
-                // ==========================
-
+                // ============================
                 $reason = null;
-                if ($isLowStock) $reason = '⚠️ Low Stock';
-                if ($isTopSelling) $reason = $reason ? $reason . ' + 🚀 Top Selling' : '🚀 Top Selling';
+                if ($isLowStock) {
+                    $reason = 'Low Stock';
+                }
 
-                if (str_contains($reason, '⚠️')) {
+                if ($isTopSelling) {
+                    $reason = isset($reason) ? $reason . ' + Top Selling' : 'Top Selling';
+                }
+
+                if (str_contains($reason, 'Low Stock')) {
                     $product->reason_badge = 'background-color:#fef3c7;color:#92400e;';
-                } elseif (str_contains($reason, '🚀')) {
+                } elseif (str_contains($reason, 'Top Selling')) {
                     $product->reason_badge = 'background-color:#dcfce7;color:#166534;';
                 } else {
                     $product->reason_badge = 'background-color:#e2e8f0;color:#334155;';
                 }
 
-                // ==========================
+                // ============================
                 // 📊 Attach computed fields
-                // ==========================
+                // ============================
                 $product->avg_daily_demand = round($avgDailyDemand, 2);
                 $product->lead_time = $leadTime;
                 $product->safety_stock = $safetyStock;
@@ -490,12 +498,10 @@ class RestockController extends Controller
                 return $product->suggested_quantity > 0
                     && ($product->stock <= $product->stock_limit || $product->sold_this_month > $product->stock_limit);
             })
-
-
             ->sortBy('stock')
             ->values();
 
-        // --- Dropdown data (unchanged)
+        // Dropdown data (unchanged)
         $allProducts = DB::table('products')
             ->leftJoinSub(
                 DB::table('inventory')
@@ -518,6 +524,7 @@ class RestockController extends Controller
 
         return view('dashboards.owner.restock_suggestion', compact('products', 'categories', 'currentYear', 'currentMonth', 'allProducts'));
     }
+
 
 
 

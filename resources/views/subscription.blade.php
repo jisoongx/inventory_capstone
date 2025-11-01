@@ -43,48 +43,75 @@
 
 <body class="bg-gradient-to-br from-gray-700 via-red-800 to-black text-slate-800 antialiased">
     <div class="scale-container">
-        <div id="paymentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden opacity-0 transition-opacity duration-300">
-            <div id="modalContent" class="bg-white rounded-xl shadow-2xl w-full max-w-lg transform scale-95 transition-all duration-300">
+        <div id="paymentModal"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden opacity-0 transition-opacity duration-300">
+            <div id="modalContent"
+                class="bg-white rounded-xl shadow-2xl w-full max-w-lg transform scale-95 transition-all duration-300">
 
-                <div id="paymentFormView">
-                    <div class="p-6 sm:p-8 border-b border-slate-200">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-900">Confirm Purchase</h2>
-                                <p class="text-sm text-slate-500 mt-1">You're one step away from unlocking new features.</p>
-                            </div>
-                            <button id="closeModalBtn" class="text-slate-400 hover:text-red-600 transition-colors">
-                                <span class="material-symbols-rounded">close</span>
-                            </button>
+                <!-- Step 1: Overview -->
+                <div id="planOverview" class="p-8">
+                    <p class="text-sm text-slate-500 mb-4">Please review your plan details before continuing.</p>
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="font-semibold text-slate-800" id="overviewPlanName"></p>
+                            <p class="font-bold text-lg text-slate-900" id="overviewPlanPrice"></p>
                         </div>
+                        <p class="text-xs text-slate-500" id="overviewPlanDuration"></p>
                     </div>
-                    <div class="p-6 sm:p-8">
-                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="text-xs text-slate-500 font-medium">YOU ARE SUBSCRIBING TO</p>
-                                    <p id="selectedPlanName" class="font-bold text-lg text-slate-800"></p>
-                                </div>
-                                <p id="selectedPlanPrice" class="text-2xl font-extrabold text-slate-900"></p>
-                            </div>
-                        </div>
-                        <div id="paypal-button-container" class="mt-6"></div>
+
+                    <ul id="overviewFeatures" class="space-y-3 text-sm text-slate-700 mb-6"></ul>
+
+                    <div class="flex justify-end gap-3">
+                        <button id="cancelOverview"
+                            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm">
+                            Cancel
+                        </button>
+                        <button id="confirmOverview"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm">
+                            Subscribe
+                        </button>
                     </div>
                 </div>
 
+                <!-- Step 2: PayPal or Basic Activation -->
+                <div id="paymentFormView" class="p-8 hidden">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">Confirm Purchase</h2>
+                            <p class="text-sm text-slate-500 mt-1">You’re one step away from activating your plan.</p>
+                        </div>
+                        <button id="closeModalBtn" class="text-slate-400 hover:text-red-600 transition-colors">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">YOU ARE SUBSCRIBING TO</p>
+                                <p id="selectedPlanName" class="font-bold text-lg text-slate-800"></p>
+                            </div>
+                            <p id="selectedPlanPrice" class="text-2xl font-extrabold text-slate-900"></p>
+                        </div>
+                    </div>
+                    <div id="paypal-button-container" class="mt-6"></div>
+                </div>
+
+                <!-- Step 3: Success -->
                 <div id="successView" class="p-8 text-center hidden">
                     <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span class="material-symbols-rounded text-4xl text-green-600">task_alt</span>
                     </div>
                     <h2 class="text-2xl font-bold text-slate-900 mb-2">Payment Successful!</h2>
                     <p class="text-sm text-slate-600 mb-6">Your subscription is now active and ready to use.</p>
-                    <a href="{{ route('dashboards.owner.dashboard') }}" class="w-full block bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all text-sm">
+                    <a href="{{ route('dashboards.owner.dashboard') }}"
+                        class="w-full block bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all text-sm">
                         Go to Dashboard
                     </a>
                 </div>
-
             </div>
         </div>
+
 
         <!-- Free Plan Modal -->
         <div id="freePlanModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden opacity-0 transition-opacity duration-300">
@@ -143,7 +170,7 @@
                         <button
                             type="button"
                             onclick="openModal(3, 'Basic', 0)"
-                            class="w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors text-sm shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30">
+                            class="w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-colors text-sm shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30">
                             Get Started for FREE!
                         </button>
                         @endif
@@ -168,7 +195,8 @@
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 products, 30 categories & units)</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock alert & expiration notice</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Top selling products dashboard</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock suggestion report</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales Performance reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory reports</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs</li>
 
                         </ul>
@@ -196,9 +224,8 @@
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Standard Plan</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product performance analysis</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales & performance reports</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory reports</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Customer & behavior insights</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock Suggestion List</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product trends</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Seasonal trend analysis</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs for both owner & staff</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Unlimited inventory, categories, and units</li>
@@ -219,7 +246,7 @@
         </main>
     </div>
 
-    <script>
+    <!-- <script>
         function openModal(planId, planName, planPrice) {
             const modal = document.getElementById('paymentModal');
             const modalContent = document.getElementById('modalContent');
@@ -348,7 +375,179 @@
             modal.classList.add('opacity-0'); // fade-out
             setTimeout(() => modal.classList.add('hidden'), 300);
         });
+    </script> -->
+
+    <script>
+        const plans = {
+            3: {
+                name: "Basic",
+                price: 0,
+                duration: "1 month free access",
+                features: [
+                    "Daily, weekly, and monthly sales tracking",
+                    "Comparative sales analysis",
+                    "Monthly net profit overview",
+                    "Sales by category and loss analysis",
+                    "Up to 50 inventory products with 10 categories & units"
+                ]
+            },
+            1: {
+                name: "Standard",
+                price: 250,
+                duration: "6 months",
+                features: [
+                    "All features from Basic Plan",
+                    "Inventory expansion (up to 200 products, 30 categories & units)",
+                    "Stock alert & expiration notice",
+                    "Top selling products dashboard",
+                    "Sales performance reports",
+                    "Inventory reports",
+                    "Activity logs"
+                ]
+            },
+            2: {
+                name: "Premium",
+                price: 500,
+                duration: "1 year",
+                features: [
+                    "All features from Standard Plan",
+                    "Product performance analysis",
+                    "Restock suggestion list",
+                    "Product trends",
+                    "Seasonal trend analysis",
+                    "Activity logs for both owner & staff",
+                    "Unlimited inventory, categories, and units",
+                    "Add and manage multiple staff"
+                ]
+            }
+        };
+
+        function openModal(planId, planName, planPrice) {
+            const modal = document.getElementById('paymentModal');
+            const overview = document.getElementById('planOverview');
+            const paymentForm = document.getElementById('paymentFormView');
+            const successView = document.getElementById('successView');
+
+            // Reset views
+            overview.classList.remove('hidden');
+            paymentForm.classList.add('hidden');
+            successView.classList.add('hidden');
+
+            // Fill overview content
+            const plan = plans[planId];
+            document.getElementById('overviewPlanName').textContent = plan.name;
+            document.getElementById('overviewPlanPrice').textContent = `₱${plan.price}`;
+            document.getElementById('overviewPlanDuration').textContent = plan.duration;
+
+            const featuresList = document.getElementById('overviewFeatures');
+            featuresList.innerHTML = plan.features.map(f => `
+            <li class="flex items-start gap-2"><span class="material-symbols-rounded text-green-500 text-base mt-0.5">check_circle</span>${f}</li>
+        `).join('');
+
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+            // Handle "Cancel" and "Continue"
+            document.getElementById('cancelOverview').onclick = () => {
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            };
+
+            document.getElementById('confirmOverview').onclick = () => {
+                overview.classList.add('hidden');
+                startPaymentFlow(planId, plan.name, plan.price);
+            };
+        }
+
+        function startPaymentFlow(planId, planName, planPrice) {
+            const modal = document.getElementById('paymentModal');
+            const paymentFormView = document.getElementById('paymentFormView');
+            const successView = document.getElementById('successView');
+            const selectedPlanName = document.getElementById('selectedPlanName');
+            const selectedPlanPrice = document.getElementById('selectedPlanPrice');
+            const paypalContainer = document.getElementById('paypal-button-container');
+
+            paymentFormView.classList.remove('hidden');
+            successView.classList.add('hidden');
+            paypalContainer.innerHTML = "";
+
+            selectedPlanName.textContent = planName;
+            selectedPlanPrice.textContent = planPrice === 0 ? "₱0" : `₱${planPrice}`;
+
+            // BASIC PLAN → direct fetch
+            if (planName.toLowerCase() === "basic") {
+                paypalContainer.innerHTML = `<div class="text-center py-4 text-slate-600">Activating your free plan...</div>`;
+                fetch(`/subscribe/${planId}`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(async res => {
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok && data.success) {
+                            setTimeout(() => {
+                                paymentFormView.classList.add('hidden');
+                                successView.classList.remove('hidden');
+                            }, 1000);
+                        } else {
+                            alert(data.message || "You have already used the Basic plan.");
+                            modal.classList.add('opacity-0');
+                            setTimeout(() => modal.classList.add('hidden'), 300);
+                        }
+                    })
+                    .catch(() => alert("Something went wrong."));
+                return;
+            }
+
+            // STANDARD / PREMIUM → PayPal
+            paypal.Buttons({
+                createOrder: function(data, actions) {
+                    return actions.order.create({
+                        purchase_units: [{
+                            description: planName,
+                            amount: {
+                                currency_code: "PHP",
+                                value: planPrice
+                            }
+                        }]
+                    });
+                },
+                onApprove: function(data, actions) {
+                    return actions.order.capture().then(details => {
+                        return fetch(`/subscribe/${planId}`, {
+                                method: 'POST',
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                                },
+                                body: JSON.stringify({
+                                    paypal_order_id: data.orderID,
+                                    plan_id: planId
+                                })
+                            }).then(res => res.json())
+                            .then(response => {
+                                paymentFormView.classList.add('hidden');
+                                successView.classList.remove('hidden');
+                            });
+                    });
+                },
+                onError: function(err) {
+                    alert("Something went wrong with PayPal payment.");
+                    console.error(err);
+                }
+            }).render("#paypal-button-container");
+        }
+
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            const modal = document.getElementById('paymentModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        });
     </script>
+
 
 </body>
 

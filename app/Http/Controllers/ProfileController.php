@@ -45,13 +45,15 @@ class ProfileController extends Controller
     {
         $owner = Auth::guard('owner')->user();
 
-        // Get active subscription (with its related plan info)
-        $subscription = $owner->activeSubscription()
+        // Get the most recent subscription based on the farthest 'subscription_end' date
+        $subscription = $owner->subscription()
             ->with('planDetails')
-            ->first();
+            ->orderByDesc('subscription_end')  // Sort by the latest subscription end date
+            ->first();  // Fetch the most recent (latest) subscription
 
         return view('dashboards.owner.owner_profile', compact('owner', 'subscription'));
     }
+
 
 
     public function updateOwnerProfile(Request $request)

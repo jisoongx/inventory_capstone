@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -804,63 +805,84 @@ public function bulkRestock(Request $request)
     }
 }
 
-    public function create()
-    {
-        $ownerId = Auth::guard('owner')->id();
-
-        // ✅ Fetch all products owned by the logged-in owner
-        $products = DB::table('products')
-            ->where('owner_id', $ownerId)
-            ->select('prod_code', 'name')
-            ->get();
-
-        // Pass to view
-        return view('inventory-owner', compact('products'));
-    }
-
-
     public function store(Request $request)
     {
         $ownerId = Auth::guard('owner')->id();
 
-        // ✅ Validate inputs
-        $request->validate([
-            'prod_code' => 'required|exists:products,prod_code',
-            'damaged_quantity' => 'required|integer|min:1',
-            'damaged_type' => 'required|string|max:20',
-            'damaged_reason' => 'required|string|max:255',
-        ]);
+        try {
+            $validated = $request->validate([
+                'prod_code' => 'required|exists:products,prod_code',
+                'damaged_quantity' => 'required|integer|min:1',
+                'damaged_type' => 'required|string|max:20',
+                'damaged_reason' => 'required|string|max:255',
+            ]);
 
-        // ✅ Find inventory record
-        $inventory = DB::table('inventory')
-            ->where('prod_code', $request->prod_code)
+            $totalStock = DB::table('inventory')
+                ->where('prod_code', $validated['prod_code'])
+                ->where('owner_id', $ownerId)
+                ->sum('stock');
+
+            if ($totalStock === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product stock is zero. Cannot record damage.'
+                ]);
+            }
+
+            if ($validated['damaged_quantity'] > $totalStock) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Damaged quantity exceeds available stock.'
+                ]);
+            }
+
+            DB::table('damaged_items')->insert([
+                'prod_code' => $validated['prod_code'],
+                'damaged_quantity' => $validated['damaged_quantity'],
+                'damaged_type' => $validated['damaged_type'],
+                'damaged_reason' => $validated['damaged_reason'],
+                'owner_id' => $ownerId,
+                'damaged_date' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Damaged item recorded successfully!'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->validator->errors()->first()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An unexpected error occurred.'
+            ]);
+        }
+    }
+
+
+    public function showDamageItemsForm()
+    {
+        $ownerId = Auth::guard('owner')->id();
+
+        // Fetch all products for the product dropdown
+        $products = DB::table('products')
             ->where('owner_id', $ownerId)
-            ->first();
+            ->get();
 
-        if (!$inventory) {
-            return back()->with('error', 'No inventory found for this product.');
-        }
+        // Fetch all damaged items recorded by the logged-in owner
+        $damagedItems = DB::table('damaged_items')
+            ->join('products', 'damaged_items.prod_code', '=', 'products.prod_code')
+            ->where('damaged_items.owner_id', $ownerId)
+            ->select('damaged_items.*', 'products.name as product_name')
+            ->orderBy('damaged_items.damaged_date', 'desc') // ✅ Show latest records first
+            ->get();
 
-        // ✅ Check if damaged quantity is not greater than stock
-        if ($request->damaged_quantity > $inventory->stock) {
-            return back()->with('error', 'Damaged quantity exceeds available stock.');
-        }
 
-        // ✅ Insert into damaged_items
-        DB::table('damaged_items')->insert([
-            'prod_code' => $request->prod_code,
-            'damaged_quantity' => $request->damaged_quantity,
-            'damaged_type' => $request->damaged_type,
-            'damaged_reason' => $request->damaged_reason,
-            'owner_id' => $ownerId,
-            'damaged_date' => now(),
-        ]);
-
-        
-
-        // ✅ Redirect correctly
-        return redirect()->route('inventory-owner')
-            ->with('success', 'Damaged item recorded and stock updated successfully!');
+        // Return the view with both products and damaged items data
+        return view('damage-items', compact('damagedItems', 'products'));
     }
 }
 
