@@ -36,6 +36,7 @@
             'border-purple-500 bg-purple-50': tab === 'product-performance'
         }">
 
+        <div wire:poll.15s="pollAll" wire:keep-alive class="hidden"></div>
         <!-- DAILY/MONTHLY SALES TAB -->
         <div x-show="tab === 'sales'" class="h-full flex flex-col">
             <!-- Sales Analytics Cards -->
@@ -242,67 +243,48 @@
                 </div>
 
                 <div class="relative">
-                    <button @click="open = !open" type="button" class="py-2 px-3 border border-orange-500 rounded hover:bg-orange-50">
-                        <div class="flex justify-center gap-1">
-                            <span class="material-symbols-rounded text-orange-700" title="Filter">tune</span>
-                            <span class="text-orange-700 text-xs font-semibold">Filter</span>
-                        </div>
-                    </button>
-                    
-                    <div x-show="open" x-cloak @click.away="open = false" 
-                        class="absolute top-full right-0 mt-2 w-64 bg-white border border-orange-200 rounded-xl shadow-lg z-50 p-4 space-y-4">
+                    <select wire:model.live="selectedMonths"
+                        class="text-xs border border-slate-300 rounded px-3 py-2 focus:ring focus:ring-purple-200">
+                        @foreach($monthNames as $index => $name)
+                            <option value="{{ $index + 1 }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
 
-                        <div>
-                            <span class="text-[11px] font-semibold text-orange-700">Year:</span>
-                            <div class="grid grid-cols-3 gap-2 mt-2">
-                                @foreach($years as $yr)
-                                    <label class="flex items-center justify-center cursor-pointer">
-                                        <input type="radio" name="selectedYear" value="{{ $yr->year }}" wire:model.live="selectedYearSingle" class="hidden peer">
-                                        <span class="peer-checked:bg-orange-600 peer-checked:text-white 
-                                                    text-orange-600 bg-orange-100 hover:bg-orange-200 
-                                                    rounded-full py-1 px-2 text-center text-[11px] transition">
-                                            {{ $yr->year }}
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        
-
-                        <div class="flex gap-2 mt-3">
-                            <button wire:click="salesByCategory" 
-                                class="flex-1 bg-orange-700 hover:bg-orange-800 text-white text-[11px] py-2 rounded-lg transition">
-                                Proceed
-                            </button>
-                            <button wire:click="resetFilters" 
-                                class="flex-1 bg-orange-100 hover:bg-orange-200 text-orange-700 text-[11px] py-2 rounded-lg transition">
-                                Reset
-                            </button>
-                        </div>
-                    </div>
+                    <!-- Year Filter -->
+                    <select wire:model.live="selectedYears"
+                        class="text-xs border border-slate-300 rounded px-3 py-2 focus:ring focus:ring-purple-200">
+                        @foreach($years as $yr)
+                            <option value="{{ $yr->year }}">{{ $yr->year }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto scrollbar-custom">
-                <table x-data="{ showTopProductUnit: false, showTopProductSales: false }" class="min-w-full divide-y divide-gray-200 text-xs">
+            <div class="flex-1 overflow-y-auto scrollbar-custom"> 
+                <table class="min-w-full divide-y divide-gray-200 text-xs">
                     <thead class="bg-gray-50">
                         <tr class="text-gray-700 uppercase text-xs tracking-wider border-b">
-                            <th class="px-2 py-3 text-left font-semibold text-xs sticky top-0 bg-gray-50 w-[15%]">Category</th>
-                            <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50 w-[8%]">Units Sold</th>
-                            <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50 w-[8%]" 
+                            <th class="px-2 py-3 text-left font-semibold text-xs sticky top-0 bg-gray-50">Category</th>
+                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">Units Sold</th>
+                            <!-- <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50 w-[8%]" 
                                 x-show="showTopProductUnit" x-cloak>
                                 Top Product (Unit)
+                            </th> -->
+                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">
+                                <div class="flex items-center justify-end space-x-1">
+                                    <span>Stock Left</span>
+                                    <span class="material-symbols-rounded-info text-gray-500 text-base"
+                                        title="Stock left reflects the current stock in the inventory">info</span>
+                                </div>
                             </th>
-                            <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50 w-[8%]">Stock Left</th>
-                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50 w-[10%]">Sales (₱)</th>
-                            <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50 w-[8%]" 
+                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">Sales (₱)</th>
+                            <!-- <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50 w-[8%]" 
                                 x-show="showTopProductSales" x-cloak>
                                 Top Product (Sales)
-                            </th>
-                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50 w-[10%]">COGS (₱)</th>
-                            <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50 w-[8%]">Margin %</th>
-                            <th class="px-2 py-3 text-left font-semibold sticky top-0 bg-gray-50">Insight</th>
+                            </th> -->
+                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">COGS (₱)</th>
+                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">Margin %</th>
+                            <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50">Insight</th>
                         </tr>
                     </thead>
 
@@ -310,17 +292,14 @@
                         @forelse($sbc as $input)
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="py-3 px-2 text-gray-900 font-medium">{{ $input->category }}</td>
-                                <td class="py-3 px-2 text-center text-gray-900">{{ $input->unit_sold }}</td>
-                                <td class="py-3 px-2 text-center text-gray-600 text-[10px]" x-show="showTopProductUnit" x-cloak>
-                                    {{ $input->top_product_unit }}
+                                <td class="py-3 px-2 text-right text-gray-900">{{ $input->unit_sold }}</td>
+                                <td class="py-3 px-2 text-right text-gray-600 text-[10px]" x-show="showTopProductUnit" x-cloak>
+                                    {{ $input->stock_left }}
                                 </td>
-                                <td class="py-3 px-2 text-center text-gray-900">{{ $input->stock_left }}</td>
+                                <td class="py-3 px-2 text-right text-gray-900">{{ $input->stock_left }}</td>
                                 <td class="py-3 px-2 text-right text-green-600 font-semibold">₱{{ number_format($input->total_sales, 2) }}</td>
-                                <td class="py-3 px-2 text-center text-gray-600 text-[10px]" x-show="showTopProductSales" x-cloak>
-                                    {{ $input->top_product_sales }}
-                                </td>
                                 <td class="py-3 px-2 text-right text-gray-900">₱{{ number_format($input->cogs, 2) }}</td>
-                                <td class="py-3 px-2 text-center font-semibold
+                                <td class="py-3 px-2 text-right font-semibold
                                     @if($input->gross_margin >= 30) text-green-600
                                     @elseif($input->gross_margin >= 20) text-blue-600
                                     @elseif($input->gross_margin >= 10) text-yellow-600
@@ -334,14 +313,14 @@
                                     @elseif (strpos($input->insight, 'Out of stock') !== false) bg-gray-600
                                     @elseif (strpos($input->insight, 'Low stock') !== false) bg-orange-600
                                     @elseif (strpos($input->insight, 'Star performer') !== false) bg-purple-600
-                                    @elseif (strpos($input->insight, 'Good sales velocity') !== false) bg-blue-600
+                                    @elseif (strpos($input->insight, 'Good sales velocity') !== false) bg-blue-800
                                     @elseif (strpos($input->insight, 'Fast-moving but low margins') !== false) bg-yellow-600
                                     @elseif (strpos($input->insight, 'Slow-moving with poor margins') !== false) bg-red-400
                                     @elseif (strpos($input->insight, 'Slow-moving') !== false) bg-amber-500
                                     @elseif (strpos($input->insight, 'No recent sales') !== false) bg-red-500
                                     @elseif (strpos($input->insight, 'Low profit margin') !== false) bg-amber-600
                                     @elseif (strpos($input->insight, 'Strong profit margins') !== false) bg-green-600
-                                    @elseif (strpos($input->insight, 'Steady sales') !== false) bg-blue-500
+                                    @elseif (strpos($input->insight, 'Steady sales') !== false) bg-blue-600
                                     @elseif (strpos($input->insight, 'Stable') !== false) bg-slate-500
                                     @else bg-slate-600
                                     @endif
@@ -427,7 +406,7 @@
                                 </button>
                             </th>
                             <th class="px-3 py-3 text-right font-semibold">
-                                <button wire:click="sortBy('total_sales')" class="uppercase flex items-center gap-1 hover:text-purple-600">
+                                <button wire:click="sortBy('total_sales')" class="uppercase flex items-right gap-1 hover:text-purple-600">
                                     Total Sales (₱)
                                     @if($sortField === 'total_sales')
                                         <span class="material-symbols-rounded text-sm">

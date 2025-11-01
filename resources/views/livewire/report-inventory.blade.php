@@ -1,14 +1,14 @@
-<div x-data="{ tab: 'expiring' }" class="w-full px-4 {{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
+<div x-data="{ tab: 'stock' }" class="w-full px-4 {{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
 
     <div class="flex space-x-1">
-        <!-- <button 
+        <button 
             @click="tab = 'stock'"
             :class="tab === 'stock' 
                 ? 'bg-red-50 text-black border-red-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
-            Inventory Stock
-        </button> -->
+            Stock In & Out
+        </button>
 
         <button 
             @click="tab = 'expiring'"
@@ -52,51 +52,40 @@
             <p class="text-gray-700">⚡ <b>top selling</b> report content goes here.</p>
         </div>
 
-         <div x-show="tab === 'stock'">
+        <!-- STOCK -->
+        <div wire:poll.15s="stockAlertReport" wire:keep-alive class="hidden"></div>
+        <div x-show="tab === 'stock'">
             <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[39rem]">
                     <table class="w-full text-xs text-left shadow-sm 
-                        {{ $stock->isNotEmpty() ? 'w-[120rem]' : 'w-full' }}">
+                        {{ $stock->isNotEmpty() ? 'w-[95rem]' : 'w-full' }}">
                     <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                         <tr class="border-b-2 border-gray-300">
-                            <th class="p-3 text-left bg-gray-100">Product Name</th>
-                            <th class="p-3 bg-gray-100">Category</th>
-                            <th class="p-3 bg-gray-100 text-center">Alert Status</th>
-                            <th class="p-3 bg-gray-100 text-right">Current Stock</th>
-                            <th class="p-3 bg-gray-100 text-right">Stock Limit</th>
-                            <th class="p-3 bg-gray-100 text-right">Avg Daily Sales</th>
-                            <!-- <th class="p-3 bg-gray-100 text-right">Suggested Reorder</th> -->
-                            <th class="p-3 bg-gray-100 text-right">Last Restocked</th>
-                            <th class="p-3 bg-gray-100 text-center">Action Recommended</th>
+                            <th class="p-3 text-left bg-gray-100">Batch Number</th>
+                            <th class="p-3 bg-gray-100">Product Name</th>
+                            <th class="p-3 bg-gray-100 text-right">Stock in</th>
+                            <th class="p-3 bg-gray-100 text-right">Stock out</th>
+                            <th class="p-3 bg-gray-100 text-right">Damaged stock</th>
+                            <th class="p-3 bg-gray-100 text-right">Damaged rate (%)</th>
+                            <th class="p-3 bg-gray-100 text-right">Sales rate (%)</th>
+                            <th class="p-3 bg-gray-100 text-center w-[24rem]">Insight</th>
                         </tr>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($stock as $row)
                             <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="p-3 font-medium text-gray-900">{{ $row->prod_name }}</td>
-                                <td class="p-3 text-gray-700">{{ $row->cat_name }}</td>
-                                <td class="p-3 text-center">
-                                    <span class="px-2 py-1 rounded text-[10px] font-semibold
-                                        @if($row->alert_status === 'Out of Stock') bg-red-600 text-white
-                                        @elseif($row->alert_status === 'Critical Low') bg-orange-600 text-white
-                                        @elseif($row->alert_status === 'Expiring Soon') bg-yellow-500 text-black
-                                        @elseif($row->alert_status === 'Reorder Soon') bg-amber-400 text-black
-                                        @elseif($row->alert_status === 'Below Minimum') bg-amber-600 text-white
-                                        @elseif($row->alert_status === 'Dead Stock') bg-gray-600 text-white
-                                        @elseif($row->alert_status === 'New Product') bg-blue-500 text-white
-                                        @elseif($row->alert_status === 'Slow Mover') bg-indigo-500 text-white
-                                        @elseif($row->alert_status === 'Overstocked') bg-green-600 text-white
-                                        @else bg-gray-400 text-white
-                                        @endif">
-                                        {{ $row->alert_status }}
+                                <td class="p-3 font-medium text-gray-900">{{ $row->batch_number }}</td>
+                                <td class="p-3 text-gray-700">{{ $row->prod_name }}</td>
+                                <td class="p-3 text-right font-bold text-red-600">{{ $row->usable_stock + $row->sold_stock + $row->damaged_stock }}</td>
+                                <td class="p-3 text-right">{{ $row->sold_stock }}</td>
+                                <td class="p-3 text-right">{{ $row->damaged_stock }}</td>
+                                <td class="p-3 text-right">{{ number_format($row->damaged_rate_percent, 0) }}%</td>
+                                <td class="p-3 text-right">{{ number_format($row->sales_rate_percent, 0) }}%</td>
+                                <td class="p-3 text-center {{ $row->insight_color }}">
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-medium ">
+                                        {{ $row->insight }}
                                     </span>
                                 </td>
-                                <td class="p-3 text-right font-bold text-red-600">{{ $row->current_stock }}</td>
-                                <td class="p-3 text-right">{{ $row->stock_limit }}</td>
-                                <td class="p-3 text-right">{{ $row->avg_daily_sales }}</td>
-                                <!-- <td class="p-3 text-right font-semibold text-blue-600">{{ $row->suggested_reorder }}</td> -->
-                                <td class="p-3 text-right text-gray-600">{{ \Carbon\Carbon::parse($row->last_restocked)->format('F j, Y') }}</td>
-                                <td class="p-3 text-center text-gray-600">{{ $row->action_recommendation }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -113,8 +102,7 @@
             </div>     
         </div>
 
-        
-
+    
 
         <!-- EXPIRING PRODUCTS -->
         <div wire:poll.15s="expired" wire:keep-alive class="hidden"></div>
@@ -232,6 +220,7 @@
         </div>
 
         <!-- DAMAGED/ LOSS/ EXPIRED-->
+        <div wire:poll.15s="loss" wire:keep-alive class="hidden"></div>
         <div x-show="tab === 'loss'">
             <div class="flex items-center mb-4 space-x-2 relative justify-between">
                 <div class="space-x-1">
@@ -265,6 +254,7 @@
                         <thead class="uppercase text-xs font-semibold bg-gray-200 text-gray-600">
                             <tr class="bg-gray-100 border-b-2 border-gray-300 sticky top-0">
                                 <th class="p-3 text-left sticky top-0 bg-gray-50">Date Reported</th>
+                                <th class="p-3 sticky top-0 bg-gray-50">Batch #</th>
                                 <th class="p-3 sticky top-0 bg-gray-50">Product Name</th>
                                 <th class="p-3 sticky top-0 bg-gray-50">Category</th>
                                 <th class="p-3 sticky top-0 bg-gray-50 text-center">Loss Type</th>
@@ -279,7 +269,8 @@
                         <tbody class="divide-y divide-gray-200">
                             @forelse ($lossRep as $row)
                                 <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="py-3 px-4 text-left">{{ \Carbon\Carbon::parse($row->date_reported)->format('M d, Y') }}</td>
+                                    <td class="py-3 px-4 text-left">{{ \Carbon\Carbon::parse($row->date_reported)->format('M d, Y h:i A') }}</td>
+                                    <td class="py-3 px-4">{{ $row->batch_num }}</td>
                                     <td class="py-3 px-4">{{ $row->prod_name }}</td>
                                     <td class="py-3 px-4">{{ $row->cat_name }}</td>
                                     <td class="py-3 px-4 text-center">

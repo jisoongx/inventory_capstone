@@ -254,76 +254,113 @@
     </div>
 
     @if($addModal)
-    <div id="add-modal" tabindex="-1" aria-hidden="true"
-        class="overflow-y-auto overflow-x-hidden fixed z-50 inset-0 flex justify-center items-center w-full bg-black/40">
-        <div class="relative p-4 w-full max-w-3xl max-h-full" wire:click.away="closeModal">
-            <div class="relative bg-white rounded shadow-sm">
+        <div id="add-modal" tabindex="-1" aria-hidden="true"
+            class="overflow-y-auto overflow-x-hidden fixed z-50 inset-0 flex justify-center items-center w-full bg-black/60 backdrop-blur-sm transition-opacity duration-300">
+            <div class="relative p-4 w-full max-w-2xl max-h-full" wire:click.away="closeModal">
+                <div class="border border-red-800 relative bg-white rounded-xl shadow-xl border border-gray-100 transform transition-all duration-300 scale-100">
 
-                <div class="absolute -top-12 left-1/2 transform -translate-x-1/2">
-                    <img src="{{ asset('assets/expense.jpg') }}"
-                        class="w-24 h-24 rounded-full border-8 border-white shadow-md">
-                </div>
-
-                <div class="flex items-center justify-center pt-16">
-                    <h3 class="text-sm font-semibold">Add Expense</h3>
-                </div>
-                
-                <form wire:submit="addExpenses" enctype="multipart/form-data" class="p-4 space-y-5">
-                    <div class="flex space-x-4">
-                        <div class="flex-1">
-                            <label for="expense_descri"
-                                class="block mb-2 text-xs font-medium text-gray-900">Item / Purpose <span class="text-red-500">*</span></label>
-                            <input wire:model.defer="add_expense_descri" type="text" id="expense_descri" required
-                                class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"/>
-                        </div>
-                        <div class="flex-1">
-                            <label for="expense_category"
-                                class="block mb-2 text-xs font-medium text-gray-900">Expense Category <span class="text-red-500">*</span></label>
-                            <select wire:model.defer="add_expense_category" id="expense_category" required
-                                    class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                                <option value="">-- Select Category --</option>
-                                <option value="purchases">Purchases</option>
-                                <option value="supplies">Supplies</option>
-                                <option value="utilities">Utilities</option>
-                                <option value="rent">Rent</option>
-                                <option value="transportation">Transportation</option>
-                                <option value="maintenance and repairs">Maintenance and Repairs</option>
-                                <option value="salaries">Salaries</option>
-                                <option value="marketing">Marketing</option>
-                                <option value="licenses/permits">Licenses/Permits</option>
-                                <option value="insurance">Insurance</option>
-                                <option value="software/subscriptions">Software/Subscriptions</option>
-                                <option value="taxes">Taxes</option>
-                                <option value="miscellaneous/others">Miscellaneous/Others</option>
-                            </select>
-                        </div>
+                    <div class="absolute -top-12 left-1/2 transform -translate-x-1/2">
+                        <img src="{{ asset('assets/expense.jpg') }}"
+                            class="w-24 h-24 rounded-full border-8 border-red-800 shadow-md">
                     </div>
-
-                    <div class="flex space-x-4">
-                        <div class="flex-1">
-                            <label for="expense_amount"
-                                class="block mb-2 text-xs font-medium text-gray-900">Amount <span class="text-red-500">*</span></label>
-                            <input wire:model.defer="add_expense_amount" type="number" step="0.01" id="expense_amount" required
-                                class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"/>
-                        </div>
-
-                        <div class="flex-1">
-                            <label for="add_expense_file"
-                                class="block mb-2 text-xs font-medium text-gray-900">Attachment</label>
-                            <input wire:model="add_expense_file" type="file" id="add_expense_file"
-                                accept=".pdf,.docx,.jpg,.jpeg,.png"
-                                class="border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full"/>
-                        </div>
+                    <div class="flex items-center justify-center pt-16 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Add New Expense</h3>
                     </div>
+                    
+                    <form wire:submit="addExpenses" enctype="multipart/form-data" class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 ">
+                            <div>
+                                <label for="expense_descri"
+                                    class="block mb-2 text-sm font-semibold text-gray-700">Item / Purpose <span class="text-red-500">*</span></label>
+                                <input wire:model.live="add_expense_descri" type="text" id="expense_descri" required
+                                    class="border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 block w-full p-2.5 transition-all duration-200"/>
+                                <p class="text-red-500 font-medium text-xs mt-2 flex items-center {{ $descriptionError ? '' : 'invisible' }}">
+                                    <i class="fas fa-exclamation-circle mr-1"></i>
+                                    {{ $descriptionError ?: 'Good' }}
+                                </p>
+                            </div>
+                            <div>
+                                <label for="expense_category"
+                                    class="block mb-2 text-sm font-semibold text-gray-700">Expense Category <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-tag text-gray-400 text-sm"></i>
+                                    </div>
+                                    <select wire:model.defer="add_expense_category" id="expense_category" required
+                                            class="pl-10 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 block w-full p-2.5 appearance-none bg-white">
+                                        <option value="">-- Select Category --</option>
+                                        <option value="purchases">Purchases</option>
+                                        <option value="supplies">Supplies</option>
+                                        <option value="utilities">Utilities</option>
+                                        <option value="rent">Rent</option>
+                                        <option value="transportation">Transportation</option>
+                                        <option value="maintenance and repairs">Maintenance and Repairs</option>
+                                        <option value="salaries">Salaries</option>
+                                        <option value="marketing">Marketing</option>
+                                        <option value="licenses/permits">Licenses/Permits</option>
+                                        <option value="insurance">Insurance</option>
+                                        <option value="software/subscriptions">Software/Subscriptions</option>
+                                        <option value="taxes">Taxes</option>
+                                        <option value="miscellaneous/others">Miscellaneous/Others</option>
+                                    </select>
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <i class="fas fa-chevron-down text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                    <button type="submit" wire:loading.attr="disabled"
-                            class="w-full text-white bg-red-600 hover:bg-red-700 font-medium rounded text-sm px-5 py-2.5 text-center">
-                        Add Expense
-                    </button>
-                </form>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="expense_amount"
+                                    class="block mb-2 text-sm font-semibold text-gray-700">Amount <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500">₱</span>
+                                    </div>
+                                    <input wire:model.live="add_expense_amount" type="number" step="0.01" id="expense_amount" required
+                                        class="pl-10 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 block w-full p-2.5 transition-all duration-200"/>
+                                </div>
+                                <p class="text-red-500 font-medium text-xs mt-2 flex items-center {{ $amountError ? '' : 'invisible' }}">
+                                    {{ $amountError ?: 'Good' }}
+                                </p>
+                            </div>
+                            <div >
+                                <label for="add_expense_file"
+                                    class="block mb-2 text-sm font-semibold text-gray-700">Attachment</label>
+                                <div class="relative flex justify-center items-center border border-gray-300 text-gray-900 text-sm rounded-lg 
+                                            focus-within:ring-2 focus-within:ring-red-500 focus-within:border-red-500
+                                            w-full transition-all duration-200 bg-white">       
+                                    <span class="material-symbols-rounded text-gray-500 absolute left-3 pointer-events-none">add_photo_alternate</span>
+                                    <input
+                                        wire:model="add_expense_file"
+                                        type="file"
+                                        id="add_expense_file"
+                                        accept=".pdf,.docx,.jpg,.jpeg,.png"
+                                        class="w-full text-sm text-gray-700 cursor-pointer rounded-lg"
+                                    />
+                                </div>
+                                <p class="text-red-500 font-medium text-xs mt-2 flex items-center {{ $fileError ? '' : 'invisible' }}">
+                                    {{ $fileError ?: 'Good' }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                            <button type="button" wire:click="closeModal"
+                                    class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors duration-200">
+                                Cancel
+                            </button>
+                            <button type="submit" wire:loading.attr="disabled"
+                                    class="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 shadow-sm transition-all duration-200 flex items-center justify-center">
+                                <i class="fas fa-plus-circle mr-2"></i>
+                                Add Expense
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
     @endif
 
 </div>

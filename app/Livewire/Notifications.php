@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class Notifications extends Component
 {
-    public $active = false;       // Dropdown visibility
-    public $notifs = [];          // Current notifications displayed
-    public $count = 0;            // Unread notifications count
-    public $filter = 'all';       // Current filter: 'all' or 'unread'
+    public $active = false;       
+    public $notifs = [];         
+    public $count = 0;            
+    public $filter = 'all';     
 
     public $showModal = false;
     public $notifTitle = '';
@@ -21,7 +21,21 @@ class Notifications extends Component
     public $notifCountRead = null;
     public $notifID = null;
 
+    public $activeTab = 'all';
+
     public function mount() {
+        $this->loadNotifs();
+    }
+
+    public function showAll() {
+        $this->filter = 'all';
+        $this->activeTab = 'all';
+        $this->loadNotifs();
+    }
+
+    public function showUnread() {
+        $this->filter = 'unread';
+        $this->activeTab = 'unread';
         $this->loadNotifs();
     }
 
@@ -32,6 +46,8 @@ class Notifications extends Component
             $this->markAsSeen();
         }
     }
+
+
 
     public function loadNotifs() {
         
@@ -69,18 +85,11 @@ class Notifications extends Component
         ", [$user_email]))->first()->cnt ?? 0;
     }
 
-    public function showAll() {
-        $this->filter = 'all';
-        $this->loadNotifs();
-    }
 
-    public function showUnread() {
-        $this->filter = 'unread';
-        $this->loadNotifs();
-    }
+
 
     public function markAsSeen() {
-        $role = Auth::guard('owner')->check() ? 'owner' : 'staff';
+        
         $user_email = Auth::guard('owner')->check() 
             ? Auth::guard('owner')->user()->email 
             : Auth::guard('staff')->user()->email;
@@ -94,11 +103,17 @@ class Notifications extends Component
         $this->count = 0;
     }
 
+
+
     public function refreshNotifs() {
         $this->loadNotifs();
     }
 
-    public function openModal($id, $title, $message, $created) {
+
+
+
+
+    public function openModal($id, $title, $message, $created) { //katong magpakita na mismo whole message sa notif
 
         $user_email = Auth::guard('owner')->check() 
             ? Auth::guard('owner')->user()->email 
@@ -123,7 +138,6 @@ class Notifications extends Component
             group by n.notif_id
         ', [$id]))->first();
 
-        // $this->loadNotifs();
 
         $this->notifTitle = $title;
         $this->notifMessage = $message;
@@ -135,6 +149,8 @@ class Notifications extends Component
     public function closeModal() {
         $this->showModal = false;
     }
+
+
 
     public function render()
     {

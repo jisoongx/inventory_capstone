@@ -35,6 +35,7 @@ function initProfitChart()
     profitChart.style.height = "24rem"; 
     profitChart.style.width = "100%";
 
+
     if (!canvas.chartInstance) {
         canvas.chartInstance = new Chart(ctx, {
             type: "line",
@@ -73,6 +74,7 @@ function initProfitChart()
         canvas.chartInstance.update();
     }
 
+    const chart = canvas.chartInstance;
     window.profitChartInstance = canvas.chartInstance;
 }
 
@@ -297,6 +299,7 @@ document.addEventListener("livewire:init", () => {
     // para real time date ni diri
     updateDateTime();
     setInterval(updateDateTime, 1000);
+    
 
     Livewire.hook("morph.updating", ({ component }) => {
         
@@ -358,17 +361,17 @@ document.addEventListener("livewire:init", () => {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    document.querySelector('#zoomIn').addEventListener('click', (e) => {
-        lineChart.zoom(1.2); 
-    })
+    // document.querySelector('#zoomIn').addEventListener('click', (e) => {
+    //     lineChart.zoom(1.2); 
+    // })
 
-    document.querySelector('#zoomOut').addEventListener('click', (e) => {
-        lineChart.zoom(0.8); 
-    })
+    // document.querySelector('#zoomOut').addEventListener('click', (e) => {
+    //     lineChart.zoom(0.8); 
+    // })
 
-    document.querySelector('#zoomReset').addEventListener('click', (e) => {
-        lineChart.resetZoom();
-    })
+    // document.querySelector('#zoomReset').addEventListener('click', (e) => {
+    //     lineChart.resetZoom();
+    // })
 
     // const productChart = document.getElementById("productChart");
     // const ctz = productChart.querySelector("canvas").getContext("2d");

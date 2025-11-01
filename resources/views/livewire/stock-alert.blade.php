@@ -42,7 +42,7 @@
             @empty
                 <div class="flex flex-col justify-center items-center h-full text-center space-y-2 px-8">
                     <span class="material-symbols-rounded-semibig text-gray-400">production_quantity_limits</span>
-                    <p class="text-xs text-gray-500">There are currently no products set to expire within the next 60 days.</p>
+                    <p class="text-xs text-gray-500">There are currently no products that need restocking.</p>
                 </div>
             @endforelse
 
@@ -82,7 +82,7 @@
                     
                     <div class="flex-1">
                         <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
-                        <p class="text-xs font-medium">{{ $p->expired_stock }} items</p>
+                        <p class="text-xs font-medium"><span class="font-semibold">{{ $p->batch_number }}</span> • {{ $p->expired_stock }} items</p>
                         <p class="text-xs font-bold">{{ $p->days_until_expiry }} days left!</p>
                     </div>
 

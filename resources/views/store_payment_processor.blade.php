@@ -722,67 +722,73 @@ class PaymentProcessor {
         printWindow.document.write(`
             <!DOCTYPE html>
             <html>
-            <head>
-                <title>Receipt - {{ $receipt_no ?? '0' }}</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        padding: 20px;
-                        max-width: 400px;
-                        margin: 0 auto;
-                    }
-                    .text-center { text-align: center; }
-                    .font-bold { font-weight: bold; }
-                    .text-xl { font-size: 1.25rem; }
-                    .text-lg { font-size: 1.125rem; }
-                    .text-sm { font-size: 0.875rem; }
-                    .text-xs { font-size: 0.75rem; }
-                    .mb-2 { margin-bottom: 0.5rem; }
-                    .mb-3 { margin-bottom: 0.75rem; }
-                    .mb-4 { margin-bottom: 1rem; }
-                    .mb-6 { margin-bottom: 1.5rem; }
-                    .mt-4 { margin-top: 1rem; }
-                    .mt-6 { margin-top: 1.5rem; }
-                    .pb-2 { padding-bottom: 0.5rem; }
-                    .pb-4 { padding-bottom: 1rem; }
-                    .pt-4 { padding-top: 1rem; }
-                    .p-3 { padding: 0.75rem; }
-                    .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-                    .border-b { border-bottom: 1px solid #e5e7eb; }
-                    .border-b-2 { border-bottom: 2px solid #d1d5db; }
-                    .border-t { border-top: 1px solid #e5e7eb; }
-                    .border-t-2 { border-top: 2px solid #d1d5db; }
-                    .border-gray-100 { border-color: #f3f4f6; }
-                    .border-gray-200 { border-color: #e5e7eb; }
-                    .border-gray-300 { border-color: #d1d5db; }
-                    .space-y-2 > * + * { margin-top: 0.5rem; }
-                    .flex { display: flex; }
-                    .justify-between { justify-content: space-between; }
-                    .items-center { align-items: center; }
-                    .items-start { align-items: flex-start; }
-                    .flex-1 { flex: 1; }
-                    .pr-2 { padding-right: 0.5rem; }
-                    .text-gray-500 { color: #6b7280; }
-                    .text-gray-600 { color: #4b5563; }
-                    .text-gray-700 { color: #374151; }
-                    .text-gray-800 { color: #1f2937; }
-                    .text-gray-900 { color: #111827; }
-                    .text-red-600 { color: #dc2626; }
-                    .text-green-600 { color: #16a34a; }
-                    .text-orange-600 { color: #ea580c; }
-                    .text-orange-800 { color: #9a3412; }
-                    .bg-orange-50 { background-color: #fff7ed; }
-                    .border-orange-200 { border: 1px solid #fed7aa; }
-                    .rounded-lg { border-radius: 0.5rem; }
-                    @media print {
-                        body { padding: 0; }
-                    }
-                </style>
-            </head>
-            <body>
-                ${receiptContent}
-            </body>
+                <head>
+                    <title>Receipt - {{ $receipt_no ?? '0' }}</title>
+                    <style>
+                        @page {
+                            size: 48mm auto;
+                            margin: 0;
+                        }
+                        body {
+                            font-family: Arial, sans-serif;
+                            width: 48mm;
+                            margin: 0 auto;
+                            padding: 3px;
+                            font-size: 10.5px; /* smaller base font */
+                            color: #000;
+                            background: #fff;
+                            line-height: 1.05; /* very compact line spacing */
+                        }
+
+                        /* Text alignment & weight */
+                        .text-center { text-align: center; }
+                        .font-bold { font-weight: bold; }
+
+                        /* Adjusted font sizes */
+                        .text-xl { font-size: 1rem; }     /* header / store name */
+                        .text-lg { font-size: 0.95rem; }  /* section titles */
+                        .text-sm { font-size: 0.8rem; }   /* regular text */
+                        .text-xs { font-size: 0.7rem; }   /* small details */
+
+                        /* Minimal spacing */
+                        .mb-1 { margin-bottom: 1px; }
+                        .mb-2 { margin-bottom: 2px; }
+                        .mt-1 { margin-top: 1px; }
+                        .mt-2 { margin-top: 2px; }
+
+                        /* Borders in black only */
+                        .border-b { border-bottom: 1px solid #000; }
+                        .border-t { border-top: 1px solid #000; }
+
+                        /* Tight layout helpers */
+                        .flex { display: flex; }
+                        .justify-between { justify-content: space-between; }
+                        .items-center { align-items: center; }
+                        .items-start { align-items: flex-start; }
+                        .flex-1 { flex: 1; }
+
+                        /* Small padding utilities */
+                        .p-1 { padding: 1px; }
+                        .py-1 { padding-top: 1px; padding-bottom: 1px; }
+
+                        .space-y-1 > * + * { margin-top: 1px; }
+
+                        @media print {
+                            body {
+                                padding: 0;
+                                margin: 0;
+                                width: 48mm;
+                                font-size: 10px; /* slightly smaller on print for fitting */
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${receiptContent}
+                </body>
             </html>
+
+
         `);
         
         printWindow.document.close();

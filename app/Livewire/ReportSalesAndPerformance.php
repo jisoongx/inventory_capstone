@@ -18,9 +18,8 @@ class ReportSalesAndPerformance extends Component
     public $monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     public $years;
     public $selectedYearSingle; 
-    public array $selectedYears = [];
-    public array $selectedMonths = [];
-    public $peak;
+    public $selectedYears;
+    public $selectedMonths;
     public $dateChoice;
     public $searchWord;
     public $suggestedCategories;
@@ -178,9 +177,12 @@ class ReportSalesAndPerformance extends Component
         }
     }
 
+
+    
+
     public function salesByCategory() {
-        $years = $this->selectedYears ?: [now()->year];
-        $months = $this->selectedMonths ?: [now()->month];
+        $years = is_array($this->selectedYears) ? $this->selectedYears : [$this->selectedYears ?: now()->year];
+        $months = is_array($this->selectedMonths) ? $this->selectedMonths : [$this->selectedMonths ?: now()->month];
 
         $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
         $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
@@ -325,6 +327,7 @@ class ReportSalesAndPerformance extends Component
                 JOIN products p2 ON inv.prod_code = p2.prod_code
                 JOIN categories c2 ON p2.category_id = c2.category_id
                 WHERE p2.owner_id = ?
+                    and p2.prod_status = 'active'
                 GROUP BY c2.category_id
             ) i ON i.category_id = p.category_id
             LEFT JOIN (
@@ -336,6 +339,7 @@ class ReportSalesAndPerformance extends Component
                 AND MONTH(r.receipt_date) IN ($monthPlaceholders)
             ) AS ritems ON p.prod_code = ritems.prod_code
             WHERE c.owner_id = ?
+                and p.prod_status = 'active'
             GROUP BY c.category, c.category_id, i.stock
             ORDER BY c.category ASC
         ";
@@ -611,57 +615,10 @@ class ReportSalesAndPerformance extends Component
         return Response::stream($callback, 200, $headers);
     }
 
-    public function peakHour() {
-        if ($this->dateChoice === null) {
-            $this->dateChoice = now()->toDateString();
-        }
 
-        $owner_id = Auth::guard('owner')->user()->owner_id;
 
-        $this->peak = collect(DB::select("
-            WITH RECURSIVE time_slots AS (
-                SELECT 
-                    DATE_FORMAT(MIN(receipt_date), '%Y-%m-%d %H:00:00') AS slot_start,
-                    DATE_FORMAT(DATE_ADD(MIN(receipt_date), INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00') AS slot_end,
-                    DATE(MIN(receipt_date)) AS day
-                FROM receipt
-                WHERE DATE(receipt_date) = ? AND owner_id = ?
 
-                UNION ALL
 
-                SELECT 
-                    DATE_FORMAT(slot_end, '%Y-%m-%d %H:00:00'),
-                    DATE_FORMAT(DATE_ADD(slot_end, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00'),
-                    day
-                FROM time_slots
-                WHERE slot_end < (
-                    SELECT MAX(receipt_date) 
-                    FROM receipt 
-                    WHERE DATE(receipt_date) = ? AND owner_id = ?
-                )
-            )
-
-            SELECT 
-                DAYNAME(ts.day) AS dayName,
-                CONCAT(DATE_FORMAT(ts.slot_start, '%h:%i %p'), ' - ', DATE_FORMAT(ts.slot_end, '%h:%i %p')) AS time_slot,
-                COUNT(DISTINCT r.receipt_id) AS transactions,                        
-                COALESCE(SUM(ri.item_quantity * p.selling_price), 0) AS sales,
-                CASE WHEN COUNT(DISTINCT r.receipt_id) > 0
-                    THEN ROUND(COALESCE(SUM(ri.item_quantity * p.selling_price), 0) / COUNT(DISTINCT r.receipt_id), 2)
-                    ELSE 0 END AS avg_value
-            FROM time_slots ts
-            LEFT JOIN receipt r 
-                ON r.receipt_date >= ts.slot_start
-            AND r.receipt_date <  ts.slot_end
-            AND r.owner_id = ?
-            AND DATE(r.receipt_date) = ?
-            LEFT JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
-            LEFT JOIN products p ON ri.prod_code = p.prod_code
-            WHERE DATE(ts.day) = ?
-            GROUP BY ts.day, ts.slot_start, ts.slot_end
-            ORDER BY ts.slot_start
-        ", [$this->dateChoice, $owner_id, $this->dateChoice, $owner_id, $owner_id, $this->dateChoice, $this->dateChoice]));
-    }
 
     public function sortBy($field) {
         if ($this->sortField === $field) {
@@ -673,6 +630,7 @@ class ReportSalesAndPerformance extends Component
         $this->sortField = $field;
         $this->prodPerformance();
     }
+
 
     public function prodPerformance() {
         $owner_id = Auth::guard('owner')->user()->owner_id;
@@ -751,6 +709,7 @@ class ReportSalesAndPerformance extends Component
                 JOIN products p2 ON i.prod_code = p2.prod_code
                 WHERE p2.owner_id = ?
                     AND (i.expiration_date IS NULL OR i.expiration_date > CURDATE())
+                    and p2.prod_status = 'active'
                 GROUP BY i.prod_code
             ) inv ON inv.prod_code = p.prod_code
             LEFT JOIN categories AS c 
@@ -770,9 +729,11 @@ class ReportSalesAndPerformance extends Component
                 JOIN receipt_item ri2 ON ri2.prod_code = p2.prod_code
                 JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
                 WHERE MONTH(r2.receipt_date) = ? AND YEAR(r2.receipt_date) = ?
+                    and p2.prod_status = 'active'
                 GROUP BY p2.owner_id
             ) total ON total.owner_id = p.owner_id
             WHERE p.owner_id = ?
+                and p.prod_status = 'active'
             GROUP BY p.prod_code, p.name, c.category, p.owner_id, c.category_id, total.total_sales_all, inv.total_stock
         ", [$owner_id, $month, $latestYear, $month, $latestYear, $owner_id]));
 
@@ -787,8 +748,16 @@ class ReportSalesAndPerformance extends Component
         $this->perf = $perf->values();
     }
 
+
+
+
+    public function pollAll() {
+        $this->salesByCategory();
+        $this->prodPerformance();
+        $this->getTransactions();
+    }
+
     public function render() {
-        $this->peakHour();
         $this->salesByCategory();
         $this->displayYears();
         $this->getTransactions();

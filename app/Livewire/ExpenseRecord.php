@@ -17,6 +17,10 @@ class ExpenseRecord extends Component
     public $year;
     public $month;
 
+    public $descriptionError;
+    public $amountError;
+    public $fileError;
+
     public $add_expense_descri; 
     public $add_expense_category; 
     public $add_expense_amount; 
@@ -197,6 +201,44 @@ class ExpenseRecord extends Component
 
 
 
+    public function updated($propertyName, $value) {
+        
+        if ($propertyName === 'add_expense_descri') {
+            if (!preg_match('/^[a-zA-Z\s]*$/', $value)) {
+                $this->descriptionError = 'Purpose should only contain letters.';
+            } else {
+                $this->descriptionError = '';
+            }
+        }
+
+        
+        if ($propertyName === 'add_expense_amount') {
+            if ($value <= 0) {
+                $this->amountError = 'Invalid amount. Must be a positive number.';
+            } else {
+                $this->amountError = '';
+            }
+        }
+
+        if ($propertyName === 'add_expense_file') {
+            if ($this->add_expense_file) {
+                $fileSize = $this->add_expense_file->getSize();
+                $maxSize = 300 * 1024;
+                
+                if ($fileSize > $maxSize) {
+                    $this->fileError = 'File exceeds 300KB.';
+                    $this->add_expense_file = null; 
+                } else {
+                    $this->fileError = '';
+                }
+            } else {
+                $this->fileError = '';
+            }
+        }
+    }
+
+
+
     public function addModalOpen() {
         $this->addModal = true;
     }
@@ -213,47 +255,51 @@ class ExpenseRecord extends Component
 
         $owner_id = Auth::guard('owner')->user()->owner_id;
 
-        $validated = $this->validate([
-            'add_expense_descri'   => 'required|string|max:255',
-            'add_expense_category' => 'required|string|max:100',
-            'add_expense_amount'   => 'required|numeric|min:0.01',
-            'add_expense_file'     => 'nullable|file|mimes:pdf,docx,jpg,jpeg,png|max:15120',
-        ]);
+        if($this->descriptionError === '') {
+            $validated = $this->validate([
+                'add_expense_descri'   => 'required|string|max:255',
+                'add_expense_category' => 'required|string|max:100',
+                'add_expense_amount'   => 'required|numeric|min:0.01',
+                'add_expense_file'     => 'nullable|file|mimes:pdf,docx,jpg,jpeg,png|max:300',
+            ]);
 
-        $filePath = null;
+            $filePath = null;
 
-        if ($this->add_expense_file) {
-            $filePath = $this->add_expense_file->store('expenses', 'public');
-        }
+            if ($this->add_expense_file) {
+                $filePath = $this->add_expense_file->store('expenses', 'public');
+            }
 
-        DB::insert('
-            INSERT INTO expenses 
-            (expense_descri, expense_category, expense_amount, file_path, expense_created, owner_id) 
-            VALUES (?, ?, ?, ?, NOW(), ?)
-        ', [
-            $validated['add_expense_descri'],
-            $validated['add_expense_category'],
-            $validated['add_expense_amount'],
-            $filePath,
-            $owner_id,
-        ]);
-
-
-        $this->reset(['add_expense_descri', 'add_expense_category', 'add_expense_amount', 'add_expense_file']);
-        $this->addModal = false;
-
-        $user = Auth::guard('owner')->user();
-        $ip = request()->ip();
-
-        ActivityLogController::log(
-            'Added expense record: ' . $validated['add_expense_descri'],
-            'owner',
-            $user,
-            $ip
-        );
+            DB::insert('
+                INSERT INTO expenses 
+                (expense_descri, expense_category, expense_amount, file_path, expense_created, owner_id) 
+                VALUES (?, ?, ?, ?, NOW(), ?)
+            ', [
+                $validated['add_expense_descri'],
+                $validated['add_expense_category'],
+                $validated['add_expense_amount'],
+                $filePath,
+                $owner_id,
+            ]);
 
 
-        session()->flash('success', 'Expense added successfully!');
+            $this->reset(['add_expense_descri', 'add_expense_category', 'add_expense_amount', 'add_expense_file']);
+            $this->addModal = false;
+
+            $user = Auth::guard('owner')->user();
+            $ip = request()->ip();
+
+            ActivityLogController::log(
+                'Added expense record: ' . $validated['add_expense_descri'],
+                'owner',
+                $user,
+                $ip
+            );
+
+
+            session()->flash('success', 'Expense added successfully!');
+        } 
+
+
     }
 
     public function viewAttachment($expense_id) {
@@ -285,8 +331,9 @@ class ExpenseRecord extends Component
 
 
 
-    public function editExpense($expense_id)
-    {
+
+
+    public function editExpense($expense_id) {
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
         }
@@ -306,8 +353,7 @@ class ExpenseRecord extends Component
     }
 
 
-    public function saveExpense()
-    {
+    public function saveExpense() {
         $this->validate([
             'editingDescri' => 'required|string|max:255',
             'editingAmount' => 'required|numeric|min:0.01',

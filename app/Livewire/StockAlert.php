@@ -58,6 +58,7 @@ class StockAlert extends Component
             FROM products p
             JOIN inventory i ON p.prod_code = i.prod_code
             WHERE p.owner_id = ?
+                AND p.prod_status = 'active'
             GROUP BY p.prod_code, p.name, p.stock_limit, p.prod_image
             HAVING status IN ('Critical', 'Reorder')
             ORDER BY remaining_stock ASC
@@ -79,7 +80,7 @@ class StockAlert extends Component
         $results = DB::select("
             SELECT 
                 p.name AS prod_name, i.stock as expired_stock, p.prod_image,
-                i.expiration_date,
+                i.expiration_date, i.batch_number,
                 CASE 
                     WHEN i.expiration_date IS NULL THEN NULL
                     ELSE DATEDIFF(i.expiration_date, CURDATE())
@@ -119,7 +120,7 @@ class StockAlert extends Component
                 p.name AS prod_name, 
                 p.prod_code, 
                 p.prod_image, 
-                SUM(ri.item_quantity * p.selling_price) AS total_sales,
+                SUM(ri.item_quantity * p.selling_price) as total_sales,
                 SUM(ri.item_quantity) AS unit_sold
             FROM receipt r
             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id

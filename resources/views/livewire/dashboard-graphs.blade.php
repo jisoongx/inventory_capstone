@@ -8,24 +8,31 @@
             </div>
             <h1 class="text-2xl font-semibold mb-4">Welcome, {{ ucwords($owner_name) }}!</h1>
 
-            <div class="flex gap-3 mb-3 w-full">
-                <div class="bg-white border-t-4 border-red-900 p-4 shadow-lg rounded flex-[2] text-center">
-                    <p class="text-red-800 text-2xl font-bold">₱{{ number_format($dailySales->dailySales, 2) }}</p>
-                    <span class="text-gray-600 text-xs font-bold">Daily Sales</span>
+            <div class="flex gap-3 mb-4 w-full grid-cols-3">
+                <div class="bg-gradient-to-br from-red-50 to-white border border-red-100 p-3 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl flex-[2]">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-red-800 uppercase tracking-wide">Today's Sales</span>
+                        <span class="material-symbols-rounded text-red-600 text-xl">trending_up</span>
+                    </div>
+                    <p class="text-red-900 text-2xl font-bold">₱{{ number_format($dailySales->dailySales, 2) }}</p>
                 </div>
 
-                <div class="bg-white border-t-4 border-red-700 p-4 shadow-lg rounded flex-[1] text-center" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
-                    <p class="text-red-600 text-2xl font-bold" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
+                <div class="bg-gradient-to-br from-orange-50 to-white border border-orange-100 p-3 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl flex-[1]" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-orange-800 uppercase tracking-wide">Last 7 Days</span>
+                    </div>
+                    <p class="text-orange-900 text-2xl font-bold" title="₱{{ number_format($weeklySales->weeklySales, 2) }}">
                         ₱{{ $weeklySales->weeklySales >= 1000 ? number_format($weeklySales->weeklySales / 1000, 1) . 'k' : number_format($weeklySales->weeklySales, 2) }}
                     </p>
-                    <span class="text-gray-600 text-xs">Last 7 days</span>
                 </div>
 
-                <div class="bg-white border-t-4 border-red-500 p-4 shadow-lg rounded flex-[1] text-center" title="₱{{ number_format($monthSales->monthSales, 2) }}">
-                    <p class="text-red-400 text-2xl font-bold" title="₱{{ number_format($monthSales->monthSales, 2) }}">
+                <div class="bg-gradient-to-br from-rose-50 to-white border border-rose-100 p-3 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl flex-[1]" title="₱{{ number_format($monthSales->monthSales, 2) }}">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-rose-800 uppercase tracking-wide">Monthly</span>
+                    </div>
+                    <p class="text-rose-900 text-2xl font-bold" title="₱{{ number_format($monthSales->monthSales, 2) }}">
                         ₱{{ $monthSales->monthSales >= 1000 ? number_format($monthSales->monthSales / 1000, 1) . 'k' : number_format($monthSales->monthSales, 2) }}
                     </p>
-                    <span class="text-gray-600 text-xs">This Month's Sales</span>
                 </div>
             </div>
 

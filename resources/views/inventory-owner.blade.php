@@ -106,8 +106,7 @@
             </div>
         </div>
 
-        {{-- Right side: Add Product --}}
-        <div>
+        <div class="flex items-center gap-3">
             <button id="addProductBtn" {{ $expired ? 'disabled' : '' }}
                 class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 transform hover:scale-105
                         {{ $expired ? 'cursor-not-allowed' : '' }}">
@@ -118,13 +117,7 @@
                         {{ $expired ? 'cursor-not-allowed' : '' }}">
                 Add Stock
             </button>
-            <a href="{{ route('damage-items.form') }}"
-                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-all duration-200 transform hover:scale-105">
-                Damage
-            </a>
-
-
-
+             @livewire('record-damage')
         </div>
     </div>
 
