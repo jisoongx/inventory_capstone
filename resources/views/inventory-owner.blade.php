@@ -1786,7 +1786,10 @@
 
         function closeTypeModal() {
             const modal = document.getElementById('typeBarcodeModal');
-            if (modal) modal.classList.add('hidden');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
         }
 
     function openBarcodeExistsModal(product) {
@@ -1861,7 +1864,10 @@
         function openRegisterModal(barcode) {
             closeAllModals();
             const modal = document.getElementById('registerProductModal');
-            if (modal) modal.classList.remove('hidden');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex'); 
+            }
 
             // Auto-fill barcode in the register modal
             const barcodeElement = document.getElementById('autoFilledBarcode');
@@ -2629,8 +2635,10 @@
         function openRegisterModal(barcode = '') {
             closeAllModals();
             const modal = document.getElementById('registerProductModal');
-            if (modal) modal.classList.remove('hidden');
-
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex'); // Add this line
+            }
             // Auto-fill barcode in the register modal
             const barcodeElement = document.getElementById('autoFilledBarcode');
             if (barcodeElement && barcode) {
@@ -2641,7 +2649,10 @@
         function closeRegisterModal() {
             const modal = document.getElementById('registerProductModal');
             const form = document.getElementById('registerProductForm');
-            if (modal) modal.classList.add('hidden');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex'); 
+            }
             if (form) form.reset();
             resetPhotoPreview();
 
