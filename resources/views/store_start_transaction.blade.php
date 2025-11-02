@@ -35,7 +35,6 @@
     @livewire('expiration-container')
 </div>
 
-<!-- Rest of your existing blade content... -->
 <div class="px-4">
     <!-- Top Navigation Bar -->
     <div class="bg-white shadow-lg rounded-lg mb-4 p-4">
@@ -52,32 +51,6 @@
                     <input type="text" id="searchInput" placeholder="Search products by name or barcode" 
                         class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
                 </div>
-            </div>
-
-            <!-- Right Section - Report/Transactions Button -->
-            <div class="ml-4 flex items-center space-x-3">
-                @if(Auth::guard('owner')->check())
-                    <!-- Owner: Report Button -->
-                    <a href="{{ route('report-sales-performance') }}" 
-                        class="px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors text-white"
-                        style="background-color: #336055;"
-                        onmouseover="this.style.backgroundColor='#2a4d44'"
-                        onmouseout="this.style.backgroundColor='#336055'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                        <span>Reports</span>
-                    </a>
-                @elseif(Auth::guard('staff')->check())
-                    <!-- Staff: Transactions Button -->
-                    <a href="{{ route('report-sales-performance') }}" 
-                       class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                        </svg>
-                        <span>Transactions</span>
-                    </a>
-                @endif
             </div>
         </div>
     </div>
@@ -179,6 +152,36 @@
     </div>
 </div>
 
+<!-- Quantity Input Modal -->
+<div id="quantityModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold" id="modalProductName">Enter Quantity</h3>
+            <button id="closeQuantityModal" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                <input type="number" id="quantityInput" min="1" value="1" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
+                <p class="text-xs text-gray-500 mt-1">Available: <span id="modalAvailableStock">0</span></p>
+            </div>
+            <div class="flex gap-2">
+                <button id="cancelQuantityBtn" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button id="confirmQuantityBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Remove Item Reason Modal -->
 <div id="removeReasonModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
@@ -211,13 +214,12 @@
 </div>
 
 <style>
-/* Existing styles... */
 .category-pill {
     padding: 10px 12px;
     border-radius: 8px;
     border: 2px solid #e5e7eb;
     background-color: white;
-    color: white;
+    color: #374151;
     font-size: 0.75rem;
     font-weight: 500;
     transition: all 0.2s ease;
@@ -232,6 +234,7 @@
 
 .category-pill:hover:not(.active) {
     transform: translateY(-1px);
+    border-color: #ef4444;
     opacity: 0.9;
 }
 
@@ -240,17 +243,18 @@
     color: white;
     border-color: #ef4444;
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+    transform: scale(1.05);
 }
 
 .product-card {
     background: white;
     border: 2px solid #e5e7eb;
     border-radius: 12px;
-    padding: 20px;
+    padding: 16px;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    min-height: 200px;
+    min-height: 220px;
     display: flex;
     flex-direction: column;
 }
@@ -267,10 +271,17 @@
     background-color: #f9fafb;
 }
 
-.product-card.out-of-stock:hover {
+.product-card.expired {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #fef2f2;
+    border-color: #dc2626;
+}
+
+.product-card.out-of-stock:hover,
+.product-card.expired:hover {
     transform: none;
-    box-shadow: 0 2 4px rgba(0, 0, 0, 0.05);
-    border-color: #e5e7eb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .product-card.low-stock {
@@ -280,7 +291,7 @@
 
 .product-image {
     width: 100%;
-    height: 80px;
+    height: 100px;
     background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
     border-radius: 8px;
     margin-bottom: 12px;
@@ -289,6 +300,7 @@
     justify-content: center;
     border: 2px dashed #d1d5db;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .product-image img {
@@ -301,6 +313,77 @@
 .product-image.has-image {
     border: 2px solid #e5e7eb;
     background: white;
+}
+
+.product-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 0;
+}
+
+.product-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #111827;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 36px;
+}
+
+.product-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #dc2626;
+    margin-bottom: 8px;
+}
+
+.product-stock-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-top: auto;
+}
+
+.stock-label {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.stock-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stock-badge.available {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.stock-badge.low {
+    background-color: #fed7aa;
+    color: #92400e;
+}
+
+.stock-badge.out {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.stock-badge.expired {
+    background-color: #fecaca;
+    color: #7f1d1d;
 }
 
 .cart-item {
@@ -341,6 +424,23 @@
 .quantity-btn:disabled {
     background-color: #d1d5db;
     cursor: not-allowed;
+}
+
+.quantity-display {
+    padding: 8px 12px;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    min-width: 60px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quantity-display:hover {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
 }
 
 .remove-btn {
@@ -416,37 +516,6 @@ body.modal-open {
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
-
-/* Scanner Indicator Animation */
-@keyframes slideUp {
-    from {
-        transform: translateY(100px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideDown {
-    from {
-        transform: translateY(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateY(100px);
-        opacity: 0;
-    }
-}
-
-#scannerIndicator.show {
-    animation: slideUp 0.3s ease-out forwards;
-}
-
-#scannerIndicator.hide {
-    animation: slideDown 0.3s ease-in forwards;
-}
 </style>
 
 <script>
@@ -459,6 +528,7 @@ class KioskSystem {
         this.removeItemData = null;
         this.categories = [];
         this.activeCategory = '';
+        this.activeCategoryName = 'All Categories';
         this.barcodeBuffer = '';
         this.barcodeTimeout = null;
         this.scannerActive = true;
@@ -467,6 +537,7 @@ class KioskSystem {
         this.isExpired = {{ $expired ? 'true' : 'false' }};
         this.toastTimeout = null;
         this.toastProgressInterval = null;
+        this.quantityModalData = null;
         
         this.init();
     }
@@ -481,11 +552,11 @@ class KioskSystem {
     }
 
     bindEvents() {
-        // Existing event bindings...
         document.addEventListener('click', (e) => {
             if (e.target.closest('.category-pill')) {
                 const pill = e.target.closest('.category-pill');
-                this.selectCategory(pill.dataset.category);
+                const categoryName = pill.textContent.trim();
+                this.selectCategory(pill.dataset.category, categoryName);
             }
         });
 
@@ -516,6 +587,26 @@ class KioskSystem {
             window.location.href = '{{ route("store_payment_processor") }}';
         });
 
+        // Quantity Modal Events
+        document.getElementById('closeQuantityModal').addEventListener('click', () => {
+            this.hideModal('quantityModal');
+        });
+
+        document.getElementById('cancelQuantityBtn').addEventListener('click', () => {
+            this.hideModal('quantityModal');
+        });
+
+        document.getElementById('confirmQuantityBtn').addEventListener('click', () => {
+            this.confirmQuantityChange();
+        });
+
+        document.getElementById('quantityInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.confirmQuantityChange();
+            }
+        });
+
+        // Remove Modal Events
         document.getElementById('closeRemoveModal').addEventListener('click', () => {
             this.hideModal('removeReasonModal');
         });
@@ -527,15 +618,23 @@ class KioskSystem {
             });
         });
 
+        // Close modals on click outside
         document.getElementById('removeReasonModal').addEventListener('click', (e) => {
             if (e.target.id === 'removeReasonModal') {
                 this.hideModal('removeReasonModal');
             }
         });
 
+        document.getElementById('quantityModal').addEventListener('click', (e) => {
+            if (e.target.id === 'quantityModal') {
+                this.hideModal('quantityModal');
+            }
+        });
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.hideModal('removeReasonModal');
+                this.hideModal('quantityModal');
                 this.hideScannerToast();
             }
         });
@@ -546,15 +645,12 @@ class KioskSystem {
             'background: #3b82f6; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold',
             'color: #3b82f6');
         
-        // Show scanner ready indicator
         this.showScannerIndicator();
         
-        // Auto-hide scanner indicator after 3 seconds
         setTimeout(() => {
             this.hideScannerIndicator();
         }, 3000);
 
-        // Check for scanner within 2 seconds of page load
         this.scannerCheckTimeout = setTimeout(() => {
             if (!this.scannerDetected) {
                 console.log('%c⚠️%c Scanner not detected within timeout', 
@@ -569,14 +665,11 @@ class KioskSystem {
             }
         }, 2000);
 
-        // Listen for keypress events (barcode scanners simulate keyboard input)
         document.addEventListener('keypress', (e) => {
-            // Ignore if user is typing in input fields
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
             }
 
-            // Scanner detected!
             if (!this.scannerDetected) {
                 this.scannerDetected = true;
                 clearTimeout(this.scannerCheckTimeout);
@@ -592,14 +685,11 @@ class KioskSystem {
                 );
             }
 
-            // Clear previous timeout
             if (this.barcodeTimeout) {
                 clearTimeout(this.barcodeTimeout);
             }
 
-            // Add character to buffer
             if (e.key === 'Enter') {
-                // Process the complete barcode
                 if (this.barcodeBuffer.length > 0) {
                     console.log('%c📋%c Barcode scanned: %c' + this.barcodeBuffer, 
                         'font-size: 16px',
@@ -611,7 +701,6 @@ class KioskSystem {
             } else {
                 this.barcodeBuffer += e.key;
                 
-                // Set timeout to clear buffer if no more input
                 this.barcodeTimeout = setTimeout(() => {
                     this.barcodeBuffer = '';
                 }, 100);
@@ -693,7 +782,6 @@ class KioskSystem {
     }
 
     showScannerToast(title, message, type = 'info', duration = 3000) {
-        // Clear existing toast
         this.hideScannerToast();
 
         const toast = document.getElementById('scannerToast');
@@ -702,11 +790,9 @@ class KioskSystem {
         const toastIcon = document.getElementById('toastIcon');
         const progressBar = document.querySelector('#toastProgress > div');
 
-        // Set content
         toastTitle.textContent = title;
         toastMessage.textContent = message;
 
-        // Set colors and icons based on type
         const configs = {
             success: {
                 borderColor: 'border-green-500',
@@ -744,7 +830,6 @@ class KioskSystem {
 
         const config = configs[type] || configs.info;
 
-        // Apply styles
         toast.className = `fixed top-4 right-4 z-[9999] transform transition-all duration-300`;
         toast.querySelector('.bg-white').className = `bg-white rounded-lg shadow-2xl ${config.borderColor} border-l-4 p-4 min-w-[320px] max-w-md`;
         toastTitle.className = `font-bold text-sm mb-1 ${config.titleColor}`;
@@ -752,18 +837,15 @@ class KioskSystem {
         toastIcon.innerHTML = config.icon;
         progressBar.className = `h-full ${config.progressColor} transition-all duration-[${duration}ms] ease-linear w-0`;
 
-        // Show toast with animation
         setTimeout(() => {
             toast.classList.remove('translate-x-full', 'opacity-0');
             toast.classList.add('translate-x-0', 'opacity-100');
         }, 10);
 
-        // Start progress bar animation
         setTimeout(() => {
             progressBar.style.width = '100%';
         }, 50);
 
-        // Auto hide after duration
         this.toastTimeout = setTimeout(() => {
             this.hideScannerToast();
         }, duration);
@@ -781,7 +863,6 @@ class KioskSystem {
         toast.classList.remove('translate-x-0', 'opacity-100');
         toast.classList.add('translate-x-full', 'opacity-0');
         
-        // Reset progress bar
         setTimeout(() => {
             progressBar.style.width = '0';
         }, 300);
@@ -863,15 +944,27 @@ class KioskSystem {
         container.innerHTML = pillsHTML;
     }
 
-    selectCategory(categoryId) {
+    selectCategory(categoryId, categoryName) {
         this.activeCategory = categoryId;
+        this.activeCategoryName = categoryName;
         
         document.querySelectorAll('.category-pill').forEach(pill => {
             pill.classList.remove('active');
         });
         
-        document.querySelector(`[data-category="${categoryId}"]`).classList.add('active');
+        const selectedPill = document.querySelector(`[data-category="${categoryId}"]`);
+        if (selectedPill) {
+            selectedPill.classList.add('active');
+        }
+        
         this.loadProducts();
+        
+        this.showScannerToast(
+            'Category Changed',
+            `Now showing: ${categoryName}`,
+            'info',
+            1500
+        );
     }
 
     async loadProducts() {
@@ -937,8 +1030,21 @@ class KioskSystem {
         const isLowStock = product.stock > 0 && product.stock <= product.stock_limit;
         
         let cardClass = 'product-card';
-        if (isOutOfStock) cardClass += ' out-of-stock';
-        else if (isLowStock) cardClass += ' low-stock';
+        let stockBadge = '';
+        let stockBadgeClass = 'stock-badge';
+        
+        if (isOutOfStock) {
+            cardClass += ' out-of-stock';
+            stockBadge = 'Out of Stock';
+            stockBadgeClass += ' out';
+        } else if (isLowStock) {
+            cardClass += ' low-stock';
+            stockBadge = 'Low Stock';
+            stockBadgeClass += ' low';
+        } else {
+            stockBadge = 'Available';
+            stockBadgeClass += ' available';
+        }
         
         card.className = cardClass;
         card.dataset.prodCode = product.prod_code;
@@ -959,19 +1065,15 @@ class KioskSystem {
                      </svg>`
                 }
             </div>
-            <div class="flex-1 flex flex-column justify-between">
-                <h4 class="font-semibold text-[13px] text-gray-900 mb-2 line-clamp-2" title="${product.name}">
+            <div class="product-info">
+                <h4 class="product-name" title="${product.name}">
                     ${product.name}
                 </h4>
                 <div>
-                    <p class="text-sm font-bold text-red-600 mb-2">₱${parseFloat(product.selling_price).toFixed(2)}</p>
-                    <div class="flex items-center justify-between text-xs">
-                        <span class="text-gray-600">Stock: ${product.stock}</span>
-                        ${isOutOfStock ? 
-                            '<span class="text-red-500 font-medium px-2 py-1 bg-red-50 rounded">Out of Stock</span>' :
-                            isLowStock ? '<span class="text-orange-500 font-medium px-2 py-1 bg-orange-50 rounded">Low Stock</span>' : 
-                            '<span class="text-green-500 font-medium px-2 py-1 bg-green-50 rounded">Available</span>'
-                        }
+                    <p class="product-price">₱${parseFloat(product.selling_price).toFixed(2)}</p>
+                    <div class="product-stock-info">
+                        <span class="stock-label">Stock: ${product.stock}</span>
+                        <span class="${stockBadgeClass}">${stockBadge}</span>
                     </div>
                 </div>
             </div>
@@ -1010,6 +1112,43 @@ class KioskSystem {
             console.error('Error adding to cart:', error);
             this.showToast('Error adding item to cart', 'error');
         }
+    }
+
+    showQuantityModal(prodCode, currentQuantity, availableStock, productName) {
+        this.quantityModalData = {
+            prodCode: prodCode,
+            currentQuantity: currentQuantity,
+            availableStock: availableStock
+        };
+
+        document.getElementById('modalProductName').textContent = productName;
+        document.getElementById('quantityInput').value = currentQuantity;
+        document.getElementById('quantityInput').max = availableStock;
+        document.getElementById('modalAvailableStock').textContent = availableStock;
+
+        this.showModal('quantityModal');
+        document.getElementById('quantityInput').focus();
+        document.getElementById('quantityInput').select();
+    }
+
+    async confirmQuantityChange() {
+        if (!this.quantityModalData) return;
+
+        const newQuantity = parseInt(document.getElementById('quantityInput').value);
+        
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            this.showToast('Please enter a valid quantity', 'error');
+            return;
+        }
+
+        if (newQuantity > this.quantityModalData.availableStock) {
+            this.showToast(`Maximum available stock is ${this.quantityModalData.availableStock}`, 'error');
+            return;
+        }
+
+        await this.updateCartQuantity(this.quantityModalData.prodCode, newQuantity);
+        this.hideModal('quantityModal');
+        this.quantityModalData = null;
     }
 
     async updateCartQuantity(prodCode, quantity) {
@@ -1056,7 +1195,9 @@ class KioskSystem {
                 },
                 body: JSON.stringify({
                     prod_code: this.removeItemData,
-                    reason: reason
+                    reason: reason,
+                    quantity: 1,
+                    damage_reason: reason === 'damage' ? 'Damaged during transaction' : null
                 })
             });
 
@@ -1133,8 +1274,11 @@ class KioskSystem {
                     <div class="quantity-controls">
                         <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity - 1})" 
                                 ${item.quantity <= 1 ? 'disabled' : ''}>−</button>
-                        <span class="px-4 py-2 bg-gray-50 border rounded-lg text-xs font-medium min-w-[4rem] text-center">${item.quantity}</span>
-                        <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity + 1})">+</button>
+                        <div class="quantity-display" onclick="kioskSystem.showQuantityModal('${item.product.prod_code}', ${item.quantity}, ${item.current_stock}, '${item.product.name.replace(/'/g, "\\'")}')">
+                            ${item.quantity}
+                        </div>
+                        <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity + 1})" 
+                                ${item.quantity >= item.current_stock ? 'disabled' : ''}>+</button>
                     </div>
                     <div class="text-right">
                         <p class="font-bold text-sm text-red-600">₱${item.amount.toFixed(2)}</p>
@@ -1206,7 +1350,6 @@ class KioskSystem {
     }
 }
 
-// Initialize the kiosk system
 let kioskSystem;
 document.addEventListener('DOMContentLoaded', function() {
     kioskSystem = new KioskSystem();
@@ -1215,7 +1358,6 @@ document.addEventListener('DOMContentLoaded', function() {
         'color: #10b981; margin-left: 5px; font-weight: 600');
 });
 
-// Global error handling
 window.addEventListener('error', function(e) {
     console.error('%c✕%c JavaScript Error:', 
         'color: #ef4444; font-size: 16px; font-weight: bold',

@@ -529,58 +529,73 @@
 
     <!-- Receipt Display Modal -->
     @if($showReceiptModal && $receiptDetails)
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col">
-            <!-- Receipt Header -->
-            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg flex-shrink-0">
-                <div class="text-center">
-                    <h3 class="text-xl font-bold mb-2">Receipt Details</h3>
-                    <p class="text-sm text-red-100">Transaction Record</p>
-                </div>
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col">
+        <!-- Receipt Header -->
+        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg flex-shrink-0">
+            <div class="text-center">
+                <h3 class="text-xl font-bold mb-2">Receipt Details</h3>
+                <p class="text-sm text-red-100">Transaction Record</p>
             </div>
+        </div>
 
-            <!-- Receipt Content - Scrollable -->
-            <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
-                <div class="p-6">
-                    <!-- Store Info -->
-                    <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-800">
-                            {{ $receiptDetails->owner->store_name ?? $store_info->store_name ?? 'Store Name' }}
-                        </h2>
+        <!-- Receipt Content - Scrollable -->
+        <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
+            <div class="p-6">
+                <!-- Store Info -->
+                <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        {{ $receiptDetails->owner->store_name ?? $store_info->store_name ?? 'Store Name' }}
+                    </h2>
+                </div>
+
+                <!-- Transaction Details -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
+                        <span class="text-sm font-bold text-gray-900">#{{ str_pad($receiptDetails->receipt_id, 6, '0', STR_PAD_LEFT) }}</span>
                     </div>
-
-                    <!-- Transaction Details -->
-                    <div class="mb-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
-                            <span class="text-sm font-bold text-gray-900">#{{ str_pad($receiptDetails->receipt_id, 6, '0', STR_PAD_LEFT) }}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700">Date & Time:</span>
-                            <span class="text-sm text-gray-900">{{ $receiptDetails->receipt_date->format('m/d/Y, h:i:s A') }}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-sm font-medium text-gray-700">Cashier:</span>
-                            <span class="text-sm text-gray-900">
-                                {{ $receiptDetails->staff ? $receiptDetails->staff->firstname : ($receiptDetails->owner ? $receiptDetails->owner->firstname : 'N/A') }}
-                            </span>
-                        </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Date & Time:</span>
+                        <span class="text-sm text-gray-900">{{ $receiptDetails->receipt_date->format('m/d/Y, h:i:s A') }}</span>
                     </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-sm font-medium text-gray-700">Cashier:</span>
+                        <span class="text-sm text-gray-900">
+                            {{ $receiptDetails->staff ? $receiptDetails->staff->firstname : ($receiptDetails->owner ? $receiptDetails->owner->firstname : 'N/A') }}
+                        </span>
+                    </div>
+                </div>
 
-                    <!-- Items List -->
-                    <div class="mb-4">
-                        <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
-                        <div class="space-y-2">
-                            @foreach($receiptDetails->receiptItems as $item)
-                                <div class="flex justify-between items-start py-2 border-b border-gray-100">
+                <!-- Items List with Return Buttons -->
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
+                    <div class="space-y-2">
+                        @foreach($receiptDetails->receiptItems as $item)
+                            @php
+                                // Get already returned quantity
+                                $alreadyReturned = DB::table('returned_items')
+                                    ->where('item_id', $item->item_id)
+                                    ->sum('return_quantity');
+                                $canReturn = $item->item_quantity - $alreadyReturned;
+                            @endphp
+                            <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition">
+                                <div class="flex justify-between items-start">
                                     <div class="flex-1 pr-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $item->product->name }}</div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="text-sm font-medium text-gray-900">{{ $item->product->name }}</div>
+                                            @if($alreadyReturned > 0)
+                                                <span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                                                    {{ $alreadyReturned }} returned
+                                                </span>
+                                            @endif
+                                        </div>
                                         <div class="text-xs text-gray-500">
-                                            {{ $item->item_quantity }} × ₱{{ number_format($item->product->selling_price, 2) }}
+                                            Quantity: {{ $item->item_quantity }} × ₱{{ number_format($item->product->selling_price, 2) }}
                                         </div>
                                         @if(($item->item_discount_value ?? 0) > 0)
                                             <div class="text-xs text-orange-600">
-                                                Discount: 
+                                                Item Discount: 
                                                 @if(($item->item_discount_type ?? 'percent') == 'percent')
                                                     {{ $item->item_discount_value }}%
                                                 @else
@@ -593,89 +608,267 @@
                                                 VAT: ₱{{ number_format($item->vat_amount, 2) }}
                                             </div>
                                         @endif
+                                        
+                                        <!-- Return Button -->
+                                        @if($canReturn > 0)
+                                            <button wire:click="openReturnModal({{ $item->item_id }})"
+                                                class="mt-2 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded-full font-medium transition inline-flex items-center gap-1">
+                                                <span class="material-symbols-rounded text-sm">undo</span>
+                                                Return Item
+                                            </button>
+                                        @elseif($alreadyReturned > 0)
+                                            <div class="mt-2 text-xs text-gray-500 italic">
+                                                Fully returned
+                                            </div>
+                                        @endif
                                     </div>
-                                    <div class="text-sm font-bold text-gray-900">
-                                        ₱{{ number_format(($item->product->selling_price * $item->item_quantity), 2) }}
+                                    <div class="text-right">
+                                        <div class="text-sm font-bold text-gray-900">
+                                            ₱{{ number_format(($item->product->selling_price * $item->item_quantity), 2) }}
+                                        </div>
                                     </div>
                                 </div>
-                            @endforeach
-                        </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- Totals -->
+                <div class="border-t-2 border-gray-300 pt-4 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Subtotal:</span>
+                        <span class="text-sm font-bold text-gray-900">
+                            ₱{{ number_format($receiptDetails->computed_subtotal ?? 0, 2) }}
+                        </span>
                     </div>
 
-                    <!-- Totals -->
-                    <div class="border-t-2 border-gray-300 pt-4 space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">Subtotal:</span>
-                            <span class="text-sm font-bold text-gray-900">
-                                ₱{{ number_format($receiptDetails->computed_subtotal ?? 0, 2) }}
-                            </span>
-                        </div>
+                    @if(($receiptDetails->total_item_discounts ?? 0) > 0)
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-orange-600">Item Discounts:</span>
+                        <span class="text-sm font-bold text-orange-600">
+                            -₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
+                        </span>
+                    </div>
+                    @endif
 
-                        @if(($receiptDetails->total_item_discounts ?? 0) > 0)
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-orange-600">Item Discounts:</span>
-                            <span class="text-sm font-bold text-orange-600">
-                                -₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
-                            </span>
-                        </div>
-                        @endif
+                    @if(($receiptDetails->receipt_discount_amount ?? 0) > 0)
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-orange-600">Receipt Discount:</span>
+                        <span class="text-sm font-bold text-orange-600">
+                            @if(($receiptDetails->discount_type ?? '') == 'percent')
+                                -{{ $receiptDetails->discount_value ?? 0 }}% (₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }})
+                            @else
+                                -₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
+                            @endif
+                        </span>
+                    </div>
+                    @endif
 
-                        @if(($receiptDetails->receipt_discount_amount ?? 0) > 0)
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-orange-600">Receipt Discount:</span>
-                            <span class="text-sm font-bold text-orange-600">
-                                @if(($receiptDetails->discount_type ?? '') == 'percent')
-                                    -{{ $receiptDetails->discount_value ?? 0 }}% (₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }})
-                                @else
-                                    -₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
-                                @endif
-                            </span>
-                        </div>
-                        @endif
+                    @if(($receiptDetails->vat_amount ?? 0) > 0)
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-green-700">VAT:</span>
+                        <span class="text-sm font-bold text-green-600">
+                            +₱{{ number_format($receiptDetails->vat_amount, 2) }}
+                        </span>
+                    </div>
+                    @endif
 
-                        @if(($receiptDetails->vat_amount ?? 0) > 0)
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-green-700">VAT:</span>
-                            <span class="text-sm font-bold text-green-600">
-                                +₱{{ number_format($receiptDetails->vat_amount, 2) }}
-                            </span>
-                        </div>
-                        @endif
+                    <div class="flex justify-between items-center pt-2 border-t">
+                        <span class="text-lg font-bold text-gray-900">Total Amount:</span>
+                        <span class="text-lg font-bold text-red-600">
+                            ₱{{ number_format($receiptDetails->computed_total ?? 0, 2) }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
+                        <span class="text-sm text-gray-900">
+                            ₱{{ number_format($receiptDetails->amount_paid ?? 0, 2) }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Change:</span>
+                        <span class="text-sm font-bold text-green-600">
+                            ₱{{ number_format($receiptDetails->computed_change ?? 0, 2) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <div class="flex justify-between items-center pt-2 border-t">
-                            <span class="text-lg font-bold text-gray-900">Total Amount:</span>
-                            <span class="text-lg font-bold text-red-600">
-                                ₱{{ number_format($receiptDetails->computed_total ?? 0, 2) }}
-                            </span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
-                            <span class="text-sm text-gray-900">
-                                ₱{{ number_format($receiptDetails->amount_paid ?? 0, 2) }}
-                            </span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">Change:</span>
-                            <span class="text-sm font-bold text-green-600">
-                                ₱{{ number_format($receiptDetails->computed_change ?? 0, 2) }}
-                            </span>
-                        </div>
+        <!-- Action Button - Fixed at bottom -->
+        <div class="p-4 border-t bg-gray-50 flex gap-3 rounded-b-lg flex-shrink-0">
+            <button wire:click="closeReceiptModal" 
+                class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors">
+                <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+@endif
+
+<!-- Return Item Modal (NEW - Separate Modal) -->
+@if($showReturnModal && $selectedItemForReturn)
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg w-full max-w-lg mx-auto">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold">Return Item</h3>
+                <button wire:click="closeReturnModal" class="text-white hover:text-gray-200">
+                    <span class="material-symbols-rounded text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+            <!-- Product Info -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-rounded text-orange-600 text-3xl">inventory_2</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">{{ $selectedItemForReturn->product_name }}</h4>
+                        <p class="text-sm text-gray-600">
+                            Original Quantity: {{ $selectedItemForReturn->item_quantity }}
+                            @if($selectedItemForReturn->already_returned > 0)
+                                <span class="text-orange-600 ml-2">
+                                    ({{ $selectedItemForReturn->already_returned }} already returned)
+                                </span>
+                            @endif
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            Unit Price: ₱{{ number_format($selectedItemForReturn->selling_price, 2) }}
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Action Button - Fixed at bottom -->
-            <div class="p-4 border-t bg-gray-50 flex gap-3 rounded-b-lg flex-shrink-0">
-                <button wire:click="closeReceiptModal" 
-                    class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors">
-                    <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    Return
-                </button>
-            </div>
+            <!-- Return Form -->
+            <form wire:submit.prevent="submitReturn" class="space-y-4">
+                <!-- Return Quantity -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Return Quantity <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" 
+                        wire:model="returnQuantity"
+                        min="1" 
+                        max="{{ $maxReturnQuantity }}"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="Enter quantity to return">
+                    @error('returnQuantity')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">
+                        Maximum returnable: {{ $maxReturnQuantity }}
+                    </p>
+                </div>
+
+                <!-- Is Damaged? -->
+                <div>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" 
+                            wire:model.live="isDamaged"
+                            class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
+                        <span class="text-sm font-semibold text-gray-700">Item is damaged/defective</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1 ml-7">
+                        Check this if the item cannot be restocked
+                    </p>
+                </div>
+
+                <!-- Damage Type (shown only if isDamaged is true) -->
+                @if($isDamaged)
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <label class="block text-sm font-semibold text-red-700 mb-2">
+                        Damage Type <span class="text-red-500">*</span>
+                    </label>
+                    <select wire:model="damageType"
+                        class="w-full border border-red-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500">
+                        <option value="">Select damage type</option>
+                        <option value="Physical">Physical Damage</option>
+                        <option value="Expired">Expired</option>
+                        <option value="Defective">Defective/Malfunction</option>
+                        <option value="Contaminated">Contaminated</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    @error('damageType')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                @endif
+
+                <!-- Return Reason -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Return Reason <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <button type="button"
+                            wire:click="$set('returnReason', 'Wrong product ordered')"
+                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                            Wrong Product
+                        </button>
+                        <button type="button"
+                            wire:click="$set('returnReason', 'Product is expired.')"
+                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                            Expired
+                        </button>
+                        <button type="button"
+                            wire:click="$set('returnReason', 'Product defective/damaged')"
+                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                            Defective
+                        </button>
+                        <button type="button"
+                            wire:click="$set('returnReason', 'Duplicate purchase')"
+                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                            Duplicate
+                        </button>
+                    </div>
+                    <textarea 
+                        wire:model="returnReason"
+                        rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                        placeholder="Describe the reason for return..."></textarea>
+                    @error('returnReason')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Refund Calculation -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Return Subtotal:</span>
+                        <span class="text-lg font-bold text-blue-600">
+                            ₱{{ number_format($selectedItemForReturn->selling_price * $returnQuantity, 2) }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-600">
+                        <span class="material-symbols-rounded text-sm align-middle">info</span>
+                        This amount should be refunded to the customer
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="button"
+                        wire:click="closeReturnModal"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition">
+                        <span class="material-symbols-rounded text-sm align-middle mr-1">check_circle</span>
+                        Process Return
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-    @endif
+</div>
+@endif
 
 </div>

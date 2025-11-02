@@ -615,10 +615,171 @@ class ReportSalesAndPerformance extends Component
         return Response::stream($callback, 200, $headers);
     }
 
+    // Add to class properties RETURN MODAL
+public $showReturnModal = false;
+public $selectedItemForReturn = null;
+public $returnQuantity = 1;
+public $returnReason = '';
+public $isDamaged = false;
+public $damageType = '';
+public $maxReturnQuantity = 0;
 
+// Add these methods
 
+public function openReturnModal($itemId)
+{
+    try {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+        
+        // Get item details including already returned quantity
+        $item = DB::selectOne("
+            SELECT 
+                ri.*,
+                p.name as product_name,
+                p.selling_price,
+                COALESCE(SUM(ret.return_quantity), 0) as already_returned
+            FROM receipt_item ri
+            JOIN products p ON ri.prod_code = p.prod_code
+            JOIN receipt r ON ri.receipt_id = r.receipt_id
+            LEFT JOIN returned_items ret ON ret.item_id = ri.item_id
+            WHERE ri.item_id = ?
+            AND r.owner_id = ?
+            GROUP BY ri.item_id, ri.item_quantity, ri.prod_code, ri.receipt_id, 
+                     ri.item_discount_type, ri.item_discount_value, ri.vat_amount,
+                     p.name, p.selling_price
+        ", [$itemId, $owner_id]);
 
+        if (!$item) {
+            session()->flash('error', 'Item not found.');
+            return;
+        }
 
+        $this->selectedItemForReturn = $item;
+        $this->maxReturnQuantity = $item->item_quantity - $item->already_returned;
+        
+        if ($this->maxReturnQuantity <= 0) {
+            session()->flash('error', 'This item has already been fully returned.');
+            return;
+        }
+        
+        $this->returnQuantity = min(1, $this->maxReturnQuantity);
+        $this->returnReason = '';
+        $this->isDamaged = false;
+        $this->damageType = '';
+        $this->showReturnModal = true;
+        
+    } catch (\Exception $e) {
+        session()->flash('error', 'Error loading item: ' . $e->getMessage());
+    }
+}
+
+public function closeReturnModal()
+{
+    $this->showReturnModal = false;
+    $this->selectedItemForReturn = null;
+    $this->returnQuantity = 1;
+    $this->returnReason = '';
+    $this->isDamaged = false;
+    $this->damageType = '';
+    $this->maxReturnQuantity = 0;
+}
+
+public function submitReturn()
+{
+    $this->validate([
+        'returnQuantity' => 'required|integer|min:1|max:' . $this->maxReturnQuantity,
+        'returnReason' => 'required|string|min:3|max:255',
+        'isDamaged' => 'required|boolean',
+        'damageType' => 'required_if:isDamaged,true|nullable|string|max:20'
+    ], [
+        'returnQuantity.required' => 'Please enter a return quantity.',
+        'returnQuantity.max' => 'Return quantity cannot exceed ' . $this->maxReturnQuantity,
+        'returnReason.required' => 'Please provide a reason for the return.',
+        'returnReason.min' => 'Reason must be at least 3 characters.',
+        'damageType.required_if' => 'Please select the damage type.'
+    ]);
+
+    try {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+        $staff_id = null;
+        
+        if (Auth::guard('staff')->check()) {
+            $staff_id = Auth::guard('staff')->user()->staff_id;
+        }
+
+        DB::beginTransaction();
+
+        // Create return record
+        $returnId = DB::table('returned_items')->insertGetId([
+            'item_id' => $this->selectedItemForReturn->item_id,
+            'return_quantity' => $this->returnQuantity,
+            'return_reason' => $this->returnReason,
+            'return_date' => now(),
+            'owner_id' => $owner_id,
+            'staff_id' => $staff_id
+        ]);
+
+        if ($this->isDamaged) {
+            // Record in damaged_items table
+            DB::table('damaged_items')->insert([
+                'prod_code' => $this->selectedItemForReturn->prod_code,
+                'damaged_quantity' => $this->returnQuantity,
+                'damaged_date' => now(),
+                'damaged_type' => $this->damageType,
+                'damaged_reason' => $this->returnReason,
+                'return_id' => $returnId,
+                'owner_id' => $owner_id,
+                'staff_id' => $staff_id
+            ]);
+
+            // DECREASE inventory for damaged items (FIFO - remove from oldest stock first)
+            $this->decrementInventoryStock(
+                $this->selectedItemForReturn->prod_code, 
+                $this->returnQuantity, 
+                $owner_id
+            );
+        } else {
+            // Return to inventory for non-damaged items (add back to newest inventory batch)
+            $latestInventory = DB::table('inventory')
+                ->where('prod_code', $this->selectedItemForReturn->prod_code)
+                ->where('owner_id', $owner_id)
+                ->orderBy('date_added', 'desc')
+                ->orderBy('inven_code', 'desc')
+                ->first();
+
+            if ($latestInventory) {
+                DB::table('inventory')
+                    ->where('inven_code', $latestInventory->inven_code)
+                    ->increment('stock', $this->returnQuantity);
+            } else {
+                // Get product details for category_id
+                $product = DB::table('products')
+                    ->where('prod_code', $this->selectedItemForReturn->prod_code)
+                    ->first();
+
+                DB::table('inventory')->insert([
+                    'prod_code' => $this->selectedItemForReturn->prod_code,
+                    'stock' => $this->returnQuantity,
+                    'date_added' => now(),
+                    'owner_id' => $owner_id,
+                    'category_id' => $product->category_id
+                ]);
+            }
+        }
+
+        DB::commit();
+
+        session()->flash('success', 'Return processed successfully. ' . 
+            ($this->isDamaged ? 'Item recorded as damaged.' : 'Stock updated.'));
+        
+        $this->closeReturnModal();
+        $this->viewReceipt($this->selectedReceipt); // Refresh receipt details
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        session()->flash('error', 'Error processing return: ' . $e->getMessage());
+    }
+}
 
     public function sortBy($field) {
         if ($this->sortField === $field) {
@@ -747,9 +908,6 @@ class ReportSalesAndPerformance extends Component
 
         $this->perf = $perf->values();
     }
-
-
-
 
     public function pollAll() {
         $this->salesByCategory();
