@@ -40,30 +40,48 @@ class InventoryOwnerController extends Controller
                 MIN(u.unit)          AS unit,
                 MIN(c.category)      AS category,
                 p.prod_status,
-                COALESCE(SUM(i.stock), 0) AS total_stock_in,
+                -- Stock in Inventory (already reduced by sales)
+                COALESCE(SUM(i.stock), 0) AS inventory_stock,
+                -- Total Stock Out from Sales
                 COALESCE((
                     SELECT SUM(ri.item_quantity) 
                     FROM receipt_item ri 
                     JOIN receipt r ON ri.receipt_id = r.receipt_id 
                     WHERE ri.prod_code = p.prod_code
                 ), 0) AS total_stock_out_sales,
+                -- Total Damaged Items (prevent duplicates by grouping by inven_code)
                 COALESCE((
-                    SELECT SUM(damaged_quantity) 
-                    FROM damaged_items 
-                    WHERE prod_code = p.prod_code
+                    SELECT SUM(di.damaged_quantity)
+                    FROM damaged_items di
+                    WHERE di.prod_code = p.prod_code
+                    AND di.damaged_id IN (
+                        SELECT MIN(damaged_id)
+                        FROM damaged_items
+                        WHERE prod_code = p.prod_code
+                        GROUP BY inven_code
+                    )
                 ), 0) AS total_stock_out_damaged,
+                -- Current Stock: Inventory Stock - Damaged Items
                 (COALESCE(SUM(i.stock), 0) - 
+                COALESCE((
+                    SELECT SUM(di.damaged_quantity)
+                    FROM damaged_items di
+                    WHERE di.prod_code = p.prod_code
+                    AND di.damaged_id IN (
+                        SELECT MIN(damaged_id)
+                        FROM damaged_items
+                        WHERE prod_code = p.prod_code
+                        GROUP BY inven_code
+                    )
+                ), 0)) AS current_stock,
+                -- Total Stock In (Original): Current Stock + Sales + Damaged
+                (COALESCE(SUM(i.stock), 0) + 
                 COALESCE((
                     SELECT SUM(ri.item_quantity) 
                     FROM receipt_item ri 
                     JOIN receipt r ON ri.receipt_id = r.receipt_id 
                     WHERE ri.prod_code = p.prod_code
-                ), 0) - 
-                COALESCE((
-                    SELECT SUM(damaged_quantity) 
-                    FROM damaged_items 
-                    WHERE prod_code = p.prod_code
-                ), 0)) AS total_stock
+                ), 0)) AS total_stock_in
             FROM products p
             JOIN units u       ON p.unit_id = u.unit_id
             JOIN categories c  ON p.category_id = c.category_id
@@ -140,16 +158,55 @@ public function showProductDetails($prodCode)
         abort(404, 'Product not found');
     }
 
-    // Stock-in History (from inventory table) - Only batches with quantity > 0
+    // Stock-in History (from inventory table)
     $stockInHistory = DB::table('inventory')
         ->where('prod_code', $prodCode)
-        ->where('stock', '>', 0)
         ->whereNotNull('batch_number')
         ->orderBy('date_added', 'desc')
         ->orderBy('batch_number', 'desc')
         ->get();
 
-    // Stock-out from Sales (from receipt_item table)
+    // Get sales data per batch to calculate original quantities
+    $salesPerBatch = DB::table('receipt_item as ri')
+        ->join('inventory as i', 'ri.inven_code', '=', 'i.inven_code')
+        ->where('ri.prod_code', $prodCode)
+        ->whereNotNull('i.batch_number')
+        ->select('i.batch_number', DB::raw('SUM(ri.item_quantity) as total_sold'))
+        ->groupBy('i.batch_number')
+        ->pluck('total_sold', 'batch_number');
+
+    // Get damaged items per batch
+    $damagedPerBatch = DB::table('damaged_items as di')
+        ->join('inventory as i', 'di.inven_code', '=', 'i.inven_code')
+        ->where('di.prod_code', $prodCode)
+        ->whereNotNull('i.batch_number')
+        ->whereIn('di.damaged_id', function($query) use ($prodCode) {
+            $query->select(DB::raw('MIN(damaged_id)'))
+                ->from('damaged_items')
+                ->where('prod_code', $prodCode)
+                ->groupBy('inven_code');
+        })
+        ->select('i.batch_number', DB::raw('SUM(di.damaged_quantity) as total_damaged'))
+        ->groupBy('i.batch_number')
+        ->pluck('total_damaged', 'batch_number');
+
+    // Batch grouping for stock-in with original quantities calculated
+    $batchGroups = $stockInHistory->groupBy('batch_number')->map(function($batches, $batchNumber) use ($salesPerBatch, $damagedPerBatch) {
+        $currentStock = $batches->sum('stock');
+        $soldFromBatch = $salesPerBatch->get($batchNumber, 0);
+        $damagedFromBatch = $damagedPerBatch->get($batchNumber, 0);
+        
+        // Calculate original quantity: current + sold + damaged
+        $originalQuantity = $currentStock + $soldFromBatch + $damagedFromBatch;
+        
+        // Add original_quantity to each batch in the group
+        return $batches->map(function($batch) use ($originalQuantity) {
+            $batch->original_quantity = $originalQuantity;
+            return $batch;
+        });
+    });
+
+    // Stock-out from Sales
     $stockOutSalesHistory = DB::table('receipt_item as ri')
         ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
         ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
@@ -170,6 +227,8 @@ public function showProductDetails($prodCode)
         ->get();
 
     // Stock-out from Damaged/Expired Items
+    // FIXED: Prevent duplicate counting by grouping by inven_code
+    // Take the first (oldest) damaged record per inven_code to avoid counting the same item twice
     $stockOutDamagedHistory = DB::table('damaged_items as di')
         ->leftJoin('staff as s', 'di.staff_id', '=', 's.staff_id')
         ->leftJoin('owners as o', 'di.owner_id', '=', 'o.owner_id')
@@ -178,13 +237,48 @@ public function showProductDetails($prodCode)
             DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as reported_by')
         )
         ->where('di.prod_code', $prodCode)
+        ->whereIn('di.damaged_id', function($query) use ($prodCode) {
+            // Get only the first damaged record for each unique inven_code
+            // This prevents counting the same inventory item multiple times
+            $query->select(DB::raw('MIN(damaged_id)'))
+                ->from('damaged_items')
+                ->where('prod_code', $prodCode)
+                ->groupBy('inven_code');
+        })
         ->orderBy('di.damaged_date', 'desc')
         ->get();
 
-    // Batch Stock-out History - Track inventory reductions per batch
+    // FIXED: Calculate totals correctly
+    // Step 1: Get current remaining stock from inventory
+    $currentStockInInventory = $stockInHistory->sum('stock');
+    
+    // Step 2: Get total sold quantity
+    $totalStockOutSold = $stockOutSalesHistory->sum('quantity_sold');
+    
+    // Step 3: Get total damaged/expired quantity
+    $totalStockOutDamaged = $stockOutDamagedHistory->sum('damaged_quantity');
+    
+    // Step 4: Calculate total stock out
+    $totalStockOut = $totalStockOutSold + $totalStockOutDamaged;
+    
+    // Step 5: Calculate TOTAL STOCK (Original stock that was added)
+    // Total Stock = Current Stock in Inventory + All items that went out (sold + damaged)
+    $totalStockIn = $currentStockInInventory + $totalStockOut;
+    
+    // Step 6: Current/Remaining Stock is what's left in inventory
+    $currentStock = $currentStockInInventory;
+    
+    // Revenue and other calculations
+    $totalRevenue = $stockOutSalesHistory->sum('total_amount');
+    $turnoverRate = $totalStockIn > 0 ? ($totalStockOutSold / $totalStockIn) * 100 : 0;
+
+    // Count expired and damaged items
+    $totalExpired = $stockOutDamagedHistory->where('damaged_reason', 'Expired')->sum('damaged_quantity');
+    $totalDamaged = $stockOutDamagedHistory->where('damaged_reason', '!=', 'Expired')->sum('damaged_quantity');
+
+    // Batch Stock-out History
     $manualBatchStockOut = collect();
 
-    // Get all inventory changes for this product, ordered by batch and date
     $inventoryChanges = DB::table('inventory')
         ->where('prod_code', $prodCode)
         ->whereNotNull('batch_number')
@@ -192,18 +286,14 @@ public function showProductDetails($prodCode)
         ->orderBy('last_updated', 'asc')
         ->get();
 
-    // Group by batch number to track each batch separately
     $batches = $inventoryChanges->groupBy('batch_number');
 
     foreach ($batches as $batchNumber => $batchRecords) {
-        // Sort batch records by date
         $sortedRecords = $batchRecords->sortBy('last_updated');
-        
         $previousStock = null;
         
         foreach ($sortedRecords as $record) {
             if ($previousStock !== null && $record->stock < $previousStock) {
-                // Stock decreased - this is a stock-out event
                 $quantityOut = $previousStock - $record->stock;
                 
                 $manualBatchStockOut->push((object)[
@@ -219,9 +309,7 @@ public function showProductDetails($prodCode)
         }
     }
 
-    // Add damaged items with batch number tracing
     foreach ($stockOutDamagedHistory as $damaged) {
-        // Find which batch was active when the damage occurred
         $batchForDamage = DB::table('inventory')
             ->where('prod_code', $prodCode)
             ->whereNotNull('batch_number')
@@ -241,36 +329,11 @@ public function showProductDetails($prodCode)
             'quantity_out' => $damaged->damaged_quantity,
             'type' => 'damaged',
             'reference' => 'DAMAGED-' . $damaged->damaged_id,
-            'sold_by' => $damaged->reported_by // Use the reported_by from the join
+            'sold_by' => $damaged->reported_by
         ]);
     }
 
-    // Sort all stock-out events by date
     $manualBatchStockOut = $manualBatchStockOut->sortByDesc('date')->values();
-
-    // Batch grouping for stock-in
-    $batchGroups = $stockInHistory->groupBy('batch_number');
-
-    // Summary calculations
-    $totalStockIn = $stockInHistory->sum('stock');
-    $totalStockOutSold = $stockOutSalesHistory->sum('quantity_sold');
-    $totalStockOutDamaged = $stockOutDamagedHistory->sum('damaged_quantity');
-    $totalStockOut = $totalStockOutSold + $totalStockOutDamaged;
-    $currentStock = $totalStockIn - $totalStockOut;
-    $totalRevenue = $stockOutSalesHistory->sum('total_amount');
-    $turnoverRate = $totalStockIn > 0 ? ($totalStockOutSold / $totalStockIn) * 100 : 0;
-
-        // Count expired items (damaged_reason = 'Expired')
-    $totalExpired = DB::table('damaged_items')
-        ->where('prod_code', $prodCode)
-        ->where('damaged_reason', 'Expired')
-        ->sum('damaged_quantity');
-
-    // Count damaged items (all except 'Expired')
-    $totalDamaged = DB::table('damaged_items')
-        ->where('prod_code', $prodCode)
-        ->where('damaged_reason', '!=', 'Expired')
-        ->sum('damaged_quantity');
 
     return view('inventory-owner-product-info', compact(
         'product',
@@ -550,7 +613,7 @@ public function update(Request $request, $prodCode)
 
 
 
-    public function registerProduct(Request $request)
+public function registerProduct(Request $request)
 {
     $ownerId = session('owner_id');
 
@@ -570,8 +633,55 @@ public function update(Request $request, $prodCode)
         'batch_number' => 'nullable|string|max:50'
     ]);
 
-    // Handle category
+    // ✅ NEW: Check for existing/similar product names
+    $existingProducts = DB::table('products')
+        ->where('owner_id', $ownerId)
+        ->get();
+    
+    $productMatch = $this->findProductNameMatch($validated['name'], $existingProducts);
+    
+    if ($productMatch) {
+        $message = $productMatch['isExact'] 
+            ? 'Product name already exists: ' . $productMatch['name']
+            : 'Similar product name already exists: ' . $productMatch['name'];
+            
+        return response()->json([
+            'success' => false,
+            'message' => $message
+        ], 422);
+    }
+
+    // ✅ Combined validation approach for categories
     if ($validated['category_id'] === 'other' && !empty($validated['custom_category'])) {
+        $existingCategories = DB::table('categories')
+            ->where('owner_id', $ownerId)
+            ->get();
+        
+        // Check 1: Exact case-insensitive match
+        $exactMatch = DB::table('categories')
+            ->where('owner_id', $ownerId)
+            ->whereRaw('LOWER(category) = ?', [strtolower($validated['custom_category'])])
+            ->first();
+        
+        if ($exactMatch) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category already exists: ' . $exactMatch->category
+            ], 422);
+        }
+        
+        // Check 2: Semantic similarity
+        $normalizedInput = $this->normalizeName($validated['custom_category']);
+        $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
+
+        if ($semanticMatch) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Similar category already exists: ' . $semanticMatch
+            ], 422);
+        }
+
+        // Both checks passed - create the new category
         $categoryId = DB::table('categories')->insertGetId([
             'category' => $validated['custom_category'],
             'owner_id' => $ownerId,
@@ -580,8 +690,28 @@ public function update(Request $request, $prodCode)
         $categoryId = $validated['category_id'];
     }
 
-    // Handle unit
+    //Handle unit - Check for duplicates (with parenthesis awareness)
     if ($validated['unit_id'] === 'other' && !empty($validated['custom_unit'])) {
+        // Get all existing units for this owner
+        $existingUnits = DB::table('units')
+            ->where('owner_id', $ownerId)
+            ->get();
+        
+        // Check for unit match (now returns array or null)
+        $unitMatchResult = $this->findUnitMatch($validated['custom_unit'], $existingUnits);
+
+        if ($unitMatchResult) {
+            $message = $unitMatchResult['isExact'] 
+                ? 'Unit already exists: ' . $unitMatchResult['unit']
+                : 'Similar unit already exists: ' . $unitMatchResult['unit'];
+                
+            return response()->json([
+                'success' => false,
+                'message' => $message
+            ], 422);
+        }
+
+        // If no match found, create the new unit
         $unitId = DB::table('units')->insertGetId([
             'unit' => $validated['custom_unit'],
             'owner_id' => $ownerId,
@@ -597,7 +727,6 @@ public function update(Request $request, $prodCode)
         // Store relative path to your default image in public/assets
         $photoPath = 'assets/no-product-image.png';
     }
-
 
     // Check if product exists
     $product = DB::table('products')
@@ -624,17 +753,6 @@ public function update(Request $request, $prodCode)
         ]);
     }
 
-    // Insert inventory
-    DB::table('inventory')->insert([
-        'prod_code' => $prodCode,
-        'owner_id' => $ownerId,
-        'category_id' => $categoryId,
-        'date_added' => now(),
-        'expiration_date' => $validated['expiration_date'] ?? null,
-        'last_updated' => now(),
-        'batch_number' => $validated['batch_number'] ?? null,
-    ]);
-
     // Insert initial pricing record for the newly registered product
     DB::table('pricing_history')->insert([
         'prod_code'         => $prodCode,
@@ -646,19 +764,423 @@ public function update(Request $request, $prodCode)
         'effective_to'      => null, // current active price
     ]);
 
-        $ip = $request->ip();
-        $guard = 'owner';
-        $user = Auth::guard('owner')->user();
+    $ip = $request->ip();
+    $guard = 'owner';
+    $user = Auth::guard('owner')->user();
 
-        ActivityLogController::log(
-            'Registered new product: ' . $validated['name'],
-            $guard,
-            $user,
-            $ip
-        );
+    ActivityLogController::log(
+        'Registered new product: ' . $validated['name'],
+        $guard,
+        $user,
+        $ip
+    );
+    
     return response()->json(['success' => true]);
 }
 
+
+public function checkExistingName(Request $request)
+{
+    $ownerId = session('owner_id');
+    $type = $request->type; // 'category', 'unit', or 'product'
+    $name = $request->name;
+    
+    if (!$ownerId || !$type || !$name) {
+        return response()->json(['exists' => false]);
+    }
+    
+    // Normalize the input for semantic comparison
+    $normalizedInput = $this->normalizeName($name);
+    
+    if ($type === 'category') {
+        $existingCategories = DB::table('categories')
+            ->where('owner_id', $ownerId)
+            ->get();
+        
+        $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
+        
+        return response()->json([
+            'exists' => !is_null($semanticMatch),
+            'existingName' => $semanticMatch,
+            'isExactMatch' => $semanticMatch && strtolower($semanticMatch) === strtolower($name)
+        ]);
+        
+    } else if ($type === 'unit') {
+        $existingUnits = DB::table('units')
+            ->where('owner_id', $ownerId)
+            ->get();
+        
+        $unitMatchResult = $this->findUnitMatch($name, $existingUnits);
+        
+        if ($unitMatchResult) {
+            return response()->json([
+                'exists' => true,
+                'existingName' => $unitMatchResult['unit'],
+                'isExactMatch' => $unitMatchResult['isExact']
+            ]);
+        }
+        
+        return response()->json(['exists' => false]);
+        
+    } else if ($type === 'product') {
+        // ✅ NEW: Check for existing product names
+        $existingProducts = DB::table('products')
+            ->where('owner_id', $ownerId)
+            ->get();
+        
+        $productMatch = $this->findProductNameMatch($name, $existingProducts);
+        
+        if ($productMatch) {
+            return response()->json([
+                'exists' => true,
+                'existingName' => $productMatch['name'],
+                'isExactMatch' => $productMatch['isExact']
+            ]);
+        }
+        
+        return response()->json(['exists' => false]);
+    }
+    
+    return response()->json(['exists' => false]);
+}
+
+// NEW: Find product name matches with typo detection
+private function findProductNameMatch($input, $existingProducts)
+{
+    $inputLower = strtolower(trim($input));
+    $normalizedInput = $this->normalizeName($input);
+    $bestMatch = null;
+    
+    foreach ($existingProducts as $product) {
+        $existingName = $product->name;
+        $existingNameLower = strtolower($existingName);
+        $normalizedExisting = $this->normalizeName($existingName);
+        
+        // Exact match (case-insensitive)
+        if ($inputLower === $existingNameLower) {
+            return ['name' => $existingName, 'isExact' => true];
+        }
+        
+        // Exact normalized match
+        if ($normalizedInput === $normalizedExisting) {
+            return ['name' => $existingName, 'isExact' => true];
+        }
+        
+        // Check for semantic similarity (using existing function)
+        if (!$bestMatch) {
+            $semanticMatch = $this->checkProductSemantic($normalizedInput, $normalizedExisting, $existingName);
+            if ($semanticMatch) {
+                $bestMatch = ['name' => $existingName, 'isExact' => false];
+            }
+        }
+        
+        // Check for typo similarity
+        if (!$bestMatch && $this->isSimilarString($inputLower, $existingNameLower)) {
+            $bestMatch = ['name' => $existingName, 'isExact' => false];
+        }
+    }
+    
+    return $bestMatch;
+}
+
+// Helper function for product semantic matching
+private function checkProductSemantic($normalizedInput, $normalizedExisting, $originalName)
+{
+    $inputWords = explode(' ', $normalizedInput);
+    $existingWords = explode(' ', $normalizedExisting);
+    
+    // Skip empty arrays
+    if (empty($inputWords) || empty($existingWords)) {
+        return false;
+    }
+    
+    // Check if input is a substring of existing
+    if (strpos($normalizedExisting, $normalizedInput) === 0) {
+        return true;
+    }
+    
+    // Check if existing is a substring of input
+    if (strpos($normalizedInput, $normalizedExisting) === 0) {
+        return true;
+    }
+    
+    // Check word-by-word for close matches
+    foreach ($inputWords as $inputWord) {
+        if (strlen($inputWord) < 3) continue;
+        
+        foreach ($existingWords as $existingWord) {
+            if (strlen($existingWord) < 3) continue;
+            
+            // Check if words are very similar (allowing for typos)
+            $distance = levenshtein($inputWord, $existingWord);
+            $maxLength = max(strlen($inputWord), strlen($existingWord));
+            $similarity = 1 - ($distance / $maxLength);
+            
+            // If words are 75% similar, consider it a match
+            if ($similarity >= 0.75) {
+                return true;
+            }
+            
+            // Check if one word contains the other
+            if (strpos($existingWord, $inputWord) !== false || 
+                strpos($inputWord, $existingWord) !== false) {
+                return true;
+            }
+        }
+    }
+    
+    // Check for high word overlap
+    $commonWords = array_intersect($inputWords, $existingWords);
+    $totalWords = count(array_unique(array_merge($inputWords, $existingWords)));
+    
+    if (!empty($inputWords) && !empty($existingWords)) {
+        $similarity = count($commonWords) / $totalWords;
+        $containmentRatio1 = count($commonWords) / count($inputWords);
+        $containmentRatio2 = count($commonWords) / count($existingWords);
+        
+        // Match if 70% word overlap or 80% containment
+        if ($similarity >= 0.7 || $containmentRatio1 >= 0.8 || $containmentRatio2 >= 0.8) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+//Normalize name for semantic comparison
+private function normalizeName($name)
+{
+    $name = strtolower(trim($name));
+    
+    // Replace common variations
+    $replacements = [
+        ' and ' => ' & ',
+        ' + ' => ' & ',
+        ' with ' => ' & ',
+        ' plus ' => ' & ',
+        // Remove common filler words
+        'the ' => '',
+        ' of ' => ' ',
+        ' in ' => ' ',
+    ];
+    
+    $name = str_replace(array_keys($replacements), array_values($replacements), $name);
+    
+    // Remove extra spaces and special characters
+    $name = preg_replace('/[^\w&]/', ' ', $name);
+    $name = preg_replace('/\s+/', ' ', $name);
+    
+    return trim($name);
+}
+
+
+
+//Find semantic matches in existing categories (FIXED VERSION)
+private function findSemanticMatch($normalizedInput, $existingItems, $column)
+{
+    $inputWords = array_filter(explode(' ', $normalizedInput));
+    
+    // Skip if input is empty
+    if (empty($inputWords)) {
+        return null;
+    }
+    
+    foreach ($existingItems as $item) {
+        $existingName = $item->{$column};
+        $normalizedExisting = $this->normalizeName($existingName);
+        
+        // Check for exact normalized match
+        if ($normalizedInput === $normalizedExisting) {
+            return $existingName;
+        }
+        
+        // Check if input is a substring of existing category (must start at beginning)
+        if (strpos($normalizedExisting, $normalizedInput) === 0) {
+            return $existingName;
+        }
+        
+        // Check if existing is a substring of input (must start at beginning)
+        if (strpos($normalizedInput, $normalizedExisting) === 0) {
+            return $existingName;
+        }
+        
+        $existingWords = array_filter(explode(' ', $normalizedExisting));
+        
+        // ✅ Check if ALL input words have matches in existing category
+        $allInputWordsMatched = true;
+        $matchedCount = 0;
+        
+        foreach ($inputWords as $inputWord) {
+            if (strlen($inputWord) < 2) continue; // Skip very short words like "&"
+            
+            $foundMatch = false;
+            
+            // First check for exact word match
+            foreach ($existingWords as $existingWord) {
+                if ($inputWord === $existingWord) {
+                    $foundMatch = true;
+                    $matchedCount++;
+                    break;
+                }
+            }
+            
+            // If no exact match, check for typo similarity
+            if (!$foundMatch) {
+                foreach ($existingWords as $existingWord) {
+                    if (strlen($existingWord) < 3) continue;
+                    
+                    // Check if words are very similar (typo detection)
+                    $distance = levenshtein($inputWord, $existingWord);
+                    $maxLength = max(strlen($inputWord), strlen($existingWord));
+                    $similarity = 1 - ($distance / $maxLength);
+                    
+                    // If words are 80% similar AND at least 4 characters long
+                    if ($similarity >= 0.70 && strlen($inputWord) >= 4 && strlen($existingWord) >= 4) {
+                        $foundMatch = true;
+                        $matchedCount++;
+                        break;
+                    }
+                    
+                    // Check if one word contains the other (singular/plural)
+                    if (strlen($inputWord) >= 4 && strlen($existingWord) >= 4) {
+                        if (strpos($existingWord, $inputWord) !== false || 
+                            strpos($inputWord, $existingWord) !== false) {
+                            $foundMatch = true;
+                            $matchedCount++;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If this input word didn't match anything, category doesn't match
+            if (!$foundMatch) {
+                $allInputWordsMatched = false;
+                break;
+            }
+        }
+        
+        // ✅ Only return match if ALL input words were matched
+        if ($allInputWordsMatched && $matchedCount > 0 && count($inputWords) > 1) {
+            // Additional check: input should represent significant portion
+            $matchRatio = count($inputWords) / count($existingWords);
+            
+            // Only match if input represents at least 50% of the existing category
+            if ($matchRatio >= 0.5) {
+                return $existingName;
+            }
+        }
+        
+        // ✅ Special case: If input has only 1 word and it matches exactly
+        if (count($inputWords) === 1 && $matchedCount === 1) {
+            // Only match if the existing category also has 1 word (prevents "care" matching "Personal Care")
+            if (count($existingWords) === 1) {
+                return $existingName;
+            }
+        }
+    }
+    
+    return null;
+}
+
+//Find unit matches considering parenthesis notation AND similarity
+private function findUnitMatch($input, $existingUnits)
+{
+    $inputLower = strtolower(trim($input));
+    $bestMatch = null;
+    $isExactMatch = false;
+    
+    foreach ($existingUnits as $unit) {
+        $existingUnit = $unit->unit;
+        $existingUnitLower = strtolower($existingUnit);
+        
+        // Exact match (case-insensitive)
+        if ($inputLower === $existingUnitLower) {
+            return ['unit' => $existingUnit, 'isExact' => true];
+        }
+        
+        // Extract the main name and abbreviation from format "Name (abbr)"
+        if (preg_match('/^(.+?)\s*\((.+?)\)$/', $existingUnit, $matches)) {
+            $unitName = strtolower(trim($matches[1])); // e.g., "bottle"
+            $unitAbbr = strtolower(trim($matches[2])); // e.g., "btl"
+            
+            // Check if input matches the name part exactly
+            if ($inputLower === $unitName) {
+                return ['unit' => $existingUnit, 'isExact' => true];
+            }
+            
+            // Check if input matches the abbreviation part exactly
+            if ($inputLower === $unitAbbr) {
+                return ['unit' => $existingUnit, 'isExact' => true];
+            }
+            
+            //Check for similarity with the name part (e.g., "battle" vs "bottle")
+            if (!$bestMatch && $this->isSimilarString($inputLower, $unitName)) {
+                $bestMatch = ['unit' => $existingUnit, 'isExact' => false];
+            }
+            
+            //Check for similarity with the abbreviation (e.g., "bttle" vs "btl")
+            if (!$bestMatch && $this->isSimilarString($inputLower, $unitAbbr)) {
+                $bestMatch = ['unit' => $existingUnit, 'isExact' => false];
+            }
+            
+            // Check if input is trying to create "Name (abbr)" that already exists
+            if (preg_match('/^(.+?)\s*\((.+?)\)$/', $input, $inputMatches)) {
+                $inputName = strtolower(trim($inputMatches[1]));
+                $inputAbbr = strtolower(trim($inputMatches[2]));
+                
+                // Same name or same abbreviation
+                if ($inputName === $unitName || $inputAbbr === $unitAbbr) {
+                    return ['unit' => $existingUnit, 'isExact' => true];
+                }
+                
+                //Check for similarity in formatted units
+                if (!$bestMatch && ($this->isSimilarString($inputName, $unitName) || $this->isSimilarString($inputAbbr, $unitAbbr))) {
+                    $bestMatch = ['unit' => $existingUnit, 'isExact' => false];
+                }
+            }
+        } else {
+            // Existing unit doesn't have parenthesis format
+            // Check if user is trying to add parenthesis version
+            if (preg_match('/^(.+?)\s*\((.+?)\)$/', $input, $inputMatches)) {
+                $inputName = strtolower(trim($inputMatches[1]));
+                
+                if ($inputName === $existingUnitLower) {
+                    return ['unit' => $existingUnit, 'isExact' => true];
+                }
+                
+                //Check for similarity
+                if (!$bestMatch && $this->isSimilarString($inputName, $existingUnitLower)) {
+                    $bestMatch = ['unit' => $existingUnit, 'isExact' => false];
+                }
+            } else {
+                //Simple unit vs simple unit similarity check
+                if (!$bestMatch && $this->isSimilarString($inputLower, $existingUnitLower)) {
+                    $bestMatch = ['unit' => $existingUnit, 'isExact' => false];
+                }
+            }
+        }
+    }
+    
+    return $bestMatch;
+}
+
+//Helper function to check string similarity (for typos)
+private function isSimilarString($str1, $str2)
+{
+    // Skip very short strings
+    if (strlen($str1) < 3 || strlen($str2) < 3) {
+        return false;
+    }
+    
+    // Calculate Levenshtein distance
+    $distance = levenshtein($str1, $str2);
+    $maxLength = max(strlen($str1), strlen($str2));
+    $similarity = 1 - ($distance / $maxLength);
+    
+    // If strings are 70% similar or more, consider them similar
+    return $similarity >= 0.70;
+}
 
 public function addCategory(Request $request)
 {
@@ -669,17 +1191,40 @@ public function addCategory(Request $request)
         return response()->json(['success' => false, 'message' => 'Category name cannot be empty.']);
     }
 
-    // Check for duplicates
-    $exists = DB::table('categories')
+    //  Get all existing categories for semantic comparison
+    $existingCategories = DB::table('categories')
+        ->where('owner_id', $ownerId)
+        ->get();
+    
+    //  Check 1: Exact case-insensitive match
+    $exactMatch = DB::table('categories')
         ->where('owner_id', $ownerId)
         ->whereRaw('LOWER(category) = ?', [strtolower($categoryName)])
-        ->exists();
+        ->first();
+    
+    if ($exactMatch) {
+        return response()->json([
+            'success' => false, 
+            'message' => 'Category already exists: ' . $exactMatch->category,
+            'isExactMatch' => true,
+            'existingName' => $exactMatch->category
+        ]);
+    }
+    
+    //  Check 2: Semantic similarity (using the same functions from registerProduct)
+    $normalizedInput = $this->normalizeName($categoryName);
+    $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
 
-    if ($exists) {
-        return response()->json(['success' => false, 'message' => 'Category already exists.']);
+    if ($semanticMatch) {
+        return response()->json([
+            'success' => false, 
+            'message' => 'Similar category already exists: ' . $semanticMatch,
+            'isExactMatch' => false,
+            'existingName' => $semanticMatch
+        ]);
     }
 
-    // Insert new category (your table only has 3 columns)
+    //  Both checks passed - insert new category
     DB::table('categories')->insert([
         'category' => $categoryName,
         'owner_id' => $ownerId,
@@ -727,36 +1272,85 @@ public function getCategoryProducts($categoryId)
 
 
 
-// Return the next batch identifier for a product (e.g. BATCH-3)
 public function getLatestBatch($prod_code)
 {
     $ownerId = session('owner_id');
-
-    $lastBatch = DB::table('inventory')
+    
+    // MODIFIED: Get latest batch for specific product
+    $latestBatch = DB::table('inventory')
         ->where('prod_code', $prod_code)
         ->where('owner_id', $ownerId)
         ->orderBy('inven_code', 'desc')
         ->value('batch_number');
-
-    // Parse BATCH-# if present, else default to BATCH-0 then +1
-    if ($lastBatch && preg_match('/BATCH-(\d+)/', $lastBatch, $m)) {
-        $next = 'BATCH-' . (((int)$m[1]) + 1);
+    
+    // MODIFIED: Parse new format P{prodCode}-BATCH-{number}
+    if ($latestBatch && preg_match('/P\d+-BATCH-(\d+)/', $latestBatch, $matches)) {
+        $nextNumber = ((int)$matches[1]) + 1;
     } else {
-        $next = 'BATCH-1';
+        $nextNumber = 1; // First batch for this product
     }
-
-    return response()->json(['next_batch' => $next, 'last_batch' => $lastBatch]);
+    
+    // Return next batch in new format
+    $nextBatch = "P{$prod_code}-BATCH-{$nextNumber}";
+    
+    return response()->json(['next_batch' => $nextBatch]);
 }
+
 
 public function bulkRestock(Request $request)
 {
     $ownerId = session('owner_id');
     $items = $request->input('items', []);
-
+    
     if (empty($items)) {
         return response()->json(['success' => false, 'message' => 'No products provided for restocking.']);
     }
-
+    
+    // ✅ Validate expiration dates (must be at least 7 days from today)
+    $today = now()->startOfDay();
+    $minDate = now()->addDays(7)->startOfDay(); // 7 days from today
+    $invalidDates = [];
+    
+    foreach ($items as $index => $it) {
+        $expiration = $it['expiration_date'] ?? null;
+        
+        if ($expiration) {
+            $expirationDate = \Carbon\Carbon::parse($expiration)->startOfDay();
+            
+            // Calculate days difference
+            $daysDiff = $today->diffInDays($expirationDate, false); // false = can be negative
+            
+            // Check if expiration date is less than 7 days from today
+            if ($expirationDate->lt($minDate)) {
+                $prodCode = $it['prod_code'] ?? 'Unknown';
+                
+                // Get product name for better error message
+                $product = DB::table('products')
+                    ->where('prod_code', $prodCode)
+                    ->where('owner_id', $ownerId)
+                    ->first();
+                
+                $productName = $product ? $product->name : "Product #{$prodCode}";
+                
+                if ($daysDiff < 0) {
+                    $invalidDates[] = "{$productName} (Expiration: {$expiration} - date is in the past)";
+                } else {
+                    $invalidDates[] = "{$productName} (Expiration: {$expiration} - only {$daysDiff} day(s) away, needs 7 days minimum)";
+                }
+            }
+        }
+    }
+    
+    // ✅ If any invalid dates found, return error
+    if (!empty($invalidDates)) {
+        $message = 'Cannot restock: All products must have expiration dates at least 7 days from today.<br><br>' . implode('<br>', $invalidDates);
+        return response()->json([
+            'success' => false, 
+            'message' => $message,
+            'invalidDates' => $invalidDates
+        ], 422);
+    }
+    
     DB::beginTransaction();
     try {
         foreach ($items as $it) {
@@ -764,20 +1358,26 @@ public function bulkRestock(Request $request)
             $qty = (int) ($it['qty'] ?? 0);
             $expiration = $it['expiration_date'] ?? null;
             $categoryId = $it['category_id'] ?? null;
-
+            
             if (!$prodCode || $qty <= 0) continue;
-
-            // Always increment the batch per new restock entry
+            
+            // ✅ MODIFIED: Get latest batch for THIS specific product using new format
             $latestBatch = DB::table('inventory')
                 ->where('prod_code', $prodCode)
                 ->where('owner_id', $ownerId)
                 ->orderBy('inven_code', 'desc')
                 ->value('batch_number');
-
-            $nextBatchNumber = ($latestBatch && preg_match('/BATCH-(\d+)/', $latestBatch, $m))
-                ? 'BATCH-' . (((int)$m[1]) + 1)
-                : 'BATCH-1';
-
+            
+            // ✅ MODIFIED: Parse new format P{prodCode}-BATCH-{number}
+            if ($latestBatch && preg_match('/P\d+-BATCH-(\d+)/', $latestBatch, $m)) {
+                $nextNumber = ((int)$m[1]) + 1;
+            } else {
+                $nextNumber = 1; // First batch for this product
+            }
+            
+            // ✅ MODIFIED: Generate batch number in format P{prodCode}-BATCH-{number}
+            $nextBatchNumber = "P{$prodCode}-BATCH-{$nextNumber}";
+            
             DB::table('inventory')->insert([
                 'prod_code' => $prodCode,
                 'category_id' => $categoryId,
@@ -789,14 +1389,14 @@ public function bulkRestock(Request $request)
                 'last_updated' => now(),
             ]);
         }
-
+        
         DB::commit();
-
+        
         $ip = $request->ip();
         $guard = 'owner';
         $user = Auth::guard('owner')->user();
         ActivityLogController::log('Bulk Restock Products', $guard, $user, $ip);
-
+        
         return response()->json(['success' => true, 'message' => 'Restock saved successfully.']);
     } catch (\Exception $e) {
         DB::rollBack();

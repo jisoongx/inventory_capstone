@@ -200,6 +200,7 @@ Route::get('/inventory/damage-items', [InventoryOwnerController::class, 'showDam
 
 // Route to store the damage item
 Route::post('/inventory/damage', [InventoryOwnerController::class, 'store'])->name('damaged.store');
+Route::post('/check-existing-name', [InventoryOwnerController::class, 'checkExistingName']);
 
 
 

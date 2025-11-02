@@ -65,11 +65,11 @@
             <!-- Stock Summary Cards -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p class="text-xs text-blue-700 font-medium">Current Stock</p>
+                    <p class="text-xs text-blue-700 font-medium">Remaining Stock</p>
                     <p class="text-xl font-bold text-blue-900">{{ $currentStock }}</p>
                 </div>
                 <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <p class="text-xs text-green-700 font-medium">Total Stock In</p>
+                    <p class="text-xs text-green-700 font-medium">Total Stock</p>
                     <p class="text-xl font-bold text-green-900">{{ $totalStockIn }}</p>
                 </div>
                 <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
@@ -195,19 +195,22 @@
                         @forelse ($batchGroups as $batchNumber => $batches)
                             @php
                                 $firstBatch = $batches->first();
-                                $totalBatchQuantity = $batches->sum('stock');
+                                // FIXED: Use the calculated original_quantity instead of sum('stock')
+                                $totalBatchQuantity = $firstBatch->original_quantity;
                                 
-                                // FIXED: Use diffInDays() for whole numbers and ensure proper calculation
+                                // FIXED: Calculate days including both start and end dates
                                 if ($firstBatch->expiration_date) {
-                                    $expirationDate = \Carbon\Carbon::parse($firstBatch->expiration_date);
-                                    $now = \Carbon\Carbon::now();
+                                    $expirationDate = \Carbon\Carbon::parse($firstBatch->expiration_date)->startOfDay();
+                                    $now = \Carbon\Carbon::now()->startOfDay();
                                     
                                     if ($expirationDate->isPast()) {
-                                        // If expired, show days since expiration
-                                        $expiryDays = -$expirationDate->diffInDays($now);
+                                        // If expired, show negative days (days since expiration)
+                                        // Add 1 to include today in the count
+                                        $expiryDays = -($now->diffInDays($expirationDate) + 1);
                                     } else {
-                                        // If not expired, show days until expiration
-                                        $expiryDays = $now->diffInDays($expirationDate);
+                                        // If not expired, show positive days (days until expiration)
+                                        // Add 1 to include today in the count
+                                        $expiryDays = $now->diffInDays($expirationDate) + 1;
                                     }
                                 } else {
                                     $expiryDays = null;
@@ -228,15 +231,14 @@
                                 </td>
                                 <td class="px-4 py-3 border text-center text-sm">
                                     @if($expiryDays !== null)
-                                        @php
-                                            $roundedDays = (int)round($expiryDays);
-                                        @endphp
-                                        <span class="{{ $roundedDays <= 0 ? 'text-red-600 font-medium' : 'text-blue-600 font-medium' }}">
-                                            @if($roundedDays > 0)
-                                                {{ $roundedDays }} day{{ $roundedDays === 1 ? '' : 's' }} left
+                                        <span class="{{ $expiryDays <= 0 ? 'text-red-600 font-medium' : 'text-blue-600 font-medium' }}">
+                                            @if($expiryDays > 0)
+                                                {{ $expiryDays }} day{{ $expiryDays === 1 ? '' : 's' }} left
+                                            @elseif($expiryDays == 0)
+                                                Expires today
                                             @else
                                                 @php
-                                                    $daysAgo = abs($roundedDays);
+                                                    $daysAgo = abs($expiryDays);
                                                 @endphp
                                                 Expired {{ $daysAgo }} day{{ $daysAgo === 1 ? '' : 's' }} ago
                                             @endif
@@ -256,7 +258,6 @@
             </div>
         </div>
     </div>
-
     <!-- Stock-Out History Section -->
     <div id="stockOutSection" class="tab-content hidden">
         <div class="mb-6">
