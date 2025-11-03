@@ -28,6 +28,8 @@ class InventoryOwnerController extends Controller
         $category = $request->input('category');
         $status   = $request->input('status', 'active'); // default to active
 
+        DB::statement("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+
         $query = "
             SELECT
                 p.prod_code,
@@ -53,12 +55,14 @@ class InventoryOwnerController extends Controller
                 COALESCE((
                     SELECT SUM(di.damaged_quantity)
                     FROM damaged_items di
-                    WHERE di.prod_code = p.prod_code
+                    WHERE di.inven_code = i.inven_code
                     AND di.damaged_id IN (
                         SELECT MIN(damaged_id)
-                        FROM damaged_items
-                        WHERE prod_code = p.prod_code
-                        GROUP BY inven_code
+                        FROM damaged_items di2
+                        INNER JOIN inventory i2 ON di2.inven_code = i2.inven_code
+                        INNER JOIN products p2 ON i2.prod_code = p2.prod_code
+                        WHERE i2.prod_code = i.prod_code  -- Connect to main query
+                        GROUP BY di2.inven_code
                     )
                 ), 0) AS total_stock_out_damaged,
                 -- Current Stock: Just the sum of stock from inventory table
@@ -171,13 +175,15 @@ public function showProductDetails($prodCode)
     // Get damaged items per batch
     $damagedPerBatch = DB::table('damaged_items as di')
         ->join('inventory as i', 'di.inven_code', '=', 'i.inven_code')
-        ->where('di.prod_code', $prodCode)
+        ->join('products as p', 'i.prod_code', '=', 'p.prod_code') // Add this join
+        ->where('p.prod_code', $prodCode) // Use p.prod_code instead of di.prod_code
         ->whereNotNull('i.batch_number')
         ->whereIn('di.damaged_id', function($query) use ($prodCode) {
             $query->select(DB::raw('MIN(damaged_id)'))
-                ->from('damaged_items')
-                ->where('prod_code', $prodCode)
-                ->groupBy('inven_code');
+                ->from('damaged_items as di2')
+                ->join('inventory as i2', 'di2.inven_code', '=', 'i2.inven_code') // Join in subquery
+                ->where('i2.prod_code', $prodCode) // Use i2.prod_code
+                ->groupBy('di2.inven_code');
         })
         ->select('i.batch_number', DB::raw('SUM(di.damaged_quantity) as total_damaged'))
         ->groupBy('i.batch_number')
@@ -225,18 +231,19 @@ public function showProductDetails($prodCode)
     $stockOutDamagedHistory = DB::table('damaged_items as di')
         ->leftJoin('staff as s', 'di.staff_id', '=', 's.staff_id')
         ->leftJoin('owners as o', 'di.owner_id', '=', 'o.owner_id')
+        ->leftJoin('inventory as i', 'di.inven_code', '=', 'i.inven_code') // Add this join
         ->select(
             'di.*',
             DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as reported_by')
         )
-        ->where('di.prod_code', $prodCode)
+        ->where('i.prod_code', $prodCode) // Use i.prod_code instead of di.prod_code
         ->whereIn('di.damaged_id', function($query) use ($prodCode) {
             // Get only the first damaged record for each unique inven_code
-            // This prevents counting the same inventory item multiple times
             $query->select(DB::raw('MIN(damaged_id)'))
-                ->from('damaged_items')
-                ->where('prod_code', $prodCode)
-                ->groupBy('inven_code');
+                ->from('damaged_items as di2')
+                ->leftJoin('inventory as i2', 'di2.inven_code', '=', 'i2.inven_code') // Join in subquery
+                ->where('i2.prod_code', $prodCode) // Use i2.prod_code
+                ->groupBy('di2.inven_code');
         })
         ->orderBy('di.damaged_date', 'desc')
         ->get();
@@ -1553,58 +1560,58 @@ public function bulkRestock(Request $request)
     //     return view('damage-items', compact('damagedItems', 'products'));
     // }
 
-    public function showDamageItemsForm()
-    {
-        $ownerId = Auth::guard('owner')->id();
+    // public function showDamageItemsForm()
+    // {
+    //     $ownerId = Auth::guard('owner')->id();
 
-        $expiredInventories = DB::table('inventory')
-            ->where('owner_id', $ownerId)
-            ->where('stock', '>', 0)
-            ->where(function ($query) {
-                $query->whereDate('expiration_date', '<=', now())  
-                    ->orWhere('is_expired', 1);
-            })
-            ->get();
+    //     $expiredInventories = DB::table('inventory')
+    //         ->where('owner_id', $ownerId)
+    //         ->where('stock', '>', 0)
+    //         ->where(function ($query) {
+    //             $query->whereDate('expiration_date', '<=', now())  
+    //                 ->orWhere('is_expired', 1);
+    //         })
+    //         ->get();
 
-        foreach ($expiredInventories as $expired) {
+    //     foreach ($expiredInventories as $expired) {
 
-            $alreadyRecorded = DB::table('damaged_items')
-                ->where('inven_code', $expired->inven_code)
-                ->where('damaged_type', 'Expired')
-                ->exists();
+    //         $alreadyRecorded = DB::table('damaged_items')
+    //             ->where('inven_code', $expired->inven_code)
+    //             ->where('damaged_type', 'Expired')
+    //             ->exists();
 
-            if (!$alreadyRecorded) {
-                DB::table('damaged_items')->insert([
-                    'prod_code' => $expired->prod_code,
-                    'damaged_quantity' => $expired->stock,
-                    'damaged_type' => 'Expired',
-                    'damaged_reason' => 'Product has reached its expiration date.',
-                    'owner_id' => $ownerId,
-                    'damaged_date' => now(),
-                    'inven_code' => $expired->inven_code
+    //         if (!$alreadyRecorded) {
+    //             DB::table('damaged_items')->insert([
+    //                 'prod_code' => $expired->prod_code,
+    //                 'damaged_quantity' => $expired->stock,
+    //                 'damaged_type' => 'Expired',
+    //                 'damaged_reason' => 'Product has reached its expiration date.',
+    //                 'owner_id' => $ownerId,
+    //                 'damaged_date' => now(),
+    //                 'inven_code' => $expired->inven_code
                    
-                ]);
+    //             ]);
 
-                DB::table('inventory')
-                    ->where('inven_code', $expired->inven_code)
-                    ->update(['is_expired' => 1, 'stock' => 0]);
-            }
-        }
+    //             DB::table('inventory')
+    //                 ->where('inven_code', $expired->inven_code)
+    //                 ->update(['is_expired' => 1, 'stock' => 0]);
+    //         }
+    //     }
 
-        $products = DB::table('products')
-            ->where('owner_id', $ownerId)
-            ->get();
+    //     $products = DB::table('products')
+    //         ->where('owner_id', $ownerId)
+    //         ->get();
 
-        $damagedItems = DB::table('damaged_items')
-            ->join('products', 'damaged_items.prod_code', '=', 'products.prod_code')
-            ->join('inventory', 'damaged_items.inven_code', '=', 'inventory.inven_code')
-            ->where('damaged_items.owner_id', $ownerId)
-            ->select('damaged_items.*', 'products.name as product_name', 'inventory.batch_number')
-            ->orderBy('damaged_items.damaged_date', 'desc')
-            ->get();
+    //     $damagedItems = DB::table('damaged_items')
+    //         ->join('products', 'damaged_items.prod_code', '=', 'products.prod_code')
+    //         ->join('inventory', 'damaged_items.inven_code', '=', 'inventory.inven_code')
+    //         ->where('damaged_items.owner_id', $ownerId)
+    //         ->select('damaged_items.*', 'products.name as product_name', 'inventory.batch_number')
+    //         ->orderBy('damaged_items.damaged_date', 'desc')
+    //         ->get();
 
-        return view('damage-items', compact('damagedItems', 'products'));
-    }
+    //     return view('damage-items', compact('damagedItems', 'products'));
+    // }
 }
 
     

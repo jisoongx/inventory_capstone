@@ -81,11 +81,3 @@ class CheckExpiration extends Command
 
 }
 
-
-                // $exists = DB::table('notification')
-                //     ->where('notif_target', 'owner')
-                //     ->where('super_id', 2)
-                //     ->where('notif_type', 'specific')
-                //     ->where('notif_date', $notifDate)
-                //     ->where('owner_id', $owner->owner_id)
-                //     ->exists();

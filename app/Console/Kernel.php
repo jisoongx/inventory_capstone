@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
         })->everyMinute();
 
         $schedule->command('check:expiration')->daily();
+        $schedule->command('check:expiredProduct')->everyMinute();
     }
 
     protected function commands(): void

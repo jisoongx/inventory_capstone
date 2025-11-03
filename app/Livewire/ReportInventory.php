@@ -11,6 +11,7 @@ class ReportInventory extends Component
     public $expiredProd;
     public $selectedCategory;
     public $selectedRange = 60; 
+    public $selectedLossType = null; 
 
     public $category;
     public $years;
@@ -210,10 +211,21 @@ class ReportInventory extends Component
 
 
 
-    public function showAll() { 
-        $this->selectedMonths = null;
-        $this->selectedYears = null;
-        $this->loss();
+    public function showAll()
+    {
+        if (is_null($this->selectedMonths) && is_null($this->selectedYears)) {
+            
+            $this->selectedMonths = now()->format('m');
+            $this->selectedYears = now()->format('Y');
+            $this->selectedLossType = null;
+        } else {
+            
+            $this->selectedMonths = null;
+            $this->selectedYears = null;
+            $this->selectedLossType = null;
+        }
+
+        $this->loss(); 
     }
 
     public function updatedSelectedMonths() {
@@ -223,6 +235,11 @@ class ReportInventory extends Component
     public function updatedSelectedYears() {
         $this->loss();
     }
+
+    public function updatedSelectedLossType() {
+        $this->loss();
+    }
+
 
     public function loss() {
         $owner_id = Auth::guard('owner')->user()->owner_id;
@@ -238,6 +255,11 @@ class ReportInventory extends Component
         if (!is_null($this->selectedYears)) {
             $whereClause .= " AND YEAR(di.damaged_date) = ?";
             $bindings[] = $this->selectedYears;
+        }
+
+        if (!empty($this->selectedLossType)) {
+            $whereClause .= " AND di.damaged_type = ?";
+            $bindings[] = $this->selectedLossType;
         }
 
         $this->lossRep = collect(DB::select("
@@ -258,7 +280,8 @@ class ReportInventory extends Component
                 END AS reported_by,
                 (SELECT i.batch_number FROM inventory i WHERE i.inven_code = di.inven_code) AS batch_num
             FROM damaged_items di
-            JOIN products p ON p.prod_code = di.prod_code
+            join inventory i on i.inven_code = di.inven_code
+            JOIN products p ON p.prod_code = i.prod_code
             JOIN categories c ON c.category_id = p.category_id
             
             LEFT JOIN owners o ON o.owner_id = di.owner_id

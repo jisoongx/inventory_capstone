@@ -224,12 +224,6 @@
         <div x-show="tab === 'loss'">
             <div class="flex items-center mb-4 space-x-2 relative justify-between">
                 <div class="space-x-1">
-                    <button wire:click="showAll" class="border rounded px-3 py-2 text-xs transition-colors
-                            {{ is_null($selectedMonths) && is_null($selectedYears) 
-                                ? 'bg-red-600 text-white border-red-600' 
-                                : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">
-                        Show All 
-                    </button>
                     <select wire:model.live="selectedMonths" class="border border-gray-300 rounded px-3 py-2 text-xs">
                         @foreach ($monthNames as $index => $name)
                             <option value="{{ $index + 1 }}">{{ $name }}</option>
@@ -243,7 +237,38 @@
                             <option value="{{ now()->year }}">{{ now()->year }}</option>
                         @endforelse
                     </select>
-                </div>                
+                </div>    
+                <div class="space-x-1">
+                    <button wire:click="showAll" class="border rounded px-3 py-2 text-xs transition-colors
+                            {{ is_null($selectedMonths) && is_null($selectedYears) 
+                                ? 'bg-red-600 text-white border-red-600' 
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">
+                        Show All 
+                    </button>
+
+                    <select wire:model.live="selectedLossType" class="border border-gray-300 rounded px-3 py-2 text-xs ">
+                        <option value="">All Type of Damage</option>
+                        <option value="Expired">🕐 Expired</option>
+                        <option value="Broken">💔 Broken</option>
+                        <option value="Spoiled">🗑️ Spoiled</option>
+                        <option value="Damaged">⚠️ Damaged</option>
+                        <option value="Defective">🔧 Defective</option>
+                        <option value="Contaminated">☣️ Contaminated</option>
+                        <option value="Crushed">📦 Crushed</option>
+                        <option value="Leaking">💧 Leaking</option>
+                        <option value="Torn">✂️ Torn</option>
+                        <option value="Wet">🌊 Wet/Water Damaged</option>
+                        <option value="Mold">🦠 Mold/Fungus</option>
+                        <option value="Pest">🐛 Pest Damage</option>
+                        <option value="Temperature">🌡️ Temperature Abuse</option>
+                        <option value="Recalled">🚫 Recalled</option>
+                        <option value="Missing Parts">🧩 Missing Parts/Incomplete</option>
+                        <option value="Wrong Item">❌ Wrong Item Received</option>
+                        <option value="Unsealed">📭 Unsealed/Opened</option>
+                        <option value="Faded">🎨 Faded/Discolored</option>
+                        <option value="Stolen">🔒 Stolen/Lost</option>
+                    </select>
+                </div>            
             </div>
             
             <div class="h-[39rem]">

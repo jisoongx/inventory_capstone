@@ -44,8 +44,19 @@ class RecordDamage extends Component
     public function closeModal()
     {
         $this->showModal = false;
-        $this->reset(); 
     }
+
+    public function cancelModal()
+    {
+        $this->showModal = false;
+        $this->damageRecords = [];
+        $this->inventories = [];
+        $this->reset();
+        $this->addRecord();
+    }
+
+
+
 
     public function getProducts()
     {
@@ -85,7 +96,6 @@ class RecordDamage extends Component
             {
                 DB::insert("
                     INSERT INTO damaged_items (
-                        prod_code, 
                         damaged_quantity, 
                         damaged_date, 
                         damaged_type, 
@@ -94,9 +104,8 @@ class RecordDamage extends Component
                         owner_id, 
                         staff_id, 
                         inven_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ", [
-                    $record['prod_code'],
                     $record['damaged_quantity'],
                     now(),
                     $record['damaged_type'] ?? 'N/A',
@@ -119,6 +128,33 @@ class RecordDamage extends Component
         $this->damageRecords = []; 
         $this->addRecord(); 
     }
+
+
+
+    public function updatedDamageRecords($value, $key)
+    {
+        if (!str_contains($key, 'damaged_quantity')) return;
+
+        [$index] = explode('.', $key);
+        $record = $this->damageRecords[$index] ?? null;
+
+        if (!$record || empty($record['inven_code'])) return;
+
+        $stock = DB::table('inventory')
+            ->where('inven_code', $record['inven_code'])
+            ->value('stock');
+
+        if ($value > $stock) {
+            $this->addError("damageRecords.$index.damaged_quantity", "Cannot exceed available stock ($stock).");
+        } else if ($value <= 0) {
+            $this->addError("damageRecords.$index.damaged_quantity", "Cannot be negative or zero.");
+        }
+        else {
+            $this->resetErrorBag("damageRecords.$index.damaged_quantity");
+        }
+    }
+
+
 
     public function render()
     {
