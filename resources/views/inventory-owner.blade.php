@@ -141,15 +141,7 @@
                 </button>
 
                 <!-- Damage -->
-                <a href="{{ route('damage-items.form') }}">
-                    <button id="damageBtn" {{ $expired ? 'disabled' : '' }}
-                        class="flex items-center gap-1.5 bg-red-500 text-white border-2 border-red-500 px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200 transform hover:scale-105
-                                {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        title="Report Damaged Items">
-                        <span class="material-symbols-outlined text-lg">report</span>
-                        <span class="font-medium text-sm">Damage</span>
-                    </button>
-                </a>
+                @livewire('record-damage')
             </div>
         </div>
     </div>

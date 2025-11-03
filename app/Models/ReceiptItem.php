@@ -16,13 +16,15 @@ class ReceiptItem extends Model
         'receipt_id',
         'item_discount_type',
         'item_discount_value',
-        'vat_amount'
+        'vat_amount',
+        'inven_code', // Added this
     ];
     
     protected $casts = [
         'item_quantity' => 'integer',
         'item_discount_value' => 'decimal:2',
-        'vat_amount' => 'decimal:2'
+        'vat_amount' => 'decimal:2',
+        'selling_price' => 'decimal:2' // Added this
     ];
 
     // Relationships
@@ -36,12 +38,19 @@ class ReceiptItem extends Model
         return $this->belongsTo(Product::class, 'prod_code', 'prod_code');
     }
 
+    public function inventory()
+    {
+        return $this->belongsTo(Inventory::class, 'inven_code', 'inven_code');
+    }
+
     /**
      * Get line total before discount
      */
     public function getLineTotalAttribute()
     {
-        return $this->item_quantity * $this->product->selling_price;
+        // Use selling_price from receipt_item if available, otherwise from product
+        $unitPrice = $this->selling_price ?? $this->product->selling_price;
+        return $this->item_quantity * $unitPrice;
     }
 
     /**
@@ -76,5 +85,21 @@ class ReceiptItem extends Model
         }
         
         return $this->total_amount / $this->item_quantity;
+    }
+
+    /**
+     * Get batch information
+     */
+    public function getBatchInfoAttribute()
+    {
+        if ($this->inven_code) {
+            return [
+                'inven_code' => $this->inven_code,
+                'batch_number' => $this->batch_number,
+                'selling_price' => $this->selling_price
+            ];
+        }
+        
+        return null;
     }
 }

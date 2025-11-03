@@ -1,11 +1,12 @@
 <div>
     <!-- Trigger Button -->
-    <button type="button" 
+    <button id="damageBtn" {{ $expired ? 'disabled' : '' }}
         wire:click="$toggle('showModal')"
-        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-all duration-200 transform hover:scale-105
-            {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
-        {{ $expired ? 'disabled' : '' }}>
-        Add Damage Record
+        class="flex items-center gap-1.5 bg-red-500 text-white border-2 border-red-500 px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200 transform hover:scale-105
+                {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
+        title="Report Damaged Items">
+        <span class="material-symbols-outlined text-lg">report</span>
+        <span class="font-medium text-sm">Damage</span>
     </button>
 
 
@@ -36,7 +37,6 @@
                     <div>
                         <div class="px-6 py-6 max-h-[calc(100vh-200px)] overflow-y-auto">
                             
-                            <!-- Table Header -->
                             <div class="grid grid-cols-[40px_1fr_1fr_120px_120px_150px_40px] gap-3 mb-3 px-3 text-xs font-semibold text-gray-700 uppercase tracking-wide">
                                 <div>#</div>
                                 <div>Product <span class="text-red-500">*</span></div>
@@ -47,19 +47,16 @@
                                 <div></div>
                             </div>
 
-                            <!-- Table Rows -->
                             <div class="space-y-2">
                                 @foreach ($damageRecords as $index => $record)
                                 <div class="grid grid-cols-[40px_1fr_1fr_120px_120px_150px_40px] gap-3 items-center bg-gray-50 p-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
                                     
-                                    <!-- Number -->
                                     <div class="flex items-center justify-center">
                                         <span class="bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">
                                             {{ $index + 1 }}
                                         </span>
                                     </div>
 
-                                    <!-- Product -->
                                     <div>
                                         <select wire:model="damageRecords.{{ $index }}.prod_code" 
                                                 wire:change="getInventory({{ $index }}, $event.target.value)"
@@ -74,8 +71,7 @@
                                             <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> 
                                         @enderror
                                     </div>
-
-                                    <!-- Inventory -->
+                                    
                                     <div>
                                         <select wire:model="damageRecords.{{ $index }}.inven_code" 
                                                 required 

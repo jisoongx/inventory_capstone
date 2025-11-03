@@ -248,11 +248,11 @@ class StoreController extends Controller
                 ->join('categories', 'products.category_id', '=', 'categories.category_id')
                 ->leftJoin('inventory', function($join) use ($ownerId) {
                     $join->on('products.prod_code', '=', 'inventory.prod_code')
-                         ->where('inventory.owner_id', '=', $ownerId)
-                         ->where(function($q) {
-                             $q->whereNull('inventory.is_expired')
-                               ->orWhere('inventory.is_expired', '=', 0);
-                         });
+                        ->where('inventory.owner_id', '=', $ownerId)
+                        ->where(function($q) {
+                            $q->whereNull('inventory.is_expired')
+                            ->orWhere('inventory.is_expired', '=', 0);
+                        });
                 })
                 ->select(
                     'products.prod_code',
@@ -263,6 +263,8 @@ class StoreController extends Controller
                     'products.prod_image',
                     'products.category_id',
                     'categories.category as category_name',
+                    // Include inven_code(s) - you might want the first available one
+                    DB::raw('(SELECT inven_code FROM inventory WHERE inventory.prod_code = products.prod_code AND inventory.owner_id = ' . $ownerId . ' AND (inventory.is_expired IS NULL OR inventory.is_expired = 0) AND inventory.stock > 0 ORDER BY inventory.expiration_date ASC LIMIT 1) as inven_code'),
                     DB::raw('COALESCE(SUM(inventory.stock), 0) as stock')
                 )
                 ->where('products.owner_id', $ownerId)
@@ -285,7 +287,7 @@ class StoreController extends Controller
             if ($search) {
                 $query->where(function($q) use ($search) {
                     $q->where('products.name', 'LIKE', "%{$search}%")
-                      ->orWhere('products.barcode', 'LIKE', "%{$search}%");
+                    ->orWhere('products.barcode', 'LIKE', "%{$search}%");
                 });
             }
 
@@ -321,8 +323,8 @@ class StoreController extends Controller
             }
             
             $product = Product::where('prod_code', $request->prod_code)
-                              ->where('owner_id', $ownerId)
-                              ->first();
+                            ->where('owner_id', $ownerId)
+                            ->first();
             
             if (!$product) {
                 return response()->json([
@@ -331,14 +333,18 @@ class StoreController extends Controller
                 ], 404);
             }
 
-            // Get total available (non-expired) stock
-            $totalStock = Inventory::where('prod_code', $product->prod_code)
-                                   ->where('owner_id', $ownerId)
-                                   ->where(function($q) {
-                                       $q->whereNull('is_expired')
-                                         ->orWhere('is_expired', 0);
-                                   })
-                                   ->sum('stock');
+            // Get available inventory batches (non-expired, with stock) sorted by FIFO
+            $availableBatches = Inventory::where('prod_code', $product->prod_code)
+                                    ->where('owner_id', $ownerId)
+                                    ->where('stock', '>', 0)
+                                    ->where(function($q) {
+                                        $q->whereNull('is_expired')
+                                            ->orWhere('is_expired', 0);
+                                    })
+                                    ->orderBy('expiration_date') // FIFO - earliest expiry first
+                                    ->get();
+
+            $totalStock = $availableBatches->sum('stock');
 
             $currentItems = session()->get('transaction_items', []);
             $currentQuantity = 0;
@@ -359,10 +365,14 @@ class StoreController extends Controller
                 ], 400);
             }
 
+            // Allocate inventory batches for the requested quantity
+            $allocatedBatches = $this->allocateInventoryBatches($availableBatches, $newTotalQuantity);
+
             $itemFound = false;
             foreach ($currentItems as &$item) {
                 if ($item['prod_code'] == $request->prod_code) {
                     $item['quantity'] = $newTotalQuantity;
+                    $item['allocated_batches'] = $allocatedBatches; // Store which batches we're using
                     $itemFound = true;
                     break;
                 }
@@ -371,7 +381,8 @@ class StoreController extends Controller
             if (!$itemFound) {
                 $currentItems[] = [
                     'prod_code' => $request->prod_code,
-                    'quantity' => $request->quantity
+                    'quantity' => $request->quantity,
+                    'allocated_batches' => $allocatedBatches // Store which batches we're using
                 ];
             }
 
@@ -394,7 +405,38 @@ class StoreController extends Controller
                 'success' => false,
                 'message' => 'Error adding item: ' . $e->getMessage()
             ], 500);
+        
         }
+    }
+
+/**
+ * Allocate inventory batches using FIFO (First-In-First-Out) method
+ */
+    private function allocateInventoryBatches($availableBatches, $requiredQuantity)
+    {
+        $allocated = [];
+        $remainingQuantity = $requiredQuantity;
+
+        // Sort by expiration date (FEFO - earliest expiry first)
+        $sortedBatches = $availableBatches->sortBy('expiration_date');
+
+        foreach ($sortedBatches as $batch) {
+            if ($remainingQuantity <= 0) break;
+
+            $takeFromBatch = min($batch->stock, $remainingQuantity);
+            
+            $allocated[] = [
+                'inven_code' => $batch->inven_code,
+                'batch_number' => $batch->batch_number,
+                'expiration_date' => $batch->expiration_date,
+                'quantity' => $takeFromBatch,
+                'current_stock' => $batch->stock
+            ];
+
+            $remainingQuantity -= $takeFromBatch;
+        }
+
+        return $allocated;
     }
 
     public function updateCartItem(Request $request)
@@ -417,19 +459,24 @@ class StoreController extends Controller
             $currentItems = session()->get('transaction_items', []);
             
             if ($request->quantity == 0) {
+                // Remove item from cart
                 $currentItems = array_filter($currentItems, function($item) use ($request) {
                     return $item['prod_code'] != $request->prod_code;
                 });
                 $currentItems = array_values($currentItems);
             } else {
-                // Check available non-expired stock
-                $totalStock = Inventory::where('prod_code', $request->prod_code)
-                                       ->where('owner_id', $ownerId)
-                                       ->where(function($q) {
-                                           $q->whereNull('is_expired')
-                                             ->orWhere('is_expired', 0);
-                                       })
-                                       ->sum('stock');
+                // Get available inventory batches (non-expired, with stock) for FEFO
+                $availableBatches = Inventory::where('prod_code', $request->prod_code)
+                                        ->where('owner_id', $ownerId)
+                                        ->where('stock', '>', 0)
+                                        ->where(function($q) {
+                                            $q->whereNull('is_expired')
+                                                ->orWhere('is_expired', 0);
+                                        })
+                                        ->orderBy('expiration_date') // FEFO - earliest expiry first
+                                        ->get();
+
+                $totalStock = $availableBatches->sum('stock');
                 
                 if ($totalStock < $request->quantity) {
                     return response()->json([
@@ -438,11 +485,26 @@ class StoreController extends Controller
                     ], 400);
                 }
 
+                // Allocate inventory batches for the updated quantity
+                $allocatedBatches = $this->allocateInventoryBatches($availableBatches, $request->quantity);
+
+                $itemFound = false;
                 foreach ($currentItems as &$item) {
                     if ($item['prod_code'] == $request->prod_code) {
                         $item['quantity'] = $request->quantity;
+                        $item['allocated_batches'] = $allocatedBatches; // Update allocated batches
+                        $itemFound = true;
                         break;
                     }
+                }
+
+                // If item not found in cart (shouldn't happen normally), add it
+                if (!$itemFound) {
+                    $currentItems[] = [
+                        'prod_code' => $request->prod_code,
+                        'quantity' => $request->quantity,
+                        'allocated_batches' => $allocatedBatches
+                    ];
                 }
             }
 
@@ -467,6 +529,7 @@ class StoreController extends Controller
         }
     }
 
+
     public function removeCartItem(Request $request)
     {
         $request->validate([
@@ -484,23 +547,59 @@ class StoreController extends Controller
                 $staffId = Auth::guard('staff')->user()->staff_id;
             }
 
-            if ($request->reason === 'damage') {
-                DB::transaction(function() use ($request, $ownerId, $staffId) {
-                    DamagedItem::create([
-                        'prod_code' => $request->prod_code,
-                        'damaged_quantity' => $request->quantity,
-                        'damaged_date' => now(),
-                        'damaged_reason' => $request->damage_reason,
-                        'owner_id' => $ownerId,
-                        'staff_id' => $staffId
-                    ]);
+            // Get the current cart item to find allocated batches
+            $currentItems = session()->get('transaction_items', []);
+            $itemToRemove = null;
+            
+            foreach ($currentItems as $item) {
+                if ($item['prod_code'] == $request->prod_code) {
+                    $itemToRemove = $item;
+                    break;
+                }
+            }
 
-                    $this->decrementInventoryStockFEFO($request->prod_code, $request->quantity, $ownerId);
+            if (!$itemToRemove) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item not found in cart'
+                ], 404);
+            }
+
+            if ($request->reason === 'damage') {
+                DB::transaction(function() use ($request, $ownerId, $staffId, $itemToRemove) {
+                    // Record damaged items with specific inventory batches
+                    foreach ($itemToRemove['allocated_batches'] as $batch) {
+                        // Calculate proportional quantity from each batch
+                        $totalItemQuantity = $itemToRemove['quantity'];
+                        $batchProportion = $batch['quantity'] / $totalItemQuantity;
+                        $damagedQuantityFromBatch = ceil($request->quantity * $batchProportion);
+                        
+                        // Ensure we don't exceed the batch's allocated quantity
+                        $actualDamagedQuantity = min($damagedQuantityFromBatch, $batch['quantity']);
+                        
+                        if ($actualDamagedQuantity > 0) {
+                            DamagedItem::create([
+                                'inven_code' => $batch['inven_code'], // Track specific batch
+                                'prod_code' => $request->prod_code,
+                                'damaged_quantity' => $actualDamagedQuantity,
+                                'damaged_date' => now(),
+                                'damaged_reason' => $request->damage_reason,
+                                'owner_id' => $ownerId,
+                                'staff_id' => $staffId,
+                                'batch_number' => $batch['batch_number'],
+                                'expiration_date' => $batch['expiration_date']
+                            ]);
+
+                            // Decrement stock from the specific inventory batch
+                            Inventory::where('inven_code', $batch['inven_code'])
+                                    ->where('owner_id', $ownerId)
+                                    ->decrement('stock', $actualDamagedQuantity);
+                        }
+                    }
                 });
             }
 
-            $currentItems = session()->get('transaction_items', []);
-            
+            // Remove item from cart
             $currentItems = array_filter($currentItems, function($item) use ($request) {
                 return $item['prod_code'] != $request->prod_code;
             });
@@ -658,26 +757,25 @@ class StoreController extends Controller
             $receiptItems = [];
             $subtotal = 0;
 
-            // Validate all items have sufficient non-expired stock
+            // Validate all items have sufficient non-expired stock using allocated batches
             foreach ($items as $item) {
                 $product = Product::where('prod_code', $item['prod_code'])
-                                  ->where('owner_id', $owner_id)
-                                  ->first();
+                                ->where('owner_id', $owner_id)
+                                ->first();
                 
                 if (!$product) {
                     throw new \Exception("Product not found or access denied: " . $item['prod_code']);
                 }
 
-                $totalStock = Inventory::where('prod_code', $item['prod_code'])
-                                       ->where('owner_id', $owner_id)
-                                       ->where(function($q) {
-                                           $q->whereNull('is_expired')
-                                             ->orWhere('is_expired', 0);
-                                       })
-                                       ->sum('stock');
-                
-                if ($totalStock < $item['quantity']) {
-                    throw new \Exception("Insufficient stock for product: " . $product->name . ". Available: {$totalStock}");
+                // Validate each allocated batch has sufficient stock
+                foreach ($item['allocated_batches'] as $batch) {
+                    $currentBatchStock = Inventory::where('inven_code', $batch['inven_code'])
+                                                ->where('owner_id', $owner_id)
+                                                ->value('stock');
+                    
+                    if ($currentBatchStock < $batch['quantity']) {
+                        throw new \Exception("Insufficient stock in batch {$batch['batch_number']} for product: " . $product->name . ". Available: {$currentBatchStock}, Requested: {$batch['quantity']}");
+                    }
                 }
 
                 $itemTotal = $product->selling_price * $item['quantity'];
@@ -686,7 +784,8 @@ class StoreController extends Controller
                 $receiptItems[] = [
                     'product' => $product,
                     'quantity' => $item['quantity'],
-                    'amount' => $itemTotal
+                    'amount' => $itemTotal,
+                    'allocated_batches' => $item['allocated_batches'] // Include batch info
                 ];
             }
 
@@ -740,11 +839,11 @@ class StoreController extends Controller
                 'discount_value' => $receiptDiscountValue
             ]);
 
-            // Process each item with FEFO stock deduction
+            // Process each item using the pre-allocated batches from session
             foreach ($items as $item) {
                 $product = Product::where('prod_code', $item['prod_code'])
-                                  ->where('owner_id', $owner_id)
-                                  ->first();
+                                ->where('owner_id', $owner_id)
+                                ->first();
 
                 $itemDiscountType = 'percent';
                 $itemDiscountValue = 0;
@@ -761,11 +860,14 @@ class StoreController extends Controller
                 $itemProportion = $subtotal > 0 ? $itemTotal / $subtotal : 0;
                 $itemVatAmount = $vatEnabled ? $vatAmount * $itemProportion : 0;
 
-                // Deduct stock using FEFO and get batch information
-                $batchInfo = $this->decrementInventoryStockFEFO($item['prod_code'], $item['quantity'], $owner_id);
+                // Use the pre-allocated batches from session instead of recalculating
+                foreach ($item['allocated_batches'] as $batch) {
+                    // Deduct stock from the specific inventory batch
+                    Inventory::where('inven_code', $batch['inven_code'])
+                            ->where('owner_id', $owner_id)
+                            ->decrement('stock', $batch['quantity']);
 
-                // Create receipt items for each batch used
-                foreach ($batchInfo as $batch) {
+                    // Create receipt item for each batch
                     ReceiptItem::create([
                         'item_quantity' => $batch['quantity'],
                         'prod_code' => $item['prod_code'],
@@ -773,19 +875,21 @@ class StoreController extends Controller
                         'item_discount_type' => $itemDiscountType,
                         'item_discount_value' => $itemDiscountValue * ($batch['quantity'] / $item['quantity']),
                         'vat_amount' => $itemVatAmount * ($batch['quantity'] / $item['quantity']),
-                        'inven_code' => $batch['inven_code']
+                        'inven_code' => $batch['inven_code'], // Store the inven_code
+                        'batch_number' => $batch['batch_number'], // Store batch info
+                        'selling_price' => $product->selling_price // Store price at time of sale
                     ]);
                 }
                 
                 // Check for low stock
                 $remainingStock = Inventory::where('prod_code', $item['prod_code'])
-                                           ->where('owner_id', $owner_id)
-                                           ->where(function($q) {
-                                               $q->whereNull('is_expired')
-                                                 ->orWhere('is_expired', 0);
-                                           })
-                                           ->sum('stock');
-                                           
+                                        ->where('owner_id', $owner_id)
+                                        ->where(function($q) {
+                                            $q->whereNull('is_expired')
+                                                ->orWhere('is_expired', 0);
+                                        })
+                                        ->sum('stock');
+                                        
                 if ($remainingStock <= $product->stock_limit) {
                     $lowStockProducts[] = [
                         'name' => $product->name,
@@ -843,25 +947,32 @@ class StoreController extends Controller
 
         foreach ($items as $item) {
             $product = Product::where('prod_code', $item['prod_code'])
-                              ->where('owner_id', $ownerId)
-                              ->first();
-                              
+                            ->where('owner_id', $ownerId)
+                            ->first();
+                            
             if ($product) {
                 // Get only non-expired stock
                 $currentStock = Inventory::where('prod_code', $item['prod_code'])
-                                         ->where('owner_id', $ownerId)
-                                         ->where(function($q) {
-                                             $q->whereNull('is_expired')
-                                               ->orWhere('is_expired', 0);
-                                         })
-                                         ->sum('stock');
+                                        ->where('owner_id', $ownerId)
+                                        ->where(function($q) {
+                                            $q->whereNull('is_expired')
+                                            ->orWhere('is_expired', 0);
+                                        })
+                                        ->sum('stock');
+                
                 $itemTotal = $product->selling_price * $item['quantity'];
                 
                 $formattedItems[] = [
-                    'product' => $product,
+                    'prod_code' => $product->prod_code,
+                    'inven_code' => $item['allocated_batches'][0]['inven_code'] ?? null, // Primary inven_code for display
+                    'name' => $product->name,
+                    'selling_price' => $product->selling_price,
                     'quantity' => $item['quantity'],
-                    'amount' => $itemTotal,
-                    'current_stock' => $currentStock
+                    'subtotal' => $itemTotal,
+                    'current_stock' => $currentStock,
+                    'allocated_batches' => $item['allocated_batches'] ?? [], // Include all allocated batches
+                    'product' => $product, // Keep the full product object if needed elsewhere
+                    'amount' => $itemTotal // Keep for backward compatibility
                 ];
                 
                 $totalAmount += $itemTotal;
@@ -880,64 +991,64 @@ class StoreController extends Controller
      * Decrement inventory stock using FEFO (First Expired, First Out) method
      * Returns array of batch information for receipt_item tracking
      */
-    private function decrementInventoryStockFEFO($prod_code, $quantity, $ownerId)
-    {
-        $remainingQuantity = $quantity;
-        $batchInfo = [];
+    // private function decrementInventoryStockFEFO($prod_code, $quantity, $ownerId)
+    // {
+    //     $remainingQuantity = $quantity;
+    //     $batchInfo = [];
         
-        // Get inventory items ordered by expiration date (FEFO)
-        // Prioritize items expiring soonest, but exclude expired items
-        $inventoryItems = Inventory::where('prod_code', $prod_code)
-                                   ->where('owner_id', $ownerId)
-                                   ->where('stock', '>', 0)
-                                   ->where(function($q) {
-                                       $q->whereNull('is_expired')
-                                         ->orWhere('is_expired', 0);
-                                   })
-                                   ->orderByRaw('CASE 
-                                       WHEN expiration_date IS NULL THEN 1 
-                                       ELSE 0 
-                                   END')
-                                   ->orderBy('expiration_date', 'asc')
-                                   ->orderBy('date_added', 'asc')
-                                   ->orderBy('inven_code', 'asc')
-                                   ->get();
+    //     // Get inventory items ordered by expiration date (FEFO)
+    //     // Prioritize items expiring soonest, but exclude expired items
+    //     $inventoryItems = Inventory::where('prod_code', $prod_code)
+    //                             ->where('owner_id', $ownerId)
+    //                             ->where('stock', '>', 0)
+    //                             ->where(function($q) {
+    //                                 $q->whereNull('is_expired')
+    //                                     ->orWhere('is_expired', 0);
+    //                             })
+    //                             ->orderByRaw('CASE 
+    //                                 WHEN expiration_date IS NULL THEN 1 
+    //                                 ELSE 0 
+    //                             END')
+    //                             ->orderBy('expiration_date', 'asc')
+    //                             ->orderBy('date_added', 'asc')
+    //                             ->orderBy('inven_code', 'asc')
+    //                             ->get();
 
-        if ($inventoryItems->isEmpty()) {
-            throw new \Exception("No available inventory records found for product code: {$prod_code}");
-        }
+    //     if ($inventoryItems->isEmpty()) {
+    //         throw new \Exception("No available inventory records found for product code: {$prod_code}");
+    //     }
 
-        foreach ($inventoryItems as $item) {
-            if ($remainingQuantity <= 0) {
-                break;
-            }
+    //     foreach ($inventoryItems as $item) {
+    //         if ($remainingQuantity <= 0) {
+    //             break;
+    //         }
 
-            $quantityToDeduct = min($item->stock, $remainingQuantity);
+    //         $quantityToDeduct = min($item->stock, $remainingQuantity);
 
-            // Record batch information for receipt_item
-            $batchInfo[] = [
-                'inven_code' => $item->inven_code,
-                'quantity' => $quantityToDeduct,
-                'batch_number' => $item->batch_number,
-                'expiration_date' => $item->expiration_date
-            ];
+    //         // Record batch information for receipt_item
+    //         $batchInfo[] = [
+    //             'inven_code' => $item->inven_code,
+    //             'quantity' => $quantityToDeduct,
+    //             'batch_number' => $item->batch_number,
+    //             'expiration_date' => $item->expiration_date
+    //         ];
 
-            // Update inventory
-            if ($item->stock >= $remainingQuantity) {
-                $item->decrement('stock', $remainingQuantity);
-                $remainingQuantity = 0;
-            } else {
-                $remainingQuantity -= $item->stock;
-                $item->update(['stock' => 0]);
-            }
-        }
+    //         // Update inventory
+    //         if ($item->stock >= $remainingQuantity) {
+    //             $item->decrement('stock', $remainingQuantity);
+    //             $remainingQuantity = 0;
+    //         } else {
+    //             $remainingQuantity -= $item->stock;
+    //             $item->update(['stock' => 0]);
+    //         }
+    //     }
 
-        if ($remainingQuantity > 0) {
-            throw new \Exception("Not enough inventory stock available. Missing: {$remainingQuantity} units");
-        }
+    //     if ($remainingQuantity > 0) {
+    //         throw new \Exception("Not enough inventory stock available. Missing: {$remainingQuantity} units");
+    //     }
 
-        return $batchInfo;
-    }
+    //     return $batchInfo;
+    // }
 
     private function generateReceiptNumber($ownerId)
     {

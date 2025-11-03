@@ -293,9 +293,6 @@
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="py-3 px-2 text-gray-900 font-medium">{{ $input->category }}</td>
                                 <td class="py-3 px-2 text-right text-gray-900">{{ $input->unit_sold }}</td>
-                                <td class="py-3 px-2 text-right text-gray-600 text-[10px]" x-show="showTopProductUnit" x-cloak>
-                                    {{ $input->stock_left }}
-                                </td>
                                 <td class="py-3 px-2 text-right text-gray-900">{{ $input->stock_left }}</td>
                                 <td class="py-3 px-2 text-right text-green-600 font-semibold">₱{{ number_format($input->total_sales, 2) }}</td>
                                 <td class="py-3 px-2 text-right text-gray-900">₱{{ number_format($input->cogs, 2) }}</td>

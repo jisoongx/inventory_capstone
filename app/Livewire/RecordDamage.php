@@ -52,9 +52,12 @@ class RecordDamage extends Component
         $owner_id = Auth::guard('owner')->user()->owner_id;
 
         $this->products = collect(DB::select("
-            SELECT p.name, p.prod_code
+            SELECT p.name, p.prod_code, sum(i.stock) as stocks
             FROM products p
-            WHERE owner_id = ?
+            join inventory i on p.prod_code = i.prod_code
+            WHERE p.owner_id = ?
+            group by i.stock, p.name, p.prod_code
+            having i.stock > 0
         ", [$owner_id]));
     }
 
@@ -64,6 +67,7 @@ class RecordDamage extends Component
             SELECT i.inven_code, i.batch_number, i.expiration_date
             FROM inventory i
             WHERE i.prod_code = ?
+            and i.stock > 0
         ", [$prod_code]));
 
         $this->inventories[$index] = $inventories;

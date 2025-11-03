@@ -61,19 +61,12 @@ class InventoryOwnerController extends Controller
                         GROUP BY inven_code
                     )
                 ), 0) AS total_stock_out_damaged,
-                -- Current Stock: Inventory Stock - Damaged Items
-                (COALESCE(SUM(i.stock), 0) - 
+                -- Current Stock: Just the sum of stock from inventory table
                 COALESCE((
-                    SELECT SUM(di.damaged_quantity)
-                    FROM damaged_items di
-                    WHERE di.prod_code = p.prod_code
-                    AND di.damaged_id IN (
-                        SELECT MIN(damaged_id)
-                        FROM damaged_items
-                        WHERE prod_code = p.prod_code
-                        GROUP BY inven_code
-                    )
-                ), 0)) AS current_stock,
+                    SELECT SUM(i.stock)
+                    FROM inventory i
+                    WHERE i.prod_code = p.prod_code
+                ), 0) AS current_stock,
                 -- Total Stock In (Original): Current Stock + Sales + Damaged
                 (COALESCE(SUM(i.stock), 0) + 
                 COALESCE((
