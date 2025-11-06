@@ -74,7 +74,8 @@ class ComparativeAnalysis extends Component
                     MONTH(d.damaged_date) AS month,
                     SUM(d.damaged_quantity * p.selling_price) AS total_loss
                 FROM damaged_items d
-                JOIN products p ON d.prod_code = p.prod_code
+                Join inventory i on i.inven_code = d.inven_code
+                JOIN products p ON i.prod_code = p.prod_code
                 WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
                 GROUP BY MONTH(d.damaged_date)
             ) l ON m.month = l.month
