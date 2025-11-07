@@ -49,7 +49,16 @@ class RegisterController extends Controller
                     }
                 },
             ],
-            'password'   => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[A-Z]/', // At least one uppercase letter
+                'regex:/[a-z]/', // At least one lowercase letter
+                'regex:/[0-9]/', // At least one number
+                'regex:/[\W_]/', // At least one special character
+            ],
         ], [
 
             'firstname.regex' => 'First name must only contain letters.',
@@ -60,6 +69,7 @@ class RegisterController extends Controller
             'contact.digits' => 'Contact number must be exactly 11 digits.',
             'contact.starts_with' => 'The contact number must start with 09.',
             'password.min'       => 'Password must be at least 8 characters.',
+            'password.regex' => 'Password must include uppercase, lowercase, number, and special character.',
             'password.confirmed' => 'Password does not match.',
         ]);
 

@@ -66,19 +66,28 @@
             </div>
 
             <!-- Password + Confirm -->
+            <!-- Password + Confirm -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 @foreach([['password','Password'], ['password_confirmation','Confirm Password']] as $pw)
-                <div class="relative">
-                    <input type="password" id="{{ $pw[0] }}" name="{{ $pw[0] }}" placeholder="{{ $pw[1] }}" required
-                        class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
-                    <span id="{{ $pw[0] }}Icon"
-                        class="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 cursor-pointer hidden"></span>
+                <div class="relative flex flex-col">
+                    <!-- Input Field with Eye Icon inside the container -->
+                    <div class="relative">
+                        <input type="password" id="{{ $pw[0] }}" name="{{ $pw[0] }}" placeholder="{{ $pw[1] }}" required
+                            class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
+
+                        <!-- Eye Icon for Password Visibility Toggle -->
+                        <span id="{{ $pw[0] }}Icon"
+                            class="material-symbols-rounded absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 cursor-pointer hidden"></span>
+                    </div>
+
+                    <!-- Error Message -->
                     @error($pw[0])
                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
                 @endforeach
             </div>
+
 
             <!-- Contact + Checkboxes -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
