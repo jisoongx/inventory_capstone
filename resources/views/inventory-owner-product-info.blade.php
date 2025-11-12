@@ -73,7 +73,7 @@
                     <p class="text-xl font-bold text-green-900">{{ $totalStockIn }}</p>
                 </div>
                 <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <p class="text-xs text-orange-700 font-medium">Total Sold</p>
+                    <p class="text-xs text-orange-700 font-medium">Total Items Sold</p>
                     <p class="text-xl font-bold text-orange-900">{{ $totalStockOutSold }}</p>
                 </div>
                 <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
@@ -279,6 +279,7 @@
                 <h3 class="text-md font-semibold">Sales History</h3>
                 <div class="flex gap-2 flex-wrap">
                     <select id="salesSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                        <option value="" disabled selected>Sort by Date</option>
                         <option value="date_desc">Date (Newest First)</option>
                         <option value="date_asc">Date (Oldest First)</option>
                         <option value="quantity_desc">Quantity (High to Low)</option>
@@ -286,8 +287,8 @@
                         <option value="amount_desc">Amount (High to Low)</option>
                     </select>
                     <input type="text" id="salesSearch" placeholder="Search receipt..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <input type="date" id="salesDateFrom" placeholder="From Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <input type="date" id="salesDateTo" placeholder="To Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                    <input type="date" id="salesDateFrom" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                    <input type="date" id="salesDateTo" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
                     <button onclick="filterSalesTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
                     <button onclick="resetSalesFilters()" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">Reset</button>
                 </div>
@@ -298,7 +299,6 @@
                     <table class="min-w-full table-auto border border-gray-100">
                         <thead class="bg-gray-100 text-gray-700 text-sm">
                             <tr>
-                                <th class="px-4 py-3 border">Receipt ID</th>
                                 <th class="px-4 py-3 border">Date Sold</th>
                                 <th class="px-4 py-3 border">Quantity Sold</th>
                                 <th class="px-4 py-3 border">Unit Price</th>
@@ -308,8 +308,10 @@
                         </thead>
                         <tbody id="salesTableBody">
                             @forelse ($stockOutSalesHistory as $sale)
-                                <tr class="hover:bg-gray-50 text-sm" data-date="{{ \Carbon\Carbon::parse($sale->receipt_date)->timestamp }}" data-quantity="{{ $sale->quantity_sold }}" data-amount="{{ $sale->total_amount }}">
-                                    <td class="px-4 py-3 border text-center font-mono">{{ $sale->receipt_id }}</td>
+                                <tr class="hover:bg-gray-50 text-sm" 
+                                    data-date="{{ \Carbon\Carbon::parse($sale->receipt_date)->timestamp }}" 
+                                    data-quantity="{{ $sale->quantity_sold }}" 
+                                    data-amount="{{ $sale->total_amount }}">
                                     <td class="px-4 py-3 border text-center">
                                         {{ \Carbon\Carbon::parse($sale->receipt_date)->format('M j, Y g:i A') }}
                                     </td>
@@ -320,14 +322,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center py-6 text-gray-500">No sales records found.</td>
+                                    <td colspan="5" class="text-center py-6 text-gray-500">No sales records found.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         @if($stockOutSalesHistory->count() > 0)
                         <tfoot class="bg-gray-50">
                             <tr class="text-sm font-semibold">
-                                <td colspan="2" class="px-4 py-3 border text-right">Total</td>
+                                <td class="px-4 py-3 border text-right">Total</td>
                                 <td class="px-4 py-3 border text-center">{{ $totalStockOutSold }}</td>
                                 <td class="px-4 py-3 border text-center">—</td>
                                 <td class="px-4 py-3 border text-center">₱{{ number_format($totalRevenue, 2) }}</td>
@@ -346,6 +348,7 @@
                 <h3 class="text-md font-semibold">Damaged/Expired Items</h3>
                 <div class="flex gap-2 flex-wrap">
                     <select id="damagedSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                        <option value="" disabled selected>Sort by Date</option>
                         <option value="date_desc">Date (Newest First)</option>
                         <option value="date_asc">Date (Oldest First)</option>
                         <option value="quantity_desc">Quantity (High to Low)</option>
@@ -354,8 +357,8 @@
                         <option value="batch_asc">Batch (Oldest First)</option>
                     </select>
                     <input type="text" id="damagedSearch" placeholder="Search reason..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <input type="date" id="damagedDateFrom" placeholder="From Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <input type="date" id="damagedDateTo" placeholder="To Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                    <input type="date" id="damagedDateFrom" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                    <input type="date" id="damagedDateTo" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
                     <button onclick="filterDamagedTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
                     <button onclick="resetDamagedFilters()" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">Reset</button>
                 </div>
@@ -366,31 +369,14 @@
                     <table class="min-w-full table-auto border border-gray-100">
                         <thead class="bg-gray-100 text-gray-700 text-sm">
                             <tr>
-                                <!-- <th class="px-4 py-3 border">Batch Number</th> -->
                                 <th class="px-4 py-3 border">Date Out</th>
                                 <th class="px-4 py-3 border">Quantity Out</th>
                                 <th class="px-4 py-3 border">Reason</th>
-                                <!-- <th class="px-4 py-3 border">Reference ID</th> -->
                                 <th class="px-4 py-3 border">Processed By</th>
                             </tr>
                         </thead>
                         <tbody id="damagedTableBody">
                             @forelse ($stockOutDamagedHistory as $damaged)
-                                @php
-                                    // Find which batch was active when the damage occurred
-                                    $batchForDamage = DB::table('inventory')
-                                        ->where('prod_code', $product->prod_code)
-                                        ->whereNotNull('batch_number')
-                                        ->where('date_added', '<=', $damaged->damaged_date)
-                                        ->where(function($query) use ($damaged) {
-                                            $query->whereNull('expiration_date')
-                                                ->orWhere('expiration_date', '>=', $damaged->damaged_date);
-                                        })
-                                        ->orderBy('date_added', 'desc')
-                                        ->first();
-
-                                    $batchNumber = $batchForDamage ? $batchForDamage->batch_number : 'N/A';
-                                @endphp
                                 <tr> 
                                     <td class="px-4 py-3 border text-center">
                                         {{ \Carbon\Carbon::parse($damaged->damaged_date)->format('M j, Y') }}
@@ -401,21 +387,20 @@
                                             {{ $damaged->damaged_reason }}
                                         </span>
                                     </td>
-                                    <!-- <td class="px-4 py-3 border text-center font-mono">DMG-{{ $damaged->damaged_id }}</td> -->
                                     <td class="px-4 py-3 border text-center">{{ $damaged->reported_by ?? 'System' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center py-6 text-gray-500">No damaged/expired items found.</td>
+                                    <td colspan="4" class="text-center py-6 text-gray-500">No damaged/expired items found.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         @if($stockOutDamagedHistory->count() > 0)
                         <tfoot class="bg-gray-50">
                             <tr class="text-sm font-semibold">
-                                <td colspan="2" class="px-4 py-3 border text-right">Total</td>
+                                <td class="px-4 py-3 border text-right">Total</td>
                                 <td class="px-4 py-3 border text-center">{{ $totalStockOutDamaged }}</td>
-                                <td colspan="3" class="px-4 py-3 border text-center">—</td>
+                                <td colspan="2" class="px-4 py-3 border text-center">—</td>
                             </tr>
                         </tfoot>
                         @endif
@@ -423,7 +408,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <!-- Stock Comparison Section -->
     <!-- <div id="comparisonSection" class="tab-content hidden">

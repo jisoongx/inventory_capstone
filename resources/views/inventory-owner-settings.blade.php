@@ -73,7 +73,7 @@
                                         Update
                                     </button>
                                 </div>
-                                <div class="category-error-message text-xs text-red-600 mt-1 hidden"></div>
+                                <div class="category-error-message text-xs mt-1 hidden"></div>
                             </div>
                         </form>
                     </li>
@@ -103,7 +103,7 @@
                                 Add
                             </button>
                         </div>
-                        <div id="new-category-error" class="text-xs text-red-600 mt-1 hidden"></div>
+                        <div id="new-category-error" class="text-xs mt-1 hidden"></div>
                     </div>
                 </form>
             </div>
@@ -149,7 +149,7 @@
                                         Update
                                     </button>
                                 </div>
-                                <div class="unit-error-message text-xs text-red-600 mt-1 hidden"></div>
+                                <div class="unit-error-message text-xs mt-1 hidden"></div>
                             </div>
                         </form>
                     </li>
@@ -179,7 +179,7 @@
                                 Add
                             </button>
                         </div>
-                        <div id="new-unit-error" class="text-xs text-red-600 mt-1 hidden"></div>
+                        <div id="new-unit-error" class="text-xs mt-1 hidden"></div>
                     </div>
                 </form>
             </div>
@@ -244,11 +244,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (value.length === 0) {
                 hideError(newCategoryError);
                 enableButton(addCategoryBtn);
+                this.classList.remove('border-red-500', 'border-yellow-500');
                 return;
             }
 
             typingTimer = setTimeout(() => {
-                checkExistence(value, 'category', newCategoryError, addCategoryBtn);
+                checkExistence(value, 'category', newCategoryError, addCategoryBtn, this);
             }, typingDelay);
         });
     }
@@ -266,11 +267,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (value.length === 0) {
                 hideError(newUnitError);
                 enableButton(addUnitBtn);
+                this.classList.remove('border-red-500', 'border-yellow-500');
                 return;
             }
 
             typingTimer = setTimeout(() => {
-                checkExistence(value, 'unit', newUnitError, addUnitBtn);
+                checkExistence(value, 'unit', newUnitError, addUnitBtn, this);
             }, typingDelay);
         });
     }
@@ -290,17 +292,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (value === originalValue) {
                 hideError(errorDiv);
                 enableButton(submitBtn);
+                this.classList.remove('border-red-500', 'border-yellow-500');
                 return;
             }
 
             if (value.length === 0) {
                 hideError(errorDiv);
                 enableButton(submitBtn);
+                this.classList.remove('border-red-500', 'border-yellow-500');
                 return;
             }
 
             typingTimer = setTimeout(() => {
-                checkExistence(value, 'category', errorDiv, submitBtn, originalValue);
+                checkExistence(value, 'category', errorDiv, submitBtn, this, originalValue);
             }, typingDelay);
         });
     });
@@ -320,61 +324,197 @@ document.addEventListener('DOMContentLoaded', function() {
             if (value === originalValue) {
                 hideError(errorDiv);
                 enableButton(submitBtn);
+                this.classList.remove('border-red-500', 'border-yellow-500');
                 return;
             }
 
             if (value.length === 0) {
                 hideError(errorDiv);
                 enableButton(submitBtn);
+                this.classList.remove('border-red-500', 'border-yellow-500');
                 return;
             }
 
             typingTimer = setTimeout(() => {
-                checkExistence(value, 'unit', errorDiv, submitBtn, originalValue);
+                checkExistence(value, 'unit', errorDiv, submitBtn, this, originalValue);
             }, typingDelay);
         });
     });
 
-    // =========================== FORM SUBMISSION PREVENTION ===========================
+    // =========================== FORM SUBMISSION WITH CONFIRMATION ===========================
     
-    // Prevent form submission if there are errors
-    document.getElementById('add-category-form')?.addEventListener('submit', function(e) {
+    // Prevent form submission if there are errors and handle confirmation
+    document.getElementById('add-category-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
         if (addCategoryBtn.disabled) {
-            e.preventDefault();
             return false;
         }
+
+        const value = newCategoryInput.value.trim();
+        const response = await checkExistenceForSubmit(value, 'category', null);
+        
+        if (response && response.exists) {
+            if (response.isExactMatch) {
+                alert(`Cannot submit: Category "${value}" already exists as "${response.existingName}"`);
+                return false;
+            } else {
+                // Similar match - ask for confirmation
+                const proceed = confirm(
+                    `Similar category found: "${response.existingName}"\n\n` +
+                    `You're adding: "${value}"\n\n` +
+                    `These appear similar. Proceed anyway?`
+                );
+                
+                if (!proceed) {
+                    return false;
+                }
+                
+                // User confirmed - submit with flag
+                await submitFormWithConfirmation(this, 'confirmed_similar');
+                return false;
+            }
+        }
+        
+        // No conflicts - submit normally
+        this.submit();
     });
 
-    document.getElementById('add-unit-form')?.addEventListener('submit', function(e) {
+    document.getElementById('add-unit-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
         if (addUnitBtn.disabled) {
-            e.preventDefault();
             return false;
         }
+
+        const value = newUnitInput.value.trim();
+        const response = await checkExistenceForSubmit(value, 'unit', null);
+        
+        if (response && response.exists) {
+            if (response.isExactMatch) {
+                alert(`Cannot submit: Unit "${value}" already exists as "${response.existingName}"`);
+                return false;
+            } else {
+                // Similar match - ask for confirmation
+                const proceed = confirm(
+                    `Similar unit found: "${response.existingName}"\n\n` +
+                    `You're adding: "${value}"\n\n` +
+                    `These appear similar. Proceed anyway?`
+                );
+                
+                if (!proceed) {
+                    return false;
+                }
+                
+                // User confirmed - submit with flag
+                await submitFormWithConfirmation(this, 'confirmed_similar');
+                return false;
+            }
+        }
+        
+        // No conflicts - submit normally
+        this.submit();
     });
 
     document.querySelectorAll('.category-edit-form').forEach(form => {
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
             const submitBtn = form.querySelector('.category-update-btn');
             if (submitBtn.disabled) {
-                e.preventDefault();
                 return false;
             }
+
+            const input = form.querySelector('.category-edit-input');
+            const value = input.value.trim();
+            const originalValue = form.dataset.originalValue;
+            
+            // If same as original, just submit
+            if (value === originalValue) {
+                this.submit();
+                return;
+            }
+
+            const response = await checkExistenceForSubmit(value, 'category', originalValue);
+            
+            if (response && response.exists) {
+                if (response.isExactMatch) {
+                    alert(`Cannot submit: Category "${value}" already exists as "${response.existingName}"`);
+                    return false;
+                } else {
+                    // Similar match - ask for confirmation
+                    const proceed = confirm(
+                        `Similar category found: "${response.existingName}"\n\n` +
+                        `You're updating to: "${value}"\n\n` +
+                        `These appear similar. Proceed anyway?`
+                    );
+                    
+                    if (!proceed) {
+                        return false;
+                    }
+                    
+                    // User confirmed - submit with flag
+                    await submitFormWithConfirmation(this, 'confirmed_similar');
+                    return false;
+                }
+            }
+            
+            // No conflicts - submit normally
+            this.submit();
         });
     });
 
     document.querySelectorAll('.unit-edit-form').forEach(form => {
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
             const submitBtn = form.querySelector('.unit-update-btn');
             if (submitBtn.disabled) {
-                e.preventDefault();
                 return false;
             }
+
+            const input = form.querySelector('.unit-edit-input');
+            const value = input.value.trim();
+            const originalValue = form.dataset.originalValue;
+            
+            // If same as original, just submit
+            if (value === originalValue) {
+                this.submit();
+                return;
+            }
+
+            const response = await checkExistenceForSubmit(value, 'unit', originalValue);
+            
+            if (response && response.exists) {
+                if (response.isExactMatch) {
+                    alert(`Cannot submit: Unit "${value}" already exists as "${response.existingName}"`);
+                    return false;
+                } else {
+                    // Similar match - ask for confirmation
+                    const proceed = confirm(
+                        `Similar unit found: "${response.existingName}"\n\n` +
+                        `You're updating to: "${value}"\n\n` +
+                        `These appear similar. Proceed anyway?`
+                    );
+                    
+                    if (!proceed) {
+                        return false;
+                    }
+                    
+                    // User confirmed - submit with flag
+                    await submitFormWithConfirmation(this, 'confirmed_similar');
+                    return false;
+                }
+            }
+            
+            // No conflicts - submit normally
+            this.submit();
         });
     });
 
     // =========================== HELPER FUNCTIONS ===========================
     
-    function checkExistence(name, type, errorDiv, submitBtn, excludeValue = null) {
+    function checkExistence(name, type, errorDiv, submitBtn, inputElement, excludeValue = null) {
         fetch('{{ route("owner.check-existing-name") }}', {
             method: 'POST',
             headers: {
@@ -392,32 +532,99 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.exists) {
                 let message;
                 if (data.isExactMatch) {
+                    // Red error for exact match
                     message = `${type === 'category' ? 'Category' : 'Unit'} already exists: <strong>"${data.existingName}"</strong>`;
+                    showError(errorDiv, message, 'red');
+                    disableButton(submitBtn);
+                    inputElement.classList.add('border-red-500');
+                    inputElement.classList.remove('border-yellow-500');
                 } else {
-                    message = `Similar ${type} already exists: <strong>"${data.existingName}"</strong>. Did you mean this one?`;
+                    // Yellow warning for similar match
+                    message = `Similar ${type} exists: "<strong>${data.existingName}</strong>"<br><span class="text-gray-600 text-xs">Proceed with caution</span>`;
+                    showError(errorDiv, message, 'yellow');
+                    enableButton(submitBtn); // Allow submission but show warning
+                    inputElement.classList.add('border-yellow-500');
+                    inputElement.classList.remove('border-red-500');
                 }
-                showError(errorDiv, message);
-                disableButton(submitBtn);
             } else {
                 hideError(errorDiv);
                 enableButton(submitBtn);
+                inputElement.classList.remove('border-red-500', 'border-yellow-500');
             }
         })
         .catch(error => {
             console.error('Error:', error);
             hideError(errorDiv);
             enableButton(submitBtn);
+            inputElement.classList.remove('border-red-500', 'border-yellow-500');
         });
     }
 
-    function showError(element, message) {
+    async function checkExistenceForSubmit(name, type, excludeValue = null) {
+        try {
+            const response = await fetch('{{ route("owner.check-existing-name") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    type: type,
+                    excludeValue: excludeValue
+                })
+            });
+            
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error:', error);
+            return null;
+        }
+    }
+
+    async function submitFormWithConfirmation(form, confirmField) {
+        const formData = new FormData(form);
+        formData.append(confirmField, '1');
+        
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Something went wrong.');
+        }
+    }
+
+    function showError(element, message, color = 'red') {
         element.innerHTML = message;
         element.classList.remove('hidden');
+        if (color === 'red') {
+            element.classList.add('text-red-600', 'font-semibold');
+            element.classList.remove('text-yellow-600');
+        } else {
+            element.classList.add('text-yellow-600');
+            element.classList.remove('text-red-600', 'font-semibold');
+        }
     }
 
     function hideError(element) {
         element.innerHTML = '';
         element.classList.add('hidden');
+        element.classList.remove('text-red-600', 'text-yellow-600', 'font-semibold');
     }
 
     function disableButton(button) {

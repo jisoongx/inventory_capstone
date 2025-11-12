@@ -41,33 +41,40 @@ class InventoryOwnerSettingsController extends Controller
 
         $owner_id = session('owner_id');
         $categoryName = trim($request->category);
+        $confirmedSimilar = $request->input('confirmed_similar') === '1';
 
         // Get all existing categories for comparison
         $existingCategories = DB::table('categories')
             ->where('owner_id', $owner_id)
             ->get();
 
-        // Check 1: Exact case-insensitive match
+        // Check 1: Exact case-insensitive match (ALWAYS BLOCK)
         $exactMatch = DB::table('categories')
             ->where('owner_id', $owner_id)
             ->whereRaw('LOWER(category) = ?', [strtolower($categoryName)])
             ->first();
 
         if ($exactMatch) {
-            return redirect()->route('inventory-owner-settings')
-                ->with('error', 'Category already exists: "' . $exactMatch->category . '"');
+            return response()->json([
+                'success' => false,
+                'message' => '❌ Category already exists: "' . $exactMatch->category . '"'
+            ], 422);
         }
 
-        // Check 2: Semantic similarity
+        // Check 2: Semantic similarity (ALLOW if user confirmed)
         $normalizedInput = $this->normalizeName($categoryName);
         $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
 
-        if ($semanticMatch) {
-            return redirect()->route('inventory-owner-settings')
-                ->with('error', 'Similar category already exists: "' . $semanticMatch . '". Did you mean this one?');
+        if ($semanticMatch && !$confirmedSimilar) {
+            return response()->json([
+                'success' => false,
+                'needsConfirmation' => true,
+                'message' => '⚠️ Similar category already exists: "' . $semanticMatch . '". Did you mean this one?',
+                'existingName' => $semanticMatch
+            ], 422);
         }
 
-        // Both checks passed - insert new category
+        // Both checks passed OR user confirmed similar match - insert new category
         DB::table('categories')->insert([
             'category' => $categoryName,
             'owner_id' => $owner_id,
@@ -83,7 +90,10 @@ class InventoryOwnerSettingsController extends Controller
             $ip
         );
 
-        return redirect()->route('inventory-owner-settings')->with('success', 'Category added successfully!');
+        return response()->json([
+            'success' => true,
+            'message' => '✅ Category added successfully!'
+        ]);
     }
 
     // Update category
@@ -95,6 +105,7 @@ class InventoryOwnerSettingsController extends Controller
 
         $owner_id = session('owner_id');
         $categoryName = trim($request->category);
+        $confirmedSimilar = $request->input('confirmed_similar') === '1';
 
         $oldCategory = DB::table('categories')->where('category_id', $id)->value('category');
 
@@ -104,7 +115,7 @@ class InventoryOwnerSettingsController extends Controller
             ->where('category_id', '!=', $id)
             ->get();
 
-        // Check 1: Exact case-insensitive match
+        // Check 1: Exact case-insensitive match (ALWAYS BLOCK)
         $exactMatch = DB::table('categories')
             ->where('owner_id', $owner_id)
             ->where('category_id', '!=', $id)
@@ -112,20 +123,26 @@ class InventoryOwnerSettingsController extends Controller
             ->first();
 
         if ($exactMatch) {
-            return redirect()->route('inventory-owner-settings')
-                ->with('error', 'Category already exists: "' . $exactMatch->category . '"');
+            return response()->json([
+                'success' => false,
+                'message' => '❌ Category already exists: "' . $exactMatch->category . '"'
+            ], 422);
         }
 
-        // Check 2: Semantic similarity
+        // Check 2: Semantic similarity (ALLOW if user confirmed)
         $normalizedInput = $this->normalizeName($categoryName);
         $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
 
-        if ($semanticMatch) {
-            return redirect()->route('inventory-owner-settings')
-                ->with('error', 'Similar category already exists: "' . $semanticMatch . '". Did you mean this one?');
+        if ($semanticMatch && !$confirmedSimilar) {
+            return response()->json([
+                'success' => false,
+                'needsConfirmation' => true,
+                'message' => '⚠️ Similar category already exists: "' . $semanticMatch . '". Did you mean this one?',
+                'existingName' => $semanticMatch
+            ], 422);
         }
 
-        // Both checks passed - update category
+        // Both checks passed OR user confirmed similar match - update category
         DB::table('categories')
             ->where('category_id', $id)
             ->update([
@@ -142,7 +159,10 @@ class InventoryOwnerSettingsController extends Controller
             $ip
         );
 
-        return redirect()->route('inventory-owner-settings')->with('success', 'Category updated successfully!');
+        return response()->json([
+            'success' => true,
+            'message' => '✅ Category updated successfully!'
+        ]);
     }
 
     // Store new unit
@@ -154,6 +174,7 @@ class InventoryOwnerSettingsController extends Controller
 
         $owner_id = session('owner_id');
         $unitName = trim($request->unit);
+        $confirmedSimilar = $request->input('confirmed_similar') === '1';
 
         // Get all existing units for comparison
         $existingUnits = DB::table('units')
@@ -165,15 +186,25 @@ class InventoryOwnerSettingsController extends Controller
 
         if ($unitMatch) {
             if ($unitMatch['isExact']) {
-                return redirect()->route('inventory-owner-settings')
-                    ->with('error', 'Unit already exists: "' . $unitMatch['unit'] . '"');
+                // EXACT MATCH: Always block
+                return response()->json([
+                    'success' => false,
+                    'message' => '❌ Unit already exists: "' . $unitMatch['unit'] . '"'
+                ], 422);
             } else {
-                return redirect()->route('inventory-owner-settings')
-                    ->with('error', 'Similar unit already exists: "' . $unitMatch['unit'] . '". Did you mean this one?');
+                // SIMILAR MATCH: Only block if not confirmed
+                if (!$confirmedSimilar) {
+                    return response()->json([
+                        'success' => false,
+                        'needsConfirmation' => true,
+                        'message' => '⚠️ Similar unit already exists: "' . $unitMatch['unit'] . '". Did you mean this one?',
+                        'existingName' => $unitMatch['unit']
+                    ], 422);
+                }
             }
         }
 
-        // Both checks passed - insert new unit
+        // Both checks passed OR user confirmed similar match - insert new unit
         DB::table('units')->insert([
             'unit' => $unitName,
             'owner_id' => $owner_id,
@@ -189,7 +220,10 @@ class InventoryOwnerSettingsController extends Controller
             $ip
         );
 
-        return redirect()->route('inventory-owner-settings')->with('success', 'Unit added successfully!');
+        return response()->json([
+            'success' => true,
+            'message' => '✅ Unit added successfully!'
+        ]);
     }
 
     // Update unit
@@ -201,6 +235,7 @@ class InventoryOwnerSettingsController extends Controller
 
         $owner_id = session('owner_id');
         $unitName = trim($request->unit);
+        $confirmedSimilar = $request->input('confirmed_similar') === '1';
 
         $oldUnit = DB::table('units')->where('unit_id', $id)->value('unit');
 
@@ -215,15 +250,25 @@ class InventoryOwnerSettingsController extends Controller
 
         if ($unitMatch) {
             if ($unitMatch['isExact']) {
-                return redirect()->route('inventory-owner-settings')
-                    ->with('error', 'Unit already exists: "' . $unitMatch['unit'] . '"');
+                // EXACT MATCH: Always block
+                return response()->json([
+                    'success' => false,
+                    'message' => '❌ Unit already exists: "' . $unitMatch['unit'] . '"'
+                ], 422);
             } else {
-                return redirect()->route('inventory-owner-settings')
-                    ->with('error', 'Similar unit already exists: "' . $unitMatch['unit'] . '". Did you mean this one?');
+                // SIMILAR MATCH: Only block if not confirmed
+                if (!$confirmedSimilar) {
+                    return response()->json([
+                        'success' => false,
+                        'needsConfirmation' => true,
+                        'message' => '⚠️ Similar unit already exists: "' . $unitMatch['unit'] . '". Did you mean this one?',
+                        'existingName' => $unitMatch['unit']
+                    ], 422);
+                }
             }
         }
 
-        // Both checks passed - update unit
+        // Both checks passed OR user confirmed similar match - update unit
         DB::table('units')
             ->where('unit_id', $id)
             ->update([
@@ -240,7 +285,10 @@ class InventoryOwnerSettingsController extends Controller
             $ip
         );
 
-        return redirect()->route('inventory-owner-settings')->with('success', 'Unit updated successfully!');
+        return response()->json([
+            'success' => true,
+            'message' => '✅ Unit updated successfully!'
+        ]);
     }
 
     // ==================== VALIDATION HELPER METHODS ====================
@@ -372,17 +420,12 @@ class InventoryOwnerSettingsController extends Controller
                 return $existingName;
             }
             
-            // Check if input is a substring of existing category (must start at beginning)
-            if (strpos($normalizedExisting, $normalizedInput) === 0) {
-                return $existingName;
-            }
-            
-            // Check if existing is a substring of input (must start at beginning)
-            if (strpos($normalizedInput, $normalizedExisting) === 0) {
-                return $existingName;
-            }
-            
             $existingWords = array_filter(explode(' ', $normalizedExisting));
+            
+            // Skip multi-word input vs single-word existing (like "beverages hot" vs "beverages")
+            if (count($inputWords) > count($existingWords)) {
+                continue; // Input has more words, so it's likely a more specific category
+            }
             
             // Check if ALL input words have matches in existing category
             $allInputWordsMatched = true;
@@ -412,8 +455,8 @@ class InventoryOwnerSettingsController extends Controller
                         $maxLength = max(strlen($inputWord), strlen($existingWord));
                         $similarity = 1 - ($distance / $maxLength);
                         
-                        // If words are 70% similar AND at least 4 characters long
-                        if ($similarity >= 0.70 && strlen($inputWord) >= 4 && strlen($existingWord) >= 4) {
+                        // If words are 80% similar AND at least 4 characters long
+                        if ($similarity >= 0.80 && strlen($inputWord) >= 4 && strlen($existingWord) >= 4) {
                             $foundMatch = true;
                             $matchedCount++;
                             break;
@@ -438,21 +481,15 @@ class InventoryOwnerSettingsController extends Controller
                 }
             }
             
-            // Only return match if ALL input words were matched
-            if ($allInputWordsMatched && $matchedCount > 0 && count($inputWords) > 1) {
-                // Additional check: input should represent significant portion
-                $matchRatio = count($inputWords) / count($existingWords);
-                
-                // Only match if input represents at least 50% of the existing category
-                if ($matchRatio >= 0.5) {
+            // Only return match if ALL input words were matched and word counts are equal OR single-word exact match
+            if ($allInputWordsMatched && $matchedCount > 0) {
+                // Case 1: Both have same number of words (e.g., "hot beverages" vs "cold beverages")
+                if (count($inputWords) === count($existingWords)) {
                     return $existingName;
                 }
-            }
-            
-            // Special case: If input has only 1 word and it matches exactly
-            if (count($inputWords) === 1 && $matchedCount === 1) {
-                // Only match if the existing category also has 1 word
-                if (count($existingWords) === 1) {
+                
+                // Case 2: Single word that matches exactly
+                if (count($inputWords) === 1 && count($existingWords) === 1) {
                     return $existingName;
                 }
             }
