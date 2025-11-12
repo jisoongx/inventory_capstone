@@ -379,6 +379,7 @@ class RestockController extends Controller
             ->leftJoin('restock_item', 'restock_item.inven_code', '=', 'products.prod_code')
             ->whereNull('restock_item.inven_code')
             ->where('products.owner_id', $ownerId)
+            ->where('products.prod_status', 'active')
             ->select(
                 'products.prod_code',
                 'products.name',
@@ -524,6 +525,9 @@ class RestockController extends Controller
 
         return view('dashboards.owner.restock_suggestion', compact('products', 'categories', 'currentYear', 'currentMonth', 'allProducts'));
     }
+
+    
+
 
 
 
