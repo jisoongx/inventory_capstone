@@ -164,6 +164,7 @@
             <h2 class="text-md font-semibold">Stock-In History</h2>
             <div class="flex gap-2 flex-wrap">
                 <select id="stockInSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                    <option value="" disabled selected>Select sort option</option>
                     <option value="date_desc">Date (Newest First)</option>
                     <option value="date_asc">Date (Oldest First)</option>
                     <option value="batch_desc">Batch (Newest First)</option>
@@ -279,14 +280,14 @@
                 <h3 class="text-md font-semibold">Sales History</h3>
                 <div class="flex gap-2 flex-wrap">
                     <select id="salesSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                        <option value="" disabled selected>Sort by Date</option>
+                        <option value="" disabled selected>Select sort option</option>
                         <option value="date_desc">Date (Newest First)</option>
                         <option value="date_asc">Date (Oldest First)</option>
                         <option value="quantity_desc">Quantity (High to Low)</option>
                         <option value="quantity_asc">Quantity (Low to High)</option>
                         <option value="amount_desc">Amount (High to Low)</option>
                     </select>
-                    <input type="text" id="salesSearch" placeholder="Search receipt..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                    <!-- <input type="text" id="salesSearch" placeholder="Search receipt..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100"> -->
                     <input type="date" id="salesDateFrom" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
                     <input type="date" id="salesDateTo" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
                     <button onclick="filterSalesTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
@@ -348,7 +349,7 @@
                 <h3 class="text-md font-semibold">Damaged/Expired Items</h3>
                 <div class="flex gap-2 flex-wrap">
                     <select id="damagedSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                        <option value="" disabled selected>Sort by Date</option>
+                        <option value="" disabled selected>Select sort option</option>
                         <option value="date_desc">Date (Newest First)</option>
                         <option value="date_asc">Date (Oldest First)</option>
                         <option value="quantity_desc">Quantity (High to Low)</option>
