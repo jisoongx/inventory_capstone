@@ -630,58 +630,67 @@ public function registerProduct(Request $request)
         'photo' => 'nullable|image|max:2048',
         'stock_limit' => 'required|integer|min:0',
         'expiration_date' => 'nullable|date',
-        'batch_number' => 'nullable|string|max:50'
+        'batch_number' => 'nullable|string|max:50',
+        'confirmed_similar' => 'nullable|string',
+        'confirmed_category' => 'nullable|string',
+        'confirmed_unit' => 'nullable|string'
     ]);
 
-    // ✅ NEW: Check for existing/similar product names
-    $existingProducts = DB::table('products')
-        ->where('owner_id', $ownerId)
-        ->get();
+    // Check for existing/similar product names BUT skip this check if user already confirmed similar product
+    $confirmedSimilar = $request->input('confirmed_similar') === '1';
     
-    $productMatch = $this->findProductNameMatch($validated['name'], $existingProducts);
-    
-    if ($productMatch) {
-        $message = $productMatch['isExact'] 
-            ? 'Product name already exists: ' . $productMatch['name']
-            : 'Similar product name already exists: ' . $productMatch['name'];
-            
-        return response()->json([
-            'success' => false,
-            'message' => $message
-        ], 422);
+    if (!$confirmedSimilar) {
+        $existingProducts = DB::table('products')
+            ->where('owner_id', $ownerId)
+            ->get();
+        
+        $productMatch = $this->findProductNameMatch($validated['name'], $existingProducts);
+        
+        if ($productMatch) {
+            // Only block exact matches
+            if ($productMatch['isExact']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product name already exists: ' . $productMatch['name']
+                ], 422);
+            }
+        }
     }
 
     // ✅ Combined validation approach for categories
     if ($validated['category_id'] === 'other' && !empty($validated['custom_category'])) {
-        $existingCategories = DB::table('categories')
-            ->where('owner_id', $ownerId)
-            ->get();
+        $confirmedCategory = $request->input('confirmed_category') === '1'; // 🆕 NEW
         
-        // Check 1: Exact case-insensitive match
-        $exactMatch = DB::table('categories')
-            ->where('owner_id', $ownerId)
-            ->whereRaw('LOWER(category) = ?', [strtolower($validated['custom_category'])])
-            ->first();
-        
-        if ($exactMatch) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Category already exists: ' . $exactMatch->category
-            ], 422);
-        }
-        
-        // Check 2: Semantic similarity
-        $normalizedInput = $this->normalizeName($validated['custom_category']);
-        $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
+        if (!$confirmedCategory) { // 🆕 Only validate if not confirmed
+            $existingCategories = DB::table('categories')
+                ->where('owner_id', $ownerId)
+                ->get();
+            
+            // Check 1: Exact case-insensitive match
+            $exactMatch = DB::table('categories')
+                ->where('owner_id', $ownerId)
+                ->whereRaw('LOWER(category) = ?', [strtolower($validated['custom_category'])])
+                ->first();
+            
+            if ($exactMatch) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Category already exists: ' . $exactMatch->category
+                ], 422);
+            }
+            
+            // Check 2: Semantic similarity - DON'T BLOCK, just inform
+            $normalizedInput = $this->normalizeName($validated['custom_category']);
+            $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
 
-        if ($semanticMatch) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Similar category already exists: ' . $semanticMatch
-            ], 422);
+            if ($semanticMatch) {
+                // 🔴 REMOVED: The blocking return statement
+                // Frontend will handle the confirmation dialog
+                // Just continue to create the category
+            }
         }
 
-        // Both checks passed - create the new category
+        // Both checks passed (or user confirmed) - create the new category
         $categoryId = DB::table('categories')->insertGetId([
             'category' => $validated['custom_category'],
             'owner_id' => $ownerId,
@@ -692,26 +701,28 @@ public function registerProduct(Request $request)
 
     //Handle unit - Check for duplicates (with parenthesis awareness)
     if ($validated['unit_id'] === 'other' && !empty($validated['custom_unit'])) {
-        // Get all existing units for this owner
-        $existingUnits = DB::table('units')
-            ->where('owner_id', $ownerId)
-            ->get();
+        $confirmedUnit = $request->input('confirmed_unit') === '1'; // 🆕 NEW
         
-        // Check for unit match (now returns array or null)
-        $unitMatchResult = $this->findUnitMatch($validated['custom_unit'], $existingUnits);
+        if (!$confirmedUnit) { // 🆕 Only validate if not confirmed
+            $existingUnits = DB::table('units')
+                ->where('owner_id', $ownerId)
+                ->get();
+            
+            $unitMatchResult = $this->findUnitMatch($validated['custom_unit'], $existingUnits);
 
-        if ($unitMatchResult) {
-            $message = $unitMatchResult['isExact'] 
-                ? 'Unit already exists: ' . $unitMatchResult['unit']
-                : 'Similar unit already exists: ' . $unitMatchResult['unit'];
-                
-            return response()->json([
-                'success' => false,
-                'message' => $message
-            ], 422);
+            if ($unitMatchResult) {
+                // 🔴 MODIFIED: Only block exact matches
+                if ($unitMatchResult['isExact']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unit already exists: ' . $unitMatchResult['unit']
+                    ], 422);
+                }
+                // For similar matches, don't block - frontend will handle confirmation
+            }
         }
 
-        // If no match found, create the new unit
+        // If no exact match found (or user confirmed), create the new unit
         $unitId = DB::table('units')->insertGetId([
             'unit' => $validated['custom_unit'],
             'owner_id' => $ownerId,
@@ -793,19 +804,56 @@ public function checkExistingName(Request $request)
     $normalizedInput = $this->normalizeName($name);
     
     if ($type === 'category') {
+        // ✅ STEP 1: Check for exact case-insensitive match FIRST
+        $exactMatch = DB::table('categories')
+            ->where('owner_id', $ownerId)
+            ->whereRaw('LOWER(category) = ?', [strtolower($name)])
+            ->first();
+        
+        if ($exactMatch) {
+            return response()->json([
+                'exists' => true,
+                'existingName' => $exactMatch->category,
+                'isExactMatch' => true
+            ]);
+        }
+        
+        // ✅ STEP 2: Check for semantic/similar matches
         $existingCategories = DB::table('categories')
             ->where('owner_id', $ownerId)
             ->get();
         
+        $normalizedInput = $this->normalizeName($name);
         $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
         
-        return response()->json([
-            'exists' => !is_null($semanticMatch),
-            'existingName' => $semanticMatch,
-            'isExactMatch' => $semanticMatch && strtolower($semanticMatch) === strtolower($name)
-        ]);
+        if ($semanticMatch) {
+            // It's a semantic match but NOT an exact match (since we already checked above)
+            return response()->json([
+                'exists' => true,
+                'existingName' => $semanticMatch,
+                'isExactMatch' => false // ✅ Always false here since exact was already checked
+            ]);
+        }
         
-    } else if ($type === 'unit') {
+        return response()->json(['exists' => false]);
+    }
+    
+    else if ($type === 'unit') {
+        // ✅ STEP 1: Check for exact match first
+        $exactMatch = DB::table('units')
+            ->where('owner_id', $ownerId)
+            ->whereRaw('LOWER(unit) = ?', [strtolower($name)])
+            ->first();
+        
+        if ($exactMatch) {
+            return response()->json([
+                'exists' => true,
+                'existingName' => $exactMatch->unit,
+                'isExactMatch' => true
+            ]);
+        }
+        
+        // ✅ STEP 2: Check for similar matches
         $existingUnits = DB::table('units')
             ->where('owner_id', $ownerId)
             ->get();
@@ -816,13 +864,14 @@ public function checkExistingName(Request $request)
             return response()->json([
                 'exists' => true,
                 'existingName' => $unitMatchResult['unit'],
-                'isExactMatch' => $unitMatchResult['isExact']
+                'isExactMatch' => $unitMatchResult['isExact'] // ✅ Use the flag from findUnitMatch
             ]);
         }
         
         return response()->json(['exists' => false]);
-        
-    } else if ($type === 'product') {
+    }
+    
+    else if ($type === 'product') {
         // ✅ NEW: Check for existing product names
         $existingProducts = DB::table('products')
             ->where('owner_id', $ownerId)
@@ -844,107 +893,144 @@ public function checkExistingName(Request $request)
     return response()->json(['exists' => false]);
 }
 
-// NEW: Find product name matches with typo detection
+// ✅ FIXED: Find product name matches with STRICT validation
 private function findProductNameMatch($input, $existingProducts)
 {
     $inputLower = strtolower(trim($input));
     $normalizedInput = $this->normalizeName($input);
-    $bestMatch = null;
     
     foreach ($existingProducts as $product) {
         $existingName = $product->name;
         $existingNameLower = strtolower($existingName);
         $normalizedExisting = $this->normalizeName($existingName);
         
-        // Exact match (case-insensitive)
+        // ✅ EXACT MATCH ONLY (case-insensitive)
         if ($inputLower === $existingNameLower) {
             return ['name' => $existingName, 'isExact' => true];
         }
         
-        // Exact normalized match
+        // ✅ Exact normalized match
         if ($normalizedInput === $normalizedExisting) {
             return ['name' => $existingName, 'isExact' => true];
         }
+    }
+    
+    // ✅ SECOND PASS: Check for similar products (non-blocking warnings)
+    $bestMatch = null;
+    $highestSimilarity = 0;
+    
+    foreach ($existingProducts as $product) {
+        $existingName = $product->name;
+        $existingNameLower = strtolower($existingName);
+        $normalizedExisting = $this->normalizeName($existingName);
         
-        // Check for semantic similarity (using existing function)
-        if (!$bestMatch) {
-            $semanticMatch = $this->checkProductSemantic($normalizedInput, $normalizedExisting, $existingName);
-            if ($semanticMatch) {
-                $bestMatch = ['name' => $existingName, 'isExact' => false];
-            }
-        }
+        // ✅ Check similarity only if products share meaningful base name
+        $similarity = $this->calculateProductSimilarity($normalizedInput, $normalizedExisting, $inputLower, $existingNameLower);
         
-        // Check for typo similarity
-        if (!$bestMatch && $this->isSimilarString($inputLower, $existingNameLower)) {
-            $bestMatch = ['name' => $existingName, 'isExact' => false];
+        if ($similarity > $highestSimilarity && $similarity >= 0.75) {
+            $highestSimilarity = $similarity;
+            $bestMatch = ['name' => $existingName, 'isExact' => false, 'similarity' => $similarity];
         }
     }
     
     return $bestMatch;
 }
 
-// Helper function for product semantic matching
-private function checkProductSemantic($normalizedInput, $normalizedExisting, $originalName)
+// ✅ NEW: Calculate product similarity with strict criteria
+private function calculateProductSimilarity($normalizedInput, $normalizedExisting, $inputLower, $existingLower)
 {
-    $inputWords = explode(' ', $normalizedInput);
-    $existingWords = explode(' ', $normalizedExisting);
+    // Skip if strings are too short
+    if (strlen($normalizedInput) < 3 || strlen($normalizedExisting) < 3) {
+        return 0;
+    }
     
-    // Skip empty arrays
+    $inputWords = array_filter(explode(' ', $normalizedInput), function($word) {
+        return strlen($word) >= 3; // Only consider words with 3+ characters
+    });
+    
+    $existingWords = array_filter(explode(' ', $normalizedExisting), function($word) {
+        return strlen($word) >= 3;
+    });
+    
     if (empty($inputWords) || empty($existingWords)) {
-        return false;
+        return 0;
     }
     
-    // Check if input is a substring of existing
-    if (strpos($normalizedExisting, $normalizedInput) === 0) {
-        return true;
+    // ✅ Extract numbers (sizes/quantities) from both strings
+    preg_match_all('/\d+\s*(?:ml|l|g|kg|oz|lb|pc|pcs|pieces?)?/', $inputLower, $inputNumbers);
+    preg_match_all('/\d+\s*(?:ml|l|g|kg|oz|lb|pc|pcs|pieces?)?/', $existingLower, $existingNumbers);
+    
+    $inputHasNumbers = !empty($inputNumbers[0]);
+    $existingHasNumbers = !empty($existingNumbers[0]);
+    
+    // ✅ If both have numbers but they're different, they're different products
+    if ($inputHasNumbers && $existingHasNumbers) {
+        $inputNumStr = implode('', $inputNumbers[0]);
+        $existingNumStr = implode('', $existingNumbers[0]);
+        
+        if ($inputNumStr !== $existingNumStr) {
+            // Different sizes = different products, but might still be similar
+            // Only suggest if the base name is VERY similar
+            $baseInputWords = array_values($inputWords);
+            $baseExistingWords = array_values($existingWords);
+            
+            $commonWords = array_intersect($baseInputWords, $baseExistingWords);
+            $matchRatio = count($commonWords) / max(count($baseInputWords), count($baseExistingWords));
+            
+            // Only suggest if 70%+ of non-numeric words match
+            return $matchRatio >= 0.7 ? $matchRatio : 0;
+        }
     }
     
-    // Check if existing is a substring of input
-    if (strpos($normalizedInput, $normalizedExisting) === 0) {
-        return true;
-    }
-    
-    // Check word-by-word for close matches
+    // ✅ Count exact word matches (case-insensitive)
+    $exactMatches = 0;
     foreach ($inputWords as $inputWord) {
-        if (strlen($inputWord) < 3) continue;
-        
         foreach ($existingWords as $existingWord) {
-            if (strlen($existingWord) < 3) continue;
-            
-            // Check if words are very similar (allowing for typos)
-            $distance = levenshtein($inputWord, $existingWord);
-            $maxLength = max(strlen($inputWord), strlen($existingWord));
-            $similarity = 1 - ($distance / $maxLength);
-            
-            // If words are 75% similar, consider it a match
-            if ($similarity >= 0.75) {
-                return true;
-            }
-            
-            // Check if one word contains the other
-            if (strpos($existingWord, $inputWord) !== false || 
-                strpos($inputWord, $existingWord) !== false) {
-                return true;
+            if ($inputWord === $existingWord) {
+                $exactMatches++;
+                break;
             }
         }
     }
     
-    // Check for high word overlap
-    $commonWords = array_intersect($inputWords, $existingWords);
-    $totalWords = count(array_unique(array_merge($inputWords, $existingWords)));
+    // ✅ Calculate match ratio
+    $totalUniqueWords = count(array_unique(array_merge($inputWords, $existingWords)));
+    $matchRatio = $exactMatches / $totalUniqueWords;
     
-    if (!empty($inputWords) && !empty($existingWords)) {
-        $similarity = count($commonWords) / $totalWords;
-        $containmentRatio1 = count($commonWords) / count($inputWords);
-        $containmentRatio2 = count($commonWords) / count($existingWords);
+    // ✅ Check for typo similarity only if there's some word overlap
+    if ($exactMatches > 0) {
+        $typoMatches = 0;
+        foreach ($inputWords as $inputWord) {
+            if (strlen($inputWord) < 4) continue; // Skip short words for typo check
+            
+            foreach ($existingWords as $existingWord) {
+                if (strlen($existingWord) < 4) continue;
+                
+                if ($inputWord === $existingWord) continue; // Already counted
+                
+                $distance = levenshtein($inputWord, $existingWord);
+                $maxLength = max(strlen($inputWord), strlen($existingWord));
+                $wordSimilarity = 1 - ($distance / $maxLength);
+                
+                // 85% similarity for typos (stricter than before)
+                if ($wordSimilarity >= 0.85) {
+                    $typoMatches++;
+                    break;
+                }
+            }
+        }
         
-        // Match if 70% word overlap or 80% containment
-        if ($similarity >= 0.7 || $containmentRatio1 >= 0.8 || $containmentRatio2 >= 0.8) {
-            return true;
-        }
+        $totalMatches = $exactMatches + $typoMatches;
+        $matchRatio = $totalMatches / $totalUniqueWords;
     }
     
-    return false;
+    // ✅ Check string containment (one is substring of other)
+    if (strpos($normalizedExisting, $normalizedInput) !== false || 
+        strpos($normalizedInput, $normalizedExisting) !== false) {
+        $matchRatio = max($matchRatio, 0.8);
+    }
+    
+    return $matchRatio;
 }
 
 //Normalize name for semantic comparison
@@ -989,29 +1075,31 @@ private function findSemanticMatch($normalizedInput, $existingItems, $column)
         $existingName = $item->{$column};
         $normalizedExisting = $this->normalizeName($existingName);
         
-        // Check for exact normalized match
+        // ✅ Check for EXACT normalized match ONLY
         if ($normalizedInput === $normalizedExisting) {
             return $existingName;
         }
         
-        // Check if input is a substring of existing category (must start at beginning)
-        if (strpos($normalizedExisting, $normalizedInput) === 0) {
-            return $existingName;
-        }
-        
-        // Check if existing is a substring of input (must start at beginning)
-        if (strpos($normalizedInput, $normalizedExisting) === 0) {
-            return $existingName;
-        }
+        // ❌ REMOVED: Substring checks that were too aggressive
+        // These were causing "beverages hot" to match "beverages"
         
         $existingWords = array_filter(explode(' ', $normalizedExisting));
+        
+        // ✅ Only flag as semantic match if:
+        // 1. Input and existing have SAME NUMBER of words, OR
+        // 2. ALL input words match AND input represents significant portion
+        
+        // Skip multi-word input vs single-word existing (like "beverages hot" vs "beverages")
+        if (count($inputWords) > count($existingWords)) {
+            continue; // Input has more words, so it's likely a more specific category
+        }
         
         // ✅ Check if ALL input words have matches in existing category
         $allInputWordsMatched = true;
         $matchedCount = 0;
         
         foreach ($inputWords as $inputWord) {
-            if (strlen($inputWord) < 2) continue; // Skip very short words like "&"
+            if (strlen($inputWord) < 2) continue;
             
             $foundMatch = false;
             
@@ -1029,13 +1117,11 @@ private function findSemanticMatch($normalizedInput, $existingItems, $column)
                 foreach ($existingWords as $existingWord) {
                     if (strlen($existingWord) < 3) continue;
                     
-                    // Check if words are very similar (typo detection)
                     $distance = levenshtein($inputWord, $existingWord);
                     $maxLength = max(strlen($inputWord), strlen($existingWord));
                     $similarity = 1 - ($distance / $maxLength);
                     
-                    // If words are 80% similar AND at least 4 characters long
-                    if ($similarity >= 0.70 && strlen($inputWord) >= 4 && strlen($existingWord) >= 4) {
+                    if ($similarity >= 0.80 && strlen($inputWord) >= 4 && strlen($existingWord) >= 4) {
                         $foundMatch = true;
                         $matchedCount++;
                         break;
@@ -1053,35 +1139,32 @@ private function findSemanticMatch($normalizedInput, $existingItems, $column)
                 }
             }
             
-            // If this input word didn't match anything, category doesn't match
             if (!$foundMatch) {
                 $allInputWordsMatched = false;
                 break;
             }
         }
         
-        // ✅ Only return match if ALL input words were matched
-        if ($allInputWordsMatched && $matchedCount > 0 && count($inputWords) > 1) {
-            // Additional check: input should represent significant portion
-            $matchRatio = count($inputWords) / count($existingWords);
+        // ✅ MODIFIED: Only return match if word counts are equal OR single-word exact match
+        if ($allInputWordsMatched && $matchedCount > 0) {
+            // Case 1: Both have same number of words (e.g., "hot beverages" vs "cold beverages")
+            if (count($inputWords) === count($existingWords)) {
+                return $existingName;
+            }
             
-            // Only match if input represents at least 50% of the existing category
-            if ($matchRatio >= 0.5) {
+            // Case 2: Single word that matches exactly
+            if (count($inputWords) === 1 && count($existingWords) === 1) {
                 return $existingName;
             }
-        }
-        
-        // ✅ Special case: If input has only 1 word and it matches exactly
-        if (count($inputWords) === 1 && $matchedCount === 1) {
-            // Only match if the existing category also has 1 word (prevents "care" matching "Personal Care")
-            if (count($existingWords) === 1) {
-                return $existingName;
-            }
+            
+            // ❌ REMOVED: The logic that returned matches when input was subset
+            // This was causing "beverages" to match "beverages hot"
         }
     }
     
     return null;
 }
+
 
 //Find unit matches considering parenthesis notation AND similarity
 private function findUnitMatch($input, $existingUnits)
@@ -1182,21 +1265,23 @@ private function isSimilarString($str1, $str2)
     return $similarity >= 0.70;
 }
 
+
 public function addCategory(Request $request)
 {
     $ownerId = session('owner_id');
     $categoryName = trim($request->input('category'));
+    $confirmedSimilar = $request->input('confirmed_similar') === '1'; // ✅ NEW
 
     if (empty($categoryName)) {
         return response()->json(['success' => false, 'message' => 'Category name cannot be empty.']);
     }
 
-    //  Get all existing categories for semantic comparison
+    // Get all existing categories for semantic comparison
     $existingCategories = DB::table('categories')
         ->where('owner_id', $ownerId)
         ->get();
     
-    //  Check 1: Exact case-insensitive match
+    // Check 1: Exact case-insensitive match (ALWAYS BLOCK)
     $exactMatch = DB::table('categories')
         ->where('owner_id', $ownerId)
         ->whereRaw('LOWER(category) = ?', [strtolower($categoryName)])
@@ -1211,11 +1296,11 @@ public function addCategory(Request $request)
         ]);
     }
     
-    //  Check 2: Semantic similarity (using the same functions from registerProduct)
+    // Check 2: Semantic similarity (ALLOW if user confirmed)
     $normalizedInput = $this->normalizeName($categoryName);
     $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
 
-    if ($semanticMatch) {
+    if ($semanticMatch && !$confirmedSimilar) { // ✅ MODIFIED: Only block if not confirmed
         return response()->json([
             'success' => false, 
             'message' => 'Similar category already exists: ' . $semanticMatch,
@@ -1224,7 +1309,7 @@ public function addCategory(Request $request)
         ]);
     }
 
-    //  Both checks passed - insert new category
+    // Both checks passed OR user confirmed similar match - insert new category
     DB::table('categories')->insert([
         'category' => $categoryName,
         'owner_id' => $ownerId,
@@ -1232,7 +1317,6 @@ public function addCategory(Request $request)
 
     return response()->json(['success' => true, 'message' => 'Category added successfully.']);
 }
-
 
 
 

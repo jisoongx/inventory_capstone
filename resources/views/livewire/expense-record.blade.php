@@ -26,7 +26,7 @@
                 <table class="w-full text-xs text-left text-gray-700">
                     <thead class="uppercase text-xs font-medium sticky top-0 z-10 bg-white shadow-sm">
                         <tr>
-                            <th class="py-4 w-[26%]">Title</th>
+                            <th class="py-4 w-[26%]">Item/Purpose</th>
                             <th class="py-4 w-[15%]">Cost</th>
                             <th class="py-4 w-[17%]">Date Recorded</th>
                             <th class="py-4 w-[15%]">Action</th>
@@ -37,8 +37,15 @@
                         <tr>
                             <td>
                                 @if ($editingId === $input->expense_id)
-                                    <input type="text" wire:model="editingDescri"
-                                        class="p-0 pb-1 border-0 border-b border-slate-300 focus:border-slate-500 w-[80%] text-xs font-medium rounded-none">
+                                    <div class="relative">
+                                        <input type="text" wire:model.live="editingDescri"
+                                            class="p-0 pb-1 border-0 border-b border-slate-300 focus:border-slate-500 w-[80%] text-xs font-medium rounded-none">  
+                                        <div class="absolute top-full left-0 w-full mt-2">
+                                            <p class="text-red-500 font-medium text-[10px] leading-tight whitespace-nowrap {{ $editingDescriptionError ? '' : 'invisible' }}">
+                                                {{ $editingDescriptionError ?: 'Good' }}
+                                            </p>
+                                        </div>
+                                    </div>
                                 @else
                                     <a href="{{ asset('storage/' . $input->file_path) }}" target="_blank"
                                     class="text-blue-600 hover:underline text-xs font-medium">
@@ -48,8 +55,15 @@
                             </td>
                             <td>
                                 @if ($editingId === $input->expense_id)
-                                    <input type="number" step="0.01" wire:model="editingAmount"
-                                        class="p-0 pb-1 border-0 border-b border-slate-300 focus:ring-0 focus:border-slate-500 w-[90%] text-xs font-medium rounded-none">
+                                    <div class="relative">
+                                        <input type="number" step="0.01" wire:model.live="editingAmount"
+                                            class="p-0 pb-1 border-0 border-b border-slate-300 focus:border-slate-500 w-[80%] text-xs font-medium rounded-none">  
+                                        <div class="absolute top-full left-0 w-full mt-2">
+                                            <p class="text-red-500 font-medium text-[10px] leading-tight whitespace-nowrap {{ $editingAmountError ? '' : 'invisible' }}">
+                                                {{ $editingAmountError ?: 'Good' }}
+                                            </p>
+                                        </div>
+                                    </div>
                                 @else
                                     <span>{{ $input->expense_amount }}</span>
                                 @endif
@@ -269,15 +283,16 @@
                     
                     <form wire:submit="addExpenses" enctype="multipart/form-data" class="p-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 ">
-                            <div>
+                            <div class="relative mb-6 ">
                                 <label for="expense_descri"
                                     class="block mb-2 text-sm font-semibold text-gray-700">Item / Purpose <span class="text-red-500">*</span></label>
                                 <input wire:model.live="add_expense_descri" type="text" id="expense_descri" required
                                     class="border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 block w-full p-2.5 transition-all duration-200"/>
-                                <p class="text-red-500 font-medium text-xs mt-2 flex items-center {{ $descriptionError ? '' : 'invisible' }}">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    {{ $descriptionError ?: 'Good' }}
-                                </p>
+                                <div class="absolute top-full left-0 w-full mt-2">
+                                    <p class="text-red-500 font-medium text-[10px] leading-tight whitespace-nowrap {{ $descriptionError ? '' : 'invisible' }}">
+                                        {{ $descriptionError ?: 'Good' }}
+                                    </p>
+                                </div>
                             </div>
                             <div>
                                 <label for="expense_category"
@@ -321,9 +336,11 @@
                                     <input wire:model.live="add_expense_amount" type="number" step="0.01" id="expense_amount" required
                                         class="pl-10 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 block w-full p-2.5 transition-all duration-200"/>
                                 </div>
-                                <p class="text-red-500 font-medium text-xs mt-2 flex items-center {{ $amountError ? '' : 'invisible' }}">
-                                    {{ $amountError ?: 'Good' }}
-                                </p>
+                                <div class="top-full left-0 w-full mt-2">
+                                    <p class="text-red-500 font-medium text-[10px] leading-tight whitespace-nowrap {{ $amountError ? '' : 'invisible' }}">
+                                        {{ $amountError ?: 'Good' }}
+                                    </p>
+                                </div>
                             </div>
                             <div >
                                 <label for="add_expense_file"

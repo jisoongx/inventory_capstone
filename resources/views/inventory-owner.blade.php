@@ -128,7 +128,7 @@
                             {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
                     title="Register New Product">
                     <span class="material-symbols-outlined text-lg">add_circle</span>
-                    <span class="font-medium text-sm">Register</span>
+                    <span class="font-medium text-sm">Add Product</span>
                 </button>
 
                 <!-- Add Stock -->
@@ -363,7 +363,7 @@
 
 
 
-    <!-- Choose Category Modal -->
+    <!-- Choose Category Modal for Restock -->
     <div id="chooseCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-white rounded-2xl p-8 w-[90%] max-w-4xl shadow-xl relative">
             <!-- Close Button -->
@@ -421,7 +421,7 @@
                         class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
                         Cancel
                     </button>
-                    <button type="submit"
+                    <button type="submit" id="saveCategoryBtn"
                         class="px-4 py-2 bg-[#B50612] text-white font-medium rounded-lg hover:bg-[#9E0410] transition">
                         Save Category
                     </button>
@@ -1068,6 +1068,7 @@
 </script>
 
 <script>
+    // Add Stock or Restock Functionality
     document.addEventListener('DOMContentLoaded', function() {
         const addStockBtn = document.getElementById('addStockBtn');
         const chooseCategoryModal = document.getElementById('chooseCategoryModal');
@@ -1092,32 +1093,47 @@
         document.getElementById('closeChooseCategoryModal')?.addEventListener('click', () => {
             document.body.classList.remove('modal-open');
             chooseCategoryModal.classList.add('hidden');
+            chooseCategoryModal.classList.remove('flex');
         });
 
-            // === Open Add Category Modal ===
-            window.openAddCategoryModal = function() {
-                document.getElementById('chooseCategoryModal').classList.add('hidden');
-                const modal = document.getElementById('addCategoryModal');
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                document.getElementById('newCategoryName').focus();
-            };
+        // === Open Add Category Modal ===
+        window.openAddCategoryModal = function() {
+            document.getElementById('chooseCategoryModal').classList.add('hidden');
+            const modal = document.getElementById('addCategoryModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+                
+            // Set flag to indicate this modal was opened from RESTOCK flow
+            modal.setAttribute('data-opened-from', 'restock');
+                
+            document.getElementById('newCategoryName').focus();
+        };
 
         // === Close Add Category Modal ===
         function closeAddCategoryModal() {
             const modal = document.getElementById('addCategoryModal');
-            modal.classList.add('hidden');
+            const saveCategoryBtn = document.getElementById('saveCategoryBtn');
             
-            // ✅ Clear error messages and red borders
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // Clear error messages and red borders
             const categoryInput = document.getElementById('newCategoryName');
             if (categoryInput) {
-                categoryInput.classList.remove('border-red-500');
+                categoryInput.classList.remove('border-red-500', 'border-yellow-500');
                 categoryInput.value = '';
                 
                 const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
                 if (existingError) {
                     existingError.remove();
                 }
+            }
+            
+            // Re-enable button when modal closes
+            if (saveCategoryBtn) {
+                saveCategoryBtn.disabled = false;
+                saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                saveCategoryBtn.textContent = 'Save Category';
             }
         }
 
@@ -1130,18 +1146,54 @@
 
             // === Close Buttons ===
             document.getElementById('closeAddCategoryModal')?.addEventListener('click', () => {
-                closeAddCategoryModal();
-                reopenChooseCategoryModal();
+                const modal = document.getElementById('addCategoryModal');
+                
+                // Clear everything
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modal.removeAttribute('data-opened-from');
+                
+                const categoryInput = document.getElementById('newCategoryName');
+                const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+                
+                if (categoryInput) {
+                    categoryInput.classList.remove('border-red-500', 'border-yellow-500');
+                    categoryInput.value = '';
+                    
+                    const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                }
+                
+                if (saveCategoryBtn) {
+                    saveCategoryBtn.disabled = false;
+                    saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    saveCategoryBtn.textContent = 'Save Category';
+                }
+                
+                document.body.classList.remove('modal-open');
             });
 
-        document.getElementById('cancelAddCategory')?.addEventListener('click', () => {
-            closeAddCategoryModal();
-            reopenChooseCategoryModal();
-        });
+            document.getElementById('cancelAddCategory')?.addEventListener('click', () => {
+                const modal = document.getElementById('addCategoryModal');
+                const openedFrom = modal.getAttribute('data-opened-from');
+                
+                if (openedFrom === 'barcode') {
+                    // Barcode flow - return to barcode category selection
+                    closeAddCategoryModalForBarcode();
+                } else {
+                    // Restock flow - return to restock category selection
+                    closeAddCategoryModal();
+                    reopenChooseCategoryModal();
+                }
+            });
 
         // ✅ Real-time validation for category name
         const newCategoryInput = document.getElementById('newCategoryName');
-        if (newCategoryInput) {
+        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+
+        if (newCategoryInput && saveCategoryBtn) {
             let categoryTimeout;
             
             newCategoryInput.addEventListener('input', function() {
@@ -1153,33 +1205,52 @@
                     existingError.remove();
                 }
                 
-                // Remove red border if input is empty
+                // Remove both border colors and enable button if input is empty
                 if (!this.value.trim()) {
-                    this.classList.remove('border-red-500');
+                    this.classList.remove('border-red-500', 'border-yellow-500');
+                    saveCategoryBtn.disabled = false;
+                    saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                     return;
                 }
                 
                 // Check for duplicates after 500ms delay
                 categoryTimeout = setTimeout(async () => {
-                    // Use the global checkExistingName function if available
                     const checkFunction = window.checkExistingName || checkExistingNameLocal;
                     const response = await checkFunction('category', this.value);
                     
                     if (response && response.exists) {
                         const errorDiv = document.createElement('div');
-                        errorDiv.className = 'duplicate-error text-red-500 text-xs mt-1';
                         
                         if (response.isExactMatch) {
+                            // ❌ EXACT MATCH: Red border, blocking message, DISABLE BUTTON
+                            errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Category already exists: <strong>"${response.existingName}"</strong>`;
+                            this.classList.add('border-red-500');
+                            this.classList.remove('border-yellow-500');
+                            
+                            // ✅ DISABLE the submit button
+                            saveCategoryBtn.disabled = true;
+                            saveCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                            
                         } else {
+                            // ⚠️ SIMILAR MATCH: Yellow border, warning message, KEEP BUTTON ENABLED
+                            errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar category exists: "<strong>${response.existingName}</strong>"<br>
-                                                <span class="text-gray-600">Did you mean to use this instead?</span>`;
+                                                <span class="text-gray-600">You can proceed, but consider using the existing category</span>`;
+                            this.classList.add('border-yellow-500');
+                            this.classList.remove('border-red-500');
+                            
+                            // ✅ ENABLE the submit button (user can proceed with warning)
+                            saveCategoryBtn.disabled = false;
+                            saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                         }
                         
                         this.parentNode.appendChild(errorDiv);
-                        this.classList.add('border-red-500');
                     } else {
-                        this.classList.remove('border-red-500');
+                        // ✅ No duplicates found - enable button
+                        this.classList.remove('border-red-500', 'border-yellow-500');
+                        saveCategoryBtn.disabled = false;
+                        saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                     }
                 }, 500);
             });
@@ -1213,7 +1284,10 @@
         // === Handle Add Category Form Submission ===
         document.getElementById('addCategoryForm')?.addEventListener('submit', async function(e) {
             e.preventDefault();
+            
             const categoryName = document.getElementById('newCategoryName').value.trim();
+            const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+            
             if (!categoryName) {
                 alert('Please enter a category name.');
                 return;
@@ -1222,38 +1296,81 @@
             // ✅ Client-side validation before submission
             const checkFunction = window.checkExistingName || checkExistingNameLocal;
             const response = await checkFunction('category', categoryName);
-            if (response && response.exists) {
+            
+            // ✅ EXACT MATCH: Block submission (should already be blocked by disabled button)
+            if (response && response.exists && response.isExactMatch) {
                 alert(`Cannot submit: Category "${categoryName}" already exists as "${response.existingName}"`);
+                saveCategoryBtn.disabled = true;
+                saveCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 return;
             }
-
-                const formData = new FormData(this);
-
-                try {
-                    const response = await fetch('/inventory/add-category', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: formData
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        // Set flag to reopen modal after reload
-                        sessionStorage.setItem('openChooseCategoryModal', 'true');
-
-                        alert('Category added successfully!');
-                        window.location.reload(); // reload page to get new category with proper ID
-                    } else {
-                        alert('⚠️ ' + data.message);
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert('Something went wrong while adding category.');
+            
+            // ✅ SIMILAR MATCH: Show confirmation dialog
+            let userConfirmed = false;
+            if (response && response.exists && !response.isExactMatch) {
+                const proceed = confirm(
+                    `Similar category found: "${response.existingName}"\n\n` +
+                    `You're adding: "${categoryName}"\n\n` +
+                    `These appear similar but are not identical.\n` +
+                    `Proceed with adding this new category?`
+                );
+                
+                if (!proceed) {
+                    return;
                 }
-            });
+                userConfirmed = true;
+            }
+
+            // Disable button during submission
+            saveCategoryBtn.disabled = true;
+            saveCategoryBtn.textContent = 'Saving...';
+
+            const formData = new FormData(this);
+            
+            if (userConfirmed) {
+                formData.append('confirmed_similar', '1');
+            }
+
+            try {
+                const submitResponse = await fetch('/inventory/add-category', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                });
+
+                const data = await submitResponse.json();
+
+                if (data.success) {
+                    sessionStorage.setItem('openChooseCategoryModal', 'true');
+                    alert('Category added successfully!');
+                    window.location.reload();
+                } else {
+                    // Re-enable button on error
+                    saveCategoryBtn.disabled = false;
+                    saveCategoryBtn.textContent = 'Save Category';
+                    
+                    if (data.isExactMatch) {
+                        alert('❌ ' + data.message);
+                    } else {
+                        const proceed = confirm(`${data.message}\n\nProceed anyway?`);
+                        
+                        if (proceed) {
+                            formData.append('confirmed_similar', '1');
+                            // Retry submission...
+                            // (rest of retry logic)
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Something went wrong while adding category.');
+                // Re-enable button on error
+                saveCategoryBtn.disabled = false;
+                saveCategoryBtn.textContent = 'Save Category';
+            }
+        });
 
             // === Auto-open Choose Category Modal after reload if needed ===
             window.addEventListener('DOMContentLoaded', () => {
@@ -1364,43 +1481,43 @@
             const minDate = getMinimumExpirationDate();
 
                 tr.innerHTML = `
-        <td class="p-2">
-        ${escapeHtml(prodName)}
-        <input type="hidden" name="items[${index}][prod_code]" value="${prodCode}">
-        <input type="hidden" name="items[${index}][category_id]" value="${categoryId}">
-        </td>
-        <td class="p-2 text-center">${currentStock}</td>
-        <td class="p-2 text-center">
-        <input type="number" min="1" required name="items[${index}][qty]" 
-            class="border rounded px-2 py-1 w-20 text-sm text-center">
-        </td>
-        <td class="p-2 text-center">
-        <input type="date" name="items[${index}][expiration_date]" 
-            min="${minDate}"
-            class="border rounded px-2 py-1 w-36 text-sm text-center expiration-date-input">
-        </td>
-        <td class="p-2 text-center">
-        <input type="text" readonly name="items[${index}][batch_number]" 
-            value="${batchNum}" 
-            class="border rounded px-2 py-1 text-sm text-center bg-gray-50">
-        </td>
-        <td class="p-2">
-        <div class="flex justify-center gap-2">
-            <button 
-            type="button" 
-            class="flex-1 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded hover:bg-yellow-600 transition"
-            onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
-            Add Batch
-            </button>
-            <button 
-            type="button" 
-            class="flex-1 bg-red-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-red-700 transition"
-            onclick="this.closest('tr').remove()">
-            Remove
-            </button>
-        </div>
-        </td>
-    `;
+                    <td class="p-2">
+                    ${escapeHtml(prodName)}
+                    <input type="hidden" name="items[${index}][prod_code]" value="${prodCode}">
+                    <input type="hidden" name="items[${index}][category_id]" value="${categoryId}">
+                    </td>
+                    <td class="p-2 text-center">${currentStock}</td>
+                    <td class="p-2 text-center">
+                    <input type="number" min="1" required name="items[${index}][qty]" 
+                        class="border rounded px-2 py-1 w-20 text-sm text-center">
+                    </td>
+                    <td class="p-2 text-center">
+                    <input type="date" name="items[${index}][expiration_date]" 
+                        min="${minDate}"
+                        class="border rounded px-2 py-1 w-36 text-sm text-center expiration-date-input">
+                    </td>
+                    <td class="p-2 text-center">
+                    <input type="text" readonly name="items[${index}][batch_number]" 
+                        value="${batchNum}" 
+                        class="border rounded px-2 py-1 text-sm text-center bg-gray-50">
+                    </td>
+                    <td class="p-2">
+                    <div class="flex justify-center gap-2">
+                        <button 
+                        type="button" 
+                        class="flex-1 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded hover:bg-yellow-600 transition"
+                        onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
+                        Add Batch
+                        </button>
+                        <button 
+                        type="button" 
+                        class="flex-1 bg-red-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-red-700 transition"
+                        onclick="this.closest('tr').remove()">
+                        Remove
+                        </button>
+                    </div>
+                    </td>
+                `;
             container.appendChild(tr);
             
             // ✅ Add validation listener to the expiration date input
@@ -1635,7 +1752,7 @@
             }
 
         });
-    </script>
+</script>
 
 <script>
     // Quick Restock - Open restock modal directly for a single product
@@ -1841,6 +1958,7 @@
             if (modal) {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
+                // modal.classList.remove('items-center', 'justify-center');
             }
         });
         
@@ -2010,6 +2128,7 @@
         const modal = document.getElementById('scanBarcodeModal');
         if (modal) {
             modal.classList.remove('hidden');
+            modal.classList.add('flex');
             setTimeout(() => {
                 document.getElementById('scannedBarcodeInput').focus();
             }, 300);
@@ -2144,8 +2263,8 @@
         }
     </script>
 
-    <!-- Generate Barcode JavaScript -->
-    <script>
+<!-- Generate Barcode JavaScript -->
+<script>
         let selectedCategoryData = {
             id: null,
             name: '',
@@ -2155,8 +2274,11 @@
 
         // Open Generate Barcode Flow
         window.openGenerateModal = function() {
-            closeAllModals();
-            document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
+            closeAllModals(); 
+            
+            const modal = document.getElementById('chooseCategoryBarcodeModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         };
 
         // Category Selection Handler
@@ -2198,6 +2320,7 @@
         function proceedToBarcodeGeneration() {
             closeAllModals();
             document.getElementById('generateBarcodeModal').classList.remove('hidden');
+            document.getElementById('generateBarcodeModal').classList.add('flex');
 
             // Update selected category display
             document.getElementById('selectedCategoryDisplay').textContent = selectedCategoryData.name;
@@ -2289,6 +2412,17 @@
         // Close Modal Functions
         function closeChooseCategoryBarcodeModal() {
             document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
+            document.getElementById('chooseCategoryBarcodeModal').classList.remove('flex');
+            
+            // Reset selected category data
+            selectedCategoryData = {
+                id: null,
+                name: '',
+                isNew: false
+            };
+            
+            // Remove modal-open class from body if it was added
+            document.body.classList.remove('modal-open');
         }
 
         function closeCustomCategoryBarcodeModal() {
@@ -2395,28 +2529,40 @@
             doc.close();
         }
 
-
 </script>
 
-    <script>
-        // === Barcode Generation Category Functions ===
+<script>
+    // === Barcode Generation Category Functions ===
 
     // Open Add Category Modal for Barcode Generation
     window.openAddCategoryModalForBarcode = function() {
         document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
         const modal = document.getElementById('addCategoryModal');
         modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // ✅ Set flag to indicate this modal was opened from barcode flow
+        modal.setAttribute('data-opened-from', 'barcode');
         
         // Clear input and errors
         const categoryInput = document.getElementById('newCategoryName');
+        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+        
         categoryInput.value = '';
-        categoryInput.classList.remove('border-red-500');
+        categoryInput.classList.remove('border-red-500', 'border-yellow-500');
         categoryInput.focus();
         
         // Remove any existing error messages
         const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
         if (existingError) {
             existingError.remove();
+        }
+        
+        // Re-enable button
+        if (saveCategoryBtn) {
+            saveCategoryBtn.disabled = false;
+            saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            saveCategoryBtn.textContent = 'Save Category';
         }
 
         // Setup barcode-specific form and validation
@@ -2429,11 +2575,16 @@
         const modal = document.getElementById('addCategoryModal');
         modal.classList.add('hidden');
         
+        // Remove the flag
+        modal.removeAttribute('data-opened-from');
+        
         // Clear input and errors
         const categoryInput = document.getElementById('newCategoryName');
+        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+        
         if (categoryInput) {
             categoryInput.value = '';
-            categoryInput.classList.remove('border-red-500');
+            categoryInput.classList.remove('border-red-500', 'border-yellow-500');
             
             const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
             if (existingError) {
@@ -2441,18 +2592,28 @@
             }
         }
         
-        // Return to category selection
+        // Re-enable button
+        if (saveCategoryBtn) {
+            saveCategoryBtn.disabled = false;
+            saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            saveCategoryBtn.textContent = 'Save Category';
+        }
+        
+        // Return to barcode category selection modal
         document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
+        document.getElementById('chooseCategoryBarcodeModal').classList.add('flex');
     }
 
     // ✅ Setup real-time validation for barcode category input
     function setupBarcodeCategoryValidation() {
         const categoryInput = document.getElementById('newCategoryName');
-        if (!categoryInput) return;
+        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+        
+        if (!categoryInput || !saveCategoryBtn) return;
 
         let categoryTimeout;
         
-        // Remove any existing input listeners
+        // Remove any existing input listeners by cloning
         const newInput = categoryInput.cloneNode(true);
         categoryInput.parentNode.replaceChild(newInput, categoryInput);
         
@@ -2465,39 +2626,58 @@
                 existingError.remove();
             }
             
-            // Remove red border if input is empty
+            // Remove border colors and enable button if input is empty
             if (!this.value.trim()) {
-                this.classList.remove('border-red-500');
+                this.classList.remove('border-red-500', 'border-yellow-500');
+                saveCategoryBtn.disabled = false;
+                saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 return;
             }
             
             // Check for duplicates after 500ms delay
             categoryTimeout = setTimeout(async () => {
-                // Use the global checkExistingName function or local fallback
                 const checkFunction = window.checkExistingName || checkExistingNameLocal;
                 const response = await checkFunction('category', this.value);
                 
                 if (response && response.exists) {
                     const errorDiv = document.createElement('div');
-                    errorDiv.className = 'duplicate-error text-red-500 text-xs mt-1';
                     
                     if (response.isExactMatch) {
-                        errorDiv.innerHTML = `Category already exists: <strong>"${response.existingName}"</strong>`;
+                        // ❌ EXACT MATCH: Red border, blocking message, DISABLE BUTTON
+                        errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
+                        errorDiv.innerHTML = `❌ Category already exists: <strong>"${response.existingName}"</strong>`;
+                        this.classList.add('border-red-500');
+                        this.classList.remove('border-yellow-500');
+                        
+                        // ✅ DISABLE the submit button
+                        saveCategoryBtn.disabled = true;
+                        saveCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        
                     } else {
-                        errorDiv.innerHTML = `Similar category exists: "<strong>${response.existingName}</strong>"<br>
-                                            <span class="text-gray-600">Did you mean to use this instead?</span>`;
+                        // ⚠️ SIMILAR MATCH: Yellow border, warning message, KEEP BUTTON ENABLED
+                        errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
+                        errorDiv.innerHTML = `⚠️ Similar category exists: "<strong>${response.existingName}</strong>"<br>
+                                            <span class="text-gray-600">You can proceed, but consider using the existing category</span>`;
+                        this.classList.add('border-yellow-500');
+                        this.classList.remove('border-red-500');
+                        
+                        // ✅ ENABLE the submit button (user can proceed with warning)
+                        saveCategoryBtn.disabled = false;
+                        saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                     }
                     
                     this.parentNode.appendChild(errorDiv);
-                    this.classList.add('border-red-500');
                 } else {
-                    this.classList.remove('border-red-500');
+                    // ✅ No duplicates found - enable button
+                    this.classList.remove('border-red-500', 'border-yellow-500');
+                    saveCategoryBtn.disabled = false;
+                    saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
             }, 500);
         });
     }
 
-    //  Local check function (fallback if global not available)
+    // ✅ Local check function (fallback if global not available)
     async function checkExistingNameLocal(type, value) {
         if (!value.trim()) return null;
         
@@ -2522,98 +2702,161 @@
         }
     }
 
-        // Setup form for barcode generation
-        function setupBarcodeCategoryForm() {
-            const form = document.getElementById('addCategoryForm');
-            const cancelButton = document.getElementById('cancelAddCategory');
-            const closeButton = document.getElementById('closeAddCategoryModal');
+    // Setup form for barcode generation
+    function setupBarcodeCategoryForm() {
+        const form = document.getElementById('addCategoryForm');
+        
+        if (!form) return;
 
-            // Remove any existing event listeners by cloning and replacing
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
+        // Remove old submit listener and add new one
+        form.removeEventListener('submit', handleBarcodeCategorySubmit);
+        form.addEventListener('submit', handleBarcodeCategorySubmit);
+    }
 
-            const newCancelButton = cancelButton.cloneNode(true);
-            cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
-
-            const newCloseButton = closeButton.cloneNode(true);
-            closeButton.parentNode.replaceChild(newCloseButton, closeButton);
-
-            // Add barcode-specific event listeners
-            newForm.addEventListener('submit', handleBarcodeCategorySubmit);
-            newCancelButton.addEventListener('click', closeAddCategoryModalForBarcode);
-            newCloseButton.addEventListener('click', closeAddCategoryModalForBarcode);
-        }
-
-    // Handle category form submission for barcode generation
+    // ✅ Handle category form submission for barcode generation
     async function handleBarcodeCategorySubmit(e) {
         e.preventDefault();
 
-            const categoryName = document.getElementById('newCategoryName').value.trim();
+        const categoryName = document.getElementById('newCategoryName').value.trim();
+        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
 
         if (!categoryName) {
             alert('Category name cannot be empty.');
             return;
         }
 
-        //  Client-side validation before submission
+        // ✅ Client-side validation before submission
         const checkFunction = window.checkExistingName || checkExistingNameLocal;
-        const validationResponse = await checkFunction('category', categoryName);
+        const response = await checkFunction('category', categoryName);
         
-        if (validationResponse && validationResponse.exists) {
-            alert(`Cannot submit: Category "${categoryName}" already exists as "${validationResponse.existingName}"`);
+        // ✅ EXACT MATCH: Block submission (Red Error)
+        if (response && response.exists && response.isExactMatch) {
+            alert(`Cannot submit: Category "${categoryName}" already exists as "${response.existingName}"`);
+            saveCategoryBtn.disabled = true;
+            saveCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
             return;
         }
+        
+        // ✅ SIMILAR MATCH: Show confirmation dialog (Yellow Warning)
+        let userConfirmed = false;
+        if (response && response.exists && !response.isExactMatch) {
+            const proceed = confirm(
+                `Similar category found: "${response.existingName}"\n\n` +
+                `You're adding: "${categoryName}"\n\n` +
+                `These appear similar but are not identical.\n` +
+                `Proceed with adding this new category?`
+            );
+            
+            if (!proceed) {
+                return; // User chose not to proceed
+            }
+            userConfirmed = true;
+        }
 
-        // Send AJAX request to add category
-        fetch('/inventory/add-category', {
+        // Disable button during submission
+        saveCategoryBtn.disabled = true;
+        saveCategoryBtn.textContent = 'Saving...';
+
+        // ✅ Prepare form data
+        const formData = new FormData();
+        formData.append('category', categoryName);
+        
+        // ✅ Add confirmation flag if user approved similar match
+        if (userConfirmed) {
+            formData.append('confirmed_similar', '1');
+        }
+
+        try {
+            // Send AJAX request to add category
+            const submitResponse = await fetch('/inventory/add-category', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
                 },
-                body: JSON.stringify({
-                    category: categoryName
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Category added successfully
-                    alert('Category added successfully!');
-                    closeAddCategoryModalForBarcode();
-
-                        // Update the selected category data and proceed to barcode generation
-                        selectedCategoryData = {
-                            id: 'new',
-                            name: categoryName,
-                            isNew: true
-                        };
-                        proceedToBarcodeGeneration();
-
-                } else {
-                    alert('⚠️ ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error adding category:', error);
-                alert('Error adding category. Please try again.');
+                body: formData
             });
-    }
 
-        // Update the category selection handler
-        window.selectCategoryForBarcode = function(categoryId, categoryName) {
-            if (categoryId === 'new') {
-                openAddCategoryModalForBarcode();
-            } else {
-                // Proceed with existing category
+            const data = await submitResponse.json();
+
+            if (data.success) {
+                // Category added successfully
+                alert('Category added successfully!');
+                closeAddCategoryModalForBarcode();
+
+                // Update the selected category data and proceed to barcode generation
                 selectedCategoryData = {
-                    id: categoryId,
+                    id: 'new',
                     name: categoryName,
-                    isNew: false
+                    isNew: true
                 };
                 proceedToBarcodeGeneration();
+
+            } else {
+                // Backend returned an error
+                saveCategoryBtn.disabled = false;
+                saveCategoryBtn.textContent = 'Save Category';
+                
+                if (data.isExactMatch) {
+                    alert('❌ ' + data.message);
+                } else {
+                    // Similar match from backend - ask for confirmation
+                    const proceed = confirm(
+                        `${data.message}\n\n` +
+                        `Proceed anyway?`
+                    );
+                    
+                    if (proceed) {
+                        // Retry with confirmation flag
+                        formData.append('confirmed_similar', '1');
+                        const retryResponse = await fetch('/inventory/add-category', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+                            },
+                            body: formData
+                        });
+                        
+                        const retryData = await retryResponse.json();
+                        if (retryData.success) {
+                            alert('Category added successfully!');
+                            closeAddCategoryModalForBarcode();
+                            
+                            selectedCategoryData = {
+                                id: 'new',
+                                name: categoryName,
+                                isNew: true
+                            };
+                            proceedToBarcodeGeneration();
+                        } else {
+                            alert('⚠️ ' + retryData.message);
+                        }
+                    }
+                }
             }
-        };
+        } catch (error) {
+            console.error('Error adding category:', error);
+            alert('Error adding category. Please try again.');
+            
+            // Re-enable button on error
+            saveCategoryBtn.disabled = false;
+            saveCategoryBtn.textContent = 'Save Category';
+        }
+    }
+
+    // Update the category selection handler
+    window.selectCategoryForBarcode = function(categoryId, categoryName) {
+        if (categoryId === 'new') {
+            openAddCategoryModalForBarcode();
+        } else {
+            // Proceed with existing category
+            selectedCategoryData = {
+                id: categoryId,
+                name: categoryName,
+                isNew: false
+            };
+            proceedToBarcodeGeneration();
+        }
+    };
 
     // Close Choose Category Modal for Barcode
     function closeChooseCategoryBarcodeModal() {
@@ -2661,14 +2904,14 @@
         const customCategory = document.getElementById('customCategory');
         const customUnit = document.getElementById('customUnit');
         if (productNameInput) {
-            productNameInput.classList.remove('border-red-500');
+            productNameInput.classList.remove('border-red-500', 'border-yellow-500'); 
         }
         if (customCategory) {
-            customCategory.classList.remove('border-red-500');
+            customCategory.classList.remove('border-red-500', 'border-yellow-500'); 
             customCategory.value = '';
         }
         if (customUnit) {
-            customUnit.classList.remove('border-red-500');
+            customUnit.classList.remove('border-red-500', 'border-yellow-500'); 
             customUnit.value = '';
         }
         
@@ -2880,9 +3123,9 @@
                     existingError.remove();
                 }
                 
-                // Remove red border if input is empty
+                // 🔴 CHANGED: Remove BOTH border colors if input is empty
                 if (!this.value.trim()) {
-                    this.classList.remove('border-red-500');
+                    this.classList.remove('border-red-500', 'border-yellow-500'); // ← ADDED yellow
                     return;
                 }
                 
@@ -2892,19 +3135,27 @@
                     
                     if (response && response.exists) {
                         const errorDiv = document.createElement('div');
-                        errorDiv.className = 'duplicate-error text-red-500 text-xs mt-1';
                         
+                        // 🔴 CHANGED: Different styling based on exact vs similar match
                         if (response.isExactMatch) {
+                            // EXACT MATCH: Red border, blocking message
+                            errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Product already exists: <strong>"${response.existingName}"</strong>`;
+                            this.classList.add('border-red-500');
+                            this.classList.remove('border-yellow-500');
                         } else {
+                            // SIMILAR MATCH: Yellow border, warning only
+                            errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar product exists: "<strong>${response.existingName}</strong>"<br>
-                                                <span class="text-gray-600">Did you mean this product?</span>`;
+                                                <span class="text-gray-600 text-xs">Did you mean this product?</span>`;
+                            this.classList.add('border-yellow-500');
+                            this.classList.remove('border-red-500');
                         }
                         
                         this.parentNode.appendChild(errorDiv);
-                        this.classList.add('border-red-500');
                     } else {
-                        this.classList.remove('border-red-500');
+                        // 🔴 CHANGED: Remove BOTH border colors
+                        this.classList.remove('border-red-500', 'border-yellow-500');
                     }
                 }, 500);
             });
@@ -2924,9 +3175,9 @@
                     existingError.remove();
                 }
                 
-                // Remove red border if input is empty
+                // 🔴 Remove BOTH border colors if input is empty
                 if (!this.value.trim()) {
-                    this.classList.remove('border-red-500');
+                    this.classList.remove('border-red-500', 'border-yellow-500');
                     return;
                 }
                 
@@ -2936,19 +3187,26 @@
                     
                     if (response && response.exists) {
                         const errorDiv = document.createElement('div');
-                        errorDiv.className = 'duplicate-error text-red-500 text-xs mt-1';
                         
+                        // 🔴 Different colors for exact vs similar
                         if (response.isExactMatch) {
+                            // EXACT: Red (blocking)
+                            errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Category already exists: <strong>"${response.existingName}"</strong>`;
+                            this.classList.add('border-red-500');
+                            this.classList.remove('border-yellow-500');
                         } else {
+                            // SIMILAR: Yellow (warning)
+                            errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar category exists: "<strong>${response.existingName}</strong>"<br>
-                                                <span class="text-gray-600">Did you mean to use this instead?</span>`;
+                                                <span class="text-gray-600 text-xs">Proceed with caution</span>`;
+                            this.classList.add('border-yellow-500');
+                            this.classList.remove('border-red-500');
                         }
                         
                         this.parentNode.appendChild(errorDiv);
-                        this.classList.add('border-red-500');
                     } else {
-                        this.classList.remove('border-red-500');
+                        this.classList.remove('border-red-500', 'border-yellow-500');
                     }
                 }, 500);
             });
@@ -2959,7 +3217,7 @@
         if (customUnit) {
             let unitTimeout;
             
-            customUnit.addEventListener('input', function() {
+             customUnit.addEventListener('input', function() {  
                 clearTimeout(unitTimeout);
                 
                 // Remove existing error
@@ -2968,9 +3226,9 @@
                     existingError.remove();
                 }
                 
-                // Remove red border if input is empty
+                // 🔴 Remove BOTH border colors if input is empty
                 if (!this.value.trim()) {
-                    this.classList.remove('border-red-500');
+                    this.classList.remove('border-red-500', 'border-yellow-500');
                     return;
                 }
                 
@@ -2980,19 +3238,26 @@
                     
                     if (response && response.exists) {
                         const errorDiv = document.createElement('div');
-                        errorDiv.className = 'duplicate-error text-red-500 text-xs mt-1';
                         
+                        // 🔴 Different colors for exact vs similar
                         if (response.isExactMatch) {
+                            // EXACT: Red (blocking)
+                            errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Unit already exists: <strong>"${response.existingName}"</strong>`;
+                            this.classList.add('border-red-500');
+                            this.classList.remove('border-yellow-500');
                         } else {
+                            // SIMILAR: Yellow (warning)
+                            errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar unit exists: "<strong>${response.existingName}</strong>"<br>
-                                                <span class="text-gray-600">Did you mean to use this instead?</span>`;
+                                                <span class="text-gray-600 text-xs">Proceed with caution</span>`;
+                            this.classList.add('border-yellow-500');
+                            this.classList.remove('border-red-500');
                         }
                         
                         this.parentNode.appendChild(errorDiv);
-                        this.classList.add('border-red-500');
                     } else {
-                        this.classList.remove('border-red-500');
+                        this.classList.remove('border-red-500', 'border-yellow-500');
                     }
                 }, 500);
             });
@@ -3006,40 +3271,93 @@
             form.addEventListener("submit", async function(e) {
                 e.preventDefault();
 
-                // Client-side validation for product name
+                // CHANGED: Product name validation - only block EXACT matches
                 const productNameInput = document.querySelector('input[name="name"]');
+                let userConfirmedSimilar = false; // Track if user confirmed similar product
+                
                 if (productNameInput && productNameInput.value.trim()) {
                     const response = await checkExistingName('product', productNameInput.value);
-                    if (response && response.exists) {
+                    
+                    // ADDED: Check if it's an exact match
+                    if (response && response.exists && response.isExactMatch) {
                         alert(`Cannot submit: Product "${productNameInput.value}" already exists as "${response.existingName}"`);
-                        return;
+                        return; // BLOCK submission
+                    }
+                    
+                    // ADDED: If similar (not exact), show confirmation dialog
+                    if (response && response.exists && !response.isExactMatch) {
+                        const proceed = confirm(
+                            `Similar product found: "${response.existingName}"\n\n` +
+                            `You're adding: "${productNameInput.value}"\n\n` +
+                            `These appear similar but are not identical. Proceed with registration?`
+                        );
+                        
+                        if (!proceed) {
+                            return; // User chose not to proceed
+                        }
+                        userConfirmedSimilar = true; // User confirmed they want to proceed
                     }
                 }
 
-                // Client-side validation for duplicates
+                // CHANGED: Category validation - only block EXACT matches, confirm SIMILAR
                 const categorySelect = document.getElementById('categorySelect');
                 const customCategory = document.getElementById('customCategory');
+                let userConfirmedCategory = false;
                 
-                if (categorySelect.value === 'other' && customCategory.value.trim()) {
+                if (categorySelect && categorySelect.value === 'other' && customCategory && customCategory.value.trim()) {
                     const response = await checkExistingName('category', customCategory.value);
-                    if (response && response.exists) {
+                    
+                    // Block exact matches
+                    if (response && response.exists && response.isExactMatch) {
                         alert(`Cannot submit: Category "${customCategory.value}" already exists as "${response.existingName}"`);
                         return;
                     }
-                }
-
-                const unitSelect = document.getElementById('unitSelect');
-                const customUnit = document.getElementById('customUnit');
-                
-                if (unitSelect.value === 'other' && customUnit.value.trim()) {
-                    const response = await checkExistingName('unit', customUnit.value);
-                    if (response && response.exists) {
-                        alert(`Cannot submit: Unit "${customUnit.value}" already exists as "${response.existingName}"`);
-                        return;
+                    
+                    // 🆕 NEW: Show confirmation for similar matches
+                    if (response && response.exists && !response.isExactMatch) {
+                        const proceed = confirm(
+                            `Similar category found: "${response.existingName}"\n\n` +
+                            `You're adding: "${customCategory.value}"\n\n` +
+                            `These appear similar. Proceed anyway?`
+                        );
+                        
+                        if (!proceed) {
+                            return;
+                        }
+                        userConfirmedCategory = true;
                     }
                 }
 
-                // Proceed with form submission
+                //  CHANGED: Unit validation - only block EXACT matches
+                const unitSelect = document.getElementById('unitSelect');
+                const customUnit = document.getElementById('customUnit');
+                let userConfirmedUnit = false;
+                
+                if (unitSelect && unitSelect.value === 'other' && customUnit && customUnit.value.trim()) {
+                    const response = await checkExistingName('unit', customUnit.value);
+                    
+                    // Block exact matches
+                    if (response && response.exists && response.isExactMatch) {
+                        alert(`Cannot submit: Unit "${customUnit.value}" already exists as "${response.existingName}"`);
+                        return;
+                    }
+                    
+                    // 🆕 NEW: Show confirmation for similar matches
+                    if (response && response.exists && !response.isExactMatch) {
+                        const proceed = confirm(
+                            `Similar unit found: "${response.existingName}"\n\n` +
+                            `You're adding: "${customUnit.value}"\n\n` +
+                            `These appear similar. Proceed anyway?`
+                        );
+                        
+                        if (!proceed) {
+                            return;
+                        }
+                        userConfirmedUnit = true;
+                    }
+                }
+
+                // Proceed with form submission (KEEP AS IS - no changes)
                 const formData = new FormData(form);
                 const barcodeElement = document.getElementById("autoFilledBarcode");
 
@@ -3054,6 +3372,17 @@
                     formData.append("photo", photoInput.files[0]);
                 }
 
+                // 🆕 Send confirmation flags to backend
+                if (userConfirmedSimilar) {
+                    formData.append("confirmed_similar", "1");
+                }
+                if (userConfirmedCategory) {
+                    formData.append("confirmed_category", "1");
+                }
+                if (userConfirmedUnit) {
+                    formData.append("confirmed_unit", "1");
+                }
+
                 fetch("/register-product", {
                         method: "POST",
                         headers: {
@@ -3061,10 +3390,17 @@
                         },
                         body: formData
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.message || 'Server error');
+                            });
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
-                            alert("Product registered successfully!");
+                            alert("Product added successfully!");
                             closeRegisterModal();
                             location.reload();
                         } else {

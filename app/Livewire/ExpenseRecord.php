@@ -32,6 +32,9 @@ class ExpenseRecord extends Component
     public $editingDescri;
     public $editingAmount;
 
+    public $editingDescriptionError;
+    public $editingAmountError;
+
     public $fileView;
 
     // public $isExpired = false;
@@ -108,7 +111,8 @@ class ExpenseRecord extends Component
 
                 (SELECT IFNULL(SUM(p.selling_price * d.damaged_quantity), 0)
                 FROM damaged_items d
-                JOIN products p ON p.prod_code = d.prod_code
+                Join inventory i on i.inven_code = d.inven_code
+                JOIN products p ON i.prod_code = p.prod_code
                 WHERE d.owner_id = ?
                 AND d.damaged_date BETWEEN ? AND ?) AS lossTotal
         ", [
@@ -204,15 +208,40 @@ class ExpenseRecord extends Component
     public function updated($propertyName, $value) {
         
         if ($propertyName === 'add_expense_descri') {
-            if (!preg_match('/^[a-zA-Z\s]*$/', $value)) {
-                $this->descriptionError = 'Purpose should only contain letters.';
-            } else {
-                $this->descriptionError = '';
+            
+            if (empty($value)) {
+                $this->descriptionError = 'Cannot be empty';
+                return;
             }
+
+            if (preg_match('/^\d+$/', $value)) {
+                $this->descriptionError = 'Purpose cannot contain only numbers.';
+                return;
+            }
+            
+            if (preg_match('/^[^a-zA-Z0-9]+$/', $value)) {
+                $this->descriptionError = 'Purpose cannot contain only symbols.';
+                return;
+            }
+
+            if (!preg_match('/[a-zA-Z]/', $value)) {
+                $this->descriptionError = 'Purpose must contain at least one letter.';
+                return;
+            }
+            
+            if (!preg_match('/^[a-zA-Z0-9\s_&*()\/%#]*$/', $value)) {
+                $this->descriptionError = 'Purpose should only contain letters, numbers, spaces, and symbols: # _ & * ( ) / %';
+                return;
+            }
+
+            $this->descriptionError = '';
         }
 
         
         if ($propertyName === 'add_expense_amount') {
+
+            $value = floatval($value);
+
             if ($value <= 0) {
                 $this->amountError = 'Invalid amount. Must be a positive number.';
             } else {
@@ -221,6 +250,7 @@ class ExpenseRecord extends Component
         }
 
         if ($propertyName === 'add_expense_file') {
+
             if ($this->add_expense_file) {
                 $fileSize = $this->add_expense_file->getSize();
                 $maxSize = 300 * 1024;
@@ -235,6 +265,48 @@ class ExpenseRecord extends Component
                 $this->fileError = '';
             }
         }
+
+        if ($propertyName === 'editingDescri') {
+
+            if (empty($value)) {
+                $this->editingDescriptionError = 'Cannot be empty';
+                return;
+            }
+
+            if (preg_match('/^\d+$/', $value)) {
+                $this->editingDescriptionError = 'Purpose cannot contain only numbers.';
+                return;
+            }
+            
+            if (preg_match('/^[^a-zA-Z0-9]+$/', $value)) {
+                $this->editingDescriptionError = 'Purpose cannot contain only symbols.';
+                return;
+            }
+
+            if (!preg_match('/[a-zA-Z]/', $value)) {
+                $this->editingDescriptionError = 'Purpose must contain at least one letter.';
+                return;
+            }
+            
+            if (!preg_match('/^[a-zA-Z0-9\s_&*()\/%#]*$/', $value)) {
+                $this->editingDescriptionError = 'Purpose should only contain letters, numbers, spaces, and symbols: # _ & * ( ) / %';
+                return;
+            }
+
+            $this->editingDescriptionError = '';
+        }
+
+        if ($propertyName === 'editingAmount') {
+
+            $value = floatval($value);
+
+            if ($value <= 0) {
+                $this->editingAmountError = 'Invalid amount. Must be a positive number.';
+            } else {
+                $this->editingAmountError = '';
+            }
+        }
+
     }
 
 
@@ -256,6 +328,7 @@ class ExpenseRecord extends Component
         $owner_id = Auth::guard('owner')->user()->owner_id;
 
         if($this->descriptionError === '') {
+
             $validated = $this->validate([
                 'add_expense_descri'   => 'required|string|max:255',
                 'add_expense_category' => 'required|string|max:100',
@@ -354,22 +427,31 @@ class ExpenseRecord extends Component
 
 
     public function saveExpense() {
-        $this->validate([
-            'editingDescri' => 'required|string|max:255',
-            'editingAmount' => 'required|numeric|min:0.01',
-        ]);
 
-        DB::table('expenses')
-            ->where('expense_id', $this->editingId)
-            ->where('owner_id', Auth::guard('owner')->id())
-            ->update([
-                'expense_descri' => $this->editingDescri,
-                'expense_amount' => $this->editingAmount,
+        if($this->editingDescriptionError === '' || $this->editingAmountError === '') { 
+
+            $this->validate([
+                'editingDescri' => 'required|string|max:255',
+                'editingAmount' => 'required|numeric|min:0.01',
             ]);
 
-        $this->reset(['editingId', 'editingDescri', 'editingAmount']);
+            DB::update("
+                UPDATE expenses 
+                SET expense_descri = :descri, 
+                    expense_amount = :amount 
+                WHERE expense_id = :expense_id 
+                AND owner_id = :owner_id
+            ", [
+                'descri' => $this->editingDescri,
+                'amount' => $this->editingAmount,
+                'expense_id' => $this->editingId,
+                'owner_id' => Auth::guard('owner')->id()
+            ]);
 
-        session()->flash('success', 'Expense updated successfully!');
+            $this->reset(['editingId', 'editingDescri', 'editingAmount', 'editingDescriptionError', 'editingAmountError']);
+
+            session()->flash('success', 'Expense updated successfully!');
+        }
     }
 
 }

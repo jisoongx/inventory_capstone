@@ -251,67 +251,60 @@ class DashboardGraphs extends Component
         $previousSales = count($this->sales) > 1 ? $this->sales[count($this->sales) - 2] : 0;
         $previousLoss = count($this->losses) > 1 ? $this->losses[count($this->losses) - 2] : 0;
 
-        // PARA NI DAPIT WHERE GI FETCH TANAN EXCEPT SA LAST
-        $previousSalesAll = array_slice($this->sales, 0, -1);
-        $previousLossAll = array_slice($this->losses, 0, -1);
-
+        // Calculate percentage of total (for display)
         $totalActivity = $latestSales + $latestLoss; 
-        $totalPrevActivity = $previousSales + $previousLoss;
-
         $this->salesPercentage = $totalActivity > 0 ? round(($latestSales / $totalActivity) * 100, 1) : 0;
         $this->lossPercentage = $totalActivity > 0 ? round(($latestLoss / $totalActivity) * 100, 1) : 0;
-        $salesPrevPercentage = $totalPrevActivity > 0 ? round(($previousSales / $totalPrevActivity) * 100, 1) : 0;
-        $lossPrevPercentage = $totalPrevActivity > 0 ? round(($previousLoss / $totalPrevActivity) * 100, 1) : 0;
 
+        // Calculate ACTUAL percentage change for insights (this is what was missing)
+        if ($previousSales > 0) {
+            $salesChangePercent = (($latestSales - $previousSales) / $previousSales) * 100;
+        } else {
+            $salesChangePercent = $latestSales > 0 ? 100 : 0; // Handle division by zero
+        }
 
-        $diffSales = $this->salesPercentage - $salesPrevPercentage;
-        $diffLoss = $this->lossPercentage - $lossPrevPercentage;
+        if ($previousLoss > 0) {
+            $lossChangePercent = (($latestLoss - $previousLoss) / $previousLoss) * 100;
+        } else {
+            $lossChangePercent = $latestLoss > 0 ? 100 : 0; // Handle division by zero
+        }
+
+        $previousSalesAll = array_slice($this->sales, 0, -1);
 
         if(array_sum($previousSalesAll)==0) {
             $this->salesInsights = "This is your baseline month. Future sales comparisons will be based on this data.";
             $this->salesState = 'Start';
             $this->lossInsights = "This is your baseline month. Future loss comparisons will be based on this data.";
             $this->lossState = 'Start';
-
         } else {
-            if($diffSales > 0) {
-                $this->salesInsights = "Compared to last month, sales improved by " . number_format(abs($diffSales), 1) . "%.";
+            // Use the ACTUAL percentage changes for insights
+            if($salesChangePercent > 0) {
+                $this->salesInsights = "Compared to last month, sales improved by " . number_format(abs($salesChangePercent), 1) . "%.";
                 $this->salesState = 'Positive';
-                
-            } elseif ($diffSales < 0) {
-                $this->salesInsights = "Compared to last month, sales decreased by " . number_format(abs($diffSales), 1) . "%.";
+            } elseif ($salesChangePercent < 0) {
+                $this->salesInsights = "Compared to last month, sales decreased by " . number_format(abs($salesChangePercent), 1) . "%.";
                 $this->salesState = 'Negative';
-
             } else {
                 $this->salesInsights = "Sales remained consistent at " . number_format($this->salesPercentage, 1) . "%.";
                 $this->salesState = 'Stable';
             }
 
-            if($diffLoss > 0) {
-                $this->lossInsights = "Compared to last month, loss increased by " . number_format(abs($diffLoss), 1) . "%.";
+            if($lossChangePercent > 0) {
+                $this->lossInsights = "Compared to last month, loss increased by " . number_format(abs($lossChangePercent), 1) . "%.";
                 $this->lossState = 'Negative';
-
-            } elseif ($diffLoss < 0) {
-                $this->lossInsights = "Compared to last month, loss decreased by " . number_format(abs($diffLoss), 1) . "%.";
+            } elseif ($lossChangePercent < 0) {
+                $this->lossInsights = "Compared to last month, loss decreased by " . number_format(abs($lossChangePercent), 1) . "%.";
                 $this->lossState = 'Positive';
-
             } else {
-                if($diffLoss < 0){
-                    $this->lossInsights = "Loss remained steady at " . number_format($this->lossPercentage, 1) . "%.";
-                    $this->lossState = 'Warning';  
-
-                }else {
-                    $this->lossInsights = "Good jub! Loss remained steady at " . number_format($this->lossPercentage, 1) . "%.";
-                    $this->lossState = 'Stagnant';
-                }
+                $this->lossInsights = "Loss remained steady at " . number_format($this->lossPercentage, 1) . "%.";
+                $this->lossState = 'Stable';
             }
         }
 
-                
+        // Your performance insight logic remains the same...
         if ($this->lossPercentage < 2) {
             $this->insight = "Good job! Strong sales with almost no losses.";
             $this->performanceLabel = "Excellent";
-
         } elseif ($this->lossPercentage < 5) {
             $this->insight = "Healthy performance. Sales are strong and losses are well-controlled.";
             $this->performanceLabel = "Good";
