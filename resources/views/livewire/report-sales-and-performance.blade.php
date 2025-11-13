@@ -29,7 +29,7 @@
         </button>
     </div>
 
-    <div class="border bg-white p-4 rounded-b-lg mb-3 h-[41rem]"
+    <div class="border bg-white rounded-b-lg h-[41rem]"
         :class="{
             'border-green-500 bg-green-50': tab === 'sales',
             'border-orange-500 bg-orange-50': tab === 'sales-category',
@@ -226,163 +226,265 @@
             </div>
         </div>
 
+
+
         <!-- SALES BY CATEGORY TAB -->
-        <div x-show="tab === 'sales-category'" class="h-full flex flex-col">
-            <div x-data="{ open: false }" class="flex items-center mb-4 space-x-2 relative justify-between">
-                
-                <div class="relative flex items-center text-gray-300">
-                    <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <span class="material-symbols-rounded">search</span>
-                    </span>
-                    <input 
-                        type="text"
-                        wire:model.live.debounce.300ms="searchWord"
-                        placeholder="Search Category..."
-                        class="rounded border border-gray-300 pl-10 pr-3 py-2 text-xs focus:ring focus:ring-orange-200 text-black"
-                    >
-                </div>
+        <div x-show="tab === 'sales-category'" class="bg-white rounded-lg shadow-sm">
+            <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900">Sales by Category Report</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Analyze sales performance and profitability across product categories</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="relative flex items-center">
+                            <span class="absolute left-3 flex items-center pointer-events-none text-gray-400">
+                                <span class="material-symbols-rounded text-base">search</span>
+                            </span>
+                            <input 
+                                type="text"
+                                wire:model.live="searchWord"
+                                placeholder="Search Category..."
+                                class="text-xs rounded-lg border border-gray-300 pl-9 pr-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                        </div>
 
-                <div class="relative">
-                    <select wire:model.live="selectedMonths"
-                        class="text-xs border border-slate-300 rounded px-3 py-2 focus:ring focus:ring-purple-200">
-                        @foreach($monthNames as $index => $name)
-                            <option value="{{ $index + 1 }}">{{ $name }}</option>
-                        @endforeach
-                    </select>
-
-                    <!-- Year Filter -->
-                    <select wire:model.live="selectedYears"
-                        class="text-xs border border-slate-300 rounded px-3 py-2 focus:ring focus:ring-purple-200">
-                        @foreach($years as $yr)
-                            <option value="{{ $yr->year }}">{{ $yr->year }}</option>
-                        @endforeach
-                    </select>
+                        <label class="text-xs font-medium text-gray-700">Filter by Period:</label>
+                        <select wire:model.live="selectedMonths"
+                            class="text-xs border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            @foreach($monthNames as $index => $name)
+                                <option value="{{ $index + 1 }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                        <select wire:model.live="selectedYears"
+                            class="text-xs border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            @foreach($years as $yr)
+                                <option value="{{ $yr->year }}">{{ $yr->year }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
             </div>
-
-            <div class="flex-1 overflow-y-auto scrollbar-custom"> 
-                <table class="min-w-full divide-y divide-gray-200 text-xs">
-                    <thead class="bg-gray-50">
-                        <tr class="text-gray-700 uppercase text-xs tracking-wider border-b">
-                            <th class="px-2 py-3 text-left font-semibold text-xs sticky top-0 bg-gray-50">Category</th>
-                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">Units Sold</th>
-                            <!-- <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50 w-[8%]" 
-                                x-show="showTopProductUnit" x-cloak>
-                                Top Product (Unit)
-                            </th> -->
-                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">
-                                <div class="flex items-center justify-end space-x-1">
+            <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
+                <table class="w-full text-sm {{ $sbc->isNotEmpty() ? 'min-w-[65rem]' : 'w-full' }}">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
+                        <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Category
+                            </th>
+                            
+                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Stock Status
+                            </th>
+                            
+                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Financial Performance
+                            </th>
+                            
+                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Profitability
+                            </th>
+                            
+                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-blue-50 border-l-2 border-gray-300">
+                                Analysis
+                            </th>
+                        </tr>
+                        <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Units Sold</th>
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
+                                <div class="flex items-center justify-end gap-1">
                                     <span>Stock Left</span>
-                                    <span class="material-symbols-rounded-info text-gray-500 text-base"
-                                        title="Stock left reflects the current stock in the inventory">info</span>
+                                    <span class="material-symbols-rounded text-gray-500 text-sm cursor-help"
+                                        title="Current stock remaining in inventory">info</span>
                                 </div>
                             </th>
-                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">Sales (₱)</th>
-                            <!-- <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50 w-[8%]" 
-                                x-show="showTopProductSales" x-cloak>
-                                Top Product (Sales)
-                            </th> -->
-                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">COGS (₱)</th>
-                            <th class="px-2 py-3 text-right font-semibold sticky top-0 bg-gray-50">Margin %</th>
-                            <th class="px-2 py-3 text-center font-semibold sticky top-0 bg-gray-50">Insight</th>
+                            
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Total Sales</th>
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
+                                <div class="flex items-center justify-end gap-1">
+                                    <span>COGS</span>
+                                    <span class="material-symbols-rounded text-gray-500 text-sm cursor-help"
+                                        title="Cost of Goods Sold (COGS) is the total amount we paid to buy the inventory that customers have purchased. It's the direct cost of the products themselves.">info</span>
+                                </div>
+                            </th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Gross Margin %</th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Insight</th>
                         </tr>
                     </thead>
 
-                    <tbody class="divide-y divide-gray-200 text-xs">
+                    <tbody class="divide-y divide-gray-200 bg-white text-xs">
                         @forelse($sbc as $input)
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="py-3 px-2 text-gray-900 font-medium">{{ $input->category }}</td>
-                                <td class="py-3 px-2 text-right text-gray-900">{{ $input->unit_sold }}</td>
-                                <td class="py-3 px-2 text-right text-gray-900">{{ $input->stock_left }}</td>
-                                <td class="py-3 px-2 text-right text-green-600 font-semibold">₱{{ number_format($input->total_sales, 2) }}</td>
-                                <td class="py-3 px-2 text-right text-gray-900">₱{{ number_format($input->cogs, 2) }}</td>
-                                <td class="py-3 px-2 text-right font-semibold
-                                    @if($input->gross_margin >= 30) text-green-600
-                                    @elseif($input->gross_margin >= 20) text-blue-600
-                                    @elseif($input->gross_margin >= 10) text-yellow-600
-                                    @else text-red-600
-                                    @endif">
-                                    {{ number_format($input->gross_margin, 1) }}%
+                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td class="px-4 py-3.5 text-gray-900 font-semibold">
+                                    {{ $input->category }}
                                 </td>
-                                <td class="py-3 px-2 text-center font-medium text-[10px] text-white rounded
-                                    @if (strpos($input->insight, 'URGENT') !== false) bg-red-700
-                                    @elseif (strpos($input->insight, 'critically low') !== false) bg-red-600
-                                    @elseif (strpos($input->insight, 'Out of stock') !== false) bg-gray-600
-                                    @elseif (strpos($input->insight, 'Low stock') !== false) bg-orange-600
-                                    @elseif (strpos($input->insight, 'Star performer') !== false) bg-purple-600
-                                    @elseif (strpos($input->insight, 'Good sales velocity') !== false) bg-blue-800
-                                    @elseif (strpos($input->insight, 'Fast-moving but low margins') !== false) bg-yellow-600
-                                    @elseif (strpos($input->insight, 'Slow-moving with poor margins') !== false) bg-red-400
-                                    @elseif (strpos($input->insight, 'Slow-moving') !== false) bg-amber-500
-                                    @elseif (strpos($input->insight, 'No recent sales') !== false) bg-red-500
-                                    @elseif (strpos($input->insight, 'Low profit margin') !== false) bg-amber-600
-                                    @elseif (strpos($input->insight, 'Strong profit margins') !== false) bg-green-600
-                                    @elseif (strpos($input->insight, 'Steady sales') !== false) bg-blue-600
-                                    @elseif (strpos($input->insight, 'Stable') !== false) bg-slate-500
-                                    @else bg-slate-600
-                                    @endif
-                                ">
+                                
+                                <!-- Stock Status -->
+                                <td class="px-4 py-3.5 text-right font-bold text-gray-900 bg-gray-50">
+                                    {{ number_format($input->unit_sold) }}
+                                </td>
+                                <td class="px-4 py-3.5 text-right font-semibold bg-gray-50
+                                    @if($input->stock_left == 0) text-red-600
+                                    @elseif($input->stock_left < 10) text-orange-600
+                                    @elseif($input->stock_left < 50) text-yellow-600
+                                    @else text-blue-600
+                                    @endif">
+                                    {{ number_format($input->stock_left) }}
+                                </td>
+                                
+                                <!-- Financial Performance -->
+                                <td class="px-4 py-3.5 text-right font-bold text-green-600 bg-gray-50">
+                                    ₱{{ number_format($input->total_sales, 2) }}
+                                </td>
+                                <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
+                                    ₱{{ number_format($input->cogs, 2) }}
+                                </td>
+                                
+                                <!-- Profitability -->
+                                <td class="px-4 py-3.5 text-center bg-gray-50">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold
+                                        @if($input->gross_margin >= 30) 
+                                            bg-green-100 text-green-700 border border-green-300
+                                        @elseif($input->gross_margin >= 20) 
+                                            bg-blue-100 text-blue-700 border border-blue-300
+                                        @elseif($input->gross_margin >= 10) 
+                                            bg-yellow-100 text-yellow-700 border border-yellow-300
+                                        @else 
+                                            bg-red-100 text-red-700 border border-red-300
+                                        @endif">
+                                        {{ number_format($input->gross_margin, 1) }}%
+                                    </span>
+                                </td>
+                                
+                                <!-- Analysis -->
+                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50
+                                    @if (str_contains($input->insight, 'URGENT')) 
+                                        bg-red-700 text-white border-red-900
+                                    @elseif (str_contains($input->insight, 'critically low')) 
+                                        bg-red-600 text-white border-red-800
+                                    @elseif (str_contains($input->insight, 'Out of stock')) 
+                                        bg-gray-800 text-white border-gray-950
+                                    @elseif (str_contains($input->insight, 'Low stock')) 
+                                        bg-orange-600 text-white border-orange-800
+                                    @elseif (str_contains($input->insight, 'Star performer')) 
+                                        bg-purple-600 text-white border-purple-800
+                                    @elseif (str_contains($input->insight, 'Good sales velocity')) 
+                                        bg-blue-600 text-white border-blue-800
+                                    @elseif (str_contains($input->insight, 'Fast-moving but low margins')) 
+                                        bg-yellow-500 text-gray-900 border-yellow-700
+                                    @elseif (str_contains($input->insight, 'Slow-moving with poor margins')) 
+                                        bg-red-500 text-white border-red-700
+                                    @elseif (str_contains($input->insight, 'Slow-moving')) 
+                                        bg-amber-500 text-white border-amber-700
+                                    @elseif (str_contains($input->insight, 'No recent sales')) 
+                                        bg-red-500 text-white border-red-700
+                                    @elseif (str_contains($input->insight, 'Low profit margin')) 
+                                        bg-amber-600 text-white border-amber-800
+                                    @elseif (str_contains($input->insight, 'Strong profit margins')) 
+                                        bg-green-600 text-white border-green-800
+                                    @elseif (str_contains($input->insight, 'Steady sales')) 
+                                        bg-blue-500 text-white border-blue-700
+                                    @elseif (str_contains($input->insight, 'Stable')) 
+                                        bg-gray-600 text-white border-gray-800
+                                    @else 
+                                        bg-gray-500 text-white border-gray-700
+                                    @endif">
                                     {{ $input->insight }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-8">
-                                    <div class="flex flex-col justify-center items-center space-y-2">
-                                        <span class="material-symbols-rounded text-gray-400 text-5xl">category</span>
-                                        <span class="text-gray-500">No category data available</span>
+                                <td colspan="7" class="text-center py-16">
+                                    <div class="flex flex-col justify-center items-center space-y-3">
+                                        <span class="material-symbols-rounded text-6xl text-gray-300">category</span>
+                                        <div>
+                                            <p class="text-gray-600 font-medium">No Category Data Available</p>
+                                            <p class="text-gray-400 text-sm mt-1">No sales data found for the selected period</p>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
+
+                    @if($sbc->isNotEmpty())
+                    <tfoot class="sticky bottom-0 z-10 bg-slate-100 shadow-[0_-1px_0_0_rgb(209,213,219)]">
+                        <tr class="border-t-2 border-gray-600">
+                            <td class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
+                                Total Summary
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs">
+                                {{ number_format($sbc->sum('unit_sold')) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs text-blue-600">
+                                {{ number_format($sbc->sum('stock_left')) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs text-green-600">
+                                ₱{{ number_format($sbc->sum('total_sales'), 2) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs">
+                                ₱{{ number_format($sbc->sum('cogs'), 2) }}
+                            </td>
+                            <td class="px-4 text-center font-bold text-xs text-yellow-700">
+                                {{ $sbc->sum('total_sales') > 0 ? number_format((($sbc->sum('total_sales') - $sbc->sum('cogs')) / $sbc->sum('total_sales')) * 100, 1) : '0.0' }}%
+                            </td>
+                            <td class="px-4 text-center text-xs text-gray-400">
+                            </td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 </table>
             </div>
         </div>
 
+    
+
         <!-- PRODUCT PERFORMANCE TAB -->
-        <div x-show="tab === 'product-performance'" class="h-full flex flex-col">
-            <!-- Filters -->
-            <div class="flex justify-between items-center mb-4 gap-3">
-                <div class="flex gap-2">
-                    <!-- Category Filter -->
-                    <select wire:model.live="selectedCategory" 
-                        class="text-xs border border-purple-300 rounded px-3 py-2 focus:ring focus:ring-purple-200">
-                        <option value="all">All Categories</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->category_id }}">{{ $cat->category }}</option>
-                        @endforeach
-                    </select>
+        <div x-show="tab === 'product-performance'" class="bg-white rounded-lg shadow-sm">
+            <!-- Report Header -->
+            <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900">Product Performance Report</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Detailed analysis of individual product sales and profitability</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <select wire:model.live="selectedCategory" 
+                            class="text-xs border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="all">All Categories</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->category_id }}">{{ $cat->category }}</option>
+                            @endforeach
+                        </select>
+                        
+                        <select wire:model.live="selectedMonth" 
+                            class="text-xs border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            @foreach($monthNames as $index => $name)
+                                <option value="{{ $index + 1 }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
 
-                    <!-- Month Filter -->
-                    <select wire:model.live="selectedMonth" 
-                        class="text-xs border border-purple-300 rounded px-3 py-2 focus:ring focus:ring-purple-200">
-                        @foreach($monthNames as $index => $name)
-                            <option value="{{ $index + 1 }}">{{ $name }}</option>
-                        @endforeach
-                    </select>
-
-                    <!-- Year Filter -->
-                    <select wire:model.live="selectedYear" 
-                        class="text-xs border border-purple-300 rounded px-3 py-2 focus:ring focus:ring-purple-200">
-                        @foreach($years as $yr)
-                            <option value="{{ $yr->year }}">{{ $yr->year }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="text-xs text-gray-600">
-                    <span class="font-semibold">Total Products:</span> {{ count($perf ?? []) }}
+                        <select wire:model.live="selectedYear" 
+                            class="text-xs border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            @foreach($years as $yr)
+                                <option value="{{ $yr->year }}">{{ $yr->year }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <!-- Products Table -->
-            <div class="flex-1 overflow-y-auto scrollbar-custom">
-                <table class="min-w-full divide-y divide-gray-200 text-xs">
-                    <thead class="uppercase bg-gray-50 sticky top-0">
-                        <tr class="text-gray-700 uppercase tracking-wider">
-                            <th class="px-3 py-3 text-left font-semibold w-[10rem]">
-                                <button wire:click="sortBy('product_name')" class="uppercase flex items-center gap-1 hover:text-purple-600">
+            <!-- Table Container -->
+            <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
+                <table class="w-full text-sm {{ count($perf ?? []) > 0 ? 'min-w-[80rem]' : 'w-full' }}">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
+                        <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                <button wire:click="sortBy('product_name')" class="flex items-center gap-1 hover:text-blue-600">
                                     Product Name
                                     @if($sortField === 'product_name')
                                         <span class="material-symbols-rounded text-sm">
@@ -391,9 +493,32 @@
                                     @endif
                                 </button>
                             </th>
-                            <th class="px-3 py-3 text-left font-semibold">Category</th>
-                            <th class="px-3 py-3 text-center font-semibold">
-                                <button wire:click="sortBy('unit_sold')" class="uppercase flex items-center gap-1 hover:text-purple-600">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Category
+                            </th>
+                            
+                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Sales Metrics
+                            </th>
+                            
+                            <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Financial Performance
+                            </th>
+                            
+                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Inventory
+                            </th>
+                            
+                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-blue-50 border-l-2 border-gray-300">
+                                Analysis
+                            </th>
+                        </tr>
+                        <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
+                                <button wire:click="sortBy('unit_sold')" class="flex items-center gap-1 hover:text-blue-600 mx-auto">
                                     Units Sold
                                     @if($sortField === 'unit_sold')
                                         <span class="material-symbols-rounded text-sm">
@@ -402,9 +527,9 @@
                                     @endif
                                 </button>
                             </th>
-                            <th class="px-3 py-3 text-right font-semibold">
-                                <button wire:click="sortBy('total_sales')" class="uppercase flex items-right gap-1 hover:text-purple-600">
-                                    Total Sales (₱)
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
+                                <button wire:click="sortBy('total_sales')" class="flex items-center gap-1 hover:text-blue-600 ml-auto">
+                                    Total Sales
                                     @if($sortField === 'total_sales')
                                         <span class="material-symbols-rounded text-sm">
                                             {{ $order === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
@@ -412,10 +537,11 @@
                                     @endif
                                 </button>
                             </th>
-                            <th class="px-3 py-3 text-right font-semibold">COGS (₱)</th>
-                            <th class="px-3 py-3 text-right font-semibold">
-                                <button wire:click="sortBy('profit')" class="uppercase flex items-center gap-1 hover:text-purple-600">
-                                    Profit (₱)
+                            
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">COGS</th>
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
+                                <button wire:click="sortBy('profit')" class="flex items-center gap-1 hover:text-blue-600 ml-auto">
+                                    Profit
                                     @if($sortField === 'profit')
                                         <span class="material-symbols-rounded text-sm">
                                             {{ $order === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
@@ -423,8 +549,8 @@
                                     @endif
                                 </button>
                             </th>
-                            <th class="px-3 py-3 text-center font-semibold">
-                                <button wire:click="sortBy('profit_margin_percent')" class="uppercase flex items-center gap-1 hover:text-purple-600">
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
+                                <button wire:click="sortBy('profit_margin_percent')" class="flex items-center gap-1 hover:text-blue-600 mx-auto">
                                     Margin %
                                     @if($sortField === 'profit_margin_percent')
                                         <span class="material-symbols-rounded text-sm">
@@ -433,69 +559,141 @@
                                     @endif
                                 </button>
                             </th>
-                            <th class="uppercase px-3 py-3 text-center font-semibold">Stock</th>
-                            <th class="uppercase px-3 py-3 text-left font-semibold">Insight</th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
+                                <div class="flex items-center justify-end gap-1">
+                                    <span>Stock Left</span>
+                                    <span class="material-symbols-rounded text-gray-500 text-sm cursor-help"
+                                        title="Current stock remaining in inventory">info</span>
+                                </div>
+                            </th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Insight</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+
+                    <tbody class="divide-y divide-gray-200 bg-white text-xs">
                         @forelse($perf ?? [] as $product)
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="px-3 py-3 text-gray-900 font-medium">{{ $product->product_name }}</td>
-                                <td class="px-3 py-3 text-gray-600">{{ $product->category ?? 'N/A' }}</td>
-                                <td class="px-3 py-3 text-center text-gray-900">{{ $product->unit_sold }}</td>
-                                <td class="px-3 py-3 text-right text-green-600 font-semibold">
+                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td class="px-4 py-3.5 text-gray-900 font-semibold">
+                                    {{ $product->product_name }}
+                                </td>
+                                <td class="px-4 py-3.5 text-gray-600 font-medium">
+                                    {{ $product->category ?? 'N/A' }}
+                                </td>
+                                
+                                <!-- Sales Metrics -->
+                                <td class="px-4 py-3.5 text-center font-bold text-gray-900 bg-gray-50">
+                                    {{ number_format($product->unit_sold) }}
+                                </td>
+                                <td class="px-4 py-3.5 text-right font-bold text-green-600 bg-gray-50">
                                     ₱{{ number_format($product->total_sales, 2) }}
                                 </td>
-                                <td class="px-3 py-3 text-right text-gray-900">
+                                
+                                <!-- Financial Performance -->
+                                <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
                                     ₱{{ number_format($product->cogs, 2) }}
                                 </td>
-                                <td class="px-3 py-3 text-right font-semibold
+                                <td class="px-4 py-3.5 text-right font-bold bg-gray-50
                                     @if($product->profit > 0) text-green-600
                                     @elseif($product->profit < 0) text-red-600
                                     @else text-gray-600
                                     @endif">
                                     ₱{{ number_format($product->profit, 2) }}
                                 </td>
-                                <td class="px-3 py-3 text-center font-semibold
-                                    @if($product->profit_margin_percent >= 30) text-green-600
-                                    @elseif($product->profit_margin_percent >= 20) text-blue-600
-                                    @elseif($product->profit_margin_percent >= 10) text-yellow-600
-                                    @else text-red-600
-                                    @endif">
-                                    {{ number_format($product->profit_margin_percent, 1) }}%
+                                <td class="px-4 py-3.5 text-center bg-gray-50">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold
+                                        @if($product->profit_margin_percent >= 30) 
+                                            bg-green-100 text-green-700 border border-green-300
+                                        @elseif($product->profit_margin_percent >= 20) 
+                                            bg-blue-100 text-blue-700 border border-blue-300
+                                        @elseif($product->profit_margin_percent >= 10) 
+                                            bg-yellow-100 text-yellow-700 border border-yellow-300
+                                        @else 
+                                            bg-red-100 text-red-700 border border-red-300
+                                        @endif">
+                                        {{ number_format($product->profit_margin_percent, 1) }}%
+                                    </span>
                                 </td>
-                                <td class="px-3 py-3 text-center
-                                    @if($product->remaining_stocks == 0) text-red-600 font-bold
-                                    @elseif($product->remaining_stocks < 10) text-orange-600 font-semibold
-                                    @else text-gray-900
+                                
+                                <!-- Inventory -->
+                                <td class="px-4 py-3.5 text-center font-bold bg-gray-50
+                                    @if($product->remaining_stocks == 0) text-red-600
+                                    @elseif($product->remaining_stocks < 10) text-orange-600
+                                    @elseif($product->remaining_stocks < 50) text-yellow-600
+                                    @else text-blue-600
                                     @endif">
-                                    {{ $product->remaining_stocks }}
+                                    {{ number_format($product->remaining_stocks) }}
                                 </td>
-                                <td class="px-3 py-3 text-center font-medium text-[10px] text-white rounded
-                                    @if (strpos($product->insight, 'Out of stock') !== false) bg-red-600
-                                    @elseif (strpos($product->insight, 'Low stock') !== false) bg-orange-600
-                                    @elseif (strpos($product->insight, 'No sales') !== false) bg-gray-600
-                                    @elseif (strpos($product->insight, 'Unprofitable') !== false) bg-red-700
-                                    @elseif (strpos($product->insight, 'Low margin') !== false) bg-yellow-600
-                                    @elseif (strpos($product->insight, 'Performing well') !== false) bg-green-600
-                                    @elseif (strpos($product->insight, 'Good margin') !== false) bg-blue-600
-                                    @elseif (strpos($product->insight, 'Moderate') !== false) bg-blue-500
-                                    @else bg-slate-600
+                                
+                                <!-- Analysis -->
+                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50
+                                    @if (str_contains($product->insight, 'Out of stock')) 
+                                        bg-gray-800 text-white border-gray-950
+                                    @elseif (str_contains($product->insight, 'Low stock')) 
+                                        bg-orange-600 text-white border-orange-800
+                                    @elseif (str_contains($product->insight, 'No sales')) 
+                                        bg-red-600 text-white border-red-800
+                                    @elseif (str_contains($product->insight, 'Unprofitable')) 
+                                        bg-red-700 text-white border-red-900
+                                    @elseif (str_contains($product->insight, 'Low margin')) 
+                                        bg-yellow-500 text-gray-900 border-yellow-700
+                                    @elseif (str_contains($product->insight, 'Performing well')) 
+                                        bg-green-600 text-white border-green-800
+                                    @elseif (str_contains($product->insight, 'Good margin')) 
+                                        bg-blue-600 text-white border-blue-800
+                                    @elseif (str_contains($product->insight, 'Moderate')) 
+                                        bg-blue-500 text-white border-blue-700
+                                    @else 
+                                        bg-gray-600 text-white border-gray-800
                                     @endif">
                                     {{ $product->insight }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-8">
-                                    <div class="flex flex-col items-center space-y-2">
-                                        <span class="material-symbols-rounded text-gray-400 text-5xl">inventory_2</span>
-                                        <span class="text-gray-500">No product data available</span>
+                                <td colspan="9" class="text-center py-16">
+                                    <div class="flex flex-col justify-center items-center space-y-3">
+                                        <span class="material-symbols-rounded text-6xl text-gray-300">inventory_2</span>
+                                        <div>
+                                            <p class="text-gray-600 font-medium">No Product Data Available</p>
+                                            <p class="text-gray-400 text-sm mt-1">No sales data found for the selected period</p>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
+
+                    @if(count($perf ?? []) > 0)
+                    <tfoot class="sticky bottom-0 z-10 bg-slate-100 shadow-[0_-1px_0_0_rgb(209,213,219)]">
+                        <tr class="border-t-2 border-gray-600">
+                            <td colspan="2" class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
+                                Total Summary
+                            </td>
+                            <td class="px-4 text-center font-bold text-xs">
+                                {{ number_format(collect($perf)->sum('unit_sold')) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs text-green-600">
+                                ₱{{ number_format(collect($perf)->sum('total_sales'), 2) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs">
+                                ₱{{ number_format(collect($perf)->sum('cogs'), 2) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs text-green-600">
+                                ₱{{ number_format(collect($perf)->sum('profit'), 2) }}
+                            </td>
+                            <td class="px-4 text-center font-bold text-xs text-yellow-600">
+                                {{ collect($perf)->sum('total_sales') > 0 ? number_format((collect($perf)->sum('profit') / collect($perf)->sum('total_sales')) * 100, 1) : '0.0' }}%
+                            </td>
+                            <td class="px-4 text-center font-bold text-xs text-blue-600">
+                                {{ number_format(collect($perf)->sum('remaining_stocks')) }}
+                            </td>
+                            <td class="px-4 text-center text-xs text-gray-400">
+                            </td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 </table>
             </div>
         </div>
@@ -526,346 +724,346 @@
 
     <!-- Receipt Display Modal -->
     @if($showReceiptModal && $receiptDetails)
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col">
-        <!-- Receipt Header -->
-        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg flex-shrink-0">
-            <div class="text-center">
-                <h3 class="text-xl font-bold mb-2">Receipt Details</h3>
-                <p class="text-sm text-red-100">Transaction Record</p>
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col">
+            <!-- Receipt Header -->
+            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg flex-shrink-0">
+                <div class="text-center">
+                    <h3 class="text-xl font-bold mb-2">Receipt Details</h3>
+                    <p class="text-sm text-red-100">Transaction Record</p>
+                </div>
             </div>
-        </div>
 
-        <!-- Receipt Content - Scrollable -->
-        <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
-            <div class="p-6">
-                <!-- Store Info -->
-                <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
-                    <h2 class="text-xl font-bold text-gray-800">
-                        {{ $receiptDetails->owner->store_name ?? $store_info->store_name ?? 'Store Name' }}
-                    </h2>
-                </div>
+            <!-- Receipt Content - Scrollable -->
+            <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
+                <div class="p-6">
+                    <!-- Store Info -->
+                    <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">
+                            {{ $receiptDetails->owner->store_name ?? $store_info->store_name ?? 'Store Name' }}
+                        </h2>
+                    </div>
 
-                <!-- Transaction Details -->
-                <div class="mb-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
-                        <span class="text-sm font-bold text-gray-900">#{{ str_pad($receiptDetails->receipt_id, 6, '0', STR_PAD_LEFT) }}</span>
+                    <!-- Transaction Details -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
+                            <span class="text-sm font-bold text-gray-900">#{{ str_pad($receiptDetails->receipt_id, 6, '0', STR_PAD_LEFT) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Date & Time:</span>
+                            <span class="text-sm text-gray-900">{{ $receiptDetails->receipt_date->format('m/d/Y, h:i:s A') }}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-medium text-gray-700">Cashier:</span>
+                            <span class="text-sm text-gray-900">
+                                {{ $receiptDetails->staff ? $receiptDetails->staff->firstname : ($receiptDetails->owner ? $receiptDetails->owner->firstname : 'N/A') }}
+                            </span>
+                        </div>
                     </div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Date & Time:</span>
-                        <span class="text-sm text-gray-900">{{ $receiptDetails->receipt_date->format('m/d/Y, h:i:s A') }}</span>
-                    </div>
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-sm font-medium text-gray-700">Cashier:</span>
-                        <span class="text-sm text-gray-900">
-                            {{ $receiptDetails->staff ? $receiptDetails->staff->firstname : ($receiptDetails->owner ? $receiptDetails->owner->firstname : 'N/A') }}
-                        </span>
-                    </div>
-                </div>
 
-                <!-- Items List with Return Buttons -->
-                <div class="mb-4">
-                    <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
-                    <div class="space-y-2">
-                        @foreach($receiptDetails->receiptItems as $item)
-                            @php
-                                // Get already returned quantity
-                                $alreadyReturned = DB::table('returned_items')
-                                    ->where('item_id', $item->item_id)
-                                    ->sum('return_quantity');
-                                $canReturn = $item->item_quantity - $alreadyReturned;
-                            @endphp
-                            <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex-1 pr-4">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="text-sm font-medium text-gray-900">{{ $item->product->name }}</div>
-                                            @if($alreadyReturned > 0)
-                                                <span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium">
-                                                    {{ $alreadyReturned }} returned
-                                                </span>
-                                            @endif
-                                        </div>
-                                        <div class="text-xs text-gray-500">
-                                            Quantity: {{ $item->item_quantity }} × ₱{{ number_format($item->product->selling_price, 2) }}
-                                        </div>
-                                        @if(($item->item_discount_value ?? 0) > 0)
-                                            <div class="text-xs text-orange-600">
-                                                Item Discount: 
-                                                @if(($item->item_discount_type ?? 'percent') == 'percent')
-                                                    {{ $item->item_discount_value }}%
-                                                @else
-                                                    ₱{{ number_format($item->item_discount_value, 2) }}
+                    <!-- Items List with Return Buttons -->
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
+                        <div class="space-y-2">
+                            @foreach($receiptDetails->receiptItems as $item)
+                                @php
+                                    // Get already returned quantity
+                                    $alreadyReturned = DB::table('returned_items')
+                                        ->where('item_id', $item->item_id)
+                                        ->sum('return_quantity');
+                                    $canReturn = $item->item_quantity - $alreadyReturned;
+                                @endphp
+                                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1 pr-4">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <div class="text-sm font-medium text-gray-900">{{ $item->product->name }}</div>
+                                                @if($alreadyReturned > 0)
+                                                    <span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                                                        {{ $alreadyReturned }} returned
+                                                    </span>
                                                 @endif
                                             </div>
-                                        @endif
-                                        @if(($item->vat_amount ?? 0) > 0)
-                                            <div class="text-xs text-green-600">
-                                                VAT: ₱{{ number_format($item->vat_amount, 2) }}
+                                            <div class="text-xs text-gray-500">
+                                                Quantity: {{ $item->item_quantity }} × ₱{{ number_format($item->product->selling_price, 2) }}
                                             </div>
-                                        @endif
-                                        
-                                        <!-- Return Button -->
-                                        @if($canReturn > 0)
-                                            <button wire:click="openReturnModal({{ $item->item_id }})"
-                                                class="mt-2 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded-full font-medium transition inline-flex items-center gap-1">
-                                                <span class="material-symbols-rounded text-sm">undo</span>
-                                                Return Item
-                                            </button>
-                                        @elseif($alreadyReturned > 0)
-                                            <div class="mt-2 text-xs text-gray-500 italic">
-                                                Fully returned
+                                            @if(($item->item_discount_value ?? 0) > 0)
+                                                <div class="text-xs text-orange-600">
+                                                    Item Discount: 
+                                                    @if(($item->item_discount_type ?? 'percent') == 'percent')
+                                                        {{ $item->item_discount_value }}%
+                                                    @else
+                                                        ₱{{ number_format($item->item_discount_value, 2) }}
+                                                    @endif
+                                                </div>
+                                            @endif
+                                            @if(($item->vat_amount ?? 0) > 0)
+                                                <div class="text-xs text-green-600">
+                                                    VAT: ₱{{ number_format($item->vat_amount, 2) }}
+                                                </div>
+                                            @endif
+                                            
+                                            <!-- Return Button -->
+                                            @if($canReturn > 0)
+                                                <button wire:click="openReturnModal({{ $item->item_id }})"
+                                                    class="mt-2 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded-full font-medium transition inline-flex items-center gap-1">
+                                                    <span class="material-symbols-rounded text-sm">undo</span>
+                                                    Return Item
+                                                </button>
+                                            @elseif($alreadyReturned > 0)
+                                                <div class="mt-2 text-xs text-gray-500 italic">
+                                                    Fully returned
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-sm font-bold text-gray-900">
+                                                ₱{{ number_format(($item->product->selling_price * $item->item_quantity), 2) }}
                                             </div>
-                                        @endif
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-sm font-bold text-gray-900">
-                                            ₱{{ number_format(($item->product->selling_price * $item->item_quantity), 2) }}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-
-                <!-- Totals -->
-                <div class="border-t-2 border-gray-300 pt-4 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Subtotal:</span>
-                        <span class="text-sm font-bold text-gray-900">
-                            ₱{{ number_format($receiptDetails->computed_subtotal ?? 0, 2) }}
-                        </span>
+                            @endforeach
+                        </div>
                     </div>
 
-                    @if(($receiptDetails->total_item_discounts ?? 0) > 0)
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-orange-600">Item Discounts:</span>
-                        <span class="text-sm font-bold text-orange-600">
-                            -₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
-                        </span>
-                    </div>
-                    @endif
+                    <!-- Totals -->
+                    <div class="border-t-2 border-gray-300 pt-4 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700">Subtotal:</span>
+                            <span class="text-sm font-bold text-gray-900">
+                                ₱{{ number_format($receiptDetails->computed_subtotal ?? 0, 2) }}
+                            </span>
+                        </div>
 
-                    @if(($receiptDetails->receipt_discount_amount ?? 0) > 0)
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-orange-600">Receipt Discount:</span>
-                        <span class="text-sm font-bold text-orange-600">
-                            @if(($receiptDetails->discount_type ?? '') == 'percent')
-                                -{{ $receiptDetails->discount_value ?? 0 }}% (₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }})
-                            @else
-                                -₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
-                            @endif
-                        </span>
-                    </div>
-                    @endif
+                        @if(($receiptDetails->total_item_discounts ?? 0) > 0)
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-orange-600">Item Discounts:</span>
+                            <span class="text-sm font-bold text-orange-600">
+                                -₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
+                            </span>
+                        </div>
+                        @endif
 
-                    @if(($receiptDetails->vat_amount ?? 0) > 0)
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-green-700">VAT:</span>
-                        <span class="text-sm font-bold text-green-600">
-                            +₱{{ number_format($receiptDetails->vat_amount, 2) }}
-                        </span>
-                    </div>
-                    @endif
+                        @if(($receiptDetails->receipt_discount_amount ?? 0) > 0)
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-orange-600">Receipt Discount:</span>
+                            <span class="text-sm font-bold text-orange-600">
+                                @if(($receiptDetails->discount_type ?? '') == 'percent')
+                                    -{{ $receiptDetails->discount_value ?? 0 }}% (₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }})
+                                @else
+                                    -₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
+                                @endif
+                            </span>
+                        </div>
+                        @endif
 
-                    <div class="flex justify-between items-center pt-2 border-t">
-                        <span class="text-lg font-bold text-gray-900">Total Amount:</span>
-                        <span class="text-lg font-bold text-red-600">
-                            ₱{{ number_format($receiptDetails->computed_total ?? 0, 2) }}
-                        </span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
-                        <span class="text-sm text-gray-900">
-                            ₱{{ number_format($receiptDetails->amount_paid ?? 0, 2) }}
-                        </span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Change:</span>
-                        <span class="text-sm font-bold text-green-600">
-                            ₱{{ number_format($receiptDetails->computed_change ?? 0, 2) }}
-                        </span>
+                        @if(($receiptDetails->vat_amount ?? 0) > 0)
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-green-700">VAT:</span>
+                            <span class="text-sm font-bold text-green-600">
+                                +₱{{ number_format($receiptDetails->vat_amount, 2) }}
+                            </span>
+                        </div>
+                        @endif
+
+                        <div class="flex justify-between items-center pt-2 border-t">
+                            <span class="text-lg font-bold text-gray-900">Total Amount:</span>
+                            <span class="text-lg font-bold text-red-600">
+                                ₱{{ number_format($receiptDetails->computed_total ?? 0, 2) }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
+                            <span class="text-sm text-gray-900">
+                                ₱{{ number_format($receiptDetails->amount_paid ?? 0, 2) }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700">Change:</span>
+                            <span class="text-sm font-bold text-green-600">
+                                ₱{{ number_format($receiptDetails->computed_change ?? 0, 2) }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Action Button - Fixed at bottom -->
-        <div class="p-4 border-t bg-gray-50 flex gap-3 rounded-b-lg flex-shrink-0">
-            <button wire:click="closeReceiptModal" 
-                class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors">
-                <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Close
-            </button>
-        </div>
-    </div>
-</div>
-@endif
-
-<!-- Return Item Modal (NEW - Separate Modal) -->
-@if($showReturnModal && $selectedItemForReturn)
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg w-full max-w-lg mx-auto">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xl font-bold">Return Item</h3>
-                <button wire:click="closeReturnModal" class="text-white hover:text-gray-200">
-                    <span class="material-symbols-rounded text-2xl">close</span>
+            <!-- Action Button - Fixed at bottom -->
+            <div class="p-4 border-t bg-gray-50 flex gap-3 rounded-b-lg flex-shrink-0">
+                <button wire:click="closeReceiptModal" 
+                    class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors">
+                    <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Close
                 </button>
             </div>
         </div>
+    </div>
+    @endif
 
-        <!-- Content -->
-        <div class="p-6">
-            <!-- Product Info -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                <div class="flex items-center gap-3">
-                    <span class="material-symbols-rounded text-orange-600 text-3xl">inventory_2</span>
-                    <div>
-                        <h4 class="font-bold text-gray-900">{{ $selectedItemForReturn->product_name }}</h4>
-                        <p class="text-sm text-gray-600">
-                            Original Quantity: {{ $selectedItemForReturn->item_quantity }}
-                            @if($selectedItemForReturn->already_returned > 0)
-                                <span class="text-orange-600 ml-2">
-                                    ({{ $selectedItemForReturn->already_returned }} already returned)
-                                </span>
-                            @endif
-                        </p>
-                        <p class="text-sm text-gray-600">
-                            Unit Price: ₱{{ number_format($selectedItemForReturn->selling_price, 2) }}
-                        </p>
-                    </div>
+    <!-- Return Item Modal (NEW - Separate Modal) -->
+    @if($showReturnModal && $selectedItemForReturn)
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg w-full max-w-lg mx-auto">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Return Item</h3>
+                    <button wire:click="closeReturnModal" class="text-white hover:text-gray-200">
+                        <span class="material-symbols-rounded text-2xl">close</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Return Form -->
-            <form wire:submit.prevent="submitReturn" class="space-y-4">
-                <!-- Return Quantity -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Return Quantity <span class="text-red-500">*</span>
-                    </label>
-                    <input type="number" 
-                        wire:model="returnQuantity"
-                        min="1" 
-                        max="{{ $maxReturnQuantity }}"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        placeholder="Enter quantity to return">
-                    @error('returnQuantity')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-xs text-gray-500 mt-1">
-                        Maximum returnable: {{ $maxReturnQuantity }}
-                    </p>
+            <!-- Content -->
+            <div class="p-6">
+                <!-- Product Info -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-rounded text-orange-600 text-3xl">inventory_2</span>
+                        <div>
+                            <h4 class="font-bold text-gray-900">{{ $selectedItemForReturn->product_name }}</h4>
+                            <p class="text-sm text-gray-600">
+                                Original Quantity: {{ $selectedItemForReturn->item_quantity }}
+                                @if($selectedItemForReturn->already_returned > 0)
+                                    <span class="text-orange-600 ml-2">
+                                        ({{ $selectedItemForReturn->already_returned }} already returned)
+                                    </span>
+                                @endif
+                            </p>
+                            <p class="text-sm text-gray-600">
+                                Unit Price: ₱{{ number_format($selectedItemForReturn->selling_price, 2) }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Is Damaged? -->
-                <div>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" 
-                            wire:model.live="isDamaged"
-                            class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
-                        <span class="text-sm font-semibold text-gray-700">Item is damaged/defective</span>
-                    </label>
-                    <p class="text-xs text-gray-500 mt-1 ml-7">
-                        Check this if the item cannot be restocked
-                    </p>
-                </div>
+                <!-- Return Form -->
+                <form wire:submit.prevent="submitReturn" class="space-y-4">
+                    <!-- Return Quantity -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Return Quantity <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" 
+                            wire:model="returnQuantity"
+                            min="1" 
+                            max="{{ $maxReturnQuantity }}"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            placeholder="Enter quantity to return">
+                        @error('returnQuantity')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                        <p class="text-xs text-gray-500 mt-1">
+                            Maximum returnable: {{ $maxReturnQuantity }}
+                        </p>
+                    </div>
 
-                <!-- Damage Type (shown only if isDamaged is true) -->
-                @if($isDamaged)
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <label class="block text-sm font-semibold text-red-700 mb-2">
-                        Damage Type <span class="text-red-500">*</span>
-                    </label>
-                    <select wire:model="damageType"
-                        class="w-full border border-red-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500">
-                        <option value="">Select damage type</option>
-                        <option value="Physical">Physical Damage</option>
-                        <option value="Expired">Expired</option>
-                        <option value="Defective">Defective/Malfunction</option>
-                        <option value="Contaminated">Contaminated</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    @error('damageType')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-                @endif
+                    <!-- Is Damaged? -->
+                    <div>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" 
+                                wire:model.live="isDamaged"
+                                class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
+                            <span class="text-sm font-semibold text-gray-700">Item is damaged/defective</span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1 ml-7">
+                            Check this if the item cannot be restocked
+                        </p>
+                    </div>
 
-                <!-- Return Reason -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Return Reason <span class="text-red-500">*</span>
-                    </label>
-                    <div class="grid grid-cols-2 gap-2 mb-2">
+                    <!-- Damage Type (shown only if isDamaged is true) -->
+                    @if($isDamaged)
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <label class="block text-sm font-semibold text-red-700 mb-2">
+                            Damage Type <span class="text-red-500">*</span>
+                        </label>
+                        <select wire:model="damageType"
+                            class="w-full border border-red-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500">
+                            <option value="">Select damage type</option>
+                            <option value="Physical">Physical Damage</option>
+                            <option value="Expired">Expired</option>
+                            <option value="Defective">Defective/Malfunction</option>
+                            <option value="Contaminated">Contaminated</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        @error('damageType')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    @endif
+
+                    <!-- Return Reason -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Return Reason <span class="text-red-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <button type="button"
+                                wire:click="$set('returnReason', 'Wrong product ordered')"
+                                class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                                Wrong Product
+                            </button>
+                            <button type="button"
+                                wire:click="$set('returnReason', 'Product is expired.')"
+                                class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                                Expired
+                            </button>
+                            <button type="button"
+                                wire:click="$set('returnReason', 'Product defective/damaged')"
+                                class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                                Defective
+                            </button>
+                            <button type="button"
+                                wire:click="$set('returnReason', 'Duplicate purchase')"
+                                class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
+                                Duplicate
+                            </button>
+                        </div>
+                        <textarea 
+                            wire:model="returnReason"
+                            rows="3"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                            placeholder="Describe the reason for return..."></textarea>
+                        @error('returnReason')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Refund Calculation -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Return Subtotal:</span>
+                            <span class="text-lg font-bold text-blue-600">
+                                ₱{{ number_format($selectedItemForReturn->selling_price * $returnQuantity, 2) }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-600">
+                            <span class="material-symbols-rounded text-sm align-middle">info</span>
+                            This amount should be refunded to the customer
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3 pt-4 border-t">
                         <button type="button"
-                            wire:click="$set('returnReason', 'Wrong product ordered')"
-                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
-                            Wrong Product
+                            wire:click="closeReturnModal"
+                            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">
+                            Cancel
                         </button>
-                        <button type="button"
-                            wire:click="$set('returnReason', 'Product is expired.')"
-                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
-                            Expired
-                        </button>
-                        <button type="button"
-                            wire:click="$set('returnReason', 'Product defective/damaged')"
-                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
-                            Defective
-                        </button>
-                        <button type="button"
-                            wire:click="$set('returnReason', 'Duplicate purchase')"
-                            class="text-xs py-2 px-3 rounded border border-gray-300 hover:bg-gray-50 text-gray-700">
-                            Duplicate
+                        <button type="submit"
+                            class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition">
+                            <span class="material-symbols-rounded text-sm align-middle mr-1">check_circle</span>
+                            Process Return
                         </button>
                     </div>
-                    <textarea 
-                        wire:model="returnReason"
-                        rows="3"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-                        placeholder="Describe the reason for return..."></textarea>
-                    @error('returnReason')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Refund Calculation -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Return Subtotal:</span>
-                        <span class="text-lg font-bold text-blue-600">
-                            ₱{{ number_format($selectedItemForReturn->selling_price * $returnQuantity, 2) }}
-                        </span>
-                    </div>
-                    <p class="text-xs text-gray-600">
-                        <span class="material-symbols-rounded text-sm align-middle">info</span>
-                        This amount should be refunded to the customer
-                    </p>
-                </div>
-
-                <!-- Actions -->
-                <div class="flex gap-3 pt-4 border-t">
-                    <button type="button"
-                        wire:click="closeReturnModal"
-                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                        class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition">
-                        <span class="material-symbols-rounded text-sm align-middle mr-1">check_circle</span>
-                        Process Return
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-@endif
+    @endif
 
 </div>

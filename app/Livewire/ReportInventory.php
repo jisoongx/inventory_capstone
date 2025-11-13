@@ -6,6 +6,12 @@ use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Row;
+
 class ReportInventory extends Component
 {
     public $expiredProd;
@@ -22,6 +28,7 @@ class ReportInventory extends Component
     public $selectedYears  = null;
 
     public $stock;
+    public $selectedStockStatus = 'active';
 
 
     public function mount() {
@@ -72,6 +79,7 @@ class ReportInventory extends Component
                 i.stock AS expired_stock,
                 i.expiration_date AS date,
                 c.category AS cat_name,
+                c.category_id,
                 p.selling_price AS cost,
                 DATEDIFF(i.expiration_date, CURDATE()) AS days_until_expiry,
                 SUM(p.selling_price * i.stock) AS total_loss,
@@ -271,8 +279,8 @@ class ReportInventory extends Component
                 di.damaged_reason AS remarks,
                 p.name AS prod_name, 
                 c.category AS cat_name,
-                p.cost_price AS unit_cost,
-                (p.cost_price * di.damaged_quantity) AS total_loss,
+                p.selling_price AS unit_cost,
+                (p.selling_price * di.damaged_quantity) AS total_loss,
                 CASE 
                     WHEN s.staff_id IS NOT NULL 
                     THEN s.firstname 
@@ -294,93 +302,344 @@ class ReportInventory extends Component
 
 
 
-public function stockAlertReport()
-{
-    $owner_id = Auth::guard('owner')->user()->owner_id;
 
-    DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+    public function selectedStockStat() {
+        $this->stockAlertReport();
+    }
 
-    $results = DB::select("
-        SELECT 
-            i.inven_code as inven_code,
-            i.batch_number as batch_number,
-            p.name AS prod_name,
-            p.prod_code,
-            i.stock AS usable_stock,
-            i.date_added AS last_stockin,
-            COALESCE(d.damaged_total, 0) AS damaged_stock,
-            COALESCE(ri.sold_total, 0) AS sold_stock,
-            (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) AS total_stock,
-            CASE 
-                WHEN (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) > 0 
-                THEN ROUND((COALESCE(d.damaged_total, 0) / NULLIF((i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)), 0)) * 100, 2)
-                ELSE 0 
-            END AS damaged_rate_percent,
-            CASE 
-                WHEN (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) > 0 
-                THEN ROUND((COALESCE(ri.sold_total, 0) / NULLIF((i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)), 0)) * 100, 2)
-                ELSE 0 
-            END AS sales_rate_percent,
-            CASE 
-                WHEN COALESCE(ri.sold_total, 0) > 0 
-                THEN ROUND(COALESCE(d.damaged_total, 0) / COALESCE(ri.sold_total, 0), 2)
-                WHEN COALESCE(d.damaged_total, 0) > 0 THEN 9999
-                ELSE 0 
-            END AS wastage_ratio
-        FROM inventory i
-        JOIN products p ON i.prod_code = p.prod_code
-        LEFT JOIN (
-            SELECT d.inven_code, SUM(d.damaged_quantity) AS damaged_total
-            FROM damaged_items d GROUP BY d.inven_code
-        ) d ON i.inven_code = d.inven_code
-        LEFT JOIN (
-            SELECT ri.inven_code, SUM(ri.item_quantity) AS sold_total
-            FROM receipt_item ri
-            JOIN receipt r ON r.receipt_id = ri.receipt_id
-            GROUP BY ri.inven_code
-        ) ri ON i.inven_code = ri.inven_code
-        WHERE p.owner_id = ?
-          AND (i.is_expired = 0 OR i.is_expired IS NULL)
-          AND p.prod_status = 'active'
-        GROUP BY i.inven_code
-    ", [$owner_id]);
+    public function stockAlertReport()
+    {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
 
-    $this->stock = collect($results)->map(function ($item) {
-        $damageRate = $item->damaged_rate_percent;
-        $salesRate = $item->sales_rate_percent;
-        $damagedStock = $item->damaged_stock;
-        $soldStock = $item->sold_stock;
-        $usableStock = $item->usable_stock;
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
 
-        if ($damageRate > 15 && $damagedStock > $soldStock) {
-            $item->insight = "Critical! Too many items are getting damaged compared to sales. Check handling or storage right away.";
-            $item->insight_color = "bg-red-500 text-white"; 
-        } elseif ($damageRate > 10) {
-            $item->insight = "High damage alert! Review how this product is stored or displayed to prevent losses.";
-            $item->insight_color = "bg-orange-500 text-white"; 
-        } elseif ($soldStock == 0 && $damagedStock > 0) {
-            $item->insight = "No sales but items are damaged — you might want to rethink stocking this product.";
-            $item->insight_color = "bg-yellow-500 text-white";
-        } elseif ($salesRate < 10 && $usableStock > 5) {
-            $item->insight = "Slow-moving stock detected. Try discounts or promos to boost sales.";
-            $item->insight_color = "bg-blue-600 text-white"; 
-        } elseif ($salesRate > 30 && $damageRate < 5) {
-            $item->insight = "Great job! This product is selling fast with minimal waste.";
-            $item->insight_color = "bg-green-500 text-white";
-        } else {
-            $item->insight = "Performance looks steady. Keep monitoring for any changes.";
-            $item->insight_color = "bg-gray-500 text-white";
+        $results = collect(DB::select("
+            SELECT 
+                p.category_id,
+                i.inven_code as inven_code,
+                i.batch_number as batch_number,
+                p.name AS prod_name,
+                p.prod_code,
+                i.date_added,
+                i.stock AS usable_stock,
+                i.date_added AS last_stockin,
+                COALESCE(d.damaged_total, 0) AS damaged_stock,
+                COALESCE(ri.sold_total, 0) AS sold_stock,
+                (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) AS total_stock,
+                CASE 
+                    WHEN (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) > 0 
+                    THEN ROUND((COALESCE(d.damaged_total, 0) / NULLIF((i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)), 0)) * 100, 2)
+                    ELSE 0 
+                END AS damaged_rate_percent,
+                CASE 
+                    WHEN (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) > 0 
+                    THEN ROUND((COALESCE(ri.sold_total, 0) / NULLIF((i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)), 0)) * 100, 2)
+                    ELSE 0 
+                END AS sales_rate_percent,
+                CASE 
+                    WHEN COALESCE(ri.sold_total, 0) > 0 
+                    THEN ROUND(COALESCE(d.damaged_total, 0) / COALESCE(ri.sold_total, 0), 2)
+                    WHEN COALESCE(d.damaged_total, 0) > 0 THEN 9999
+                    ELSE 0 
+                END AS wastage_ratio
+            FROM inventory i
+            JOIN products p ON i.prod_code = p.prod_code
+            LEFT JOIN (
+                SELECT d.inven_code, SUM(d.damaged_quantity) AS damaged_total
+                FROM damaged_items d GROUP BY d.inven_code
+            ) d ON i.inven_code = d.inven_code
+            LEFT JOIN (
+                SELECT ri.inven_code, SUM(ri.item_quantity) AS sold_total
+                FROM receipt_item ri
+                JOIN receipt r ON r.receipt_id = ri.receipt_id
+                GROUP BY ri.inven_code
+            ) ri ON i.inven_code = ri.inven_code
+            WHERE p.owner_id = ?
+            AND (i.is_expired = 0 OR i.is_expired IS NULL)
+            AND p.prod_status = 'active'
+            GROUP BY i.inven_code
+            order by p.name asc
+        ", [$owner_id]));
+
+        $this->stock = collect($results)->map(function ($item) {
+            $damageRate = $item->damaged_rate_percent;
+            $salesRate = $item->sales_rate_percent;
+            $damagedStock = $item->damaged_stock;
+            $soldStock = $item->sold_stock;
+            $usableStock = $item->usable_stock;
+            $totalStock = $usableStock + $soldStock + $damagedStock;
+            
+            // Calculate days since added
+            $dateAdded = \Carbon\Carbon::parse($item->date_added);
+            $daysInStock = max(1, $dateAdded->diffInDays(now())); // Avoid division by zero
+            
+            // Calculate actual daily rates (more accurate than percentages alone)
+            $dailySalesRate = $soldStock / $daysInStock;
+            $dailyDamageRate = $damagedStock / $daysInStock;
+            
+            // Calculate what percentage of initial stock remains
+            $stockRemaining = $totalStock > 0 ? ($usableStock / $totalStock) * 100 : 0;
+            
+            // Calculate turnover efficiency: how much went to sales vs damage
+            $turnoverEfficiency = ($soldStock + $damagedStock) > 0 ? 
+                (($soldStock / ($soldStock + $damagedStock)) * 100) : 0;
+
+            // CRITICAL ISSUES FIRST - SHORTER TIMEFRAMES FOR FAST-MOVING GOODS
+            
+            // 1. Complete stagnation - nothing moving (30 days for convenience stores)
+            if ($soldStock == 0 && $damagedStock == 0 && $daysInStock > 30) {
+                $item->insight = "Dead stock - " . number_format($daysInStock, 1) . " days, zero movement. Consider clearance.";
+                $item->insight_color = "bg-gray-800 text-white";
+            }
+            // 2. Expired/very old with remaining stock (60 days max for most items)
+            elseif ($daysInStock > 60 && $stockRemaining > 50) {
+                $item->insight = "Expired/Slow-moving - " . number_format($daysInStock, 1) . " days old, " . number_format($stockRemaining, 0) . "% still in stock.";
+                $item->insight_color = "bg-gray-800 text-white";
+            }
+            // 3. Damage exceeds sales (biggest red flag)
+            elseif ($damagedStock > $soldStock && $damagedStock > 0) {
+                $item->insight = "Critical: More damaged (" . $damagedStock . ") than sold (" . $soldStock . "). Severe loss issue.";
+                $item->insight_color = "bg-red-600 text-white";
+            }
+            // 4. Very high damage rate (>15%) - CRITICAL FOR PERISHABLES
+            elseif ($damageRate > 15) {
+                $item->insight = "Urgent: " . number_format($damageRate, 1) . "% damage rate (" . $damagedStock . " units lost). Check expiry/storage.";
+                $item->insight_color = "bg-red-600 text-white";
+            }
+            // 5. No sales but accumulating damage (7 days for fast-moving retail)
+            elseif ($soldStock == 0 && $damagedStock > 0 && $daysInStock > 7) {
+                $item->insight = "Zero sales but " . $damagedStock . " damaged in " . number_format($daysInStock, 1) . " days. Pure waste.";
+                $item->insight_color = "bg-red-600 text-white";
+            }
+            
+            // HIGH CONCERN ISSUES
+            
+            // 6. High damage rate (10-15%) - COMMON WITH PERISHABLES
+            elseif ($damageRate >= 10 && $damageRate <= 15) {
+                $item->insight = "High damage: " . number_format($damageRate, 1) . "% loss rate (" . $damagedStock . " units). Check refrigeration/expiry.";
+                $item->insight_color = "bg-orange-500 text-white";
+            }
+            // 7. Very slow sales with aging (30 days for convenience stores)
+            elseif ($salesRate < 15 && $daysInStock > 30 && $stockRemaining > 70) {
+                $item->insight = "Stagnant: Only " . number_format($salesRate, 1) . "% sold in " . number_format($daysInStock, 1) . " days, " . number_format($stockRemaining, 0) . "% remains.";
+                $item->insight_color = "bg-orange-500 text-white";
+            }
+            // 8. Poor turnover efficiency (<50% went to sales)
+            elseif ($turnoverEfficiency > 0 && $turnoverEfficiency < 50 && $daysInStock > 14) {
+                $item->insight = "Inefficient: Only " . number_format($turnoverEfficiency, 0) . "% of movement went to sales vs damage.";
+                $item->insight_color = "bg-orange-500 text-white";
+            }
+            
+            // FAST-MOVING ITEMS ANALYSIS - SPECIFIC TO CONVENIENCE STORES
+            elseif ($dailySalesRate >= 3 && $damageRate < 3) {
+                $item->insight = "Fast mover: " . number_format($dailySalesRate, 1) . " units/day. Ensure stock availability.";
+                $item->insight_color = "bg-green-600 text-white";
+            }
+            elseif ($dailySalesRate >= 1 && $damageRate < 5) {
+                $item->insight = "Good velocity: " . number_format($dailySalesRate, 1) . " units/day. Reliable seller.";
+                $item->insight_color = "bg-blue-500 text-white";
+            }
+            
+            // MODERATE CONCERNS
+            
+            // 9. Moderate damage with slow movement
+            elseif ($damageRate >= 5 && $damageRate < 10 && $salesRate < 30) {
+                $item->insight = "Concern: " . number_format($damageRate, 1) . "% damage + slow sales (" . number_format($salesRate, 1) . "%) in " . number_format($daysInStock, 1) . " days.";
+                $item->insight_color = "bg-yellow-500 text-gray-900";
+            }
+            // 10. Slow movement overall (21 days for retail)
+            elseif ($salesRate < 25 && $daysInStock > 21) {
+                $item->insight = "Slow turnover: " . number_format($salesRate, 1) . "% sold over " . number_format($daysInStock, 1) . " days. Low velocity.";
+                $item->insight_color = "bg-yellow-500 text-gray-900";
+            }
+            // 11. Moderate damage but good sales
+            elseif ($damageRate >= 5 && $damageRate < 10 && $salesRate >= 40) {
+                $item->insight = "Mixed: Good sales (" . number_format($salesRate, 1) . "%) but " . number_format($damageRate, 1) . "% damage is preventable.";
+                $item->insight_color = "bg-yellow-500 text-gray-900";
+            }
+            
+            // POSITIVE PERFORMANCE
+            
+            // 12. High sales velocity, minimal damage
+            elseif ($salesRate >= 70 && $damageRate < 3) {
+                $item->insight = "Excellent: " . number_format($salesRate, 1) . "% sold, " . number_format($damageRate, 1) . "% damage in " . number_format($daysInStock, 1) . " days. Top performer.";
+                $item->insight_color = "bg-green-600 text-white";
+            }
+            // 13. Good sales velocity
+            elseif ($salesRate >= 50 && $damageRate < 5) {
+                $item->insight = "Strong: " . number_format($salesRate, 1) . "% turnover, " . number_format($damageRate, 1) . "% loss. Healthy flow.";
+                $item->insight_color = "bg-green-600 text-white";
+            }
+            // 14. Moderate but healthy performance
+            elseif ($salesRate >= 35 && $damageRate < 3) {
+                $item->insight = "Healthy: " . number_format($salesRate, 1) . "% sold, minimal damage (" . number_format($damageRate, 1) . "%) over " . number_format($daysInStock, 1) . " days.";
+                $item->insight_color = "bg-blue-500 text-white";
+            }
+            
+            // NEW STOCK ANALYSIS - SHORTER TIME WINDOWS
+            
+            // 15. Very new stock with NO activity
+            elseif ($daysInStock <= 2 && $soldStock == 0 && $damagedStock == 0) {
+                $item->insight = "Just added (" . number_format($daysInStock, 1) . " days). No activity yet - monitoring.";
+                $item->insight_color = "bg-gray-500 text-white";
+            }
+            // 16. New with fast sales (very promising) - 3 DAYS for fast retail
+            elseif ($daysInStock <= 3 && $dailySalesRate >= 2 && $damageRate < 2) {
+                $item->insight = "Fast start: " . number_format($dailySalesRate, 1) . " units/day in " . number_format($daysInStock, 1) . " days. Strong early demand.";
+                $item->insight_color = "bg-green-600 text-white";
+            }
+            // 17. New with good early activity - 7 DAYS window
+            elseif ($daysInStock <= 7 && $salesRate >= 20 && $damageRate < 3) {
+                $item->insight = "Good start: " . number_format($salesRate, 1) . "% sold, " . number_format($damageRate, 1) . "% damage in " . number_format($daysInStock, 1) . " days.";
+                $item->insight_color = "bg-blue-500 text-white";
+            }
+            // 18. New but with early damage concerns - 5 DAYS window
+            elseif ($daysInStock <= 5 && $damageRate >= 5) {
+                $item->insight = "Early warning: " . number_format($damageRate, 1) . "% already damaged in " . number_format($daysInStock, 1) . " days. Check handling/expiry.";
+                $item->insight_color = "bg-yellow-500 text-gray-900";
+            }
+            // 19. New with slow start - 5 DAYS window
+            elseif ($daysInStock <= 5 && $salesRate < 10) {
+                $item->insight = "Slow start: Only " . number_format($salesRate, 1) . "% moved in " . number_format($daysInStock, 1) . " days. Early monitoring needed.";
+                $item->insight_color = "bg-yellow-500 text-gray-900";
+            }
+            
+            // DEFAULT: STABLE/MODERATE
+            else {
+                $item->insight = "Stable: " . number_format($salesRate, 1) . "% sold, " . number_format($damageRate, 1) . "% damaged over " . number_format($daysInStock, 1) . " days. Normal flow.";
+                $item->insight_color = "bg-gray-500 text-white";
+            }
+
+            return $item;
+        });
+
+        if (!empty($this->selectedCategory) && $this->selectedCategory !== 'all') {
+            $results = $results->where('category_id', (int) $this->selectedCategory);
         }
 
-        return $item; 
-    });
+        if (!empty($this->selectedStockStatus) && $this->selectedStockStatus !== 'all') {
+            if ($this->selectedStockStatus === 'active') {
+                $results = $results->filter(fn($row) => $row->usable_stock > 0);
+            } elseif ($this->selectedStockStatus === 'depleted') {
+                $results = $results->filter(fn($row) => $row->usable_stock == 0);
+            }
+        }
 
 
-    return $this->stock;
-}
+        $this->stock = $results->values();
+    }
+
+    public function exportStockReport() {
+
+        if (!$this->stock || $this->stock->isEmpty()) {
+            session()->flash('error', 'No stock data to export');
+            return;
+        }
+
+        $exportData = $this->stock->map(function ($row) {
+            $initialStock = ($row->usable_stock ?? 0) + ($row->sold_stock ?? 0) + ($row->damaged_stock ?? 0);
+            return [
+                'Product Name'  => $row->prod_name,
+                'Batch #'       => $row->batch_number,
+                'Initial Stock' => $initialStock,
+                'Current'       => $row->usable_stock,
+                'Sold'          => $row->sold_stock,
+                'Damaged'       => $row->damaged_stock,
+                'Sales Rate'    => ($row->sales_rate_percent ?? 0) . '%',
+                'Damage Rate'   => ($row->damaged_rate_percent ?? 0) . '%',
+                'Insights'      => $row->insight,
+            ];
+        });
+
+        $filename = 'Stock_Report_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = storage_path('app/' . $filename);
+
+        $totalInitial = $this->stock->sum(fn($row) => ($row->usable_stock ?? 0) + ($row->sold_stock ?? 0) + ($row->damaged_stock ?? 0));
+        $totalCurrent = $this->stock->sum('usable_stock');
+        $totalSold    = $this->stock->sum('sold_stock');
+        $totalDamaged = $this->stock->sum('damaged_stock');
+
+        $totalsRow = [
+            'Product Name'  => 'TOTAL',
+            'Batch #'       => '',
+            'Initial Stock' => $totalInitial,
+            'Current'       => $totalCurrent,
+            'Sold'          => $totalSold,
+            'Damaged'       => $totalDamaged,
+            'Sales Rate'    => '',
+            'Damage Rate'   => '',
+        ];
 
 
+        $exportData->push($totalsRow);
 
+        
+        $filename = 'Stock_Report_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = storage_path('app/' . $filename);
+
+        $writer = new Writer();
+        $writer->openToFile($filePath);
+
+        
+        $headerStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(12)
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor(Color::rgb(76, 175, 80))
+            ->setCellAlignment(CellAlignment::CENTER);
+
+        $dateStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(10)
+            ->setFontColor(Color::rgb(100, 100, 100));
+
+        $totalStyle = (new Style())
+            ->setFontBold()
+            ->setBackgroundColor(Color::rgb(230, 230, 230));
+
+
+            
+        $maxNameLength = $this->stock->max(fn($row) => strlen($row->prod_name)) ?? 15;
+        $maxBatchLength = $this->stock->max(fn($row) => strlen($row->batch_number)) ?? 10;
+        $maxInsightLength = $this->stock->max(fn($row) => strlen($row->insight)) ?? 25;
+
+        $sheet = $writer->getCurrentSheet();
+        $sheet->setColumnWidth(max($maxNameLength, 20), 1); // Product Name
+        $sheet->setColumnWidth(max($maxBatchLength, 12), 2); // Batch #
+        $sheet->setColumnWidth(15, 3); // Initial Stock
+        $sheet->setColumnWidth(12, 4); // Current
+        $sheet->setColumnWidth(12, 5); // Sold
+        $sheet->setColumnWidth(12, 6); // Damaged
+        $sheet->setColumnWidth(15, 7); // Sales Rate
+        $sheet->setColumnWidth(15, 8); // Damage Rate
+        $sheet->setColumnWidth(max($maxInsightLength, 12), 9); // Insight
+
+        $exportDate = 'Exported on: ' . now()->format('F d, Y h:i A');
+        $writer->addRow(Row::fromValues([$exportDate], $dateStyle));
+
+        // empty row para naay space
+        $writer->addRow(Row::fromValues(['']));
+
+        
+        $headers = array_keys($exportData->first());
+        $writer->addRow(Row::fromValues($headers, $headerStyle));
+
+        foreach ($exportData as $dataRow) {
+            $rowStyle = null;
+
+            if ($dataRow['Product Name'] === 'TOTAL') {
+                $rowStyle = (new Style())
+                    ->setFontBold()
+                    ->setBackgroundColor(Color::rgb(230, 230, 230));
+            }
+
+            $writer->addRow(Row::fromValues(array_values($dataRow), $rowStyle));
+        }
+
+        $writer->close();
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
 
 
 
