@@ -38,174 +38,190 @@
 
         <div wire:poll.15s="pollAll" wire:keep-alive class="hidden"></div>
         <!-- DAILY/MONTHLY SALES TAB -->
-        <div x-show="tab === 'sales'" class="h-full flex flex-col">
+        <div x-show="tab === 'sales'" class="rounded-lg shadow-sm">
             <!-- Sales Analytics Cards -->
-            <div class="grid grid-cols-3 gap-3 mb-4">
-                <div class="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 pt-4">
+                <div class="bg-gradient-to-br from-green-50 to-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow duration-150">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-500 font-medium">Total Transactions</p>
-                            <p class="text-xl font-bold text-gray-900">{{ $salesAnalytics->total_transactions ?? 0 }}</p>
+                            <p class="text-xs text-gray-600 font-medium mb-1">Total Transactions</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ $salesAnalytics->total_transactions ?? 0 }}</p>
                         </div>
-                        <span class="material-symbols-rounded text-green-600 text-3xl">receipt_long</span>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <span class="material-symbols-rounded text-green-600 text-3xl">receipt_long</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                <div class="bg-gradient-to-br from-green-50 to-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow duration-150">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-500 font-medium">Gross Sales</p>
-                            <p class="text-xl font-bold text-green-600">₱{{ number_format($salesAnalytics->gross_sales ?? 0, 2) }}</p>
+                            <p class="text-xs text-gray-600 font-medium mb-1">Gross Sales</p>
+                            <p class="text-2xl font-bold text-green-600">₱{{ number_format($salesAnalytics->gross_sales ?? 0, 2) }}</p>
                         </div>
-                        <span class="material-symbols-rounded text-green-600 text-3xl">trending_up</span>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <span class="material-symbols-rounded text-green-600 text-3xl">trending_up</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                <div class="bg-gradient-to-br from-blue-50 to-white rounded-lg p-4 border border-blue-200 shadow-sm hover:shadow-md transition-shadow duration-150">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-500 font-medium">Net Profit</p>
-                            <p class="text-xl font-bold text-blue-600">₱{{ number_format($salesAnalytics->net_profit ?? 0, 2) }}</p>
+                            <p class="text-xs text-gray-600 font-medium mb-1">Net Profit</p>
+                            <p class="text-2xl font-bold text-blue-600">₱{{ number_format($salesAnalytics->net_profit ?? 0, 2) }}</p>
                         </div>
-                        <span class="material-symbols-rounded text-blue-600 text-3xl">payments</span>
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <span class="material-symbols-rounded text-blue-600 text-3xl">payments</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Quick Date Range Filters -->
-            <div x-data="{ showQuickDates: false }" class="flex justify-between items-center mb-4 gap-3">
-                <!-- Left side: Analytics -->
-                <div class="flex gap-2 text-xs">
-                    <div class="bg-white px-3 py-2 rounded border border-gray-300">
-                        <span class="text-gray-500">Items Sold:</span>
-                        <span class="font-bold text-gray-900 ml-1">{{ $salesAnalytics->total_items_sold ?? 0 }}</span>
+            <!-- Report Header -->
+            <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4 mt-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900">Sales Transactions Report</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Items Sold: <span class="font-bold text-gray-900">{{ $salesAnalytics->total_items_sold ?? 0 }}</span>
+                            <span class="mx-2">•</span>
+                            Avg. Transaction: <span class="font-bold text-gray-900">₱{{ number_format($salesAnalytics->avg_transaction_value ?? 0, 2) }}</span>
+                        </p>
                     </div>
-                    <div class="bg-white px-3 py-2 rounded border border-gray-300">
-                        <span class="text-gray-500">Avg. Transaction:</span>
-                        <span class="font-bold text-gray-900 ml-1">₱{{ number_format($salesAnalytics->avg_transaction_value ?? 0, 2) }}</span>
-                    </div>
-                </div>
-            
-                <!-- Right side: Actions -->
-                <div class="flex items-center gap-2">
-                    <!-- Quick Date Range -->
-                    <div class="relative">
-                        <button @click="showQuickDates = !showQuickDates" 
-                            class="bg-white px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 transition text-xs flex items-center gap-1">
-                            <span class="material-symbols-rounded text-sm">schedule</span>
-                            Quick Range
-                        </button>
-                        <div x-show="showQuickDates" @click.away="showQuickDates = false" x-cloak
-                            class="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-50 py-2">
-                            <button wire:click="setQuickDateRange('7days')" 
-                                class="w-full text-left px-4 py-2 text-xs hover:bg-gray-100 transition">
-                                Last 7 Days
+                    <div class="flex items-center gap-3" x-data="{ showQuickDates: false }">
+                        <!-- Quick Date Range -->
+                        <div class="relative">
+                            <button @click="showQuickDates = !showQuickDates" 
+                                class="text-xs border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                <span class="material-symbols-rounded text-sm">schedule</span>
+                                Quick Range
                             </button>
-                            <button wire:click="setQuickDateRange('30days')" 
-                                class="w-full text-left px-4 py-2 text-xs hover:bg-gray-100 transition">
-                                Last 30 Days
-                            </button>
-                            <button wire:click="setQuickDateRange('3months')" 
-                                class="w-full text-left px-4 py-2 text-xs hover:bg-gray-100 transition">
-                                Last 3 Months
-                            </button>
-                            <div class="border-t border-gray-200 my-1"></div>
-                            <button wire:click="setQuickDateRange('thismonth')" 
-                                class="w-full text-left px-4 py-2 text-xs hover:bg-gray-100 transition">
-                                This Month
-                            </button>
-                            <button wire:click="setQuickDateRange('thisyear')" 
-                                class="w-full text-left px-4 py-2 text-xs hover:bg-gray-100 transition">
-                                This Year
-                            </button>
-                            <button wire:click="setQuickDateRange('lastyear')" 
-                                class="w-full text-left px-4 py-2 text-xs hover:bg-gray-100 transition">
-                                Last Year
-                            </button>
+                            <div x-show="showQuickDates" @click.away="showQuickDates = false" x-cloak
+                                class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+                                <button wire:click="setQuickDateRange('7days')" 
+                                    class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors">
+                                    Last 7 Days
+                                </button>
+                                <button wire:click="setQuickDateRange('30days')" 
+                                    class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors">
+                                    Last 30 Days
+                                </button>
+                                <button wire:click="setQuickDateRange('3months')" 
+                                    class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors">
+                                    Last 3 Months
+                                </button>
+                                <div class="border-t border-gray-200 my-1"></div>
+                                <button wire:click="setQuickDateRange('thismonth')" 
+                                    class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors">
+                                    This Month
+                                </button>
+                                <button wire:click="setQuickDateRange('thisyear')" 
+                                    class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors">
+                                    This Year
+                                </button>
+                                <button wire:click="setQuickDateRange('lastyear')" 
+                                    class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors">
+                                    Last Year
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Date Range Filter --> 
-                    <div class="flex items-center gap-2 bg-white px-3 py-2 rounded border border-gray-300">
+                        <!-- Date Range Filter --> 
                         <input type="date" wire:model.live="dateFrom"
-                            class="text-xs border-0 focus:ring-0 p-0 text-gray-700"/>
-                        <span class="text-green-600">to</span>
+                            class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
                         <input type="date" wire:model.live="dateTo"
-                            class="text-xs border-0 focus:ring-0 p-0 text-gray-700"/>
+                            class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+                        
                         <button wire:click="resetDateFilters" 
-                            class="text-gray-400 hover:text-gray-600"
+                            class="text-xs border border-gray-300 rounded-lg p-2 bg-white shadow-sm hover:bg-gray-50 transition-colors"
                             title="Reset dates">
                             <span class="material-symbols-rounded text-lg">refresh</span>
                         </button>
+
+                        <!-- Export Button -->
+                        <button wire:click="toggleExportModal" title="Export Report" 
+                            class="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-colors shadow-sm">
+                            <span class="material-symbols-rounded text-xl">description</span>
+                        </button>
+
+                        <!-- Start Transaction Button -->
+                        <a href="{{ route('store_start_transaction') }}" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold text-xs flex items-center gap-2 transition-colors shadow-sm">
+                            <span class="material-symbols-rounded text-lg">add_shopping_cart</span>
+                            Start Transaction
+                        </a>
                     </div>
-
-                    <!-- Export Button -->
-                    <button wire:click="toggleExportModal" title="Export Report" 
-                        class="bg-green-600 hover:bg-green-700 text-white p-2 rounded transition">
-                        <span class="material-symbols-rounded text-xl">description</span>
-                    </button>
-
-                    <!-- Start Transaction Button -->
-                    <a href="{{ route('store_start_transaction') }}" 
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium text-xs flex items-center gap-1 transition">
-                        <span class="material-symbols-rounded text-lg">add_shopping_cart</span>
-                        Start Transaction
-                    </a>
                 </div>
             </div>
 
-            <!-- Transactions Table -->
-            <div class="flex-1 overflow-y-auto scrollbar-custom bg-white rounded border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-10">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+            <!-- Table Container -->
+            <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[28.5rem]">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
+                        <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
                                 Receipt No.
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
                                 Date & Time
                             </th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                Total Quantity
+                            <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Total Qty
                             </th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                Total Amount
+                            
+                            <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Transaction Details
                             </th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                Amount Paid
-                            </th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                Change
-                            </th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                View Receipt
+                            
+                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-blue-50 border-l-2 border-gray-300">
+                                Action
                             </th>
                         </tr>
+                        <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Total Amount</th>
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Amount Paid</th>
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Change</th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">View Receipt</th>
+                        </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+
+                    <tbody class="divide-y divide-gray-200 bg-white text-xs">
                         @forelse($transactions as $transaction)
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="px-4 py-3 text-xs font-medium text-gray-900">
+                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td class="px-4 py-3.5 font-bold text-gray-900">
                                     #{{ str_pad($transaction->receipt_id, 6, '0', STR_PAD_LEFT) }}
                                 </td>
-                                <td class="px-4 py-3 text-xs text-gray-700">
-                                    {{ \Carbon\Carbon::parse($transaction->receipt_date)->format('m/d/Y, h:i A') }}
+                                <td class="px-4 py-3.5 text-gray-700">
+                                    {{ \Carbon\Carbon::parse($transaction->receipt_date)->format('M d, Y') }}
+                                    <div class="text-[10px] text-gray-500">
+                                        {{ \Carbon\Carbon::parse($transaction->receipt_date)->format('h:i A') }}
+                                    </div>
                                 </td>
-                                <td class="px-4 py-3 text-xs text-center font-medium text-gray-900">
-                                    {{ $transaction->total_quantity }}
+                                <td class="px-4 py-3.5 text-center font-bold text-gray-900">
+                                    {{ number_format($transaction->total_quantity) }}
                                 </td>
-                                <td class="px-4 py-3 text-xs text-right font-bold text-green-600">
+                                
+                                <!-- Transaction Details -->
+                                <td class="px-4 py-3.5 text-right font-bold text-green-600 bg-gray-50">
                                     ₱{{ number_format($transaction->total_amount, 2) }}
                                 </td>
-                                <td class="px-4 py-3 text-xs text-right text-gray-700">
+                                <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
                                     ₱{{ number_format($transaction->amount_paid, 2) }}
                                 </td>
-                                <td class="px-4 py-3 text-xs text-right font-medium text-blue-600">
+                                <td class="px-4 py-3.5 text-right font-bold text-blue-600 bg-gray-50">
                                     ₱{{ number_format($transaction->change, 2) }}
                                 </td>
-                                <td class="px-4 py-3 text-center">
+                                
+                                <!-- Action -->
+                                <td class="px-4 py-3.5 text-center bg-blue-50">
                                     <button wire:click="viewReceipt({{ $transaction->receipt_id }})"
-                                        class="text-green-600 hover:text-green-800 transition"
+                                        class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-colors"
                                         title="View Receipt">
                                         <span class="material-symbols-rounded text-xl">visibility</span>
                                     </button>
@@ -213,19 +229,45 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-8">
-                                    <div class="flex flex-col items-center space-y-2">
-                                        <span class="material-symbols-rounded text-gray-400 text-5xl">receipt_long</span>
-                                        <span class="text-gray-400 text-sm">No transactions found</span>
+                                <td colspan="7" class="text-center py-16">
+                                    <div class="flex flex-col justify-center items-center space-y-3">
+                                        <span class="material-symbols-rounded text-6xl text-gray-300">receipt_long</span>
+                                        <div>
+                                            <p class="text-gray-600 font-medium">No Transactions Found</p>
+                                            <p class="text-gray-400 text-sm mt-1">No sales transactions for the selected period</p>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
+
+                    @if($transactions->isNotEmpty())
+                    <tfoot class="sticky bottom-0 z-10 bg-slate-100 shadow-[0_-1px_0_0_rgb(209,213,219)]">
+                        <tr class="border-t-2 border-gray-600">
+                            <td colspan="2" class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
+                                Total Summary
+                            </td>
+                            <td class="px-4 text-center font-bold text-sm">
+                                {{ number_format($transactions->sum('total_quantity')) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-sm text-green-600">
+                                ₱{{ number_format($transactions->sum('total_amount'), 2) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-sm">
+                                ₱{{ number_format($transactions->sum('amount_paid'), 2) }}
+                            </td>
+                            <td class="px-4 text-right font-bold text-sm text-blue-600">
+                                ₱{{ number_format($transactions->sum('change'), 2) }}
+                            </td>
+                            <td class="px-4 text-center text-xs text-gray-400">
+                            </td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 </table>
             </div>
         </div>
-
 
 
         <!-- SALES BY CATEGORY TAB -->
