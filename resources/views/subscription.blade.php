@@ -157,7 +157,7 @@
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Comparative sales analysis</li>
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Monthly net profit overview</li>
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales by category and loss analysis</li>
-                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Up to 50 inventory products with 10 categories & units</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Up to 50 inventory products</li>
 
                             </ul>
 
@@ -192,12 +192,13 @@
                         </p>
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Basic Plan</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 products, 30 categories & units)</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 products)</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock alert & expiration notice</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Top selling products dashboard</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales Performance reports</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory reports</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>One staff account</li>
 
                         </ul>
 
@@ -228,7 +229,7 @@
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product trends</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Seasonal trend analysis</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs for both owner & staff</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Unlimited inventory, categories, and units</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Unlimited inventory products</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Add and manage multiple staff</li>
                         </ul>
 
