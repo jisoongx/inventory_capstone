@@ -51,15 +51,15 @@
                     <div id="reportsDropdown" class="ml-5 mt-1 space-y-1 border-l-2 border-gray-600">
                         <a href="{{ route('actLogs') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Activity Log</span>
-                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
                         </a>
                         <a href="{{ route('dashboards.owner.rsp') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Sales Performance</span>
-                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
                         </a>
                         <a href="{{ route('dashboards.owner.inven_reports') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Inventory Reports</span>
-                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
                         </a>
                         <a href="{{ route('dashboards.owner.trend') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Product Trends</span>

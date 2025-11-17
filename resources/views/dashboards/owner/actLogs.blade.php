@@ -3,7 +3,7 @@
 @section('content')
 &nbsp;
 
-@if($expired || $plan === 3 || $plan === 1)
+@if($expired || $plan === 3)
     <div class="ml-64 absolute inset-0 flex items-center justify-center z-10">
         <div class="bg-white rounded-lg shadow-2xl border border-red-200 overflow-hidden max-w-[35rem] mx-4">
 
@@ -87,7 +87,7 @@
 @endif
 
 <div class="relative mx-6">
-    <div class="{{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
+    <div class="{{ ($expired || $plan === 3) ? 'blur-sm pointer-events-none select-none' : '' }}">
         <div class="flex justify-between items-center mx-5">
             <h1 class="text-xl font-semibold text-gray-900 mb-5 ml-2">Activity Logs</h1>
             <a href="{{ route('staffLogs') }}" class="text-blue-500 hover:text-blue-700 underline text-sm">Staff Activity Logs</a>
@@ -124,7 +124,7 @@
     </div>
 
 
-    <div class="overflow-x-auto bg-white shadow-md rounded-md {{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
+    <div class="overflow-x-auto bg-white shadow-md rounded-md {{ ($expired || $plan === 3) ? 'blur-sm pointer-events-none select-none' : '' }}">
         <div class="max-h-[430px] overflow-y-auto">
             <table class="min-w-full text-sm text-center text-slate-700">
                 <thead class="bg-red-50 text-center uppercase tracking-wider border-b border-gray-100 sticky top-0">

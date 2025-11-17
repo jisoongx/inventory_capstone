@@ -30,6 +30,8 @@ class ReportInventory extends Component
     public $stock;
     public $selectedStockStatus = 'active';
 
+    public $showSuccess = false;
+
 
     public function mount() {
 
@@ -195,12 +197,28 @@ class ReportInventory extends Component
             GROUP BY p.prod_code, i.batch_number
             ORDER BY days_until_expiry ASC;
         ", [$owner_id]));
+
+        DB::insert("
+            INSERT INTO damaged_items (inven_code, damaged_quantity, damaged_type, damaged_reason, damaged_date, owner_id)
+                SELECT inven_code, stock, 'Expired', 'System noticed that the batch has been expired.', NOW(), ?
+                FROM inventory
+                WHERE expiration_date <= CURDATE()
+                AND stock > 0
+                AND is_expired is null
+        ", [$owner_id]);
+
+        DB::statement("
+            UPDATE inventory
+            SET is_expired = 1
+            WHERE expiration_date <= CURDATE() AND stock > 0
+        ");
         
         if ($this->selectedRange !== null && $this->selectedRange !== '') {
             $range = (int) $this->selectedRange;
 
             if ($range === 0) {
                 $expired = $expired->filter(fn($item) => $item->days_until_expiry <= 0);
+
             } else {
                 $expired = $expired->filter(fn($item) => $item->days_until_expiry > 0 && $item->days_until_expiry <= $range);
             }
@@ -219,8 +237,7 @@ class ReportInventory extends Component
 
 
 
-    public function showAll()
-    {
+    public function showAll() {
         if (is_null($this->selectedMonths) && is_null($this->selectedYears)) {
             
             $this->selectedMonths = now()->format('m');
@@ -297,6 +314,120 @@ class ReportInventory extends Component
             {$whereClause}
             ORDER BY di.damaged_date DESC
         ", $bindings));
+    }
+
+    public function exportLossReport() {
+
+        if (!$this->lossRep || $this->lossRep->isEmpty()) {
+            session()->flash('error', 'No stock data to export');
+            return;
+        }
+
+
+        $exportData = $this->lossRep->map(function ($row) {
+            
+            return [
+                'Date Reported'     => $row->date_reported,
+                'Batch #'           => $row->batch_num,
+                'Product Name'      => $row->prod_name,
+                'Category'          => $row->cat_name,
+                'Loss Type'         => $row->type,
+                'Quantity Lost'     => $row->qty,
+                'Unit Cost'         => ($row->unit_cost ?? 0),
+                'Total Loss'        => ($row->total_loss ?? 0),
+                'Reported By'       => $row->reported_by,
+                'Remarks'           => $row->remarks,
+            ];
+        });
+
+        $filename = 'Loss_Report_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = storage_path('app/' . $filename);
+
+        $qtyLost = $this->lossRep->sum('qty');
+        $totalLoss    = $this->lossRep->sum('total_loss');
+        $totalIncident = $this->lossRep->count();
+
+        $totalsRow = [
+            'Date Reported'     => 'TOTAL LOSS SUMMARY',
+            'Batch #'           => '',
+            'Product Name'          => '',
+            'Category'          => '',
+            'Type'              => '',
+            'Quantity Loss'     => $qtyLost . ' units',
+            'Unit Cost'         => '',
+            'Total Loss'        => '₱' . $totalLoss,
+            'Reported By'       => '',
+            'Remarks'           => $totalIncident . ' incedent(s) reported',
+        ];
+
+
+        $exportData->push($totalsRow);
+
+        
+        $filename = 'Loss_Report_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = storage_path('app/' . $filename);
+
+        $writer = new Writer();
+        $writer->openToFile($filePath);
+
+        
+        $headerStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(12)
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor(Color::rgb(76, 175, 80))
+            ->setCellAlignment(CellAlignment::CENTER);
+
+        $dateStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(10)
+            ->setFontColor(Color::rgb(100, 100, 100));
+
+        $totalStyle = (new Style())
+            ->setFontBold()
+            ->setBackgroundColor(Color::rgb(230, 230, 230));
+
+
+        $sheet = $writer->getCurrentSheet();
+        $sheet->setColumnWidth(18, 1); // Date Reported
+        $sheet->setColumnWidth(12, 2); // Batch #
+        $sheet->setColumnWidth(22, 3); // Product Name
+        $sheet->setColumnWidth(18, 4); // Category
+        $sheet->setColumnWidth(15, 5); // Loss Type
+        $sheet->setColumnWidth(14, 6); // Quantity Lost
+        $sheet->setColumnWidth(12, 7); // Unit Cost
+        $sheet->setColumnWidth(15, 8); // Total Loss
+        $sheet->setColumnWidth(18, 9); // Reported By
+        $sheet->setColumnWidth(25, 10); // Remarks
+
+        $exportDate = 'Exported on: ' . now()->format('F d, Y h:i A');
+        $writer->addRow(Row::fromValues([$exportDate], $dateStyle));
+
+        // empty row para naay space
+        $writer->addRow(Row::fromValues(['']));
+
+        
+        $headers = array_keys($exportData->first());
+        $writer->addRow(Row::fromValues($headers, $headerStyle));
+
+        foreach ($exportData as $dataRow) {
+            $rowStyle = null;
+
+            if ($dataRow['Date Reported'] === 'TOTAL LOSS SUMMARY') {
+                $rowStyle = (new Style())
+                    ->setFontBold()
+                    ->setBackgroundColor(Color::rgb(230, 230, 230));
+            }
+
+            $writer->addRow(Row::fromValues(array_values($dataRow), $rowStyle));
+        }
+
+        $writer->close();
+        
+
+        $this->showSuccess = true;
+        return response()->download($filePath)->deleteFileAfterSend(true);
+        
     }
 
 
@@ -637,10 +768,12 @@ class ReportInventory extends Component
         }
 
         $writer->close();
+        
 
+        $this->showSuccess = true;
         return response()->download($filePath)->deleteFileAfterSend(true);
+        
     }
-
 
 
 

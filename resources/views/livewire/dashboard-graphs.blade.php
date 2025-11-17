@@ -96,7 +96,7 @@
                 <div class="bg-white p-5 rounded shadow border w-[50%] h-[26rem]">
                     <p class="text-left text-black font-semibold text-xs">Sales VS Loss - {{ $dateDisplay->format('F') }}</p>
                     <div class="mt-3">
-                        @if((end($losses) ?? 0) == 0 && (end($sales) ?? 0) == 0)
+                        @if((count($losses) ?? 0) == 0 && (count($sales) ?? 0) == 0)
                             <div class="flex flex-col items-center justify-center py-24 text-gray-500 text-center">
                                 <span class="material-symbols-rounded-big text-slate-400">ssid_chart</span>
                                 <p class="mt-2 text-xs font-semibold">No sales or losses recorded for this month yet.</p>

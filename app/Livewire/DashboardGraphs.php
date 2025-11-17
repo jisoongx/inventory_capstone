@@ -277,7 +277,7 @@ class DashboardGraphs extends Component
             $this->lossInsights = "This is your baseline month. Future loss comparisons will be based on this data.";
             $this->lossState = 'Start';
         } else {
-            // Use the ACTUAL percentage changes for insights
+            
             if($salesChangePercent > 0) {
                 $this->salesInsights = "Compared to last month, sales improved by " . number_format(abs($salesChangePercent), 1) . "%.";
                 $this->salesState = 'Positive';
@@ -301,26 +301,29 @@ class DashboardGraphs extends Component
             }
         }
 
-        // Your performance insight logic remains the same...
-        if ($this->lossPercentage < 2) {
+        // FIX: Check if there's actually no activity in the current month
+        if ($totalActivity === 0) {
+            $this->insight = "No sales activity recorded this month. Consider reviewing your inventory or marketing strategies.";
+            $this->performanceLabel = "No Activity";
+        } elseif ($latestSales == 0 && $latestLoss == 0 && ($previousSales > 0 || $previousLoss > 0)) {
+            $this->insight = "No sales or losses recorded for the current month yet.";
+            $this->performanceLabel = "No Data";
+            return;
+        } elseif ($this->lossPercentage < 2) {
             $this->insight = "Good job! Strong sales with almost no losses.";
             $this->performanceLabel = "Excellent";
         } elseif ($this->lossPercentage < 5) {
             $this->insight = "Healthy performance. Sales are strong and losses are well-controlled.";
             $this->performanceLabel = "Good";
-
         } elseif ($this->lossPercentage < 10) {
             $this->insight = "Fair. Some losses are noticeable, monitor stock and expiries.";
             $this->performanceLabel = "Moderate";
-
         } elseif ($this->lossPercentage < 18) {
             $this->insight = "Losses are cutting into profits. Review inventory handling.";
             $this->performanceLabel = "Warning";
-
         } elseif ($this->lossPercentage < 25) {
             $this->insight = "Losses are significantly impacting sales. Take corrective action.";
             $this->performanceLabel = "Critical";
-
         } else {
             $this->insight = "Very high losses are severely affecting performance. Act immediately!";
             $this->performanceLabel = "Critical";

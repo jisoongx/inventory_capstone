@@ -1,0 +1,158 @@
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+use OpenSpout\Writer\XLSX\Options as XLSXOptions;
+use Rap2hpoutre\FastExcel\FastExcel;
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Writer\XLSX\Entity\ColumnWidth;
+
+class ReportComponent extends Component
+{
+    public $stock;
+    public $selectedCategory = 'all';
+
+    public function mount()
+    {
+        $this->stock = collect();
+        $this->loadStock();
+    }
+
+    public function loadStock()
+    {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+
+        $results = collect(DB::select("
+            SELECT 
+                p.category_id,
+                i.inven_code as inven_code,
+                i.batch_number as batch_number,
+                p.name AS prod_name,
+                p.prod_code,
+                i.date_added,
+                i.stock AS usable_stock,
+                i.date_added AS last_stockin,
+                COALESCE(d.damaged_total, 0) AS damaged_stock,
+                COALESCE(ri.sold_total, 0) AS sold_stock,
+                (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) AS total_stock,
+                CASE 
+                    WHEN (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) > 0 
+                    THEN ROUND((COALESCE(d.damaged_total, 0) / NULLIF((i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)), 0)) * 100, 2)
+                    ELSE 0 
+                END AS damaged_rate_percent,
+                CASE 
+                    WHEN (i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)) > 0 
+                    THEN ROUND((COALESCE(ri.sold_total, 0) / NULLIF((i.stock + COALESCE(ri.sold_total, 0) + COALESCE(d.damaged_total, 0)), 0)) * 100, 2)
+                    ELSE 0 
+                END AS sales_rate_percent,
+                CASE 
+                    WHEN COALESCE(ri.sold_total, 0) > 0 
+                    THEN ROUND(COALESCE(d.damaged_total, 0) / COALESCE(ri.sold_total, 0), 2)
+                    WHEN COALESCE(d.damaged_total, 0) > 0 THEN 9999
+                    ELSE 0 
+                END AS wastage_ratio
+            FROM inventory i
+            JOIN products p ON i.prod_code = p.prod_code
+            LEFT JOIN (
+                SELECT d.inven_code, SUM(d.damaged_quantity) AS damaged_total
+                FROM damaged_items d GROUP BY d.inven_code
+            ) d ON i.inven_code = d.inven_code
+            LEFT JOIN (
+                SELECT ri.inven_code, SUM(ri.item_quantity) AS sold_total
+                FROM receipt_item ri
+                JOIN receipt r ON r.receipt_id = ri.receipt_id
+                GROUP BY ri.inven_code
+            ) ri ON i.inven_code = ri.inven_code
+            WHERE p.owner_id = ?
+            AND (i.is_expired = 0 OR i.is_expired IS NULL)
+            AND p.prod_status = 'active'
+            GROUP BY i.inven_code
+        ", [$owner_id]));
+
+        if (!empty($this->selectedCategory) && $this->selectedCategory !== 'all') {
+            $results = $results->where('category_id', (int) $this->selectedCategory);
+        }
+
+        $this->stock = $results->values();
+    }
+
+    public function exportStockReport() {
+
+        if (!$this->stock || $this->stock->isEmpty()) {
+            session()->flash('error', 'No stock data to export');
+            return;
+        }
+
+        $exportData = $this->stock->map(function ($row) {
+            $initialStock = ($row->usable_stock ?? 0) + ($row->sold_stock ?? 0) + ($row->damaged_stock ?? 0);
+            return [
+                'Product Name'  => $row->prod_name,
+                'Batch #'       => $row->batch_number,
+                'Initial Stock' => $initialStock,
+                'Current'       => $row->usable_stock,
+                'Sold'          => $row->sold_stock,
+                'Damaged'       => $row->damaged_stock,
+                'Sales Rate'    => ($row->sales_rate_percent ?? 0) . '%',
+                'Damage Rate'   => ($row->damaged_rate_percent ?? 0) . '%',
+            ];
+        });
+
+        $filename = 'Stock_Report_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = storage_path('app/' . $filename);
+
+        $writer = new Writer();
+        $writer->openToFile($filePath);
+
+        $maxNameLength = $this->stock->max(fn($row) => strlen($row->prod_name));
+        $maxNameLength = max($maxNameLength ?? 10, 15); 
+
+        $maxBatchLength = $this->stock->max(fn($row) => strlen($row->batch_number));
+        $maxBatchLength = max($maxBatchLength ?? 10, 15); 
+
+        $headerStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(12)
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor(Color::rgb(76, 175, 80))
+            ->setCellAlignment(CellAlignment::CENTER);
+
+        $sheet = $writer->getCurrentSheet();
+        $sheet->setColumnWidth($maxNameLength, 1); // Product Name
+        $sheet->setColumnWidth($maxBatchLength, 2); // Batch #
+        $sheet->setColumnWidth(15, 3); // Initial Stock
+        $sheet->setColumnWidth(12, 4); // Current
+        $sheet->setColumnWidth(12, 5); // Sold
+        $sheet->setColumnWidth(12, 6); // Damaged
+        $sheet->setColumnWidth(15, 7); // Sales Rate
+        $sheet->setColumnWidth(15, 8); // Damage Rate
+
+        
+        $headers = array_keys($exportData->first());
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues($headers, $headerStyle));
+
+        foreach ($exportData as $dataRow) {
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues(array_values($dataRow)));
+        }
+
+        $writer->close();
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+
+
+
+    public function render()
+    {
+        return view('livewire.report-component');
+    }
+}

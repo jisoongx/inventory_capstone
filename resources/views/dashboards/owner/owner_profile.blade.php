@@ -136,8 +136,22 @@
                 <div class="flex items-center gap-2 pt-2">
                     <button type="button" id="editProfileButton" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Edit Profile</button>
                     <button type="button" id="togglePasswordSection" class="px-4 py-2 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200">Change Password</button>
-                    <button type="button" id="toggleStaffCreationSection" class="px-4 py-2 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors duration-200">Create Staff</button>
-
+                    <div x-data="{ showPopup: false }" class="flex items-center gap-3 relative">
+                        <div x-show="showPopup"
+                            x-transition
+                            class="absolute bottom-full mb-2 left-1/2 -translate-x-3/4 
+                                    bg-yellow-100 border border-yellow-400 text-yellow-800 
+                                    text-xs rounded-lg px-3 py-2 shadow-lg z-50 whitespace-nowrap"
+                            style="display: none;">
+                            {{ $staffLimitReached }}
+                        </div>
+                        <button x-on:click="
+                                @if($staffReached)
+                                    showPopup = true;
+                                    setTimeout(() => showPopup = false, 3500);
+                                @endif
+                            " type="button" id="toggleStaffCreationSection" class="px-4 py-2 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-colors duration-200">Create Staff</button>
+                    </div>
                 </div>
 
             </div>
@@ -210,6 +224,7 @@
             </div>
 
             {{-- Staff Creation Section --}}
+            @if(!$staffReached)
             <div id="staffCreationSection" class="hidden mt-6 pt-6 border-t border-slate-200">
                 <form id="staffCreationForm" method="POST" action="{{ route('owner.add.staff') }}" class="space-y-4">
                     @csrf
@@ -261,6 +276,7 @@
                     </div>
                 </form>
             </div>
+            @endif
 
         </div>
     </div>

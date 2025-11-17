@@ -20,7 +20,10 @@ class AppServiceProvider extends ServiceProvider
         View::composer('*', function ($view) {
             $expired = false;
             $plan = null;
-            $invenCount = null;
+            $limitReached = false;
+            $productLimitReached = null;
+            $staffReached = false;
+            $staffLimitReached = null;
 
             if (Auth::guard('owner')->check()) {
                 $owner_id = Auth::guard('owner')->user()->owner_id;
@@ -49,8 +52,10 @@ class AppServiceProvider extends ServiceProvider
                     LIMIT 1
                 ", [$owner_id]))->first();
 
+                $productCount = DB::table('products')->where('owner_id', $owner_id)->count();
+                $staffCount = DB::table('staff')->where('owner_id', $owner_id)->count();
+
                 if (!$owner || !$owner->plan_id) {
-                    // 🟡 Fallback: owner has no subscription yet
                     $expired = false;
                     $plan = null;
                     $invenCount = 0;
@@ -62,20 +67,38 @@ class AppServiceProvider extends ServiceProvider
 
                     if ($owner->plan_id == 3 || $owner->plan_id === null) {      // basic
                         $plan = 3;
-                        $invenCount = 50;
+
+                        if((int)$productCount >= 50) {
+                            $limitReached = true;
+                            $productLimitReached = "Your current Basic plan allows up to 50 products only. Upgrade your plan to add more items.";
+                        }
+                        
                     } elseif ($owner->plan_id == 1) { // standard
                         $plan = 1;
-                        $invenCount = 200;
+
+                        if((int)$productCount >= 200) {
+                            $limitReached = true;
+                            $productLimitReached = "Your current Standard plan allows up to 200 products only. Upgrade your plan to add more items.";
+                        }
+
+                        if((int)$staffCount >= 1) {
+                            $staffReached = true;
+                            $staffLimitReached = "Your subscription could only hold 1 staff account. Upgrade your plan to add more staff.";
+                        }
+
                     } elseif ($owner->plan_id == 2) { // premium
                         $plan = 2;
                     } 
                 }
             }
 
-            $view->with(compact('expired', 'plan', 'invenCount'));
+            $view->with(compact('expired', 'plan', 'productLimitReached', 'limitReached', 'staffReached', 'staffLimitReached'));
             App::instance('expired', $expired);
             App::instance('plan', $plan);
-             App::instance('invenCount', $invenCount);
+            App::instance('productLimitReached', $productLimitReached);
+            App::instance('limitReached', $limitReached);
+            App::instance('staffReached', $staffReached);
+            App::instance('staffLimitReached', $staffLimitReached);
         });
     }
 

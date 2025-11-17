@@ -134,7 +134,8 @@ class StockAlert extends Component
                 p.name, 
                 p.prod_image
             ORDER BY 
-                total_sales DESC;
+                total_sales DESC
+            Limit 10
         ", [$owner_id, $month, $year] ));
 
          $this->topProd = collect($results)->map(function ($item) {

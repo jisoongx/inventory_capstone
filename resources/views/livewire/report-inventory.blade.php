@@ -1,4 +1,4 @@
-<div x-data="{ tab: 'stock' }" class="w-full px-4 {{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
+<div x-data="{ tab: 'stock' }" class="w-full px-4 {{ ($expired || $plan === 3) ? 'blur-sm pointer-events-none select-none' : '' }}">
 
     <div class="flex space-x-1">
         <button 
@@ -73,9 +73,10 @@
                             </select>
                             <button 
                                 wire:click="exportStockReport" 
-                                class="border rounded hover:bg-slate-50 flex items-center justify-center p-1.5"
+                                class="border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-slate-50 flex items-center justify-center p-1.5 gap-1.5"
                                 @if(!$stock || $stock->isEmpty()) disabled @endif>
                                 <span class="material-symbols-rounded">file_export</span>
+                                <span class="text-xs">Export</span>
                             </button>
                         </div>
                     </div>
@@ -276,6 +277,25 @@
             </div>
         </div>
 
+        @if($showSuccess)
+            <div 
+                x-data="{ show: true }"
+                x-init="
+                    setTimeout(() => {
+                        show = false;
+                        setTimeout(() => @this.set('showSuccess', false), 300);
+                    }, 3000)
+                "
+                x-show="show"
+                x-transition.opacity.duration.300ms
+                class="fixed bottom-6 left-6 bg-gray-800 text-white text-sm px-4 py-3 pr-4 rounded shadow-lg z-50 flex items-center gap-3"
+            >
+                <span class="material-symbols-rounded text-3xl text-green-300">
+                    download_done
+                </span>
+                <span>Report has been exported to XLSX file successfully.</span>
+            </div>  
+        @endif
     
 
         <!-- EXPIRING PRODUCTS -->
@@ -306,12 +326,6 @@
                                 <option value="{{ $cat->cat_id }}">{{ $cat->cat_name }}</option>
                             @endforeach
                         </select>
-                        <button 
-                            wire:click="exportStockReport" 
-                            class="border rounded hover:bg-slate-50 flex items-center justify-center p-1.5"
-                            @if(!$stock || $stock->isEmpty()) disabled @endif>
-                            <span class="material-symbols-rounded">file_export</span>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -556,7 +570,15 @@
                             <option value="Faded">🎨 Faded/Discolored</option>
                             <option value="Stolen">🔒 Stolen/Lost</option>
                         </select>
-                    </div>
+                        
+                        <button 
+                            wire:click="exportLossReport" 
+                            class="border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-slate-50 flex items-center justify-center p-1.5 gap-1.5"
+                            @if(!$stock || $stock->isEmpty()) disabled @endif>
+                            <span class="material-symbols-rounded">file_export</span>
+                            <span class="text-xs">Export</span>
+                        </button>
+                    </div>  
                 </div>
             </div>
 

@@ -7,7 +7,7 @@
             @livewire('expiration-container')
         </div>
 
-        @if($expired || $plan === 3 || $plan === 1)
+        @if($expired || $plan === 3)
             <div class="ml-64 fixed inset-0 z-[99] flex items-center justify-center">
                 <!-- 🔹 Background overlay -->
                 <div class="absolute inset-0 backdrop-blur-sm"></div>

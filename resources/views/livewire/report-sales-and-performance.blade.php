@@ -1,4 +1,4 @@
-<div x-data="{ tab: 'sales' }" class="w-full px-4 {{ ($expired || $plan === 3 || $plan === 1) ? 'blur-sm pointer-events-none select-none' : '' }}">
+<div x-data="{ tab: 'sales' }" class="w-full px-4 {{ ($expired || $plan === 3) ? 'blur-sm pointer-events-none select-none' : '' }}">
 
     <div class="flex space-x-1">
         <button 
@@ -421,11 +421,11 @@
                                     @elseif (str_contains($input->insight, 'Slow-moving with poor margins')) 
                                         bg-red-500 text-white border-red-700
                                     @elseif (str_contains($input->insight, 'Slow-moving')) 
-                                        bg-amber-500 text-white border-amber-700
+                                        bg-rose-500 text-white border-rose-700
                                     @elseif (str_contains($input->insight, 'No recent sales')) 
                                         bg-red-500 text-white border-red-700
                                     @elseif (str_contains($input->insight, 'Low profit margin')) 
-                                        bg-amber-600 text-white border-amber-800
+                                        bg-rose-600 text-white border-rose-800
                                     @elseif (str_contains($input->insight, 'Strong profit margins')) 
                                         bg-green-600 text-white border-green-800
                                     @elseif (str_contains($input->insight, 'Steady sales')) 

@@ -60,7 +60,7 @@
 
 
 <!-- Inventory Table -->
-<div class="px-4 space-y-4"">
+<div class="px-4 space-y-4">
     @livewire('expiration-container')
     <h2 class="text-xl font-semibold text-gray-800 mb-6">Product List</h2>
 
@@ -161,41 +161,65 @@
 
         {{-- Right side: Action Buttons --}}
         <div class="flex items-center gap-3 mb-4">
-            <!-- Primary Action: Scan Button -->
-            <button id="quickScanBtn" {{ $expired ? 'disabled' : '' }}
-                class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg
-                        {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
-                title="Quick Scan Product">
-                <span class="material-symbols-outlined text-xl">barcode_scanner</span>
-                <span class="font-medium">Scan</span>
-            </button>
+            <div x-data="{ showPopup: false }" class="flex items-center gap-3 relative">
+                <!-- Limit Reached Popup (shared by both buttons) -->
+                <div x-show="showPopup"
+                    x-transition
+                    class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 
+                            bg-yellow-100 border border-yellow-400 text-yellow-800 
+                            text-sm rounded-lg px-3 py-2 shadow-lg z-50 whitespace-nowrap"
+                    style="display: none;">
+                    {{ $productLimitReached }}
+                </div>
 
-            <!-- Divider -->
-            <div class="h-8 w-px bg-gray-300"></div>
-
-            <!-- Secondary Actions Group -->
-            <div class="flex items-center gap-2">
-                <!-- Register Product -->
-                <button id="addProductBtn" {{ $expired ? 'disabled' : '' }}
-                    class="flex items-center gap-1.5 bg-green-500 text-white border-2 border-green-500 px-4 py-2 rounded-lg hover:bg-green-600 transition-all duration-200 transform hover:scale-105
+                <!-- Primary Action: Scan Button -->
+                <button x-on:click="
+                            @if($limitReached)
+                                showPopup = true;
+                                setTimeout(() => showPopup = false, 3500);
+                            @endif
+                        "
+                    id="quickScanBtn" {{ $expired ? 'disabled' : '' }}
+                    class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg
                             {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
-                    title="Register New Product">
+                    title="Quick Scan Product">
+                    <span class="material-symbols-outlined text-xl">barcode_scanner</span>
+                    <span class="font-medium">Scan</span>
+                </button>
+                
+                <!-- Divider -->
+                <div class="h-8 w-px bg-gray-300"></div>
+                
+                <!-- Add Product Button -->
+                <button x-on:click="
+                        @if($limitReached)
+                            showPopup = true;
+                            setTimeout(() => showPopup = false, 3500);
+                        @else
+                            $dispatch('open-add-product-modal');
+                        @endif
+                    "
+                    id="addProductBtn" {{ $expired ? 'disabled' : '' }}
+                    class="flex items-center gap-1.5 bg-green-500 text-white border-2 border-green-500 px-4 py-2 
+                        rounded-lg hover:bg-green-600 transition-all duration-200 transform hover:scale-105
+                        {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}">
                     <span class="material-symbols-outlined text-lg">add_circle</span>
                     <span class="font-medium text-sm">Add Product</span>
                 </button>
-
-                <!-- Add Stock -->
-                <button id="addStockBtn" {{ $expired ? 'disabled' : '' }}
-                    class="flex items-center gap-1.5 bg-yellow-500 text-white border-2 border-yellow-500 px-4 py-2 rounded-lg hover:bg-yellow-600 transition-all duration-200 transform hover:scale-105
-                            {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
-                    title="Add Stock by Category">
-                    <span class="material-symbols-outlined text-lg">inventory_2</span>
-                    <span class="font-medium text-sm">Add Stock</span>
-                </button>
-
-                <!-- Damage -->
-                @livewire('record-damage')
             </div>
+
+
+            <!-- Add Stock -->
+            <button id="addStockBtn" {{ $expired ? 'disabled' : '' }}
+                class="flex items-center gap-1.5 bg-yellow-500 text-white border-2 border-yellow-500 px-4 py-2 rounded-lg hover:bg-yellow-600 transition-all duration-200 transform hover:scale-105
+                        {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
+                title="Add Stock by Category">
+                <span class="material-symbols-outlined text-lg">inventory_2</span>
+                <span class="font-medium text-sm">Add Stock</span>
+            </button>
+
+            <!-- Damage -->
+            @livewire('record-damage')
         </div>
     </div>
 
@@ -383,6 +407,7 @@
 
 
     <!-- Add Product Modal -->
+    @if(!$limitReached)
     <div id="addProductModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
         <div class="bg-white rounded-lg p-8 w-[90%] max-w-md min-h-[550px] shadow-lg relative">
             <!-- Close Button -->
@@ -413,6 +438,7 @@
             </div>
         </div>
     </div>
+    @endif
 
 
 
@@ -616,6 +642,7 @@
 
 
     <!-- Scan Barcode Modal -->
+    @if(!$limitReached)
     <div id="scanBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
         <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
 
@@ -651,6 +678,7 @@
             </div>
         </div>
     </div>
+    @endif
 
 
     <!-- Choose Category Modal for Barcode Generation -->

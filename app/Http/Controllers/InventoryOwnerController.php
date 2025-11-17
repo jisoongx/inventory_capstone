@@ -620,6 +620,18 @@ public function registerProduct(Request $request)
 {
     $ownerId = session('owner_id');
 
+    $ownerPlan = DB::select("select plan_id from subscriptions where owner_id = ? and status = 'active'", [$ownerId]);
+
+    $productCount = DB::select("select count(prod_code) from products where owner_id = ?", [$ownerId]);
+
+    if ($ownerPlan == 3 && $productCount >= 50) {
+        return back()->with('warning', "Your current Basic plan allows up to 50 products only. Upgrade your plan to add more items.");
+    }
+
+    if ($ownerPlan == 1 && $productCount >= 200) {
+        return back()->with('warning', "Your current Standard plan allows up to 200 products only. Upgrade your plan to add more items.");
+    }
+
     $validated = $request->validate([
         'barcode' => 'required|string|max:50',
         'name' => 'required|string|max:100',
