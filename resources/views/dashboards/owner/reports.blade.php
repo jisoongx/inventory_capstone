@@ -137,7 +137,7 @@
                     <p class="text-gray-600 text-xs mb-3">
                         Upgrade to <span class="font-semibold text-red-600">Premium</span>
                     </p>
-                    <a href="{{ route('subscription') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
+                    <a href="{{ route('subscription.selection') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
                         Upgrade Now
                     </a>
                 </div>
@@ -153,7 +153,7 @@
                     <p class="text-gray-600 text-xs mb-3">
                         Renew to <span class="font-semibold text-red-600">continue</span>
                     </p>
-                    <a href="{{ route('subscription') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
+                    <a href="{{ route('subscription.selection') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
                         Renew Now
                     </a>
                 </div>
@@ -199,7 +199,7 @@
                     <p class="text-gray-600 text-xs mb-3">
                         Upgrade to <span class="font-semibold text-red-600">Premium</span>
                     </p>
-                    <a href="{{ route('subscription') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
+                    <a href="{{ route('subscription.selection') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
                         Upgrade Now
                     </a>
                 </div>
@@ -215,7 +215,7 @@
                     <p class="text-gray-600 text-xs mb-3">
                         Renew to <span class="font-semibold text-red-600">continue</span>
                     </p>
-                    <a href="{{ route('subscription') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
+                    <a href="{{ route('subscription.selection') }}" class="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:shadow-lg transition-all">
                         Renew Now
                     </a>
                 </div>

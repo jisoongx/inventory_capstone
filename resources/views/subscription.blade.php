@@ -389,7 +389,7 @@
                     "Comparative sales analysis",
                     "Monthly net profit overview",
                     "Sales by category and loss analysis",
-                    "Up to 50 inventory products with 10 categories & units"
+                    "Up to 50 inventory products"
                 ]
             },
             1: {
@@ -398,12 +398,13 @@
                 duration: "6 months",
                 features: [
                     "All features from Basic Plan",
-                    "Inventory expansion (up to 200 products, 30 categories & units)",
+                    "Inventory expansion (up to 200 inventory products)",
                     "Stock alert & expiration notice",
                     "Top selling products dashboard",
                     "Sales performance reports",
                     "Inventory reports",
-                    "Activity logs"
+                    "Activity logs",
+                    "One staff account"
                 ]
             },
             2: {
@@ -417,7 +418,7 @@
                     "Product trends",
                     "Seasonal trend analysis",
                     "Activity logs for both owner & staff",
-                    "Unlimited inventory, categories, and units",
+                    "Unlimited inventory products",
                     "Add and manage multiple staff"
                 ]
             }
