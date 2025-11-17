@@ -92,7 +92,7 @@ class InventoryOwnerSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '✅ Category added successfully!'
+            'message' => 'Category added successfully!'
         ]);
     }
 
@@ -161,7 +161,7 @@ class InventoryOwnerSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '✅ Category updated successfully!'
+            'message' => 'Category updated successfully!'
         ]);
     }
 
@@ -222,7 +222,7 @@ class InventoryOwnerSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '✅ Unit added successfully!'
+            'message' => 'Unit added successfully!'
         ]);
     }
 
@@ -287,7 +287,7 @@ class InventoryOwnerSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '✅ Unit updated successfully!'
+            'message' => 'Unit updated successfully!'
         ]);
     }
 

@@ -2,6 +2,59 @@
 
 <head>
     <title>Inventory</title>
+    <style>
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toast-success {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .toast-error {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .toast-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 @section('content')
 
@@ -722,14 +775,6 @@
 
                 <!-- Action Buttons -->
                 <div class="w-full space-y-3">
-                    <!-- Print Button -->
-                    <button id="printBarcodeBtn"
-                        class="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined text-sm">print</span>
-                        <span class="font-medium text-sm">Print Barcode</span>
-                    </button>
-
-                    <!-- Secondary Actions -->
                     <div class="grid grid-cols-2 gap-2">
                         <button id="goBackBtn"
                             class="bg-gray-500 text-white py-2.5 px-3 rounded-lg hover:bg-gray-600 transition-all duration-200 flex items-center justify-center gap-1.5">
@@ -1067,7 +1112,22 @@
     });
 </script>
 
+
 <script>
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
     // Add Stock or Restock Functionality
     document.addEventListener('DOMContentLoaded', function() {
         const addStockBtn = document.getElementById('addStockBtn');
@@ -1076,12 +1136,12 @@
         const restockDetailsModal = document.getElementById('restockDetailsModal');
         const bulkRestockForm = document.getElementById('bulkRestockForm');
 
-        // ✅ NEW: Helper function to get minimum expiration date (7 days from today)
+        // Helper function to get minimum expiration date (7 days from today)
         function getMinimumExpirationDate() {
             const today = new Date();
             const minDate = new Date(today);
-            minDate.setDate(today.getDate() + 7); // Add 7 days
-            return minDate.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+            minDate.setDate(today.getDate() + 7);
+            return minDate.toISOString().split('T')[0];
         }
 
         // === Open Choose Category ===
@@ -1103,9 +1163,7 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
                 
-            // Set flag to indicate this modal was opened from RESTOCK flow
             modal.setAttribute('data-opened-from', 'restock');
-                
             document.getElementById('newCategoryName').focus();
         };
 
@@ -1117,7 +1175,6 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             
-            // Clear error messages and red borders
             const categoryInput = document.getElementById('newCategoryName');
             if (categoryInput) {
                 categoryInput.classList.remove('border-red-500', 'border-yellow-500');
@@ -1129,7 +1186,6 @@
                 }
             }
             
-            // Re-enable button when modal closes
             if (saveCategoryBtn) {
                 saveCategoryBtn.disabled = false;
                 saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -1137,59 +1193,56 @@
             }
         }
 
-            // === Reopen Choose Category Modal ===
-            function reopenChooseCategoryModal() {
-                const chooseModal = document.getElementById('chooseCategoryModal');
-                chooseModal.classList.remove('hidden');
-                chooseModal.classList.add('flex');
+        // === Reopen Choose Category Modal ===
+        function reopenChooseCategoryModal() {
+            const chooseModal = document.getElementById('chooseCategoryModal');
+            chooseModal.classList.remove('hidden');
+            chooseModal.classList.add('flex');
+        }
+
+        // === Close Buttons ===
+        document.getElementById('closeAddCategoryModal')?.addEventListener('click', () => {
+            const modal = document.getElementById('addCategoryModal');
+            
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            modal.removeAttribute('data-opened-from');
+            
+            const categoryInput = document.getElementById('newCategoryName');
+            const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+            
+            if (categoryInput) {
+                categoryInput.classList.remove('border-red-500', 'border-yellow-500');
+                categoryInput.value = '';
+                
+                const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
+                if (existingError) {
+                    existingError.remove();
+                }
             }
+            
+            if (saveCategoryBtn) {
+                saveCategoryBtn.disabled = false;
+                saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                saveCategoryBtn.textContent = 'Save Category';
+            }
+            
+            document.body.classList.remove('modal-open');
+        });
 
-            // === Close Buttons ===
-            document.getElementById('closeAddCategoryModal')?.addEventListener('click', () => {
-                const modal = document.getElementById('addCategoryModal');
-                
-                // Clear everything
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                modal.removeAttribute('data-opened-from');
-                
-                const categoryInput = document.getElementById('newCategoryName');
-                const saveCategoryBtn = document.getElementById('saveCategoryBtn');
-                
-                if (categoryInput) {
-                    categoryInput.classList.remove('border-red-500', 'border-yellow-500');
-                    categoryInput.value = '';
-                    
-                    const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
-                    if (existingError) {
-                        existingError.remove();
-                    }
-                }
-                
-                if (saveCategoryBtn) {
-                    saveCategoryBtn.disabled = false;
-                    saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    saveCategoryBtn.textContent = 'Save Category';
-                }
-                
-                document.body.classList.remove('modal-open');
-            });
+        document.getElementById('cancelAddCategory')?.addEventListener('click', () => {
+            const modal = document.getElementById('addCategoryModal');
+            const openedFrom = modal.getAttribute('data-opened-from');
+            
+            if (openedFrom === 'barcode') {
+                closeAddCategoryModalForBarcode();
+            } else {
+                closeAddCategoryModal();
+                reopenChooseCategoryModal();
+            }
+        });
 
-            document.getElementById('cancelAddCategory')?.addEventListener('click', () => {
-                const modal = document.getElementById('addCategoryModal');
-                const openedFrom = modal.getAttribute('data-opened-from');
-                
-                if (openedFrom === 'barcode') {
-                    // Barcode flow - return to barcode category selection
-                    closeAddCategoryModalForBarcode();
-                } else {
-                    // Restock flow - return to restock category selection
-                    closeAddCategoryModal();
-                    reopenChooseCategoryModal();
-                }
-            });
-
-        // ✅ Real-time validation for category name
+        // Real-time validation for category name
         const newCategoryInput = document.getElementById('newCategoryName');
         const saveCategoryBtn = document.getElementById('saveCategoryBtn');
 
@@ -1199,13 +1252,11 @@
             newCategoryInput.addEventListener('input', function() {
                 clearTimeout(categoryTimeout);
                 
-                // Remove existing error
                 const existingError = this.parentNode.querySelector('.duplicate-error');
                 if (existingError) {
                     existingError.remove();
                 }
                 
-                // Remove both border colors and enable button if input is empty
                 if (!this.value.trim()) {
                     this.classList.remove('border-red-500', 'border-yellow-500');
                     saveCategoryBtn.disabled = false;
@@ -1213,7 +1264,6 @@
                     return;
                 }
                 
-                // Check for duplicates after 500ms delay
                 categoryTimeout = setTimeout(async () => {
                     const checkFunction = window.checkExistingName || checkExistingNameLocal;
                     const response = await checkFunction('category', this.value);
@@ -1222,32 +1272,27 @@
                         const errorDiv = document.createElement('div');
                         
                         if (response.isExactMatch) {
-                            // ❌ EXACT MATCH: Red border, blocking message, DISABLE BUTTON
                             errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Category already exists: <strong>"${response.existingName}"</strong>`;
                             this.classList.add('border-red-500');
                             this.classList.remove('border-yellow-500');
                             
-                            // ✅ DISABLE the submit button
                             saveCategoryBtn.disabled = true;
                             saveCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
                             
                         } else {
-                            // ⚠️ SIMILAR MATCH: Yellow border, warning message, KEEP BUTTON ENABLED
                             errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar category exists: "<strong>${response.existingName}</strong>"<br>
                                                 <span class="text-gray-600">You can proceed, but consider using the existing category</span>`;
                             this.classList.add('border-yellow-500');
                             this.classList.remove('border-red-500');
                             
-                            // ✅ ENABLE the submit button (user can proceed with warning)
                             saveCategoryBtn.disabled = false;
                             saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                         }
                         
                         this.parentNode.appendChild(errorDiv);
                     } else {
-                        // ✅ No duplicates found - enable button
                         this.classList.remove('border-red-500', 'border-yellow-500');
                         saveCategoryBtn.disabled = false;
                         saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -1256,7 +1301,7 @@
             });
         }
 
-        // ✅ Local check function (fallback if global not available)
+        // Local check function (fallback if global not available)
         async function checkExistingNameLocal(type, value) {
             if (!value.trim()) return null;
             
@@ -1289,23 +1334,20 @@
             const saveCategoryBtn = document.getElementById('saveCategoryBtn');
             
             if (!categoryName) {
-                alert('Please enter a category name.');
+                showToast('Please enter a category name.', 'error');
                 return;
             }
 
-            // ✅ Client-side validation before submission
             const checkFunction = window.checkExistingName || checkExistingNameLocal;
             const response = await checkFunction('category', categoryName);
             
-            // ✅ EXACT MATCH: Block submission (should already be blocked by disabled button)
             if (response && response.exists && response.isExactMatch) {
-                alert(`Cannot submit: Category "${categoryName}" already exists as "${response.existingName}"`);
+                showToast(`Cannot submit: Category "${categoryName}" already exists as "${response.existingName}"`, 'error');
                 saveCategoryBtn.disabled = true;
                 saveCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 return;
             }
             
-            // ✅ SIMILAR MATCH: Show confirmation dialog
             let userConfirmed = false;
             if (response && response.exists && !response.isExactMatch) {
                 const proceed = confirm(
@@ -1321,7 +1363,6 @@
                 userConfirmed = true;
             }
 
-            // Disable button during submission
             saveCategoryBtn.disabled = true;
             saveCategoryBtn.textContent = 'Saving...';
 
@@ -1344,183 +1385,177 @@
 
                 if (data.success) {
                     sessionStorage.setItem('openChooseCategoryModal', 'true');
-                    alert('Category added successfully!');
-                    window.location.reload();
+                    showToast('Category added successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
-                    // Re-enable button on error
                     saveCategoryBtn.disabled = false;
                     saveCategoryBtn.textContent = 'Save Category';
                     
                     if (data.isExactMatch) {
-                        alert('❌ ' + data.message);
+                        showToast(data.message, 'error');
                     } else {
                         const proceed = confirm(`${data.message}\n\nProceed anyway?`);
                         
                         if (proceed) {
                             formData.append('confirmed_similar', '1');
-                            // Retry submission...
-                            // (rest of retry logic)
+                            // Retry submission logic here if needed
                         }
                     }
                 }
             } catch (err) {
                 console.error(err);
-                alert('Something went wrong while adding category.');
-                // Re-enable button on error
+                showToast('Something went wrong while adding category.', 'error');
                 saveCategoryBtn.disabled = false;
                 saveCategoryBtn.textContent = 'Save Category';
             }
         });
 
-            // === Auto-open Choose Category Modal after reload if needed ===
-            window.addEventListener('DOMContentLoaded', () => {
-                if (sessionStorage.getItem('openChooseCategoryModal') === 'true') {
-                    sessionStorage.removeItem('openChooseCategoryModal'); // clear flag
-                    const chooseCategoryModal = document.getElementById('chooseCategoryModal');
-                    chooseCategoryModal.classList.remove('hidden');
-                    chooseCategoryModal.classList.add('flex');
-                }
-            });
+        // === Auto-open Choose Category Modal after reload if needed ===
+        window.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem('openChooseCategoryModal') === 'true') {
+                sessionStorage.removeItem('openChooseCategoryModal');
+                const chooseCategoryModal = document.getElementById('chooseCategoryModal');
+                chooseCategoryModal.classList.remove('hidden');
+                chooseCategoryModal.classList.add('flex');
+            }
+        });
 
+        // === Category Click ===
+        window.onCategorySelected = function(categoryId, categoryName) {
+            chooseCategoryModal.classList.add('hidden');
+            fetchCategoryProducts(categoryId, categoryName);
+        };
 
-            // === Category Click ===
-            window.onCategorySelected = function(categoryId, categoryName) {
-                chooseCategoryModal.classList.add('hidden');
-                fetchCategoryProducts(categoryId, categoryName);
-            };
+        // === AJAX: Fetch Category Products ===
+        function fetchCategoryProducts(categoryId, categoryName) {
+            document.getElementById('selectedCategoryLabel').textContent = `Category: ${categoryName}`;
+            const list = document.getElementById('categoryProductsList');
+            list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">Loading…</td></tr>';
 
-            // === AJAX: Fetch Category Products ===
-            function fetchCategoryProducts(categoryId, categoryName) {
-                document.getElementById('selectedCategoryLabel').textContent = `Category: ${categoryName}`;
-                const list = document.getElementById('categoryProductsList');
-                list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">Loading…</td></tr>';
+            fetch(`/inventory/category-products/${categoryId}`)
+                .then(r => r.json())
+                .then(data => {
+                    list.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">No products found.</td></tr>';
+                    } else {
+                        data.forEach(p => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                <td class="p-2"><input type="checkbox" class="selectProductCheckbox" data-prod="${p.prod_code}" data-cat="${p.category_id}" data-name="${escapeHtml(p.name)}" data-stock="${p.stock}"></td>
+                <td class="p-2">${escapeHtml(p.name)}</td>
+                <td class="p-2 text-center">${p.stock}</td>
+            `;
+                            list.appendChild(row);
+                        });
+                    }
+                    chooseProductsModal.classList.remove('hidden');
+                    chooseProductsModal.classList.add('flex');
+                    document.getElementById('restockCategoryId').value = categoryId;
+                })
+                .catch(err => {
+                    console.error(err);
+                    list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">Error loading products.</td></tr>';
+                });
+        }
 
-                fetch(`/inventory/category-products/${categoryId}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        list.innerHTML = '';
-                        if (!data || data.length === 0) {
-                            list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">No products found.</td></tr>';
-                        } else {
-                            data.forEach(p => {
-                                const row = document.createElement('tr');
-                                row.innerHTML = `
-                    <td class="p-2"><input type="checkbox" class="selectProductCheckbox" data-prod="${p.prod_code}" data-cat="${p.category_id}" data-name="${escapeHtml(p.name)}" data-stock="${p.stock}"></td>
-                    <td class="p-2">${escapeHtml(p.name)}</td>
-                    <td class="p-2 text-center">${p.stock}</td>
-                `;
-                                list.appendChild(row);
-                            });
-                        }
-                        chooseProductsModal.classList.remove('hidden');
-                        chooseProductsModal.classList.add('flex');
-                        document.getElementById('restockCategoryId').value = categoryId;
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">Error loading products.</td></tr>';
-                    });
+        document.getElementById('closeChooseProductsModal')?.addEventListener('click', () => {
+            chooseProductsModal.classList.add('hidden');
+        });
+
+        window.selectAllProducts = function() {
+            document.querySelectorAll('.selectProductCheckbox').forEach(cb => cb.checked = true);
+        };
+        window.deselectAllProducts = function() {
+            document.querySelectorAll('.selectProductCheckbox').forEach(cb => cb.checked = false);
+        };
+
+        // === Proceed to Restock Details ===
+        window.proceedToRestock = function() {
+            const checked = Array.from(document.querySelectorAll('.selectProductCheckbox:checked'));
+            if (checked.length === 0) {
+                showToast('Please select at least one product to restock.', 'warning');
+                return;
             }
 
+            const container = document.getElementById('restockRowsContainer');
+            container.innerHTML = '';
+            const categoryId = document.getElementById('restockCategoryId').value;
+            let index = 0;
 
-            document.getElementById('closeChooseProductsModal')?.addEventListener('click', () => {
-                chooseProductsModal.classList.add('hidden');
-            });
-
-            window.selectAllProducts = function() {
-                document.querySelectorAll('.selectProductCheckbox').forEach(cb => cb.checked = true);
-            };
-            window.deselectAllProducts = function() {
-                document.querySelectorAll('.selectProductCheckbox').forEach(cb => cb.checked = false);
-            };
-
-            // === Proceed to Restock Details ===
-            window.proceedToRestock = function() {
-                const checked = Array.from(document.querySelectorAll('.selectProductCheckbox:checked'));
-                if (checked.length === 0) {
-                    alert('Please select at least one product to restock.');
-                    return;
-                }
-
-                const container = document.getElementById('restockRowsContainer');
-                container.innerHTML = '';
-                const categoryId = document.getElementById('restockCategoryId').value;
-                let index = 0;
-
-                const promises = checked.map(cb => {
-                    const prodCode = cb.dataset.prod;
-                    const prodName = cb.dataset.name;
-                    const currentStock = cb.dataset.stock ?? 0;
+            const promises = checked.map(cb => {
+                const prodCode = cb.dataset.prod;
+                const prodName = cb.dataset.name;
+                const currentStock = cb.dataset.stock ?? 0;
 
                 return fetch(`/inventory/get-latest-batch/${prodCode}`)
                     .then(r => r.json())
                     .then(batchResp => {
-                        // ✅ MODIFIED: Use new format P{prodCode}-BATCH-{number}
                         const nextBatch = batchResp.next_batch || `P${prodCode}-BATCH-1`;
                         addRestockRow(prodCode, prodName, categoryId, currentStock, nextBatch, index++);
                     });
             });
 
-                Promise.all(promises).then(() => {
-                    chooseProductsModal.classList.add('hidden');
-                    restockDetailsModal.classList.remove('hidden');
-                    restockDetailsModal.classList.add('flex');
-                }).catch(err => {
-                    console.error(err);
-                    alert('Failed to prepare restock details.');
-                });
-            };
+            Promise.all(promises).then(() => {
+                chooseProductsModal.classList.add('hidden');
+                restockDetailsModal.classList.remove('hidden');
+                restockDetailsModal.classList.add('flex');
+            }).catch(err => {
+                console.error(err);
+                showToast('Failed to prepare restock details.', 'error');
+            });
+        };
 
-        // === MODIFIED: Add Restock Row Function ===
+        // === Add Restock Row Function ===
         window.addRestockRow = function(prodCode, prodName, categoryId, currentStock, batchNum, index) {
             const container = document.getElementById('restockRowsContainer');
             const tr = document.createElement('tr');
             tr.classList.add('border-b');
 
-            // ✅ Get minimum date (7 days from today)
             const minDate = getMinimumExpirationDate();
 
-                tr.innerHTML = `
-                    <td class="p-2">
-                    ${escapeHtml(prodName)}
-                    <input type="hidden" name="items[${index}][prod_code]" value="${prodCode}">
-                    <input type="hidden" name="items[${index}][category_id]" value="${categoryId}">
-                    </td>
-                    <td class="p-2 text-center">${currentStock}</td>
-                    <td class="p-2 text-center">
-                    <input type="number" min="1" required name="items[${index}][qty]" 
-                        class="border rounded px-2 py-1 w-20 text-sm text-center">
-                    </td>
-                    <td class="p-2 text-center">
-                    <input type="date" name="items[${index}][expiration_date]" 
-                        min="${minDate}"
-                        class="border rounded px-2 py-1 w-36 text-sm text-center expiration-date-input">
-                    </td>
-                    <td class="p-2 text-center">
-                    <input type="text" readonly name="items[${index}][batch_number]" 
-                        value="${batchNum}" 
-                        class="border rounded px-2 py-1 text-sm text-center bg-gray-50">
-                    </td>
-                    <td class="p-2">
-                    <div class="flex justify-center gap-2">
-                        <button 
-                        type="button" 
-                        class="flex-1 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded hover:bg-yellow-600 transition"
-                        onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
-                        Add Batch
-                        </button>
-                        <button 
-                        type="button" 
-                        class="flex-1 bg-red-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-red-700 transition"
-                        onclick="this.closest('tr').remove()">
-                        Remove
-                        </button>
-                    </div>
-                    </td>
-                `;
+            tr.innerHTML = `
+                <td class="p-2">
+                ${escapeHtml(prodName)}
+                <input type="hidden" name="items[${index}][prod_code]" value="${prodCode}">
+                <input type="hidden" name="items[${index}][category_id]" value="${categoryId}">
+                </td>
+                <td class="p-2 text-center">${currentStock}</td>
+                <td class="p-2 text-center">
+                <input type="number" min="1" required name="items[${index}][qty]" 
+                    class="border rounded px-2 py-1 w-20 text-sm text-center">
+                </td>
+                <td class="p-2 text-center">
+                <input type="date" name="items[${index}][expiration_date]" 
+                    min="${minDate}"
+                    class="border rounded px-2 py-1 w-36 text-sm text-center expiration-date-input">
+                </td>
+                <td class="p-2 text-center">
+                <input type="text" readonly name="items[${index}][batch_number]" 
+                    value="${batchNum}" 
+                    class="border rounded px-2 py-1 text-sm text-center bg-gray-50">
+                </td>
+                <td class="p-2">
+                <div class="flex justify-center gap-2">
+                    <button 
+                    type="button" 
+                    class="flex-1 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded hover:bg-yellow-600 transition"
+                    onclick="duplicateBatchRow(this, '${prodCode}', '${escapeHtml(prodName)}', '${categoryId}', '${currentStock}')">
+                    Add Batch
+                    </button>
+                    <button 
+                    type="button" 
+                    class="flex-1 bg-red-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-red-700 transition"
+                    onclick="this.closest('tr').remove()">
+                    Remove
+                    </button>
+                </div>
+                </td>
+            `;
             container.appendChild(tr);
             
-            // ✅ Add validation listener to the expiration date input
             const expirationInput = tr.querySelector('.expiration-date-input');
             if (expirationInput) {
                 expirationInput.addEventListener('change', function() {
@@ -1529,7 +1564,7 @@
             }
         };
 
-        // === MODIFIED: Duplicate Row for the Same Product (increments batch) ===
+        // === Duplicate Row for the Same Product (increments batch) ===
         window.duplicateBatchRow = function(button, prodCode, prodName, categoryId, currentStock) {
             const container = document.getElementById('restockRowsContainer');
             const rows = container.querySelectorAll('tr');
@@ -1540,8 +1575,7 @@
                 const batchInput = row.querySelector(`input[name*="[batch_number]"]`);
                 const prodInput = row.querySelector(`input[name*="[prod_code]"]`);
                 if (prodInput && prodInput.value === prodCode && batchInput) {
-                    lastSameProductRow = row; // keep updating to get the last occurrence
-                    // ✅ MODIFIED: Match new format P{prodCode}-BATCH-{number}
+                    lastSameProductRow = row;
                     const match = batchInput.value.match(/P\d+-BATCH-(\d+)/);
                     if (match) {
                         const num = parseInt(match[1]);
@@ -1550,15 +1584,12 @@
                 }
             });
 
-            // ✅ MODIFIED: Generate next batch in new format
             const nextBatch = `P${prodCode}-BATCH-${highestBatch + 1}`;
             const newIndex = container.querySelectorAll('tr').length;
 
-            // Create the new row
             const tr = document.createElement('tr');
             tr.classList.add('border-b');
             
-            // ✅ Get minimum date (7 days from today)
             const minDate = getMinimumExpirationDate();
             
             tr.innerHTML = `
@@ -1600,7 +1631,6 @@
         </td>
     `;
 
-            // Insert after the last row with the same product, or append if none found
             if (lastSameProductRow) {
                 if (lastSameProductRow.nextSibling) {
                     container.insertBefore(tr, lastSameProductRow.nextSibling);
@@ -1611,7 +1641,6 @@
                 container.appendChild(tr);
             }
             
-            // ✅ Add validation listener to the expiration date input
             const expirationInput = tr.querySelector('.expiration-date-input');
             if (expirationInput) {
                 expirationInput.addEventListener('change', function() {
@@ -1620,15 +1649,13 @@
             }
         };
 
+        // === Close Restock Modal ===
+        window.closeRestockDetails = function() {
+            const modal = document.getElementById('restockDetailsModal');
+            if (modal) modal.classList.add('hidden');
+        };
 
-
-            // === Close Restock Modal ===
-            window.closeRestockDetails = function() {
-                const modal = document.getElementById('restockDetailsModal');
-                if (modal) modal.classList.add('hidden');
-            };
-
-            document.getElementById('closeRestockDetailsModal')?.addEventListener('click', window.closeRestockDetails);
+        document.getElementById('closeRestockDetailsModal')?.addEventListener('click', window.closeRestockDetails);
 
         // === Helper: Escape HTML ===
         function escapeHtml(text) {
@@ -1640,34 +1667,28 @@
                 .replace(/>/g, '&gt;');
         }
         
-        // ✅ MODIFIED: Enhanced validate expiration date function
+        // === Validate expiration date function ===
         function validateExpirationDate(input) {
-            if (!input.value) return true; // Optional field
+            if (!input.value) return true;
             
             const selectedDate = new Date(input.value);
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+            today.setHours(0, 0, 0, 0);
             
-            // Calculate minimum date (7 days from today)
             const minDate = new Date(today);
             minDate.setDate(today.getDate() + 7);
             
-            // Calculate days difference
             const timeDiff = selectedDate - today;
             const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
             
-            // Remove any existing error
             const existingError = input.parentNode.querySelector('.expiration-error');
             if (existingError) {
                 existingError.remove();
             }
             
-            // Check if date is less than 7 days from today
             if (selectedDate < minDate) {
-                // Add error styling
                 input.classList.add('border-red-500');
                 
-                // Add error message
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'expiration-error text-red-500 text-xs mt-1 absolute bg-white px-1';
                 
@@ -1689,12 +1710,11 @@
             }
         }
 
-        // === MODIFIED: Bulk Restock Submit Handling ===
+        // === Bulk Restock Submit Handling ===
         if (bulkRestockForm) {
             bulkRestockForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                // ✅ Validate all expiration dates before submission
                 const expirationInputs = document.querySelectorAll('.expiration-date-input');
                 let hasInvalidDates = false;
                 const invalidProducts = [];
@@ -1722,144 +1742,73 @@
                 });
                 
                 if (hasInvalidDates) {
-                    alert('Cannot submit: All products must have expiration dates at least 7 days from today.\n\nInvalid entries:\n' + invalidProducts.join('\n'));
+                    showToast('Cannot submit: All products must have expiration dates at least 7 days from today.', 'error');
                     return;
                 }
                 
                 const formData = new FormData(bulkRestockForm);
 
-                    fetch('/inventory/bulk-restock', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            body: formData
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                alert(data.message);
+                fetch('/inventory/bulk-restock', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(data.message, 'success');
+                            setTimeout(() => {
                                 window.location.href = '/inventory-owner';
-                            } else {
-                                alert('⚠️ ' + data.message);
-                            }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            alert('Something went wrong. Please try again.');
-                        });
-                });
-            }
-
-        });
+                            }, 1000);
+                        } else {
+                            showToast(data.message, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Something went wrong. Please try again.', 'error');
+                    });
+            });
+        }
+    });
 </script>
 
 <script>
     // Quick Restock - Open restock modal directly for a single product
     function openQuickRestockForProduct(prodCode, prodName, categoryId, currentStock, event) {
-        // Prevent the row click if clicking on action buttons
         if (event && event.target.closest('.space-x-2')) {
             return;
         }
 
         closeAllModals();
         
-        // Fetch the latest batch number for this product
         fetch(`/inventory/get-latest-batch/${prodCode}`)
             .then(r => r.json())
             .then(batchResp => {
                 const nextBatch = batchResp.next_batch || 'BATCH-1';
                 
-                // Open restock details modal
                 const restockDetailsModal = document.getElementById('restockDetailsModal');
                 const container = document.getElementById('restockRowsContainer');
                 
                 if (restockDetailsModal && container) {
-                    // Clear any existing rows
                     container.innerHTML = '';
                     
-                    // Set category ID
                     document.getElementById('restockCategoryId').value = categoryId;
                     
-                    // Add the single product row
                     addRestockRow(
                         prodCode,
                         prodName,
                         categoryId,
                         currentStock,
                         nextBatch,
-                        0 // index
+                        0
                     );
                     
-                    // Show modal
                     restockDetailsModal.classList.remove('hidden');
                     restockDetailsModal.classList.add('flex');
                     
-                    // Focus on the quantity input after a short delay
-                    setTimeout(() => {
-                        const qtyInput = container.querySelector('input[name*="[qty]"]');
-                        if (qtyInput) {
-                            qtyInput.focus();
-                            qtyInput.select(); // Select the input for easier typing
-                        }
-                    }, 300);
-                }
-            })
-            .catch(err => {
-                console.error('Error fetching batch info:', err);
-                alert('Failed to prepare restock details.');
-            });
-    }
-</script>
-
-<script>
-    // Function to open restock modal from barcode exists modal
-    window.openRestockFromBarcodeModal = function() {
-        const prodCode = document.getElementById('existingProductCode').value;
-        const prodName = document.getElementById('existingProductName').value;
-        const categoryId = document.getElementById('existingCategoryId').value;
-        const currentStock = document.getElementById('existingCurrentStock').value;
-        
-        if (!prodCode || !prodName) {
-            alert('Product information is missing. Please try again.');
-            return;
-        }
-        
-        // Close all modals properly
-        closeAllModals();
-        
-        // Fetch the latest batch number for this product
-        fetch(`/inventory/get-latest-batch/${prodCode}`)
-            .then(r => r.json())
-            .then(batchResp => {
-                const nextBatch = batchResp.next_batch || `P${prodCode}-BATCH-1`;
-                
-                // Open restock details modal
-                const restockDetailsModal = document.getElementById('restockDetailsModal');
-                const container = document.getElementById('restockRowsContainer');
-                
-                if (restockDetailsModal && container) {
-                    // Clear any existing rows
-                    container.innerHTML = '';
-                    
-                    // Set category ID
-                    document.getElementById('restockCategoryId').value = categoryId;
-                    
-                    // Add the single product row using the existing addRestockRow function
-                    addRestockRow(
-                        prodCode,
-                        prodName,
-                        categoryId,
-                        currentStock,
-                        nextBatch,
-                        0 // index
-                    );
-                    
-                    // Show modal
-                    restockDetailsModal.classList.remove('hidden');
-                    restockDetailsModal.classList.add('flex');
-                    
-                    // Focus on the quantity input after a short delay
                     setTimeout(() => {
                         const qtyInput = container.querySelector('input[name*="[qty]"]');
                         if (qtyInput) {
@@ -1871,9 +1820,9 @@
             })
             .catch(err => {
                 console.error('Error fetching batch info:', err);
-                alert('Failed to prepare restock details.');
+                showToast('Failed to prepare restock details.', 'error');
             });
-    };
+    }
 </script>
 
 
@@ -2380,15 +2329,6 @@
                 proceedToRegistration();
             });
 
-            // Print Barcode Button
-            document.getElementById("printBarcodeBtn").addEventListener("click", () => {
-                if (!currentBarcode) {
-                    alert("No barcode to print.");
-                    return;
-                }
-                printBarcodeSimple(currentBarcode, selectedCategoryData.name);
-            });
-
             // Go Back Button
             document.getElementById("goBackBtn").addEventListener("click", () => {
                 closeGenerateBarcodeModal();
@@ -2433,100 +2373,6 @@
 
         function closeGenerateBarcodeModal() {
             document.getElementById('generateBarcodeModal').classList.add('hidden');
-        }
-
-        // Print Function - Iframe Method (Most Reliable)
-        function printBarcodeSimple(barcode, categoryName) {
-            const userCopies = prompt(`How many copies would you like to print?`, '1');
-            const numCopies = parseInt(userCopies) || 1;
-
-            if (numCopies < 1) return;
-
-            // Create iframe
-            const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;';
-            document.body.appendChild(iframe);
-
-            const doc = iframe.contentWindow.document;
-
-            // Build HTML with exact copies
-            let htmlContent = '';
-            for (let i = 0; i < numCopies; i++) {
-                htmlContent += `
-            <div style="
-                width: 2in; 
-                height: 1in; 
-                display: flex; 
-                flex-direction: column; 
-                justify-content: space-between; 
-                align-items: center;
-                padding: 0.05in;
-                box-sizing: border-box;
-                page-break-after: ${i < numCopies - 1 ? 'always' : 'auto'};
-            ">
-                <div style="font-size: 6px; font-weight: bold; color: #333; width: 100%; text-align: center;">
-                    ${categoryName.substring(0, 25).toUpperCase()}
-                </div>
-                <svg id="barcode-${i}"></svg>
-                <div style="font-size: 8px; font-family: monospace; font-weight: bold; width: 100%; text-align: center;">
-                    ${barcode}
-                </div>
-            </div>
-        `;
-            }
-
-            doc.open();
-            doc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Barcode Labels</title>
-            <style>
-                @media print {
-                    @page {
-                        margin: 0mm !important;
-                        size: 2in 1in !important;
-                    }
-                    body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: white !important;
-                    }
-                }
-                body {
-                    margin: 0;
-                    padding: 0;
-                    background: white;
-                }
-            </style>
-        </head>
-        <body>
-            ${htmlContent}
-            <script>
-                // Render all barcodes
-                for (let i = 0; i < ${numCopies}; i++) {
-                    JsBarcode("#barcode-" + i, "${barcode}", {
-                        format: "CODE128",
-                        lineColor: "#000000",
-                        width: 1.1,
-                        height: 35,
-                        displayValue: false,
-                        margin: 0
-                    });
-                }
-                
-                // Auto print
-                window.onload = function() {
-                    window.print();
-                    setTimeout(() => {
-                        window.frameElement.parentNode.removeChild(window.frameElement);
-                    }, 100);
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
-            doc.close();
         }
 
 </script>
@@ -3043,6 +2889,22 @@
 
 <!-- Function to check for existing categories/units and product name in register product -->
 <script>
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        // Simply set the message text without icon
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
     // Make this function globally accessible for reuse
     window.checkExistingName = async function(type, value) {
         if (!value.trim()) return null;
@@ -3055,13 +2917,13 @@
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({
-                    type: type, // 'category', 'unit', or 'product'
+                    type: type,
                     name: value
                 })
             });
             
             const data = await response.json();
-            return data; // ✅ Return the full data object
+            return data;
         } catch (error) {
             console.error('Error checking existing name:', error);
             return null;
@@ -3073,37 +2935,31 @@
         const categorySelect = document.getElementById('categorySelect');
         const unitSelect = document.getElementById('unitSelect');
         
-        // ✅ Clear category errors when changing dropdown selection
+        // Clear category errors when changing dropdown selection
         if (categorySelect) {
             categorySelect.addEventListener('change', function() {
                 const customCategory = document.getElementById('customCategory');
                 if (this.value !== 'other' && customCategory) {
-                    // Remove error message
                     const existingError = customCategory.parentNode.querySelector('.duplicate-error');
                     if (existingError) {
                         existingError.remove();
                     }
-                    // Remove red border
                     customCategory.classList.remove('border-red-500');
-                    // Clear the input value
                     customCategory.value = '';
                 }
             });
         }
         
-        // ✅ Clear unit errors when changing dropdown selection
+        // Clear unit errors when changing dropdown selection
         if (unitSelect) {
             unitSelect.addEventListener('change', function() {
                 const customUnit = document.getElementById('customUnit');
                 if (this.value !== 'other' && customUnit) {
-                    // Remove error message
                     const existingError = customUnit.parentNode.querySelector('.duplicate-error');
                     if (existingError) {
                         existingError.remove();
                     }
-                    // Remove red border
                     customUnit.classList.remove('border-red-500');
-                    // Clear the input value
                     customUnit.value = '';
                 }
             });
@@ -3117,34 +2973,28 @@
             productNameInput.addEventListener('input', function() {
                 clearTimeout(productNameTimeout);
                 
-                // Remove existing error
                 const existingError = this.parentNode.querySelector('.duplicate-error');
                 if (existingError) {
                     existingError.remove();
                 }
                 
-                // 🔴 CHANGED: Remove BOTH border colors if input is empty
                 if (!this.value.trim()) {
-                    this.classList.remove('border-red-500', 'border-yellow-500'); // ← ADDED yellow
+                    this.classList.remove('border-red-500', 'border-yellow-500');
                     return;
                 }
                 
-                // Check for duplicates after 500ms delay
                 productNameTimeout = setTimeout(async () => {
                     const response = await checkExistingName('product', this.value);
                     
                     if (response && response.exists) {
                         const errorDiv = document.createElement('div');
                         
-                        // 🔴 CHANGED: Different styling based on exact vs similar match
                         if (response.isExactMatch) {
-                            // EXACT MATCH: Red border, blocking message
                             errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Product already exists: <strong>"${response.existingName}"</strong>`;
                             this.classList.add('border-red-500');
                             this.classList.remove('border-yellow-500');
                         } else {
-                            // SIMILAR MATCH: Yellow border, warning only
                             errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar product exists: "<strong>${response.existingName}</strong>"<br>
                                                 <span class="text-gray-600 text-xs">Did you mean this product?</span>`;
@@ -3154,7 +3004,6 @@
                         
                         this.parentNode.appendChild(errorDiv);
                     } else {
-                        // 🔴 CHANGED: Remove BOTH border colors
                         this.classList.remove('border-red-500', 'border-yellow-500');
                     }
                 }, 500);
@@ -3169,34 +3018,28 @@
             customCategory.addEventListener('input', function() {
                 clearTimeout(categoryTimeout);
                 
-                // Remove existing error
                 const existingError = this.parentNode.querySelector('.duplicate-error');
                 if (existingError) {
                     existingError.remove();
                 }
                 
-                // 🔴 Remove BOTH border colors if input is empty
                 if (!this.value.trim()) {
                     this.classList.remove('border-red-500', 'border-yellow-500');
                     return;
                 }
                 
-                // Check for duplicates after 500ms delay
                 categoryTimeout = setTimeout(async () => {
                     const response = await checkExistingName('category', this.value);
                     
                     if (response && response.exists) {
                         const errorDiv = document.createElement('div');
                         
-                        // 🔴 Different colors for exact vs similar
                         if (response.isExactMatch) {
-                            // EXACT: Red (blocking)
                             errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Category already exists: <strong>"${response.existingName}"</strong>`;
                             this.classList.add('border-red-500');
                             this.classList.remove('border-yellow-500');
                         } else {
-                            // SIMILAR: Yellow (warning)
                             errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar category exists: "<strong>${response.existingName}</strong>"<br>
                                                 <span class="text-gray-600 text-xs">Proceed with caution</span>`;
@@ -3217,37 +3060,31 @@
         if (customUnit) {
             let unitTimeout;
             
-             customUnit.addEventListener('input', function() {  
+            customUnit.addEventListener('input', function() {  
                 clearTimeout(unitTimeout);
                 
-                // Remove existing error
                 const existingError = this.parentNode.querySelector('.duplicate-error');
                 if (existingError) {
                     existingError.remove();
                 }
                 
-                // 🔴 Remove BOTH border colors if input is empty
                 if (!this.value.trim()) {
                     this.classList.remove('border-red-500', 'border-yellow-500');
                     return;
                 }
                 
-                // Check for duplicates after 500ms delay
                 unitTimeout = setTimeout(async () => {
                     const response = await checkExistingName('unit', this.value);
                     
                     if (response && response.exists) {
                         const errorDiv = document.createElement('div');
                         
-                        // 🔴 Different colors for exact vs similar
                         if (response.isExactMatch) {
-                            // EXACT: Red (blocking)
                             errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
                             errorDiv.innerHTML = `Unit already exists: <strong>"${response.existingName}"</strong>`;
                             this.classList.add('border-red-500');
                             this.classList.remove('border-yellow-500');
                         } else {
-                            // SIMILAR: Yellow (warning)
                             errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
                             errorDiv.innerHTML = `Similar unit exists: "<strong>${response.existingName}</strong>"<br>
                                                 <span class="text-gray-600 text-xs">Proceed with caution</span>`;
@@ -3263,7 +3100,7 @@
             });
         }
     
-        // Update form submission to include client-side validation
+        // Update form submission to include client-side validation with toast notifications
         const form = document.getElementById('registerProductForm');
         const photoInput = document.getElementById('productPhoto');
         
@@ -3271,20 +3108,18 @@
             form.addEventListener("submit", async function(e) {
                 e.preventDefault();
 
-                // CHANGED: Product name validation - only block EXACT matches
+                // Product name validation - only block EXACT matches
                 const productNameInput = document.querySelector('input[name="name"]');
-                let userConfirmedSimilar = false; // Track if user confirmed similar product
+                let userConfirmedSimilar = false;
                 
                 if (productNameInput && productNameInput.value.trim()) {
                     const response = await checkExistingName('product', productNameInput.value);
                     
-                    // ADDED: Check if it's an exact match
                     if (response && response.exists && response.isExactMatch) {
-                        alert(`Cannot submit: Product "${productNameInput.value}" already exists as "${response.existingName}"`);
-                        return; // BLOCK submission
+                        showToast(`Cannot submit: Product "${productNameInput.value}" already exists as "${response.existingName}"`, 'error');
+                        return;
                     }
                     
-                    // ADDED: If similar (not exact), show confirmation dialog
                     if (response && response.exists && !response.isExactMatch) {
                         const proceed = confirm(
                             `Similar product found: "${response.existingName}"\n\n` +
@@ -3293,13 +3128,13 @@
                         );
                         
                         if (!proceed) {
-                            return; // User chose not to proceed
+                            return;
                         }
-                        userConfirmedSimilar = true; // User confirmed they want to proceed
+                        userConfirmedSimilar = true;
                     }
                 }
 
-                // CHANGED: Category validation - only block EXACT matches, confirm SIMILAR
+                // Category validation - only block EXACT matches, confirm SIMILAR
                 const categorySelect = document.getElementById('categorySelect');
                 const customCategory = document.getElementById('customCategory');
                 let userConfirmedCategory = false;
@@ -3307,13 +3142,11 @@
                 if (categorySelect && categorySelect.value === 'other' && customCategory && customCategory.value.trim()) {
                     const response = await checkExistingName('category', customCategory.value);
                     
-                    // Block exact matches
                     if (response && response.exists && response.isExactMatch) {
-                        alert(`Cannot submit: Category "${customCategory.value}" already exists as "${response.existingName}"`);
+                        showToast(`Cannot submit: Category "${customCategory.value}" already exists as "${response.existingName}"`, 'error');
                         return;
                     }
                     
-                    // 🆕 NEW: Show confirmation for similar matches
                     if (response && response.exists && !response.isExactMatch) {
                         const proceed = confirm(
                             `Similar category found: "${response.existingName}"\n\n` +
@@ -3328,7 +3161,7 @@
                     }
                 }
 
-                //  CHANGED: Unit validation - only block EXACT matches
+                // Unit validation - only block EXACT matches
                 const unitSelect = document.getElementById('unitSelect');
                 const customUnit = document.getElementById('customUnit');
                 let userConfirmedUnit = false;
@@ -3336,13 +3169,11 @@
                 if (unitSelect && unitSelect.value === 'other' && customUnit && customUnit.value.trim()) {
                     const response = await checkExistingName('unit', customUnit.value);
                     
-                    // Block exact matches
                     if (response && response.exists && response.isExactMatch) {
-                        alert(`Cannot submit: Unit "${customUnit.value}" already exists as "${response.existingName}"`);
+                        showToast(`Cannot submit: Unit "${customUnit.value}" already exists as "${response.existingName}"`, 'error');
                         return;
                     }
                     
-                    // 🆕 NEW: Show confirmation for similar matches
                     if (response && response.exists && !response.isExactMatch) {
                         const proceed = confirm(
                             `Similar unit found: "${response.existingName}"\n\n` +
@@ -3357,14 +3188,14 @@
                     }
                 }
 
-                // Proceed with form submission (KEEP AS IS - no changes)
+                // Proceed with form submission
                 const formData = new FormData(form);
                 const barcodeElement = document.getElementById("autoFilledBarcode");
 
                 if (barcodeElement && barcodeElement.textContent) {
                     formData.append("barcode", barcodeElement.textContent);
                 } else {
-                    alert("Barcode is required.");
+                    showToast("Barcode is required.", 'error');
                     return;
                 }
 
@@ -3372,7 +3203,7 @@
                     formData.append("photo", photoInput.files[0]);
                 }
 
-                // 🆕 Send confirmation flags to backend
+                // Send confirmation flags to backend
                 if (userConfirmedSimilar) {
                     formData.append("confirmed_similar", "1");
                 }
@@ -3400,16 +3231,19 @@
                     })
                     .then(data => {
                         if (data.success) {
-                            alert("Product added successfully!");
+                            showToast("Product added successfully!", 'success');
                             closeRegisterModal();
-                            location.reload();
+                            // Reload page after showing toast
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
                         } else {
-                            alert("Failed Submission: " + (data.message || 'Unknown error'));
+                            showToast("Failed Submission: " + (data.message || 'Unknown error'), 'error');
                         }
                     })
                     .catch(error => {
                         console.error("Error registering product:", error);
-                        alert("Something went wrong.");
+                        showToast("Something went wrong: " + error.message, 'error');
                     });
             });
         }

@@ -418,10 +418,13 @@ public function edit($prodCode)
         abort(404, 'Product not found');
     }
 
-    $units = DB::table('units')->get();
+    $units = DB::table('units')
+        ->where('owner_id', session('owner_id'))
+        ->orderBy('unit', 'asc')
+        ->get();
+    
     $statuses = ['active', 'archived'];
 
-    // ✅ Fetch price history for dropdown
     $priceHistory = DB::table('pricing_history')
         ->where('prod_code', $prodCode)
         ->where('owner_id', session('owner_id'))
@@ -684,7 +687,7 @@ public function registerProduct(Request $request)
             $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
 
             if ($semanticMatch) {
-                // 🔴 REMOVED: The blocking return statement
+                // REMOVED: The blocking return statement
                 // Frontend will handle the confirmation dialog
                 // Just continue to create the category
             }

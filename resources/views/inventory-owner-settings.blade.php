@@ -2,6 +2,51 @@
 
 <head>
     <title>Category and Unit Settings</title>
+    <style>
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+        }
+
+        .toast-success {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .toast-error {
+            background-color: #22c55e;
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 
 @section('content')
@@ -370,14 +415,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     return false;
                 }
                 
-                // User confirmed - submit with flag
+                // User confirmed - submit with flag using fetch
                 await submitFormWithConfirmation(this, 'confirmed_similar');
                 return false;
             }
         }
         
-        // No conflicts - submit normally
-        this.submit();
+        // No conflicts - submit using fetch to ensure consistent behavior
+        await submitFormDirectly(this);
     });
 
     document.getElementById('add-unit-form')?.addEventListener('submit', async function(e) {
@@ -406,14 +451,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     return false;
                 }
                 
-                // User confirmed - submit with flag
+                // User confirmed - submit with flag using fetch
                 await submitFormWithConfirmation(this, 'confirmed_similar');
                 return false;
             }
         }
         
-        // No conflicts - submit normally
-        this.submit();
+        // No conflicts - submit using fetch to ensure consistent behavior
+        await submitFormDirectly(this);
     });
 
     document.querySelectorAll('.category-edit-form').forEach(form => {
@@ -431,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // If same as original, just submit
             if (value === originalValue) {
-                this.submit();
+                await submitFormDirectly(this);
                 return;
             }
 
@@ -460,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // No conflicts - submit normally
-            this.submit();
+            await submitFormDirectly(this);
         });
     });
 
@@ -479,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // If same as original, just submit
             if (value === originalValue) {
-                this.submit();
+                await submitFormDirectly(this);
                 return;
             }
 
@@ -508,9 +553,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // No conflicts - submit normally
-            this.submit();
+            await submitFormDirectly(this);
         });
     });
+
 
     // =========================== HELPER FUNCTIONS ===========================
     
@@ -583,6 +629,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Add this function to show toasts
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Updated submitFormDirectly with dynamic UI update
+    async function submitFormDirectly(form) {
+        const formData = new FormData(form);
+        const isAddForm = form.id === 'add-category-form' || form.id === 'add-unit-form';
+        
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast(data.message || 'Operation successful!', 'success');
+                
+                // Clear input and reload page after short delay
+                if (isAddForm) {
+                    form.querySelector('input[type="text"]').value = '';
+                }
+                
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(data.message || 'Operation failed', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Something went wrong. Please try again.', 'error');
+        }
+    }
+
     async function submitFormWithConfirmation(form, confirmField) {
         const formData = new FormData(form);
         formData.append(confirmField, '1');
@@ -591,7 +686,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(form.action, {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 },
                 body: formData
             });
@@ -599,13 +695,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.success) {
-                location.reload();
+                showToast(data.message || 'Operation successful!', 'success');
+                setTimeout(() => location.reload(), 1000);
             } else {
-                alert('Error: ' + (data.message || 'Unknown error'));
+                showToast(data.message || 'Operation failed', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Something went wrong.');
+            showToast('Something went wrong. Please try again.', 'error');
         }
     }
 
