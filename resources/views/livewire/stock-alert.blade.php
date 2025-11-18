@@ -1,6 +1,6 @@
 <div class="flex justtify-between gap-4 pt-5">
 
-    <div wire:poll.15s="pollAll" wire:keep-alive class="hidden"></div>
+    <div wire:poll.7s="pollAll" wire:keep-alive class="hidden"></div>
     <!-- STOCK ALERT -->
     <div class="w-full max-w-sm bg-white shadow-md relative border">
         <div class="relative">

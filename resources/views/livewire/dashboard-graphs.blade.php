@@ -2,12 +2,7 @@
     <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
 
         <div class="">
-            <div wire:ignore>
-                <span id="date" class="text-sm font-medium text-slate-600"></span>
-                <span id="clock" class="text-sm font-medium text-slate-600"></span>
-            </div>
-            <h1 class="text-2xl font-semibold mb-4">Welcome, {{ ucwords($owner_name) }}!</h1>
-
+            <h1 class="text-3xl font-bold mb-4">Welcome back, {{ ucwords($owner_name) }}!</h1>
             <div class="flex gap-3 mb-4 w-full grid-cols-3">
                 <div class="bg-gradient-to-br from-red-50 to-white border border-red-100 p-3 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl flex-[2]">
                     <div class="flex items-center justify-between mb-2">

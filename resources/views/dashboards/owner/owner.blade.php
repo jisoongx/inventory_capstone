@@ -112,7 +112,12 @@
 
 
     <main id="mainContent" class="flex-1 p-0 ml-64 duration-300">
-        <div class="flex justify-end items-center mr-5 border-b-2 border-gray-300 pb-2 relative -mt-4 ml-2">
+        <div class="flex justify-between items-center mr-5 border-b-2 border-gray-300 pb-2 relative -mt-4 ml-2">
+            <div wire:ignore>
+                <span id="date" class="text-sm font-medium text-slate-600"></span>
+                <span id="clock" class="text-sm font-medium text-slate-600"></span>
+            </div>
+
             <div class="relative space-x-5">
                 <div class="flex items-center gap-4">
 
