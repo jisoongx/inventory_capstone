@@ -492,157 +492,157 @@ class ReportInventory extends Component
             order by p.name asc
         ", [$owner_id]));
 
-        $this->stock = collect($results)->map(function ($item) {
-            $damageRate = $item->damaged_rate_percent;
-            $salesRate = $item->sales_rate_percent;
-            $damagedStock = $item->damaged_stock;
-            $soldStock = $item->sold_stock;
-            $usableStock = $item->usable_stock;
-            $totalStock = $usableStock + $soldStock + $damagedStock;
-            
-            // Calculate days since added
-            $dateAdded = \Carbon\Carbon::parse($item->date_added);
-            $daysInStock = max(1, $dateAdded->diffInDays(now())); // Avoid division by zero
-            
-            // Calculate actual daily rates (more accurate than percentages alone)
-            $dailySalesRate = $soldStock / $daysInStock;
-            $dailyDamageRate = $damagedStock / $daysInStock;
-            
-            // Calculate what percentage of initial stock remains
-            $stockRemaining = $totalStock > 0 ? ($usableStock / $totalStock) * 100 : 0;
-            
-            // Calculate turnover efficiency: how much went to sales vs damage
-            $turnoverEfficiency = ($soldStock + $damagedStock) > 0 ? 
-                (($soldStock / ($soldStock + $damagedStock)) * 100) : 0;
-
-            // CRITICAL ISSUES FIRST - SHORTER TIMEFRAMES FOR FAST-MOVING GOODS
-            
-            // 1. Complete stagnation - nothing moving (30 days for convenience stores)
-            if ($soldStock == 0 && $damagedStock == 0 && $daysInStock > 30) {
-                $item->insight = "Dead stock - " . number_format($daysInStock, 1) . " days, zero movement. Consider clearance.";
-                $item->insight_color = "bg-gray-800 text-white";
-            }
-            // 2. Expired/very old with remaining stock (60 days max for most items)
-            elseif ($daysInStock > 60 && $stockRemaining > 50) {
-                $item->insight = "Expired/Slow-moving - " . number_format($daysInStock, 1) . " days old, " . number_format($stockRemaining, 0) . "% still in stock.";
-                $item->insight_color = "bg-gray-800 text-white";
-            }
-            // 3. Damage exceeds sales (biggest red flag)
-            elseif ($damagedStock > $soldStock && $damagedStock > 0) {
-                $item->insight = "Critical: More damaged (" . $damagedStock . ") than sold (" . $soldStock . "). Severe loss issue.";
-                $item->insight_color = "bg-red-600 text-white";
-            }
-            // 4. Very high damage rate (>15%) - CRITICAL FOR PERISHABLES
-            elseif ($damageRate > 15) {
-                $item->insight = "Urgent: " . number_format($damageRate, 1) . "% damage rate (" . $damagedStock . " units lost). Check expiry/storage.";
-                $item->insight_color = "bg-red-600 text-white";
-            }
-            // 5. No sales but accumulating damage (7 days for fast-moving retail)
-            elseif ($soldStock == 0 && $damagedStock > 0 && $daysInStock > 7) {
-                $item->insight = "Zero sales but " . $damagedStock . " damaged in " . number_format($daysInStock, 1) . " days. Pure waste.";
-                $item->insight_color = "bg-red-600 text-white";
-            }
-            
-            // HIGH CONCERN ISSUES
-            
-            // 6. High damage rate (10-15%) - COMMON WITH PERISHABLES
-            elseif ($damageRate >= 10 && $damageRate <= 15) {
-                $item->insight = "High damage: " . number_format($damageRate, 1) . "% loss rate (" . $damagedStock . " units). Check refrigeration/expiry.";
-                $item->insight_color = "bg-orange-500 text-white";
-            }
-            // 7. Very slow sales with aging (30 days for convenience stores)
-            elseif ($salesRate < 15 && $daysInStock > 30 && $stockRemaining > 70) {
-                $item->insight = "Stagnant: Only " . number_format($salesRate, 1) . "% sold in " . number_format($daysInStock, 1) . " days, " . number_format($stockRemaining, 0) . "% remains.";
-                $item->insight_color = "bg-orange-500 text-white";
-            }
-            // 8. Poor turnover efficiency (<50% went to sales)
-            elseif ($turnoverEfficiency > 0 && $turnoverEfficiency < 50 && $daysInStock > 14) {
-                $item->insight = "Inefficient: Only " . number_format($turnoverEfficiency, 0) . "% of movement went to sales vs damage.";
-                $item->insight_color = "bg-orange-500 text-white";
-            }
-            
-            // FAST-MOVING ITEMS ANALYSIS - SPECIFIC TO CONVENIENCE STORES
-            elseif ($dailySalesRate >= 3 && $damageRate < 3) {
-                $item->insight = "Fast mover: " . number_format($dailySalesRate, 1) . " units/day. Ensure stock availability.";
-                $item->insight_color = "bg-green-600 text-white";
-            }
-            elseif ($dailySalesRate >= 1 && $damageRate < 5) {
-                $item->insight = "Good velocity: " . number_format($dailySalesRate, 1) . " units/day. Reliable seller.";
-                $item->insight_color = "bg-blue-500 text-white";
-            }
-            
-            // MODERATE CONCERNS
-            
-            // 9. Moderate damage with slow movement
-            elseif ($damageRate >= 5 && $damageRate < 10 && $salesRate < 30) {
-                $item->insight = "Concern: " . number_format($damageRate, 1) . "% damage + slow sales (" . number_format($salesRate, 1) . "%) in " . number_format($daysInStock, 1) . " days.";
-                $item->insight_color = "bg-yellow-500 text-gray-900";
-            }
-            // 10. Slow movement overall (21 days for retail)
-            elseif ($salesRate < 25 && $daysInStock > 21) {
-                $item->insight = "Slow turnover: " . number_format($salesRate, 1) . "% sold over " . number_format($daysInStock, 1) . " days. Low velocity.";
-                $item->insight_color = "bg-yellow-500 text-gray-900";
-            }
-            // 11. Moderate damage but good sales
-            elseif ($damageRate >= 5 && $damageRate < 10 && $salesRate >= 40) {
-                $item->insight = "Mixed: Good sales (" . number_format($salesRate, 1) . "%) but " . number_format($damageRate, 1) . "% damage is preventable.";
-                $item->insight_color = "bg-yellow-500 text-gray-900";
-            }
-            
-            // POSITIVE PERFORMANCE
-            
-            // 12. High sales velocity, minimal damage
-            elseif ($salesRate >= 70 && $damageRate < 3) {
-                $item->insight = "Excellent: " . number_format($salesRate, 1) . "% sold, " . number_format($damageRate, 1) . "% damage in " . number_format($daysInStock, 1) . " days. Top performer.";
-                $item->insight_color = "bg-green-600 text-white";
-            }
-            // 13. Good sales velocity
-            elseif ($salesRate >= 50 && $damageRate < 5) {
-                $item->insight = "Strong: " . number_format($salesRate, 1) . "% turnover, " . number_format($damageRate, 1) . "% loss. Healthy flow.";
-                $item->insight_color = "bg-green-600 text-white";
-            }
-            // 14. Moderate but healthy performance
-            elseif ($salesRate >= 35 && $damageRate < 3) {
-                $item->insight = "Healthy: " . number_format($salesRate, 1) . "% sold, minimal damage (" . number_format($damageRate, 1) . "%) over " . number_format($daysInStock, 1) . " days.";
-                $item->insight_color = "bg-blue-500 text-white";
-            }
-            
-            // NEW STOCK ANALYSIS - SHORTER TIME WINDOWS
-            
-            // 15. Very new stock with NO activity
-            elseif ($daysInStock <= 2 && $soldStock == 0 && $damagedStock == 0) {
-                $item->insight = "Just added (" . number_format($daysInStock, 1) . " days). No activity yet - monitoring.";
-                $item->insight_color = "bg-gray-500 text-white";
-            }
-            // 16. New with fast sales (very promising) - 3 DAYS for fast retail
-            elseif ($daysInStock <= 3 && $dailySalesRate >= 2 && $damageRate < 2) {
-                $item->insight = "Fast start: " . number_format($dailySalesRate, 1) . " units/day in " . number_format($daysInStock, 1) . " days. Strong early demand.";
-                $item->insight_color = "bg-green-600 text-white";
-            }
-            // 17. New with good early activity - 7 DAYS window
-            elseif ($daysInStock <= 7 && $salesRate >= 20 && $damageRate < 3) {
-                $item->insight = "Good start: " . number_format($salesRate, 1) . "% sold, " . number_format($damageRate, 1) . "% damage in " . number_format($daysInStock, 1) . " days.";
-                $item->insight_color = "bg-blue-500 text-white";
-            }
-            // 18. New but with early damage concerns - 5 DAYS window
-            elseif ($daysInStock <= 5 && $damageRate >= 5) {
-                $item->insight = "Early warning: " . number_format($damageRate, 1) . "% already damaged in " . number_format($daysInStock, 1) . " days. Check handling/expiry.";
-                $item->insight_color = "bg-yellow-500 text-gray-900";
-            }
-            // 19. New with slow start - 5 DAYS window
-            elseif ($daysInStock <= 5 && $salesRate < 10) {
-                $item->insight = "Slow start: Only " . number_format($salesRate, 1) . "% moved in " . number_format($daysInStock, 1) . " days. Early monitoring needed.";
-                $item->insight_color = "bg-yellow-500 text-gray-900";
-            }
-            
-            // DEFAULT: STABLE/MODERATE
-            else {
-                $item->insight = "Stable: " . number_format($salesRate, 1) . "% sold, " . number_format($damageRate, 1) . "% damaged over " . number_format($daysInStock, 1) . " days. Normal flow.";
-                $item->insight_color = "bg-gray-500 text-white";
-            }
-
-            return $item;
-        });
+$this->stock = collect($results)->map(function ($item) {
+    $damageRate = $item->damaged_rate_percent;
+    $salesRate = $item->sales_rate_percent;
+    $damagedStock = $item->damaged_stock;
+    $soldStock = $item->sold_stock;
+    $usableStock = $item->usable_stock;
+    $totalStock = $usableStock + $soldStock + $damagedStock;
+    
+    // Calculate days since added
+    $dateAdded = \Carbon\Carbon::parse($item->date_added);
+    $daysInStock = max(1, $dateAdded->diffInDays(now()));
+    
+    // Calculate actual daily rates
+    $dailySalesRate = $soldStock / $daysInStock;
+    $dailyDamageRate = $damagedStock / $daysInStock;
+    
+    // Calculate what percentage of initial stock remains
+    $stockRemaining = $totalStock > 0 ? ($usableStock / $totalStock) * 100 : 0;
+    
+    // Calculate turnover efficiency
+    $turnoverEfficiency = ($soldStock + $damagedStock) > 0 ? 
+        (($soldStock / ($soldStock + $damagedStock)) * 100) : 0;
+    
+    // CRITICAL ISSUES FIRST
+    
+    // 1. Complete stagnation - nothing moving
+    if ($soldStock == 0 && $damagedStock == 0 && $daysInStock > 30) {
+        $item->insight = "Dead stock with zero movement. Consider immediate clearance or removal.";
+        $item->insight_color = "bg-gray-800 text-white";
+    }
+    // 2. Expired/very old with remaining stock
+    elseif ($daysInStock > 60 && $stockRemaining > 50) {
+        $item->insight = "Expired or severely aged item with most stock still remaining. Urgent action required.";
+        $item->insight_color = "bg-gray-800 text-white";
+    }
+    // 3. Damage exceeds sales
+    elseif ($damagedStock > $soldStock && $damagedStock > 0) {
+        $item->insight = "Critical loss issue where damaged units exceed sold units. Investigate storage and handling immediately.";
+        $item->insight_color = "bg-red-600 text-white";
+    }
+    // 4. Very high damage rate
+    elseif ($damageRate > 15) {
+        $item->insight = "Urgent attention needed due to extremely high damage rate. Check expiry dates and storage conditions.";
+        $item->insight_color = "bg-red-600 text-white";
+    }
+    // 5. No sales but accumulating damage
+    elseif ($soldStock == 0 && $damagedStock > 0 && $daysInStock > 7) {
+        $item->insight = "Zero sales but accumulating damaged stock. Pure waste occurring with no revenue generation.";
+        $item->insight_color = "bg-red-600 text-white";
+    }
+    
+    // HIGH CONCERN ISSUES
+    
+    // 6. High damage rate
+    elseif ($damageRate >= 10 && $damageRate <= 15) {
+        $item->insight = "High damage rate detected. Check refrigeration systems and expiry date management.";
+        $item->insight_color = "bg-orange-500 text-white";
+    }
+    // 7. Very slow sales with aging
+    elseif ($salesRate < 15 && $daysInStock > 30 && $stockRemaining > 70) {
+        $item->insight = "Stagnant inventory with very slow sales and most stock still remaining. Consider promotional pricing.";
+        $item->insight_color = "bg-orange-500 text-white";
+    }
+    // 8. Poor turnover efficiency
+    elseif ($turnoverEfficiency > 0 && $turnoverEfficiency < 50 && $daysInStock > 14) {
+        $item->insight = "Inefficient turnover where more stock is going to damage than to sales. Review handling procedures.";
+        $item->insight_color = "bg-orange-500 text-white";
+    }
+    
+    // FAST-MOVING ITEMS ANALYSIS
+    elseif ($dailySalesRate >= 3 && $damageRate < 3) {
+        $item->insight = "Fast-moving item with excellent daily velocity. Ensure consistent stock availability to meet demand.";
+        $item->insight_color = "bg-green-600 text-white";
+    }
+    elseif ($dailySalesRate >= 1 && $damageRate < 5) {
+        $item->insight = "Good daily sales velocity with minimal losses. Reliable seller performing well.";
+        $item->insight_color = "bg-blue-500 text-white";
+    }
+    
+    // MODERATE CONCERNS
+    
+    // 9. Moderate damage with slow movement
+    elseif ($damageRate >= 5 && $damageRate < 10 && $salesRate < 30) {
+        $item->insight = "Moderate damage combined with slow sales movement. Monitor closely for deterioration.";
+        $item->insight_color = "bg-yellow-500 text-gray-900";
+    }
+    // 10. Slow movement overall
+    elseif ($salesRate < 25 && $daysInStock > 21) {
+        $item->insight = "Slow turnover with low sales velocity. Consider adjusting order quantities or marketing approach.";
+        $item->insight_color = "bg-yellow-500 text-gray-900";
+    }
+    // 11. Moderate damage but good sales
+    elseif ($damageRate >= 5 && $damageRate < 10 && $salesRate >= 40) {
+        $item->insight = "Good sales performance but damage rate is higher than optimal. Improve handling to reduce preventable losses.";
+        $item->insight_color = "bg-yellow-500 text-gray-900";
+    }
+    
+    // POSITIVE PERFORMANCE
+    
+    // 12. High sales velocity, minimal damage
+    elseif ($salesRate >= 70 && $damageRate < 3) {
+        $item->insight = "Excellent performance with high sales turnover and minimal losses. Top performer in current inventory.";
+        $item->insight_color = "bg-green-600 text-white";
+    }
+    // 13. Good sales velocity
+    elseif ($salesRate >= 50 && $damageRate < 5) {
+        $item->insight = "Strong sales turnover with low damage rate. Healthy inventory flow and profitability.";
+        $item->insight_color = "bg-green-600 text-white";
+    }
+    // 14. Moderate but healthy performance
+    elseif ($salesRate >= 35 && $damageRate < 3) {
+        $item->insight = "Healthy performance with good sales movement and minimal damage. Stable and profitable item.";
+        $item->insight_color = "bg-blue-500 text-white";
+    }
+    
+    // NEW STOCK ANALYSIS
+    
+    // 15. Very new stock with NO activity
+    elseif ($daysInStock <= 2 && $soldStock == 0 && $damagedStock == 0) {
+        $item->insight = "Recently added to inventory with no activity yet. Currently monitoring initial performance.";
+        $item->insight_color = "bg-gray-500 text-white";
+    }
+    // 16. New with fast sales
+    elseif ($daysInStock <= 3 && $dailySalesRate >= 2 && $damageRate < 2) {
+        $item->insight = "Excellent early performance with fast daily sales rate. Strong initial customer demand detected.";
+        $item->insight_color = "bg-green-600 text-white";
+    }
+    // 17. New with good early activity
+    elseif ($daysInStock <= 7 && $salesRate >= 20 && $damageRate < 3) {
+        $item->insight = "Good start with positive early sales activity and low damage. Promising new addition to inventory.";
+        $item->insight_color = "bg-blue-500 text-white";
+    }
+    // 18. New but with early damage concerns
+    elseif ($daysInStock <= 5 && $damageRate >= 5) {
+        $item->insight = "Early warning signs with damage occurring soon after stocking. Check handling procedures and expiry dates.";
+        $item->insight_color = "bg-yellow-500 text-gray-900";
+    }
+    // 19. New with slow start
+    elseif ($daysInStock <= 5 && $salesRate < 10) {
+        $item->insight = "Slow initial movement detected. Early monitoring needed to assess customer interest and positioning.";
+        $item->insight_color = "bg-yellow-500 text-gray-900";
+    }
+    
+    // DEFAULT: STABLE/MODERATE
+    else {
+        $item->insight = "Stable performance with normal sales flow and acceptable damage levels. Standard monitoring applies.";
+        $item->insight_color = "bg-gray-500 text-white";
+    }
+    
+    return $item;
+});
 
         if (!empty($this->selectedCategory) && $this->selectedCategory !== 'all') {
             $results = $results->where('category_id', (int) $this->selectedCategory);

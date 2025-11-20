@@ -105,7 +105,7 @@
                 </div> -->
 
                 <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
-                    <table class="w-full text-sm {{ $stock->isNotEmpty() ? 'min-w-[95rem]' : 'w-full' }}">
+                    <table class="w-full text-sm {{ $stock->isNotEmpty() ? 'w-[90rem]' : 'w-full' }}">
                         <thead class="bg-gray-100 sticky top-0 z-10">
                             <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
                                 
@@ -157,7 +157,7 @@
                                 </th>
                                 <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
                                 
-                                <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Initial Stock</th>
+                                <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Stock In</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Current</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Sold</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Damaged</th>
@@ -183,7 +183,7 @@
                                 @foreach($productBatches as $index => $row)
                                     <tr class="hover:bg-gray-50 transition-colors duration-150">
                                         @if($index === 0)
-                                            <td class="px-4 py-3.5 text-gray-700 font-medium" rowspan="{{ $batchCount }}">
+                                            <td class="px-4 py-3.5 font-semibold" rowspan="{{ $batchCount }}">
                                                 {{ $row->prod_name }}
                                             </td>
                                         @endif
@@ -218,10 +218,8 @@
                                             </span>
                                         </td>
                                         
-                                        <td class="py-3.5 {{ $row->insight_color }}">
-                                            <div class="flex items-center justify-center gap-2 text-[10px] font-medium">
-                                                {{ $row->insight }}
-                                            </div>
+                                        <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50 w-[27%]">
+                                            {{ $row->insight }}
                                         </td>
                                     </tr>
                                 @endforeach
@@ -656,13 +654,39 @@
                                         @elseif(strtolower($row->type) === 'broken') 
                                             bg-orange-100 text-orange-700 border border-orange-300
                                         @elseif(strtolower($row->type) === 'spoiled') 
-                                            bg-red-100 text-red-700 border border-red-300
+                                            bg-amber-100 text-amber-700 border border-amber-300
                                         @elseif(strtolower($row->type) === 'damaged') 
                                             bg-orange-100 text-orange-700 border border-orange-300
-                                        @elseif(strtolower($row->type) === 'stolen') 
-                                            bg-purple-100 text-purple-700 border border-purple-300
+                                        @elseif(strtolower($row->type) === 'defective') 
+                                            bg-yellow-100 text-yellow-700 border border-yellow-300
                                         @elseif(strtolower($row->type) === 'contaminated') 
                                             bg-red-100 text-red-700 border border-red-300
+                                        @elseif(strtolower($row->type) === 'crushed') 
+                                            bg-orange-100 text-orange-700 border border-orange-300
+                                        @elseif(strtolower($row->type) === 'leaking') 
+                                            bg-blue-100 text-blue-700 border border-blue-300
+                                        @elseif(strtolower($row->type) === 'torn') 
+                                            bg-amber-100 text-amber-700 border border-amber-300
+                                        @elseif(strtolower($row->type) === 'wet') 
+                                            bg-cyan-100 text-cyan-700 border border-cyan-300
+                                        @elseif(strtolower($row->type) === 'mold') 
+                                            bg-green-100 text-green-700 border border-green-300
+                                        @elseif(strtolower($row->type) === 'pest') 
+                                            bg-lime-100 text-lime-700 border border-lime-300
+                                        @elseif(strtolower($row->type) === 'temperature') 
+                                            bg-rose-100 text-rose-700 border border-rose-300
+                                        @elseif(strtolower($row->type) === 'recalled') 
+                                            bg-red-100 text-red-700 border border-red-300
+                                        @elseif(strtolower($row->type) === 'missing parts') 
+                                            bg-indigo-100 text-indigo-700 border border-indigo-300
+                                        @elseif(strtolower($row->type) === 'wrong item') 
+                                            bg-violet-100 text-violet-700 border border-violet-300
+                                        @elseif(strtolower($row->type) === 'unsealed') 
+                                            bg-pink-100 text-pink-700 border border-pink-300
+                                        @elseif(strtolower($row->type) === 'faded') 
+                                            bg-slate-100 text-slate-700 border border-slate-300
+                                        @elseif(strtolower($row->type) === 'stolen') 
+                                            bg-purple-100 text-purple-700 border border-purple-300
                                         @else 
                                             bg-gray-100 text-gray-700 border border-gray-300
                                         @endif">
@@ -683,7 +707,11 @@
                                 
                                 <!-- Additional Details -->
                                 <td class="px-4 py-3.5 text-center font-medium text-gray-700 bg-blue-50">
-                                    {{ ucwords($row->reported_by) }}
+                                    @if(str_contains(strtolower($row->remarks ?? ''), 'system'))
+                                        System
+                                    @else
+                                        {{ ucwords($row->reported_by ?? 'N/A') }}
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3.5 text-gray-600 text-center bg-blue-50">
                                     @if($row->remarks)

@@ -45,23 +45,23 @@
     </div>
 
     <div x-data="{ 
-        updating: false,
-        zoomIn() { 
-            if (window.profitChartInstance) {
-                window.profitChartInstance.zoom(1.1);
+            updating: false,
+            zoomIn() { 
+                if (window.profitChartInstance) {
+                    window.profitChartInstance.zoom(1.1);
+                }
+            },
+            zoomOut() { 
+                if (window.profitChartInstance) {
+                    window.profitChartInstance.zoom(0.9);
+                }
+            },
+            resetZoom() { 
+                if (window.profitChartInstance) {
+                    window.profitChartInstance.resetZoom();
+                }
             }
-        },
-        zoomOut() { 
-            if (window.profitChartInstance) {
-                window.profitChartInstance.zoom(0.9);
-            }
-        },
-        resetZoom() { 
-            if (window.profitChartInstance) {
-                window.profitChartInstance.resetZoom();
-            }
-        }
-    }">
+        }">
         <div class="flex mt-4">
             <button @click="zoomIn()" id="zoomIn" title="Zoom In" 
                 class="p-1 hover:bg-gray-100 rounded transition-colors duration-150">
@@ -89,7 +89,7 @@
                 data-months='@json($months ?? [])'
                 
                 :class="{'opacity-0 transition-opacity duration-150': updating}"
-                class="relative w-full h-[24rem]">
+                class="relative w-full h-[23rem]">
                 <canvas></canvas>
             </div>
         </div>

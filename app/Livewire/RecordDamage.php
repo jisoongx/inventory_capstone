@@ -63,14 +63,15 @@ class RecordDamage extends Component
         $owner_id = Auth::guard('owner')->user()->owner_id;
 
         $this->products = collect(DB::select("
-            SELECT p.name, p.prod_code, sum(i.stock) as stocks
-            FROM products p
-            join inventory i on p.prod_code = i.prod_code
-            WHERE p.owner_id = ?
-            group by i.stock, p.name, p.prod_code
-            having i.stock > 0
+            SELECT p.name, p.prod_code, sum(i.stock) as stocks 
+            FROM products p 
+            join inventory i on p.prod_code = i.prod_code 
+            WHERE p.owner_id = ? 
+            group by p.name, p.prod_code 
+            having sum(i.stock) > 0
         ", [$owner_id]));
     }
+
 
     public function getInventory($index, $prod_code)
     {

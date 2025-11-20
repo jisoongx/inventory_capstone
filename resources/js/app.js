@@ -32,7 +32,7 @@ function initProfitChart()
     const profits = JSON.parse(profitChart.dataset.profits || "[]");
     const months = JSON.parse(profitChart.dataset.months || "[]");
 
-    profitChart.style.height = "24rem"; 
+    profitChart.style.height = "23rem"; 
     profitChart.style.width = "100%";
 
 

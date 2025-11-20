@@ -20,8 +20,18 @@
                     {{ $p->status === 'Reorder' ? 'border-orange-500 text-orange-600' : '' }}
                     {{ $p->status === 'Normal' ? 'border-slate-500 text-slate-600' : '' }}">
                     
-                    <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
-                        class="w-16 h-16 object-cover rounded text-xs">
+
+                    @if($p->prod_image)
+                    <img src="{{ Str::startsWith($p->prod_image, 'assets/') 
+                            ? asset($p->prod_image) 
+                            : asset('storage/' . $p->prod_image) }}"
+                        alt="Product Image"
+                        class="h-16 w-16 object-cover rounded mx-auto">
+                    @else
+                    <img src="{{ asset('assets/no-product.png') }}"
+                        alt="Image Not Found"
+                        class="h-16 w-16 object-cover rounded mx-auto">
+                    @endif
                     
                     <div class="flex-1">
                         <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
@@ -77,8 +87,17 @@
                     {{ $p->status === 'Warning' ? 'border-orange-500 text-orange-600' : '' }}
                     {{ $p->status === 'Monitor' ? 'border-yellow-500 text-yellow-500' : '' }}">
                     
-                    <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
-                        class="w-16 h-16 object-cover rounded text-xs">
+                    @if($p->prod_image)
+                    <img src="{{ Str::startsWith($p->prod_image, 'assets/') 
+                            ? asset($p->prod_image) 
+                            : asset('storage/' . $p->prod_image) }}"
+                        alt="Product Image"
+                        class="h-16 w-16 object-cover rounded mx-auto">
+                    @else
+                    <img src="{{ asset('assets/no-product.png') }}"
+                        alt="Image Not Found"
+                        class="h-16 w-16 object-cover rounded mx-auto">
+                    @endif
                     
                     <div class="flex-1">
                         <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
@@ -140,8 +159,17 @@
                             #1 BEST SELLER
                         </div>
 
-                        <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
-                            class="w-16 h-16 object-cover rounded-lg shadow">
+                        @if($p->prod_image)
+                        <img src="{{ Str::startsWith($p->prod_image, 'assets/') 
+                                ? asset($p->prod_image) 
+                                : asset('storage/' . $p->prod_image) }}"
+                            alt="Product Image"
+                            class="h-16 w-16 object-cover rounded mx-auto">
+                        @else
+                        <img src="{{ asset('assets/no-product.png') }}"
+                            alt="Image Not Found"
+                            class="h-16 w-16 object-cover rounded mx-auto">
+                        @endif
 
                         <div class="flex-1">
                             <h3 class="text-sm font-bold text-gray-900">{{ $p->prod_name }}</h3>
@@ -158,8 +186,17 @@
                             #{{ $loop->iteration }}
                         </div>
 
-                        <img src="{{ asset('storage/' . ltrim($p->prod_image, '/')) }}" alt="{{ $p->prod_name }}"
-                            class="w-16 h-16 object-cover rounded-lg">
+                        @if($p->prod_image)
+                        <img src="{{ Str::startsWith($p->prod_image, 'assets/') 
+                                ? asset($p->prod_image) 
+                                : asset('storage/' . $p->prod_image) }}"
+                            alt="Product Image"
+                            class="h-16 w-16 object-cover rounded mx-auto">
+                        @else
+                        <img src="{{ asset('assets/no-product.png') }}"
+                            alt="Image Not Found"
+                            class="h-16 w-16 object-cover rounded mx-auto">
+                        @endif
 
                         <div class="flex-1">
                             <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>

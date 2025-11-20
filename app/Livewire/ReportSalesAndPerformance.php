@@ -178,189 +178,6 @@ class ReportSalesAndPerformance extends Component
     }
 
 
-    
-
-    public function salesByCategory() {
-        $years = is_array($this->selectedYears) ? $this->selectedYears : [$this->selectedYears ?: now()->year];
-        $months = is_array($this->selectedMonths) ? $this->selectedMonths : [$this->selectedMonths ?: now()->month];
-
-        $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
-        $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
-
-        $owner_id = Auth::guard('owner')->user()->owner_id;
-        
-        $sql = "
-            SELECT
-                c.category,
-                COALESCE(SUM(ritems.item_quantity), 0) AS unit_sold,
-                COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) AS total_sales,
-                COALESCE(SUM(p.cost_price * ritems.item_quantity), 0) AS cogs,
-
-                CASE
-                    WHEN COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) = 0 THEN 0
-                    ELSE (
-                        (SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                        / SUM(p.selling_price * ritems.item_quantity)
-                    ) * 100
-                END AS gross_margin,
-
-                COALESCE((
-                    SELECT p2.name
-                    FROM products p2
-                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
-                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
-                    WHERE p2.category_id = c.category_id
-                    AND r2.owner_id = ?
-                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
-                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
-                    GROUP BY p2.prod_code, p2.name
-                    ORDER BY SUM(ri2.item_quantity) DESC
-                    LIMIT 1
-                ), '—') AS top_product_unit,
-
-                COALESCE((
-                    SELECT p2.name
-                    FROM products p2
-                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
-                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
-                    WHERE p2.category_id = c.category_id
-                    AND r2.owner_id = ?
-                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
-                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
-                    GROUP BY p2.prod_code, p2.name
-                    ORDER BY SUM(ri2.item_quantity * p2.selling_price) DESC
-                    LIMIT 1
-                ), '—') AS top_product_sales,
-
-                COALESCE(i.stock, 0) AS stock_left,
-
-                COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(
-                    AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0
-                ) AS velocity_ratio,
-
-                COALESCE(i.stock, 0) / NULLIF(
-                    COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
-                ) AS days_of_supply,
-
-                CASE
-                    WHEN COALESCE(i.stock, 0) = 0 
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        AND COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.2
-                        THEN 'URGENT: Fast-moving category out of stock. Immediate reorder required.'
-                    
-                    WHEN COALESCE(i.stock, 0) = 0 AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Out of stock with recent sales. Reorder needed.'
-                    
-                    WHEN COALESCE(i.stock, 0) = 0 AND COALESCE(SUM(ritems.item_quantity), 0) = 0
-                        THEN 'Out of stock and no sales for this month. Evaluate demand before reordering.'
-                    
-                    WHEN COALESCE(i.stock, 0) / NULLIF(
-                            COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
-                        ) < 3 AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Stock critically low. Will run out in less than 3 days at current rate.'
-                    
-                    WHEN COALESCE(i.stock, 0) / NULLIF(
-                            COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
-                        ) BETWEEN 3 AND 7 AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Low stock. Reorder within this week to avoid shortage.'
-                    
-                    WHEN COALESCE(SUM(ritems.item_quantity), 0) = 0 AND COALESCE(i.stock, 0) > 0
-                        THEN 'No recent sales despite stock availability. Reassess demand or consider promotions.'
-                    
-                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.5
-                        AND ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                            / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 > 25
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > GREATEST(
-                            AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER () * 1.5, 10
-                        )
-                        THEN 'Star performer: Fast sales with strong margins. Consider expanding stock.'
-                    
-                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.5
-                        AND ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                            / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 < 15
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > GREATEST(
-                            AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER () * 1.5, 10
-                        )
-                        THEN 'Fast-moving but low margins. Review pricing or supplier costs.'
-                    
-                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.2
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > GREATEST(
-                            AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 5
-                        )
-                        THEN 'Good sales velocity. Maintain stock levels and monitor trends.'
-                    
-                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) < 0.5
-                        AND ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                            / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 < 15
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Slow-moving with poor margins. Consider discontinuing or clearance.'
-                    
-                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) < 0.5
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Slow-moving category. Reduce stock levels to free up capital.'
-                    
-                    WHEN ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                        / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 < 10
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Low profit margin. Review pricing or supplier costs.'
-                    
-                    WHEN ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                        / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 BETWEEN 10 AND 25
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Steady sales with modest profit. Maintain visibility and monitor competition.'
-                    
-                    WHEN ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                        / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 > 25
-                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
-                        THEN 'Strong profit margins. Consider promotions to boost volume.'
-                    
-                    ELSE 'Stable category performance. Continue monitoring trends.'
-                END AS insight
-                
-            FROM categories c
-            LEFT JOIN products p
-                ON c.category_id = p.category_id
-                AND c.owner_id = ?
-            LEFT JOIN (
-                SELECT c2.category_id, SUM(inv.stock) AS stock
-                FROM inventory inv
-                JOIN products p2 ON inv.prod_code = p2.prod_code
-                JOIN categories c2 ON p2.category_id = c2.category_id
-                WHERE p2.owner_id = ?
-                    and p2.prod_status = 'active'
-                GROUP BY c2.category_id
-            ) i ON i.category_id = p.category_id
-            LEFT JOIN (
-                SELECT ri.prod_code, ri.item_quantity, ri.receipt_id, r.owner_id, r.receipt_date
-                FROM receipt_item ri
-                JOIN receipt r ON r.receipt_id = ri.receipt_id
-                WHERE r.owner_id = ?
-                AND YEAR(r.receipt_date) IN ($yearPlaceholders)
-                AND MONTH(r.receipt_date) IN ($monthPlaceholders)
-            ) AS ritems ON p.prod_code = ritems.prod_code
-            WHERE c.owner_id = ?
-                and p.prod_status = 'active'
-            GROUP BY c.category, c.category_id, i.stock
-            ORDER BY c.category ASC
-        ";
-
-        $bindings = array_merge(
-            [$owner_id], $years, $months,
-            [$owner_id], $years, $months,
-            [$owner_id, $owner_id, $owner_id], $years, $months,
-            [$owner_id]
-        );
-
-        $this->sbc = collect(DB::select($sql, $bindings));
-
-        if (!empty($this->searchWord)) {
-            $search = strtolower($this->searchWord);
-            $this->sbc = $this->sbc->filter(function($item) use ($search) {
-                return str_contains(strtolower($item->category), $search);
-            })->values();
-        }
-    }
-
 
 
 
@@ -616,13 +433,13 @@ class ReportSalesAndPerformance extends Component
     }
 
     // Add to class properties RETURN MODAL
-public $showReturnModal = false;
-public $selectedItemForReturn = null;
-public $returnQuantity = 1;
-public $returnReason = '';
-public $isDamaged = false;
-public $damageType = '';
-public $maxReturnQuantity = 0;
+    public $showReturnModal = false;
+    public $selectedItemForReturn = null;
+    public $returnQuantity = 1;
+    public $returnReason = '';
+    public $isDamaged = false;
+    public $damageType = '';
+    public $maxReturnQuantity = 0;
 
 // Add these methods
 
@@ -780,6 +597,222 @@ public function submitReturn()
         session()->flash('error', 'Error processing return: ' . $e->getMessage());
     }
 }
+
+
+
+
+
+
+
+
+    public function salesByCategory() {
+        $years = is_array($this->selectedYears) ? $this->selectedYears : [$this->selectedYears ?: now()->year];
+        $months = is_array($this->selectedMonths) ? $this->selectedMonths : [$this->selectedMonths ?: now()->month];
+
+        $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
+        $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
+
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+        
+        $sql = "
+            SELECT
+                c.category,
+                COALESCE(SUM(ritems.item_quantity), 0) AS unit_sold,
+                COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) AS total_sales,
+                COALESCE(SUM(p.cost_price * ritems.item_quantity), 0) AS cogs,
+
+                CASE
+                    WHEN COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) = 0 THEN 0
+                    ELSE (
+                        (SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                        / SUM(p.selling_price * ritems.item_quantity)
+                    ) * 100
+                END AS gross_margin,
+
+                COALESCE((
+                    SELECT p2.name
+                    FROM products p2
+                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                    WHERE p2.category_id = c.category_id
+                    AND r2.owner_id = ?
+                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                    GROUP BY p2.prod_code, p2.name
+                    ORDER BY SUM(ri2.item_quantity) DESC
+                    LIMIT 1
+                ), '—') AS top_product_unit,
+
+                COALESCE((
+                    SELECT p2.name
+                    FROM products p2
+                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                    WHERE p2.category_id = c.category_id
+                    AND r2.owner_id = ?
+                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                    GROUP BY p2.prod_code, p2.name
+                    ORDER BY SUM(ri2.item_quantity * p2.selling_price) DESC
+                    LIMIT 1
+                ), '—') AS top_product_sales,
+
+                COALESCE(i.stock, 0) AS stock_left,
+
+                COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(
+                    AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0
+                ) AS velocity_ratio,
+
+                COALESCE(i.stock, 0) / NULLIF(
+                    COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
+                ) AS days_of_supply
+                
+            FROM categories c
+            LEFT JOIN products p
+                ON c.category_id = p.category_id
+                AND c.owner_id = ?
+            LEFT JOIN (
+                SELECT c2.category_id, SUM(inv.stock) AS stock
+                FROM inventory inv
+                JOIN products p2 ON inv.prod_code = p2.prod_code
+                JOIN categories c2 ON p2.category_id = c2.category_id
+                WHERE p2.owner_id = ?
+                    and p2.prod_status = 'active'
+                GROUP BY c2.category_id
+            ) i ON i.category_id = p.category_id
+            LEFT JOIN (
+                SELECT ri.prod_code, ri.item_quantity, ri.receipt_id, r.owner_id, r.receipt_date
+                FROM receipt_item ri
+                JOIN receipt r ON r.receipt_id = ri.receipt_id
+                WHERE r.owner_id = ?
+                AND YEAR(r.receipt_date) IN ($yearPlaceholders)
+                AND MONTH(r.receipt_date) IN ($monthPlaceholders)
+            ) AS ritems ON p.prod_code = ritems.prod_code
+            WHERE c.owner_id = ?
+                and p.prod_status = 'active'
+            GROUP BY c.category, c.category_id, i.stock
+            ORDER BY c.category ASC
+        ";
+
+        $bindings = array_merge(
+            [$owner_id], $years, $months,
+            [$owner_id], $years, $months,
+            [$owner_id, $owner_id, $owner_id], $years, $months,
+            [$owner_id]
+        );
+
+
+
+        $collection = collect(DB::select($sql, $bindings));
+
+        $avgStock = $collection->avg('stock_left');
+        $avgUnitSold = $collection->avg('unit_sold');
+        $avgSales = $collection->avg('total_sales');
+        $avgCogsRatio = $collection->map(function($i){
+            return $i->total_sales == 0 ? 0 : $i->cogs / $i->total_sales;
+        })->avg();
+        $avgMargin = $collection->avg('gross_margin');
+
+        $maxUnitSold = $collection->max('unit_sold');
+        $maxSales = $collection->max('total_sales');
+
+        $avgStockLeft = $collection->avg('stock_left');
+        $medianStockLeft = $collection->median('stock_left');
+        $avgTotalSales = $collection->avg('total_sales');
+        $medianTotalSales = $collection->median('total_sales');
+        $avgGrossMargin = $collection->avg('gross_margin');
+        $medianGrossMargin = $collection->median('gross_margin');
+        $medianDaysOfSupply = $collection->median('days_of_supply');
+
+        $count = $collection->count();
+        $variance = $collection->map(fn($i) => pow($i->unit_sold - $avgUnitSold, 2))->sum() / $count;
+        $stddevUnitSold = sqrt($variance);
+
+        $this->sbc = $collection->map(function ($item) use (
+            $stddevUnitSold,
+            $avgUnitSold,
+            $medianDaysOfSupply,
+            $avgTotalSales,
+            $medianTotalSales,
+            $avgGrossMargin,
+            $medianGrossMargin
+        ) {
+            $insights = [];
+            
+            // ===== SALES VELOCITY INSIGHTS =====
+            $zScore = $stddevUnitSold > 0 ? ($item->unit_sold - $avgUnitSold) / $stddevUnitSold : 0;
+            
+            if ($zScore > 1.5) {
+                $insights[] = "This is your top performing category with exceptional sales volume.";
+            } elseif ($zScore > 0.5) {
+                $insights[] = "Strong performer that consistently sells above average.";
+            } elseif ($zScore < -1) {
+                $insights[] = "Sales performance is significantly below expectations.";
+            } elseif ($zScore < -0.3) {
+                $insights[] = "Moving slower than most other categories.";
+            } else {
+                $insights[] = "Sales performance is steady and meets expectations.";
+            }
+            
+            // ===== PROFITABILITY INSIGHTS =====
+            if ($item->gross_margin > $avgGrossMargin * 1.3) {
+                $insights[] = "Excellent profit margins make this a highly profitable category.";
+            } elseif ($item->gross_margin > $avgGrossMargin * 1.1) {
+                $insights[] = "Generates healthy profit margins for your business.";
+            } elseif ($item->gross_margin < $medianGrossMargin * 0.8 && $item->gross_margin > 0) {
+                $insights[] = "Profit margins are lower than desired, consider reviewing pricing.";
+            } else {
+                $insights[] = "Maintains acceptable profit margins within normal range.";
+            }
+            
+            // ===== REVENUE CONTRIBUTION INSIGHTS =====
+            if ($item->total_sales > $avgTotalSales * 1.8) {
+                $insights[] = "Major revenue driver contributing significantly to overall sales.";
+            } elseif ($item->total_sales > $avgTotalSales * 1.3) {
+                $insights[] = "Important revenue source for your business.";
+            } elseif ($item->total_sales < $medianTotalSales * 0.4 && $item->total_sales > 0) {
+                $insights[] = "Revenue contribution is minimal compared to other categories.";
+            }
+            
+            // ===== STOCK LEVEL INSIGHTS =====
+            if ($item->days_of_supply > $medianDaysOfSupply * 2.5) {
+                $insights[] = "Inventory levels are too high, consider reducing future orders.";
+            } elseif ($item->days_of_supply > $medianDaysOfSupply * 1.8) {
+                $insights[] = "Stock levels are comfortable with plenty of supply on hand.";
+            } elseif ($item->days_of_supply < 7 && $item->velocity_ratio > 1.2) {
+                $insights[] = "Critical stock shortage for this fast-selling category, restock immediately.";
+            } elseif ($item->days_of_supply < $medianDaysOfSupply * 0.4 && $item->unit_sold > 0) {
+                $insights[] = "Stock is running low and needs replenishment soon.";
+            } elseif ($item->days_of_supply < 14 && $item->unit_sold > 0) {
+                $insights[] = "Current stock will last less than two weeks.";
+            }
+            
+            // ===== VELOCITY RATING =====
+            if ($item->velocity_ratio > 1.8) {
+                $insights[] = "Products in this category are moving much faster than average.";
+            } elseif ($item->velocity_ratio < 0.4 && $item->velocity_ratio > 0) {
+                $insights[] = "Turnover rate is slow, items are staying on shelves longer.";
+            }
+            
+            return (object) array_merge((array) $item, [
+                'insight' => $insights,
+                'insight_summary' => implode(' ', $insights)
+            ]);
+        });
+
+        
+        if (!empty($this->searchWord)) {
+            $search = strtolower($this->searchWord);
+            $this->sbc = $this->sbc->filter(function($item) use ($search) {
+                return str_contains(strtolower($item->category), $search);
+            })->values();
+        }
+
+
+
+    }
+
+
 
     public function sortBy($field) {
         if ($this->sortField === $field) {
