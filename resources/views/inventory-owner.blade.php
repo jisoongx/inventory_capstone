@@ -180,11 +180,11 @@
                             @endif
                         "
                     id="quickScanBtn" {{ $expired ? 'disabled' : '' }}
-                    class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg
+                    class="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg
                             {{ $expired ? 'opacity-50 cursor-not-allowed' : '' }}"
                     title="Quick Scan Product">
-                    <span class="material-symbols-outlined text-xl">barcode_scanner</span>
-                    <span class="font-medium">Scan</span>
+                    <span class="material-symbols-outlined text-lg">barcode_scanner</span>
+                    <span class="font-medium text-sm">Scan</span>
                 </button>
                 
                 <!-- Divider -->
