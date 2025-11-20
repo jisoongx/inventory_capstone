@@ -38,6 +38,7 @@ class InventoryOwnerController extends Controller
                 MIN(p.name)          AS name,
                 MIN(p.cost_price)    AS cost_price,
                 MIN(p.selling_price) AS selling_price,
+                MIN(p.stock_limit)   AS stock_limit,
                 MIN(p.prod_image)    AS prod_image,
                 MIN(u.unit)          AS unit,
                 MIN(c.category)      AS category,
@@ -163,6 +164,19 @@ public function showProductDetails($prodCode)
         ->orderBy('batch_number', 'desc')
         ->get();
 
+    // Get ORIGINAL stock-in quantities per batch (before any deductions)
+    // We need to get the initial stock value when the batch was first added
+    $originalStockPerBatch = DB::table('inventory')
+        ->where('prod_code', $prodCode)
+        ->whereNotNull('batch_number')
+        ->select(
+            'batch_number',
+            DB::raw('SUM(stock) as current_stock')
+        )
+        ->groupBy('batch_number')
+        ->get()
+        ->keyBy('batch_number');
+
     // Get sales data per batch to calculate original quantities
     $salesPerBatch = DB::table('receipt_item as ri')
         ->join('inventory as i', 'ri.inven_code', '=', 'i.inven_code')
@@ -175,27 +189,25 @@ public function showProductDetails($prodCode)
     // Get damaged items per batch
     $damagedPerBatch = DB::table('damaged_items as di')
         ->join('inventory as i', 'di.inven_code', '=', 'i.inven_code')
-        ->join('products as p', 'i.prod_code', '=', 'p.prod_code') // Add this join
-        ->where('p.prod_code', $prodCode) // Use p.prod_code instead of di.prod_code
+        ->join('products as p', 'i.prod_code', '=', 'p.prod_code')
+        ->where('p.prod_code', $prodCode)
         ->whereNotNull('i.batch_number')
-        ->whereIn('di.damaged_id', function($query) use ($prodCode) {
-            $query->select(DB::raw('MIN(damaged_id)'))
-                ->from('damaged_items as di2')
-                ->join('inventory as i2', 'di2.inven_code', '=', 'i2.inven_code') // Join in subquery
-                ->where('i2.prod_code', $prodCode) // Use i2.prod_code
-                ->groupBy('di2.inven_code');
-        })
         ->select('i.batch_number', DB::raw('SUM(di.damaged_quantity) as total_damaged'))
         ->groupBy('i.batch_number')
         ->pluck('total_damaged', 'batch_number');
 
-    // Batch grouping for stock-in with original quantities calculated
-    $batchGroups = $stockInHistory->groupBy('batch_number')->map(function($batches, $batchNumber) use ($salesPerBatch, $damagedPerBatch) {
+    // Batch grouping for stock-in with CORRECT original quantities
+    $batchGroups = $stockInHistory->groupBy('batch_number')->map(function($batches, $batchNumber) use ($salesPerBatch, $damagedPerBatch, $originalStockPerBatch) {
+        // Get current stock in inventory (already reduced)
         $currentStock = $batches->sum('stock');
+        
+        // Get total sold from this batch
         $soldFromBatch = $salesPerBatch->get($batchNumber, 0);
+        
+        // Get total damaged from this batch
         $damagedFromBatch = $damagedPerBatch->get($batchNumber, 0);
         
-        // Calculate original quantity: current + sold + damaged
+        // Calculate ORIGINAL quantity: current stock + all items that went out
         $originalQuantity = $currentStock + $soldFromBatch + $damagedFromBatch;
         
         // Add original_quantity to each batch in the group
@@ -226,55 +238,42 @@ public function showProductDetails($prodCode)
         ->get();
 
     // Stock-out from Damaged/Expired Items
-    // FIXED: Prevent duplicate counting by grouping by inven_code
-    // Take the first (oldest) damaged record per inven_code to avoid counting the same item twice
     $stockOutDamagedHistory = DB::table('damaged_items as di')
+        ->join('inventory as i', 'di.inven_code', '=', 'i.inven_code')
         ->leftJoin('staff as s', 'di.staff_id', '=', 's.staff_id')
         ->leftJoin('owners as o', 'di.owner_id', '=', 'o.owner_id')
-        ->leftJoin('inventory as i', 'di.inven_code', '=', 'i.inven_code') // Add this join
         ->select(
-            'di.*',
+            'di.damaged_id',
+            'di.damaged_quantity',
+            'di.damaged_date',
+            'di.damaged_type',
+            'di.damaged_reason',
+            'i.batch_number',
+            'i.prod_code',
             DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as reported_by')
         )
-        ->where('i.prod_code', $prodCode) // Use i.prod_code instead of di.prod_code
-        ->whereIn('di.damaged_id', function($query) use ($prodCode) {
-            // Get only the first damaged record for each unique inven_code
-            $query->select(DB::raw('MIN(damaged_id)'))
-                ->from('damaged_items as di2')
-                ->leftJoin('inventory as i2', 'di2.inven_code', '=', 'i2.inven_code') // Join in subquery
-                ->where('i2.prod_code', $prodCode) // Use i2.prod_code
-                ->groupBy('di2.inven_code');
-        })
+        ->where('i.prod_code', $prodCode)
         ->orderBy('di.damaged_date', 'desc')
         ->get();
 
-    // FIXED: Calculate totals correctly
-    // Step 1: Get current remaining stock from inventory
+    // Calculate totals correctly
     $currentStockInInventory = $stockInHistory->sum('stock');
-    
-    // Step 2: Get total sold quantity
     $totalStockOutSold = $stockOutSalesHistory->sum('quantity_sold');
-    
-    // Step 3: Get total damaged/expired quantity
     $totalStockOutDamaged = $stockOutDamagedHistory->sum('damaged_quantity');
-    
-    // Step 4: Calculate total stock out
     $totalStockOut = $totalStockOutSold + $totalStockOutDamaged;
     
-    // Step 5: Calculate TOTAL STOCK (Original stock that was added)
-    // Total Stock = Current Stock in Inventory + All items that went out (sold + damaged)
+    // Total Stock In = Current Stock + All Stock Out (sold + damaged)
     $totalStockIn = $currentStockInInventory + $totalStockOut;
     
-    // Step 6: Current/Remaining Stock is what's left in inventory
+    // Current Stock = What's remaining in inventory
     $currentStock = $currentStockInInventory;
     
-    // Revenue and other calculations
     $totalRevenue = $stockOutSalesHistory->sum('total_amount');
     $turnoverRate = $totalStockIn > 0 ? ($totalStockOutSold / $totalStockIn) * 100 : 0;
 
-    // Count expired and damaged items
-    $totalExpired = $stockOutDamagedHistory->where('damaged_reason', 'Expired')->sum('damaged_quantity');
-    $totalDamaged = $stockOutDamagedHistory->where('damaged_reason', '!=', 'Expired')->sum('damaged_quantity');
+    // Count expired and damaged items using damaged_type
+    $totalExpired = $stockOutDamagedHistory->where('damaged_type', 'Expired')->sum('damaged_quantity');
+    $totalDamaged = $stockOutDamagedHistory->where('damaged_type', '!=', 'Expired')->sum('damaged_quantity');
 
     // Batch Stock-out History
     $manualBatchStockOut = collect();
@@ -435,19 +434,115 @@ public function edit($prodCode)
     return view('inventory-owner-edit', compact('product', 'units', 'statuses', 'priceHistory'));
 }
 
+/**
+ * Check if product name already exists (real-time validation for edit)
+ */
+public function checkProductName(Request $request)
+{
+    $name = $request->input('name');
+    $prodCode = $request->input('prod_code'); // Current product being edited
+    $ownerId = session('owner_id');
+
+    // Check for exact match (case-insensitive), excluding current product
+    $exactMatch = DB::table('products')
+        ->where('owner_id', $ownerId)
+        ->where('prod_code', '!=', $prodCode)
+        ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+        ->exists();
+
+    // Check for similar matches using LIKE (for typo detection)
+    $similarMatches = [];
+    if (!$exactMatch) {
+        $similar = DB::table('products')
+            ->where('owner_id', $ownerId)
+            ->where('prod_code', '!=', $prodCode)
+            ->where(function($query) use ($name) {
+                $query->where('name', 'LIKE', '%' . $name . '%')
+                      ->orWhere('name', 'LIKE', $name . '%')
+                      ->orWhere('name', 'LIKE', '%' . $name);
+            })
+            ->limit(5)
+            ->pluck('name')
+            ->toArray();
+
+        // Filter out exact matches from similar results
+        $similarMatches = array_filter($similar, function($item) use ($name) {
+            return strtolower($item) !== strtolower($name);
+        });
+    }
+
+    return response()->json([
+        'exact_match' => $exactMatch,
+        'similar_matches' => array_values($similarMatches)
+    ]);
+}
+
+/**
+ * Check if barcode already exists (real-time validation for edit)
+ * Renamed to avoid conflict with existing checkBarcode method
+ */
+public function checkBarcodeEdit(Request $request)
+{
+    $barcode = $request->input('barcode');
+    $prodCode = $request->input('prod_code'); // Current product being edited
+    $ownerId = session('owner_id');
+
+    if (empty($barcode)) {
+        return response()->json([
+            'exact_match' => false,
+            'similar_matches' => []
+        ]);
+    }
+
+    // Check for exact match (case-insensitive), excluding current product
+    $exactMatch = DB::table('products')
+        ->where('owner_id', $ownerId)
+        ->where('prod_code', '!=', $prodCode)
+        ->whereRaw('LOWER(barcode) = ?', [strtolower($barcode)])
+        ->exists();
+
+    // Check for similar matches using LIKE (for typo detection)
+    $similarMatches = [];
+    if (!$exactMatch) {
+        $similar = DB::table('products')
+            ->where('owner_id', $ownerId)
+            ->where('prod_code', '!=', $prodCode)
+            ->whereNotNull('barcode')
+            ->where('barcode', '!=', '')
+            ->where(function($query) use ($barcode) {
+                $query->where('barcode', 'LIKE', '%' . $barcode . '%')
+                      ->orWhere('barcode', 'LIKE', $barcode . '%')
+                      ->orWhere('barcode', 'LIKE', '%' . $barcode);
+            })
+            ->limit(5)
+            ->pluck('barcode')
+            ->toArray();
+
+        // Filter out exact matches and empty values from similar results
+        $similarMatches = array_filter($similar, function($item) use ($barcode) {
+            return !empty($item) && strtolower($item) !== strtolower($barcode);
+        });
+    }
+
+    return response()->json([
+        'exact_match' => $exactMatch,
+        'similar_matches' => array_values($similarMatches)
+    ]);
+}
+
 
 public function update(Request $request, $prodCode)
 {
     $ownerId = session('owner_id');
 
-    // 🔹 Updated validation to include previous_cost_price
+    // Validation
     $validated = $request->validate([
         'name'             => 'required|string|max:100',
         'barcode'          => 'nullable|string|max:50',
         'cost_price'       => 'required|numeric|min:0',
         'selling_price'    => 'nullable|numeric|min:0',
         'previous_prices'  => 'nullable|numeric|min:0',
-        'previous_cost_price' => 'nullable|numeric|min:0', // 🔹 NEW
+        'previous_cost_price' => 'nullable|numeric|min:0',
         'description'      => 'nullable|string',
         'unit_id'          => 'required|integer',
         'stock_limit'      => 'nullable|integer|min:0',
@@ -464,17 +559,41 @@ public function update(Request $request, $prodCode)
         return redirect()->route('inventory-owner')->with('error', 'Product not found.');
     }
 
+    // Server-side check for duplicate name (case-insensitive)
+    $duplicateName = DB::table('products')
+        ->where('owner_id', $ownerId)
+        ->where('prod_code', '!=', $prodCode)
+        ->whereRaw('LOWER(name) = ?', [strtolower($validated['name'])])
+        ->exists();
+
+    if ($duplicateName) {
+        return back()->with('error', 'A product with this name already exists.')->withInput();
+    }
+
+    // Server-side check for duplicate barcode (case-insensitive)
+    if (!empty($validated['barcode'])) {
+        $duplicateBarcode = DB::table('products')
+            ->where('owner_id', $ownerId)
+            ->where('prod_code', '!=', $prodCode)
+            ->whereRaw('LOWER(barcode) = ?', [strtolower($validated['barcode'])])
+            ->exists();
+
+        if ($duplicateBarcode) {
+            return back()->with('error', 'A product with this barcode already exists.')->withInput();
+        }
+    }
+
     // Handle image upload if present
     $photoPath = null;
     if ($request->hasFile('prod_image')) {
         $photoPath = $request->file('prod_image')->store('product_images', 'public');
     }
 
-    // 🔹 Determine which prices to use (new input or previous selection)
+    // Determine which prices to use (new input or previous selection)
     $finalSellingPrice = $request->previous_prices ?: $request->selling_price;
     $finalCostPrice = $request->previous_cost_price ?: $request->cost_price;
 
-    // 🔹 Validate that at least one selling price is provided
+    // Validate that at least one selling price is provided
     if (!$finalSellingPrice) {
         return back()->with('error', 'Please provide or select a selling price.')->withInput();
     }
@@ -483,7 +602,7 @@ public function update(Request $request, $prodCode)
     $updateData = [
         'name'          => $validated['name'],
         'barcode'       => $validated['barcode'],
-        'cost_price'    => $finalCostPrice, // 🔹 Use the determined cost price
+        'cost_price'    => $finalCostPrice,
         'selling_price' => $finalSellingPrice,
         'unit_id'       => $validated['unit_id'],
         'stock_limit'   => $validated['stock_limit'],
@@ -495,7 +614,7 @@ public function update(Request $request, $prodCode)
         $updateData['prod_image'] = $photoPath;
     }
 
-    // 🔹 Check if price changed compared to current product
+    // Check if price changed compared to current product
     if ($product->cost_price != $finalCostPrice || $product->selling_price != $finalSellingPrice) {
 
         // Close the current active price record (old price)
@@ -508,12 +627,12 @@ public function update(Request $request, $prodCode)
         // Insert the new active price record (new price)
         DB::table('pricing_history')->insert([
             'prod_code'         => $prodCode,
-            'old_cost_price'    => $finalCostPrice,    // 🔹 Use final cost price
-            'old_selling_price' => $finalSellingPrice, // 🔹 Use final selling price
+            'old_cost_price'    => $finalCostPrice,
+            'old_selling_price' => $finalSellingPrice,
             'owner_id'          => $ownerId,
             'updated_by'        => session('staff_id') ?? null,
             'effective_from'    => now(),
-            'effective_to'      => null,  // active price
+            'effective_to'      => null,
         ]);
     }
 
@@ -1285,7 +1404,7 @@ public function addCategory(Request $request)
 {
     $ownerId = session('owner_id');
     $categoryName = trim($request->input('category'));
-    $confirmedSimilar = $request->input('confirmed_similar') === '1'; // ✅ NEW
+    $confirmedSimilar = $request->input('confirmed_similar') === '1';
 
     if (empty($categoryName)) {
         return response()->json(['success' => false, 'message' => 'Category name cannot be empty.']);
@@ -1315,7 +1434,7 @@ public function addCategory(Request $request)
     $normalizedInput = $this->normalizeName($categoryName);
     $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
 
-    if ($semanticMatch && !$confirmedSimilar) { // ✅ MODIFIED: Only block if not confirmed
+    if ($semanticMatch && !$confirmedSimilar) {
         return response()->json([
             'success' => false, 
             'message' => 'Similar category already exists: ' . $semanticMatch,
@@ -1324,13 +1443,18 @@ public function addCategory(Request $request)
         ]);
     }
 
-    // Both checks passed OR user confirmed similar match - insert new category
-    DB::table('categories')->insert([
+    // ✅ FIX: Use insertGetId() instead of insert() to get the new category ID
+    $categoryId = DB::table('categories')->insertGetId([
         'category' => $categoryName,
         'owner_id' => $ownerId,
     ]);
 
-    return response()->json(['success' => true, 'message' => 'Category added successfully.']);
+    // ✅ FIX: Return the category_id in the response
+    return response()->json([
+        'success' => true, 
+        'message' => 'Category added successfully.',
+        'category_id' => $categoryId  // ← This is what was missing!
+    ]);
 }
 
 

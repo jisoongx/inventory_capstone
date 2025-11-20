@@ -203,6 +203,9 @@ Route::post('/inventory/damage', [InventoryOwnerController::class, 'store'])->na
 Route::post('/check-existing-name', [InventoryOwnerController::class, 'checkExistingName']);
 //Route for category and unit settings duplicate or similar input trapping
 Route::post('/owner/check-existing-name', [InventoryOwnerSettingsController::class, 'checkExistingName'])->name('owner.check-existing-name');
+//Route for edit product details name and barcode error trap
+Route::post('/inventory/check-name', [InventoryOwnerController::class, 'checkProductName'])->name('inventory-owner-check-name');
+Route::post('/inventory/check-barcode-edit', [InventoryOwnerController::class, 'checkBarcodeEdit'])->name('inventory-owner-check-barcode-edit');
 
 
 

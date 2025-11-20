@@ -30,9 +30,9 @@
                                     ? asset('storage/' . $product->prod_image) 
                                     : asset('assets/no-product-image.png') }}" 
                      alt="{{ $product->name }}" 
-                     class="w-36 h-36 object-cover rounded-lg shadow-md border">
+                     class="w-42 h-42 object-cover rounded-lg shadow-md border">
             @else
-                <div class="w-36 h-36 flex items-center justify-center bg-gray-200 text-gray-500 rounded-lg shadow-md border">
+                <div class="w-42 h-42 flex items-center justify-center bg-gray-200 text-gray-500 rounded-lg shadow-md border">
                     No Image
                 </div>
             @endif
@@ -62,24 +62,26 @@
             @endif
         </div>
 
+        
         <!-- Right: Barcode Card with Print Button -->
         <div class="lg:col-span-5">
-            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 shadow-sm h-full flex flex-col justify-between">
-                <div class="flex items-start justify-between mb-3">
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 shadow-sm h-full flex flex-col justify-between">
+                <div class="flex items-start justify-between mb-2">
                     <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
-                            <span class="material-symbols-outlined text-white text-base">barcode</span>
-                        </div>
-                        <h3 class="text-sm font-semibold text-gray-800">Product Barcode</h3>
+                        <h3 class="text-sm p-1 font-semibold text-gray-800">Barcode</h3>
                     </div>
                     <button onclick="printProductBarcode('{{ $product->barcode }}', '{{ $product->name }}')" 
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg">
+                            class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg">
                         <span class="material-symbols-outlined text-sm">print</span>
                         Print
                     </button>
                 </div>
-                <div class="bg-white rounded-lg px-3 py-2.5 border border-blue-100">
-                    <p class="font-mono text-base font-bold text-gray-800 tracking-wide text-center">
+                <div class="bg-white rounded-lg px-2 py-2 border border-blue-100 flex flex-col items-center gap-1">
+                    <!-- Barcode Image -->
+                    <svg id="product-barcode-display" class="max-w-full h-16"></svg>
+                    
+                    <!-- Barcode Number -->
+                    <p class="font-mono text-xs font-bold text-gray-800 tracking-wide text-center">
                         {{ $product->barcode }}
                     </p>
                 </div>
@@ -113,11 +115,6 @@
 
             <!-- Damaged & Expired Cards -->
             <div class="grid grid-cols-2 gap-4">
-                @php
-                    $totalExpired = $stockOutDamagedHistory->where('damaged_reason', 'Expired')->sum('damaged_quantity');
-                    $totalDamaged = $stockOutDamagedHistory->where('damaged_reason', '!=', 'Expired')->sum('damaged_quantity');
-                @endphp
-                
                 <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                     <p class="text-xs text-orange-700 font-medium">Damaged Items</p>
                     <p class="text-xl font-bold text-amber-900">{{ $totalDamaged }}</p>
@@ -190,107 +187,101 @@
         </div>
     </div>
 
-    <!-- Stock-In History Section -->
-    <div id="stockInSection" class="tab-content">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-md font-semibold">Stock-In History</h2>
-            <div class="flex gap-2 flex-wrap">
-                <select id="stockInSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <option value="" disabled selected>Select sort option</option>
-                    <option value="date_desc">Date (Newest First)</option>
-                    <option value="date_asc">Date (Oldest First)</option>
-                    <option value="batch_desc">Batch (Newest First)</option>
-                    <option value="batch_asc">Batch (Oldest First)</option>
-                    <option value="quantity_desc">Quantity (High to Low)</option>
-                    <option value="quantity_asc">Quantity (Low to High)</option>
-                </select>
-                <input type="text" id="stockInSearch" placeholder="Search batch..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                <input type="date" id="dateFrom" placeholder="From Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                <input type="date" id="dateTo" placeholder="To Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                <button onclick="filterStockInTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
-                <button onclick="resetStockInFilters()" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">Reset</button>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full table-auto border border-gray-100">
-                    <thead class="bg-gray-100 text-gray-700 text-sm">
-                        <tr>
-                            <th class="px-4 py-3 border">Batch Number</th>
-                            <th class="px-4 py-3 border">Total Quantity</th>
-                            <th class="px-4 py-3 border">Date Added</th>
-                            <th class="px-4 py-3 border">Expiration Date</th>
-                            <th class="px-4 py-3 border">Days Until Expiry</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stockInTableBody">
-                        @forelse ($batchGroups as $batchNumber => $batches)
-                            @php
-                                $firstBatch = $batches->first();
-                                // FIXED: Use the calculated original_quantity instead of sum('stock')
-                                $totalBatchQuantity = $firstBatch->original_quantity;
-                                
-                                // FIXED: Calculate days including both start and end dates
-                                if ($firstBatch->expiration_date) {
-                                    $expirationDate = \Carbon\Carbon::parse($firstBatch->expiration_date)->startOfDay();
-                                    $now = \Carbon\Carbon::now()->startOfDay();
-                                    
-                                    if ($expirationDate->isPast()) {
-                                        // If expired, show negative days (days since expiration)
-                                        // Add 1 to include today in the count
-                                        $expiryDays = -($now->diffInDays($expirationDate) + 1);
-                                    } else {
-                                        // If not expired, show positive days (days until expiration)
-                                        // Add 1 to include today in the count
-                                        $expiryDays = $now->diffInDays($expirationDate) + 1;
-                                    }
-                                } else {
-                                    $expiryDays = null;
-                                }
-                            @endphp
-                            <tr class="hover:bg-gray-50" data-batch="{{ $batchNumber }}" data-date="{{ \Carbon\Carbon::parse($firstBatch->date_added)->timestamp }}" data-quantity="{{ $totalBatchQuantity }}">
-                                <td class="px-4 py-3 border text-center text-sm">{{ $batchNumber }}</td>
-                                <td class="px-4 py-3 border text-center text-sm">{{ $totalBatchQuantity }}</td>
-                                <td class="px-4 py-3 border text-center text-sm">
-                                    {{ \Carbon\Carbon::parse($firstBatch->date_added)->format('M j, Y') }}
-                                </td>
-                                <td class="px-4 py-3 border text-center text-sm">
-                                    @if($firstBatch->expiration_date)
-                                        {{ \Carbon\Carbon::parse($firstBatch->expiration_date)->format('M j, Y') }}
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 border text-center text-sm">
-                                    @if($expiryDays !== null)
-                                        <span class="{{ $expiryDays <= 0 ? 'text-red-600 font-medium' : 'text-blue-600 font-medium' }}">
-                                            @if($expiryDays > 0)
-                                                {{ $expiryDays }} day{{ $expiryDays === 1 ? '' : 's' }} left
-                                            @elseif($expiryDays == 0)
-                                                Expires today
-                                            @else
-                                                @php
-                                                    $daysAgo = abs($expiryDays);
-                                                @endphp
-                                                Expired {{ $daysAgo }} day{{ $daysAgo === 1 ? '' : 's' }} ago
-                                            @endif
-                                        </span>
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center py-6 text-gray-500">No stock-in records found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+<!-- Stock-In History Section -->
+<div id="stockInSection" class="tab-content">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-md font-semibold">Stock-In History</h2>
+        <div class="flex gap-2 flex-wrap">
+            <select id="stockInSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                <option value="" disabled selected>Select sort option</option>
+                <option value="date_desc">Date (Newest First)</option>
+                <option value="date_asc">Date (Oldest First)</option>
+                <option value="batch_desc">Batch (Newest First)</option>
+                <option value="batch_asc">Batch (Oldest First)</option>
+                <option value="quantity_desc">Quantity (High to Low)</option>
+                <option value="quantity_asc">Quantity (Low to High)</option>
+            </select>
+            <input type="text" id="stockInSearch" placeholder="Search batch..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+            <input type="date" id="dateFrom" placeholder="From Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+            <input type="date" id="dateTo" placeholder="To Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+            <button onclick="filterStockInTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
+            <button onclick="resetStockInFilters()" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">Reset</button>
         </div>
     </div>
+
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full table-auto border border-gray-100">
+                <thead class="bg-gray-100 text-gray-700 text-sm">
+                    <tr>
+                        <th class="px-4 py-3 border">Batch Number</th>
+                        <th class="px-4 py-3 border">Total Quantity</th>
+                        <th class="px-4 py-3 border">Date Added</th>
+                        <th class="px-4 py-3 border">Expiration Date</th>
+                        <th class="px-4 py-3 border">Days Until Expiry</th>
+                    </tr>
+                </thead>
+                <tbody id="stockInTableBody">
+                    @forelse ($batchGroups as $batchNumber => $batches)
+                        @php
+                            $firstBatch = $batches->first();
+                            $totalBatchQuantity = $firstBatch->original_quantity;
+                            
+                            // Calculate days based on date only (not time)
+                            if ($firstBatch->expiration_date) {
+                                $expirationDate = \Carbon\Carbon::parse($firstBatch->expiration_date)->startOfDay();
+                                $today = \Carbon\Carbon::today();
+                                
+                                // Calculate the difference in days
+                                $expiryDays = $today->diffInDays($expirationDate, false);
+                            } else {
+                                $expiryDays = null;
+                            }
+                        @endphp
+                        <tr class="hover:bg-gray-50" data-batch="{{ $batchNumber }}" data-date="{{ \Carbon\Carbon::parse($firstBatch->date_added)->timestamp }}" data-quantity="{{ $totalBatchQuantity }}">
+                            <td class="px-4 py-3 border text-center text-sm">{{ $batchNumber }}</td>
+                            <td class="px-4 py-3 border text-center text-sm">{{ $totalBatchQuantity }}</td>
+                            <td class="px-4 py-3 border text-center text-sm">
+                                {{ \Carbon\Carbon::parse($firstBatch->date_added)->format('M j, Y') }}
+                            </td>
+                            <td class="px-4 py-3 border text-center text-sm">
+                                @if($firstBatch->expiration_date)
+                                    {{ \Carbon\Carbon::parse($firstBatch->expiration_date)->format('M j, Y') }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 border text-center text-sm">
+                                @if($expiryDays !== null)
+                                    <span class="{{ $expiryDays < 0 ? 'text-red-600 font-medium' : ($expiryDays == 0 ? 'text-orange-600 font-medium' : 'text-blue-600 font-medium') }}">
+                                        @if($expiryDays > 0)
+                                            {{ $expiryDays }} day{{ $expiryDays > 1 ? 's' : '' }} left
+                                        @elseif($expiryDays == 0)
+                                            Expires today
+                                        @else
+                                            @php
+                                                $daysAgo = abs($expiryDays);
+                                            @endphp
+                                            Expired {{ $daysAgo }} day{{ $daysAgo > 1 ? 's' : '' }} ago
+                                        @endif
+                                    </span>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center py-6 text-gray-500">No stock-in records found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
     <!-- Stock-Out History Section -->
     <div id="stockOutSection" class="tab-content hidden">
         <div class="mb-6">
@@ -389,7 +380,7 @@
                         <option value="batch_desc">Batch (Newest First)</option>
                         <option value="batch_asc">Batch (Oldest First)</option>
                     </select>
-                    <input type="text" id="damagedSearch" placeholder="Search reason..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
+                    <input type="text" id="damagedSearch" placeholder="Search type..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
                     <input type="date" id="damagedDateFrom" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
                     <input type="date" id="damagedDateTo" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
                     <button onclick="filterDamagedTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
@@ -402,29 +393,34 @@
                     <table class="min-w-full table-auto border border-gray-100">
                         <thead class="bg-gray-100 text-gray-700 text-sm">
                             <tr>
+                                <th class="px-4 py-3 border">Batch Number</th>
                                 <th class="px-4 py-3 border">Date Out</th>
                                 <th class="px-4 py-3 border">Quantity Out</th>
-                                <th class="px-4 py-3 border">Reason</th>
+                                <th class="px-4 py-3 border">Type</th>
                                 <th class="px-4 py-3 border">Processed By</th>
                             </tr>
                         </thead>
                         <tbody id="damagedTableBody">
                             @forelse ($stockOutDamagedHistory as $damaged)
-                                <tr> 
+                                <tr class="hover:bg-gray-50 text-sm" 
+                                    data-date="{{ \Carbon\Carbon::parse($damaged->damaged_date)->timestamp }}" 
+                                    data-quantity="{{ $damaged->damaged_quantity }}" 
+                                    data-batch="{{ $damaged->batch_number ?? 'N/A' }}">
+                                    <td class="px-4 py-3 border text-center">{{ $damaged->batch_number ?? 'N/A' }}</td>
                                     <td class="px-4 py-3 border text-center">
                                         {{ \Carbon\Carbon::parse($damaged->damaged_date)->format('M j, Y') }}
                                     </td>
                                     <td class="px-4 py-3 border text-center">{{ $damaged->damaged_quantity }}</td>
                                     <td class="px-4 py-3 border text-center">
-                                        <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
-                                            {{ $damaged->damaged_reason }}
+                                        <span class="px-2 py-1 text-xs rounded-full {{ $damaged->damaged_type == 'Expired' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800' }}">
+                                            {{ $damaged->damaged_type }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 border text-center">{{ $damaged->reported_by ?? 'System' }}</td>
+                                    <td class="px-4 py-3 border text-center">{{ $damaged->reported_by }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center py-6 text-gray-500">No damaged/expired items found.</td>
+                                    <td colspan="5" class="text-center py-6 text-gray-500">No damaged/expired items found.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -432,6 +428,7 @@
                         <tfoot class="bg-gray-50">
                             <tr class="text-sm font-semibold">
                                 <td class="px-4 py-3 border text-right">Total</td>
+                                <td class="px-4 py-3 border text-center">—</td>
                                 <td class="px-4 py-3 border text-center">{{ $totalStockOutDamaged }}</td>
                                 <td colspan="2" class="px-4 py-3 border text-center">—</td>
                             </tr>
@@ -441,38 +438,6 @@
                 </div>
             </div>
         </div>
-
-    <!-- Stock Comparison Section -->
-    <!-- <div id="comparisonSection" class="tab-content hidden">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full table-auto border border-gray-100">
-                    <thead class="bg-gray-100 text-gray-700 text-sm">
-                        <tr>
-                            <th class="px-4 py-3 border">Metric</th>
-                            <th class="px-4 py-3 border">Stock In</th>
-                            <th class="px-4 py-3 border">Stock Out (Sales)</th>
-                            <th class="px-4 py-3 border">Stock Out (Damaged)</th>
-                            <th class="px-4 py-3 border">Total Stock Out</th>
-                            <th class="px-4 py-3 border">Net Movement</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="text-sm hover:bg-gray-50">
-                            <td class="px-4 py-3 border text-center font-medium">All Time</td>
-                            <td class="px-4 py-3 border text-center">{{ $totalStockIn }}</td>
-                            <td class="px-4 py-3 border text-center">{{ $totalStockOutSold }}</td>
-                            <td class="px-4 py-3 border text-center">{{ $totalStockOutDamaged }}</td>
-                            <td class="px-4 py-3 border text-center">{{ $totalStockOut }}</td>
-                            <td class="px-4 py-3 border text-center font-medium {{ ($totalStockIn - $totalStockOut) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $totalStockIn - $totalStockOut }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div> -->
 </div>
 
 <script>
@@ -496,7 +461,7 @@ function switchTab(tabName) {
     document.getElementById(tabName + 'Tab').classList.add('border-blue-500', 'text-blue-600');
     document.getElementById(tabName + 'Tab').classList.remove('border-transparent', 'text-gray-500');
 
-    // If switching to stock-out, show batch sub-tab by default
+    // If switching to stock-out, show sales sub-tab by default
     if (tabName === 'stockOut') {
         switchSubTab('sales');
     }
@@ -526,13 +491,34 @@ function switchSubTab(subTabName) {
 document.addEventListener('DOMContentLoaded', function() {
     // Setup table filtering
     setupTableFiltering('stockInSearch', 'stockInTableBody');
-    setupTableFiltering('salesSearch', 'salesTableBody');
     setupTableFiltering('damagedSearch', 'damagedTableBody');
     
     // Initialize with default sort
     sortStockInTable('date_desc');
     sortSalesTable('date_desc');
     sortDamagedTable('date_desc');
+    
+    // Add event listeners for sort dropdowns to trigger sorting immediately
+    const stockInSort = document.getElementById('stockInSort');
+    if (stockInSort) {
+        stockInSort.addEventListener('change', function() {
+            sortStockInTable(this.value);
+        });
+    }
+    
+    const salesSort = document.getElementById('salesSort');
+    if (salesSort) {
+        salesSort.addEventListener('change', function() {
+            sortSalesTable(this.value);
+        });
+    }
+    
+    const damagedSort = document.getElementById('damagedSort');
+    if (damagedSort) {
+        damagedSort.addEventListener('change', function() {
+            sortDamagedTable(this.value);
+        });
+    }
 });
 
 function setupTableFiltering(searchInputId, tableBodyId) {
@@ -559,7 +545,6 @@ function filterStockInTable() {
     const searchTerm = document.getElementById('stockInSearch').value.toLowerCase();
     const dateFrom = document.getElementById('dateFrom').value;
     const dateTo = document.getElementById('dateTo').value;
-    const sortValue = document.getElementById('stockInSort').value;
     
     const rows = document.querySelectorAll('#stockInTableBody tr');
     
@@ -586,9 +571,6 @@ function filterStockInTable() {
         
         row.style.display = shouldShow ? '' : 'none';
     });
-    
-    // Apply sorting
-    sortStockInTable(sortValue);
 }
 
 function sortStockInTable(sortValue = null) {
@@ -596,10 +578,18 @@ function sortStockInTable(sortValue = null) {
         sortValue = document.getElementById('stockInSort').value;
     }
     
+    // Skip if no valid sort option selected
+    if (!sortValue || sortValue === '') {
+        return;
+    }
+    
     const tableBody = document.getElementById('stockInTableBody');
     const rows = Array.from(tableBody.querySelectorAll('tr'));
     
-    rows.sort((a, b) => {
+    // Filter out the "No records" row if it exists
+    const dataRows = rows.filter(row => row.querySelector('td:not([colspan])'));
+    
+    dataRows.sort((a, b) => {
         switch(sortValue) {
             case 'date_desc':
                 return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
@@ -620,16 +610,23 @@ function sortStockInTable(sortValue = null) {
     
     // Clear and re-append sorted rows
     tableBody.innerHTML = '';
-    rows.forEach(row => {
-        tableBody.appendChild(row);
-    });
+    if (dataRows.length > 0) {
+        dataRows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+    } else {
+        // Re-add the "No records" row if that's all we have
+        rows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+    }
 }
 
 function resetStockInFilters() {
     document.getElementById('stockInSearch').value = '';
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value = '';
-    document.getElementById('stockInSort').value = 'date_desc';
+    document.getElementById('stockInSort').selectedIndex = 0; // Reset to "Select sort option"
     
     const rows = document.querySelectorAll('#stockInTableBody tr');
     rows.forEach(row => {
@@ -639,107 +636,16 @@ function resetStockInFilters() {
     sortStockInTable('date_desc');
 }
 
-// Batch Stock-Out Table Functions
-function filterBatchOutTable() {
-    const searchTerm = document.getElementById('batchOutSearch').value.toLowerCase();
-    const dateFrom = document.getElementById('batchOutDateFrom').value;
-    const dateTo = document.getElementById('batchOutDateTo').value;
-    const sortValue = document.getElementById('batchOutSort').value;
-    
-    const rows = document.querySelectorAll('#batchOutTableBody tr');
-    
-    rows.forEach(row => {
-        const batchNumber = row.getAttribute('data-batch')?.toLowerCase() || '';
-        const rowDate = new Date(parseInt(row.getAttribute('data-date')) * 1000);
-        let shouldShow = true;
-        
-        // Search filter
-        if (searchTerm && !batchNumber.includes(searchTerm)) {
-            shouldShow = false;
-        }
-        
-        // Date range filter
-        if (dateFrom) {
-            const fromDate = new Date(dateFrom);
-            if (rowDate < fromDate) shouldShow = false;
-        }
-        if (dateTo) {
-            const toDate = new Date(dateTo);
-            toDate.setHours(23, 59, 59, 999);
-            if (rowDate > toDate) shouldShow = false;
-        }
-        
-        row.style.display = shouldShow ? '' : 'none';
-    });
-    
-    sortBatchOutTable(sortValue);
-}
-
-function sortBatchOutTable(sortValue = null) {
-    if (!sortValue) {
-        sortValue = document.getElementById('batchOutSort').value;
-    }
-    
-    const tableBody = document.getElementById('batchOutTableBody');
-    const rows = Array.from(tableBody.querySelectorAll('tr'));
-    
-    rows.sort((a, b) => {
-        switch(sortValue) {
-            case 'date_desc':
-                return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
-            case 'date_asc':
-                return parseInt(a.getAttribute('data-date')) - parseInt(b.getAttribute('data-date'));
-            case 'batch_desc':
-                return b.getAttribute('data-batch').localeCompare(a.getAttribute('data-batch'));
-            case 'batch_asc':
-                return a.getAttribute('data-batch').localeCompare(b.getAttribute('data-batch'));
-            case 'quantity_desc':
-                return parseFloat(b.getAttribute('data-quantity')) - parseFloat(a.getAttribute('data-quantity'));
-            case 'quantity_asc':
-                return parseFloat(a.getAttribute('data-quantity')) - parseFloat(b.getAttribute('data-quantity'));
-            default:
-                return 0;
-        }
-    });
-    
-    tableBody.innerHTML = '';
-    rows.forEach(row => {
-        tableBody.appendChild(row);
-    });
-}
-
-function resetBatchOutFilters() {
-    document.getElementById('batchOutSearch').value = '';
-    document.getElementById('batchOutDateFrom').value = '';
-    document.getElementById('batchOutDateTo').value = '';
-    document.getElementById('batchOutSort').value = 'date_desc';
-    
-    const rows = document.querySelectorAll('#batchOutTableBody tr');
-    rows.forEach(row => {
-        row.style.display = '';
-    });
-    
-    sortBatchOutTable('date_desc');
-}
-
 // Sales Table Functions
 function filterSalesTable() {
-    const searchTerm = document.getElementById('salesSearch').value.toLowerCase();
     const dateFrom = document.getElementById('salesDateFrom').value;
     const dateTo = document.getElementById('salesDateTo').value;
-    const sortValue = document.getElementById('salesSort').value;
     
     const rows = document.querySelectorAll('#salesTableBody tr');
     
     rows.forEach(row => {
-        const rowText = row.textContent.toLowerCase();
         const rowDate = new Date(parseInt(row.getAttribute('data-date')) * 1000);
         let shouldShow = true;
-        
-        // Search filter
-        if (searchTerm && !rowText.includes(searchTerm)) {
-            shouldShow = false;
-        }
         
         // Date range filter
         if (dateFrom) {
@@ -754,8 +660,6 @@ function filterSalesTable() {
         
         row.style.display = shouldShow ? '' : 'none';
     });
-    
-    sortSalesTable(sortValue);
 }
 
 function sortSalesTable(sortValue = null) {
@@ -763,10 +667,18 @@ function sortSalesTable(sortValue = null) {
         sortValue = document.getElementById('salesSort').value;
     }
     
+    // Skip if no valid sort option selected
+    if (!sortValue || sortValue === '') {
+        return;
+    }
+    
     const tableBody = document.getElementById('salesTableBody');
     const rows = Array.from(tableBody.querySelectorAll('tr'));
     
-    rows.sort((a, b) => {
+    // Filter out the "No records" row if it exists
+    const dataRows = rows.filter(row => row.querySelector('td:not([colspan])'));
+    
+    dataRows.sort((a, b) => {
         switch(sortValue) {
             case 'date_desc':
                 return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
@@ -778,22 +690,30 @@ function sortSalesTable(sortValue = null) {
                 return parseFloat(a.getAttribute('data-quantity')) - parseFloat(b.getAttribute('data-quantity'));
             case 'amount_desc':
                 return parseFloat(b.getAttribute('data-amount')) - parseFloat(a.getAttribute('data-amount'));
+            case 'amount_asc':
+                return parseFloat(a.getAttribute('data-amount')) - parseFloat(b.getAttribute('data-amount'));
             default:
                 return 0;
         }
     });
     
     tableBody.innerHTML = '';
-    rows.forEach(row => {
-        tableBody.appendChild(row);
-    });
+    if (dataRows.length > 0) {
+        dataRows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+    } else {
+        // Re-add the "No records" row if that's all we have
+        rows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+    }
 }
 
 function resetSalesFilters() {
-    document.getElementById('salesSearch').value = '';
     document.getElementById('salesDateFrom').value = '';
     document.getElementById('salesDateTo').value = '';
-    document.getElementById('salesSort').value = 'date_desc';
+    document.getElementById('salesSort').selectedIndex = 0; // Reset to "Select sort option"
     
     const rows = document.querySelectorAll('#salesTableBody tr');
     rows.forEach(row => {
@@ -808,7 +728,6 @@ function filterDamagedTable() {
     const searchTerm = document.getElementById('damagedSearch').value.toLowerCase();
     const dateFrom = document.getElementById('damagedDateFrom').value;
     const dateTo = document.getElementById('damagedDateTo').value;
-    const sortValue = document.getElementById('damagedSort').value;
     
     const rows = document.querySelectorAll('#damagedTableBody tr');
     
@@ -835,8 +754,6 @@ function filterDamagedTable() {
         
         row.style.display = shouldShow ? '' : 'none';
     });
-    
-    sortDamagedTable(sortValue);
 }
 
 function sortDamagedTable(sortValue = null) {
@@ -844,10 +761,18 @@ function sortDamagedTable(sortValue = null) {
         sortValue = document.getElementById('damagedSort').value;
     }
     
+    // Skip if no valid sort option selected
+    if (!sortValue || sortValue === '') {
+        return;
+    }
+    
     const tableBody = document.getElementById('damagedTableBody');
     const rows = Array.from(tableBody.querySelectorAll('tr'));
     
-    rows.sort((a, b) => {
+    // Filter out the "No records" row if it exists
+    const dataRows = rows.filter(row => row.querySelector('td:not([colspan])'));
+    
+    dataRows.sort((a, b) => {
         switch(sortValue) {
             case 'date_desc':
                 return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
@@ -867,16 +792,23 @@ function sortDamagedTable(sortValue = null) {
     });
     
     tableBody.innerHTML = '';
-    rows.forEach(row => {
-        tableBody.appendChild(row);
-    });
+    if (dataRows.length > 0) {
+        dataRows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+    } else {
+        // Re-add the "No records" row if that's all we have
+        rows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+    }
 }
 
 function resetDamagedFilters() {
     document.getElementById('damagedSearch').value = '';
     document.getElementById('damagedDateFrom').value = '';
     document.getElementById('damagedDateTo').value = '';
-    document.getElementById('damagedSort').value = 'date_desc';
+    document.getElementById('damagedSort').selectedIndex = 0; // Reset to "Select sort option"
     
     const rows = document.querySelectorAll('#damagedTableBody tr');
     rows.forEach(row => {
@@ -1004,5 +936,30 @@ function printProductBarcode(barcode, productName) {
     doc.close();
 }
 </script>
+
+<!-- Initialize Barcode Display -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate barcode image for display
+    const barcodeElement = document.getElementById('product-barcode-display');
+    if (barcodeElement && typeof JsBarcode !== 'undefined') {
+        try {
+            JsBarcode(barcodeElement, "{{ $product->barcode }}", {
+                format: "CODE128",
+                lineColor: "#000000",
+                width: 2,
+                height: 50,
+                displayValue: false,
+                margin: 5
+            });
+        } catch (error) {
+            console.error('Error generating barcode:', error);
+            // Hide the SVG if barcode generation fails
+            barcodeElement.style.display = 'none';
+        }
+    }
+});
+</script>
+
 
 @endsection

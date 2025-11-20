@@ -72,8 +72,8 @@
                 <button
                     id="filterToggle"
                     type="button"
-                    class="flex items-center border border-[#FF8A00] text-[#FF8A00] bg-transparent px-4 py-2 mb-4 rounded hover:bg-orange-50 transition">
-                    <span class="material-symbols-outlined mr-2 text-[#FF8A00]">filter_alt</span> Filter
+                    class="flex items-center border border-[#FF8A00] text-[#FF8A00] text-sm bg-transparent px-4 py-2 mb-4 rounded hover:bg-orange-50 transition">
+                    <span class="material-symbols-outlined mr-2 text-[#FF8A00]">filter_alt</span> Category
                 </button>
 
                 <div id="categoryDropdown"
@@ -229,15 +229,37 @@
 
             
 <div class="overflow-x-auto bg-white rounded-lg shadow">
-    <!-- Add this info badge above the table -->
-    <div class="px-4 py-2 bg-gray-100">
+    <!-- Header with Tip and Filter -->
+    <div class="px-4 py-2 bg-gray-100 flex justify-between items-center">
         <p class="text-xs text-gray-400 flex items-center gap-2">
             <span class="material-symbols-outlined text-sm">info</span>
             <span><strong>Tip:</strong> Click on any product row to quickly restock that item</span>
         </p>
+        
+        <div class="flex items-center gap-2">
+            <label for="stockFilter" class="text-xs text-gray-600 font-medium">Filter:</label>
+            <select id="stockFilter" 
+                    class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100"
+                    onchange="filterProductTable()">
+                <option value="all">All Products</option>
+                <option value="out-of-stock">Out of Stock</option>
+                <option value="low-stock">Low Stock</option>
+            </select>
+        </div>
     </div>
-    <table class="min-w-full table-auto border border-gray-100">
-        <thead class="bg-gray-100 text-gray-700 text-md">
+
+    <table class="min-w-full table-fixed border-4 border-gray-100">
+        <colgroup>
+            <col style="width: 100px;"> <!-- Image -->
+            <col style="width: 130px;"> <!-- Barcode -->
+            <col style="width: auto;"> <!-- Name (flexible) -->
+            <col style="width: 120px;"> <!-- Cost Price -->
+            <col style="width: 120px;"> <!-- Selling Price -->
+            <col style="width: 80px;"> <!-- Unit -->
+            <col style="width: 150px;"> <!-- Current Stock -->
+            <col style="width: 140px;"> <!-- Actions -->
+        </colgroup>
+        <thead class="bg-gray-100 text-gray-700 text-sm">
             <tr>
                 <th class="px-4 py-3">Image</th>
                 <th class="px-4 py-3">Barcode</th>
@@ -245,13 +267,29 @@
                 <th class="px-4 py-3">Cost Price</th>
                 <th class="px-4 py-3">Selling Price</th>
                 <th class="px-4 py-3">Unit</th>
-                <th class="px-4 py-3">Current Stock</th> <!-- Changed from "Stock" to "Total Stock" -->
+                <th class="px-4 py-3">Current Stock</th>
                 <th class="px-4 py-3 text-center">Actions</th>
             </tr>
         </thead>
         <tbody class="text-sm text-gray-800">
             @forelse ($products as $product)
-                <tr class="hover:bg-gray-100 cursor-pointer transition-colors duration-150" 
+                @php
+                    $rowClass = '';
+                    $stockStatus = 'healthy';
+                    
+                    if ($product->current_stock <= 0) {
+                        $rowClass = 'bg-red-50 hover:bg-red-100 border-l-4 border-red-400';
+                        $stockStatus = 'out-of-stock';
+                    } elseif ($product->current_stock <= $product->stock_limit) {
+                        $rowClass = 'bg-yellow-50 hover:bg-yellow-100 border-l-4 border-yellow-400';
+                        $stockStatus = 'low-stock';
+                    } else {
+                        $rowClass = 'hover:bg-gray-100';
+                    }
+                @endphp
+                
+                <tr class="cursor-pointer transition-colors duration-150 product-row {{ $rowClass }}" 
+                    data-stock-status="{{ $stockStatus }}"
                     onclick="openQuickRestockForProduct(
                         '{{ $product->prod_code }}', 
                         '{{ addslashes($product->name) }}', 
@@ -262,23 +300,29 @@
                     <!-- Product Image -->
                     <td class="px-4 py-2 border text-center">
                         @if($product->prod_image)
-                        <img src="{{ Str::startsWith($product->prod_image, 'assets/') 
-                                ? asset($product->prod_image) 
-                                : asset('storage/' . $product->prod_image) }}"
-                            alt="Product Image"
-                            class="h-16 w-16 object-cover rounded mx-auto">
+                            <img src="{{ Str::startsWith($product->prod_image, 'assets/') ? asset($product->prod_image) : asset('storage/' . $product->prod_image) }}"
+                                alt="Product Image"
+                                class="h-16 w-16 object-cover rounded mx-auto">
                         @else
-                        <img src="{{ asset('assets/no-product.png') }}"
-                            alt="Image Not Found"
-                            class="h-16 w-16 object-cover rounded mx-auto">
+                            <img src="{{ asset('assets/no-product.png') }}"
+                                alt="Image Not Found"
+                                class="h-16 w-16 object-cover rounded mx-auto">
                         @endif
                     </td>
 
                     <!-- Barcode -->
-                    <td class="px-4 py-2 border text-center">{{ $product->barcode }}</td>
+                    <td class="px-4 py-2 border text-center">
+                        <span class="block truncate" title="{{ $product->barcode }}">
+                            {{ $product->barcode }}
+                        </span>
+                    </td>
 
                     <!-- Name -->
-                    <td class="px-4 py-2 border">{{ $product->name }}</td>
+                    <td class="px-4 py-2 border">
+                        <span class="block truncate max-w-full" title="{{ $product->name }}">
+                            {{ Str::limit($product->name, 45, '...') }}
+                        </span>
+                    </td>
 
                     <!-- Cost Price -->
                     <td class="px-4 py-2 border text-right">
@@ -294,63 +338,89 @@
                     <td class="px-4 py-2 border text-center">{{ $product->unit ?? '—' }}</td>
 
                     <!-- Remaining Stock -->
-                    <td class="px-4 py-2 border text-center ">
-                        {{ $product->current_stock }}
+                    <td class="px-4 py-2 border text-center">
+                        @php
+                            $count = $product->current_stock;
+                            $label = $count == 1 ? 'stock left' : 'stocks left';
+                        @endphp
+                        
+                        <div class="flex items-center justify-center gap-2">
+                            @if($count <= 0)
+                                <span class="inline-flex items-center gap-1 px-2 py-2 text-xs font-semibold bg-red-100 text-red-700 rounded-full cursor-help">
+                                    Out of stock
+                                </span>
+                            @elseif($count <= $product->stock_limit)
+                                <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full animate-pulse cursor-help" 
+                                    title="LOW STOCK WARNING! Current: {{ $count }} | Minimum required: {{ $product->stock_limit }}">
+                                    <span class="material-symbols-outlined text-sm">warning</span>
+                                    {{ $count }} {{ $label }}
+                                </span>
+                            @else
+                                <span class="font-semibold text-gray-800 cursor-help" 
+                                    title="Stock level healthy. Current: {{ $count }} | Minimum: {{ $product->stock_limit }}">
+                                    {{ $count }}
+                                </span>
+                            @endif
+                        </div>
                     </td>
 
                     <!-- Actions -->
-                    <td class="px-4 py-2 border text-center space-x-2" onclick="event.stopPropagation()">
-                        <!-- Info -->
-                        <a href="{{ route('inventory-product-info', $product->prod_code) }}"
-                            class="text-blue-500 hover:text-blue-700">
-                            <span class="material-symbols-outlined">info</span>
-                        </a>
+                    <td class="px-4 py-2 border text-center" onclick="event.stopPropagation()">
+                        <div class="flex items-center justify-center gap-2">
+                            <!-- Info -->
+                            <a href="{{ route('inventory-product-info', $product->prod_code) }}"
+                                class="text-blue-500 hover:text-blue-700">
+                                <span class="material-symbols-outlined">info</span>
+                            </a>
 
-                        <!-- Edit -->
-                        <a href="{{$expired ? '' : route('inventory-owner-edit', $product->prod_code)}}"
-                            onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
-                            title="Edit" class="text-green-500 hover:text-green-700
-                            {{ $expired ? 'cursor-not-allowed' : '' }}">
-                            <span class="material-symbols-outlined">edit</span>
-                        </a>
-                        <!-- Archive / Unarchive Button -->
-                        @if ($product->prod_status === 'active')
-                        <button type="button"
-                            class="text-red-500 hover:text-red-700 {{ $expired ? 'cursor-not-allowed' : '' }}"
-                            title="Archive"
-                            @if(!$expired)
-                            onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                            <!-- Edit -->
+                            @php
+                                $editDisabled = $expired ? 'cursor-not-allowed' : '';
+                            @endphp
+                            <a href="{{ $expired ? '' : route('inventory-owner-edit', $product->prod_code) }}"
+                                onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
+                                title="Edit" class="text-green-500 hover:text-green-700 {{ $editDisabled }}">
+                                <span class="material-symbols-outlined">edit</span>
+                            </a>
+                            
+                            <!-- Archive / Unarchive Button -->
+                            @if ($product->prod_status === 'active')
+                                <button type="button"
+                                    class="text-red-500 hover:text-red-700 {{ $expired ? 'cursor-not-allowed' : '' }}"
+                                    title="Archive"
+                                    @if(!$expired)
+                                        onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                    @else
+                                        disabled
+                                    @endif>
+                                    <span class="material-symbols-outlined">archive</span>
+                                </button>
                             @else
-                            disabled
-                            @endif>
-                            <span class="material-symbols-outlined">archive</span>
-                        </button>
-
-                        @else
-                        <button type="button"
-                            class="text-orange-400 hover:text-orange-600 {{ $expired ? 'cursor-not-allowed' : '' }}"
-                            title="Unarchive"
-                            @if(!$expired)
-                            onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
-                            @else
-                            disabled
-                            @endif>
-                            <span class="material-symbols-outlined">unarchive</span>
-                        </button>
-
-                        @endif
+                                <button type="button"
+                                    class="text-orange-400 hover:text-orange-600 {{ $expired ? 'cursor-not-allowed' : '' }}"
+                                    title="Unarchive"
+                                    @if(!$expired)
+                                        onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                    @else
+                                        disabled
+                                    @endif>
+                                    <span class="material-symbols-outlined">unarchive</span>
+                                </button>
+                            @endif
+                        </div>
                     </td>
                 </tr>
-                @empty
-                <tr>
+            @empty
+                <tr class="no-products-row">
                     <td colspan="8" class="text-center py-4 text-gray-500">
                         No products available.
                     </td>
                 </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
 
 
     <!-- Archive / Unarchive Confirmation Modal -->
@@ -511,7 +581,7 @@
 
 
 
-    <!-- Choose Products Modal -->
+    <!-- Choose Products Modal for Restock -->
     <div id="chooseProductsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-white rounded-2xl p-6 w-[95%] max-w-4xl shadow-xl relative">
             <button id="closeChooseProductsModal" class="absolute top-4 right-4 text-gray-500">
@@ -713,35 +783,40 @@
     </div>
 
 
-    <!-- Custom Category Modal -->
-    <div id="customCategoryBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
-        <div class="bg-white rounded-lg w-[40%] min-h-[300px] shadow-lg relative flex flex-col items-center">
-            <!-- Red Top Bar -->
-            <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-                <h2 class="text-white text-lg font-medium">Enter New Category</h2>
-                <button onclick="closeCustomCategoryBarcodeModal()" class="text-white hover:text-gray-200">
-                    <span class="material-symbols-outlined text-white">close</span>
-                </button>
-            </div>
+    <!-- Custom Add Category Modal for Barcode Generation-->
+    <div id="customCategoryBarcodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 w-[90%] max-w-md shadow-xl relative">
+            <!-- Close Button -->
+            <button onclick="closeCustomCategoryBarcodeModalCompletely()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition">
+                <span class="material-symbols-outlined">close</span>
+            </button>
 
-            <!-- Modal Content -->
-            <div class="flex-1 w-full flex flex-col items-center justify-center px-6 py-8 space-y-6">
-                <input type="text" id="newCategoryName"
-                    placeholder="Enter category name"
-                    class="w-3/4 px-4 py-3 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-center text-sm"
-                    maxlength="50">
+            <!-- Header -->
+            <h2 class="text-xl font-bold text-center text-[#B50612] mb-6">Add New Category</h2>
 
-                <div class="flex gap-4">
-                    <button onclick="closeCustomCategoryBarcodeModal()"
-                        class="bg-gray-500 text-white text-sm px-6 py-3 rounded-3xl hover:bg-gray-600 transition-all duration-200">
+            <!-- Form -->
+            <form id="customCategoryBarcodeForm" onsubmit="event.preventDefault(); confirmCustomCategory();">
+                <div class="mb-4">
+                    <label for="newCategoryNameBarcode" class="block text-sm font-medium text-gray-700 mb-1">
+                        Category Name
+                    </label>
+                    <input type="text" id="newCategoryNameBarcode" name="category" required placeholder="Enter category name"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-[#B50612] focus:border-[#B50612] placeholder-gray-400 text-sm"
+                        maxlength="50">
+                    <!-- Error message will be inserted here dynamically -->
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeCustomCategoryBarcodeModal()"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
                         Cancel
                     </button>
-                    <button onclick="confirmCustomCategory()"
-                        class="bg-[#B50612] text-white text-sm px-6 py-3 rounded-3xl hover:bg-red-700 transition-all duration-200">
-                        Confirm
+                    <button type="submit" id="saveCategoryBarcodeBtn"
+                        class="px-4 py-2 bg-[#B50612] text-white font-medium rounded-lg hover:bg-[#9E0410] transition">
+                        Save Category
                     </button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
@@ -1123,6 +1198,33 @@
             }
         });
     </script>
+
+    
+    <script> // low stock & Out of Stock filter
+    function filterProductTable() {
+        const filterValue = document.getElementById('stockFilter').value;
+        const rows = document.querySelectorAll('.product-row');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const stockStatus = row.getAttribute('data-stock-status');
+            
+            if (filterValue === 'all' || filterValue === stockStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Handle "no products" message
+        const noProductsRow = document.querySelector('.no-products-row');
+        if (noProductsRow) {
+            noProductsRow.style.display = visibleCount === 0 ? '' : 'none';
+        }
+    }
+    </script>
+
 
     <script>
         const addProductBtn = document.getElementById('addProductBtn');
@@ -1948,18 +2050,18 @@
         }
 
         // Your existing function - keep this exactly as is
-        function openRegisterModal(barcode) {
-            closeAllModals();
-            const modal = document.getElementById('registerProductModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex'); 
-            }
+        // function openRegisterModal(barcode) {
+        //     closeAllModals();
+        //     const modal = document.getElementById('registerProductModal');
+        //     if (modal) {
+        //         modal.classList.remove('hidden');
+        //         modal.classList.add('flex'); 
+        //     }
 
-            // Auto-fill barcode in the register modal
-            const barcodeElement = document.getElementById('autoFilledBarcode');
-            if (barcodeElement) barcodeElement.textContent = barcode || '';
-        }
+        //     // Auto-fill barcode in the register modal
+        //     const barcodeElement = document.getElementById('autoFilledBarcode');
+        //     if (barcodeElement) barcodeElement.textContent = barcode || '';
+        // }
 
         // Function to detect if we're in registration context - IMPROVED
         function isRegistrationContext() {
@@ -2261,9 +2363,10 @@
         // Category Selection Handler
         window.selectCategoryForBarcode = function(categoryId, categoryName) {
             if (categoryId === 'new') {
-                // Open custom category modal
-                closeAllModals();
+                // Close choose category modal and open custom category modal
+                document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
                 document.getElementById('customCategoryBarcodeModal').classList.remove('hidden');
+                document.getElementById('customCategoryBarcodeModal').classList.add('flex');
                 document.getElementById('newCategoryName').value = '';
                 document.getElementById('newCategoryName').focus();
             } else {
@@ -2277,21 +2380,241 @@
             }
         };
 
-        // Confirm Custom Category
-        function confirmCustomCategory() {
-            const customName = document.getElementById('newCategoryName').value.trim();
+        // Confirm Custom Category for Barcode Generation
+        window.confirmCustomCategory = async function() {
+            const customName = document.getElementById('newCategoryNameBarcode').value.trim();
+            const saveCategoryBarcodeBtn = document.getElementById('saveCategoryBarcodeBtn');
+            
             if (!customName) {
-                alert("Please enter a category name.");
+                showToast("Please enter a category name.", 'error');
                 return;
             }
 
-            selectedCategoryData = {
-                id: 'new',
-                name: customName,
-                isNew: true
-            };
-            proceedToBarcodeGeneration();
-        }
+            // Check for existing categories
+            const checkFunction = window.checkExistingName || checkExistingNameLocal;
+            const response = await checkFunction('category', customName);
+            
+            // Block exact matches
+            if (response && response.exists && response.isExactMatch) {
+                showToast(`Cannot submit: Category "${customName}" already exists as "${response.existingName}"`, 'error');
+                saveCategoryBarcodeBtn.disabled = true;
+                saveCategoryBarcodeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+            
+            // Confirm similar matches
+            let userConfirmed = false;
+            if (response && response.exists && !response.isExactMatch) {
+                const proceed = confirm(
+                    `Similar category found: "${response.existingName}"\n\n` +
+                    `You're adding: "${customName}"\n\n` +
+                    `These appear similar but are not identical.\n` +
+                    `Proceed with adding this new category?`
+                );
+                
+                if (!proceed) {
+                    return;
+                }
+                userConfirmed = true;
+            }
+
+            // Disable button during submission
+            saveCategoryBarcodeBtn.disabled = true;
+            saveCategoryBarcodeBtn.textContent = 'Saving...';
+
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('category', customName);
+            
+            if (userConfirmed) {
+                formData.append('confirmed_similar', '1');
+            }
+
+            try {
+                const submitResponse = await fetch('/inventory/add-category', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+                    },
+                    body: formData
+                });
+
+                const data = await submitResponse.json();
+
+                if (data.success) {
+                    showToast('Category added successfully!', 'success');
+                    
+                    // ✅ ADD THE NEW CATEGORY TO THE DROPDOWN IMMEDIATELY
+                    const categorySelect = document.getElementById('categorySelect');
+                    if (categorySelect && data.category_id) {
+                        // ✅ IMPORTANT: Remove any existing option with same ID first (prevent duplicates)
+                        const existingOption = categorySelect.querySelector(`option[value="${data.category_id}"]`);
+                        if (existingOption) {
+                            existingOption.remove();
+                        }
+                        
+                        // Create new option element
+                        const newOption = document.createElement('option');
+                        newOption.value = data.category_id; // ✅ Make sure this is a string
+                        newOption.textContent = customName;
+                        
+                        // Insert before the "Other..." option
+                        const otherOption = Array.from(categorySelect.options).find(opt => 
+                            opt.value === 'other' || opt.textContent.toLowerCase().includes('other')
+                        );
+                        if (otherOption) {
+                            categorySelect.insertBefore(newOption, otherOption);
+                        } else {
+                            categorySelect.appendChild(newOption);
+                        }
+                        
+                        console.log('Added category to dropdown:', { id: data.category_id, name: customName }); // Debug log
+                    }
+                    
+                    // Store the new category data with the actual ID from database
+                    selectedCategoryData = {
+                        id: String(data.category_id), // ✅ Ensure it's a string
+                        name: customName,
+                        isNew: false // ✅ Set to false since it's now in the dropdown
+                    };
+                    
+                    console.log('Selected category data:', selectedCategoryData); // Debug log
+                    
+                    // Close custom category modal
+                    document.getElementById('customCategoryBarcodeModal').classList.add('hidden');
+                    document.getElementById('customCategoryBarcodeModal').classList.remove('flex');
+                    
+                    // Proceed to barcode generation
+                    proceedToBarcodeGeneration();
+                    
+                } else {
+                    // Re-enable button on error
+                    saveCategoryBarcodeBtn.disabled = false;
+                    saveCategoryBarcodeBtn.textContent = 'Save Category';
+                    
+                    if (data.isExactMatch) {
+                        showToast(data.message, 'error');
+                    } else {
+                        const proceed = confirm(`${data.message}\n\nProceed anyway?`);
+                        
+                        if (proceed) {
+                            formData.append('confirmed_similar', '1');
+                            const retryResponse = await fetch('/inventory/add-category', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+                                },
+                                body: formData
+                            });
+                            
+                            const retryData = await retryResponse.json();
+                            if (retryData.success) {
+                                showToast('Category added successfully!', 'success');
+                                
+                                // ✅ ADD THE NEW CATEGORY TO THE DROPDOWN IMMEDIATELY
+                                const categorySelect = document.getElementById('categorySelect');
+                                if (categorySelect && retryData.category_id) {
+                                    const newOption = document.createElement('option');
+                                    newOption.value = retryData.category_id;
+                                    newOption.textContent = customName;
+                                    
+                                    const otherOption = Array.from(categorySelect.options).find(opt => opt.value === 'other');
+                                    if (otherOption) {
+                                        categorySelect.insertBefore(newOption, otherOption);
+                                    } else {
+                                        categorySelect.appendChild(newOption);
+                                    }
+                                }
+                                
+                                selectedCategoryData = {
+                                    id: retryData.category_id,
+                                    name: customName,
+                                    isNew: false // ✅ Set to false since it's now in the dropdown
+                                };
+                                
+                                document.getElementById('customCategoryBarcodeModal').classList.add('hidden');
+                                document.getElementById('customCategoryBarcodeModal').classList.remove('flex');
+                                proceedToBarcodeGeneration();
+                            } else {
+                                showToast(retryData.message, 'error');
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error adding category:', error);
+                showToast('Error adding category. Please try again.', 'error');
+                
+                // Re-enable button on error
+                saveCategoryBarcodeBtn.disabled = false;
+                saveCategoryBarcodeBtn.textContent = 'Save Category';
+            }
+        };
+
+
+        // Real-time validation for barcode generation category input
+        document.addEventListener("DOMContentLoaded", () => {
+            const newCategoryInputBarcode = document.getElementById('newCategoryNameBarcode');
+            const saveCategoryBarcodeBtn = document.getElementById('saveCategoryBarcodeBtn');
+
+            if (newCategoryInputBarcode && saveCategoryBarcodeBtn) {
+                let categoryTimeout;
+                
+                newCategoryInputBarcode.addEventListener('input', function() {
+                    clearTimeout(categoryTimeout);
+                    
+                    const existingError = this.parentNode.querySelector('.duplicate-error');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                    
+                    if (!this.value.trim()) {
+                        this.classList.remove('border-red-500', 'border-yellow-500');
+                        saveCategoryBarcodeBtn.disabled = false;
+                        saveCategoryBarcodeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        return;
+                    }
+                    
+                    categoryTimeout = setTimeout(async () => {
+                        const checkFunction = window.checkExistingName || checkExistingNameLocal;
+                        const response = await checkFunction('category', this.value);
+                        
+                        if (response && response.exists) {
+                            const errorDiv = document.createElement('div');
+                            
+                            if (response.isExactMatch) {
+                                // Red error for exact match - DISABLE BUTTON
+                                errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
+                                errorDiv.innerHTML = `Category already exists: <strong>"${response.existingName}"</strong>`;
+                                this.classList.add('border-red-500');
+                                this.classList.remove('border-yellow-500');
+                                
+                                saveCategoryBarcodeBtn.disabled = true;
+                                saveCategoryBarcodeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                                
+                            } else {
+                                // Yellow warning for similar match - KEEP BUTTON ENABLED
+                                errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
+                                errorDiv.innerHTML = `Similar category exists: "<strong>${response.existingName}</strong>"<br>
+                                                    <span class="text-gray-600">You can proceed, but consider using the existing category</span>`;
+                                this.classList.add('border-yellow-500');
+                                this.classList.remove('border-red-500');
+                                
+                                saveCategoryBarcodeBtn.disabled = false;
+                                saveCategoryBarcodeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            }
+                            
+                            this.parentNode.appendChild(errorDiv);
+                        } else {
+                            this.classList.remove('border-red-500', 'border-yellow-500');
+                            saveCategoryBarcodeBtn.disabled = false;
+                            saveCategoryBarcodeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }, 500);
+                });
+            }
+        });
+
 
         // Proceed to Barcode Generation Modal
         function proceedToBarcodeGeneration() {
@@ -2361,6 +2684,7 @@
             document.getElementById("goBackBtn").addEventListener("click", () => {
                 closeGenerateBarcodeModal();
                 document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
+                document.getElementById('chooseCategoryBarcodeModal').classList.add('flex');
             });
 
             // Enter key in custom category input
@@ -2371,10 +2695,10 @@
             });
         });
 
-        // Proceed to Registration
+        // ✅ MODIFIED: Proceed to Registration with Category Pre-fill
         function proceedToRegistration() {
             closeAllModals();
-            openRegisterModal(currentBarcode);
+            openRegisterModal(currentBarcode, selectedCategoryData);
         }
 
         // Close Modal Functions
@@ -2393,165 +2717,90 @@
             document.body.classList.remove('modal-open');
         }
 
-        function closeCustomCategoryBarcodeModal() {
-            document.getElementById('customCategoryBarcodeModal').classList.add('hidden');
+        // Close Custom Category Modal
+        window.closeCustomCategoryBarcodeModal = function() {
+            const modal = document.getElementById('customCategoryBarcodeModal');
+            const input = document.getElementById('newCategoryNameBarcode');
+            const saveCategoryBarcodeBtn = document.getElementById('saveCategoryBarcodeBtn');
+            
+            // Hide modal
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // Clear input and errors
+            if (input) {
+                input.value = '';
+                input.classList.remove('border-red-500', 'border-yellow-500');
+                
+                const existingError = input.parentNode.querySelector('.duplicate-error');
+                if (existingError) {
+                    existingError.remove();
+                }
+            }
+            
+            // Re-enable button
+            if (saveCategoryBarcodeBtn) {
+                saveCategoryBarcodeBtn.disabled = false;
+                saveCategoryBarcodeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                saveCategoryBarcodeBtn.textContent = 'Save Category';
+            }
+            
             // Return to category selection
             document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
-        }
+            document.getElementById('chooseCategoryBarcodeModal').classList.add('flex');
+        };
 
         function closeGenerateBarcodeModal() {
             document.getElementById('generateBarcodeModal').classList.add('hidden');
         }
+
+        // Close button that exits to inventory home
+        window.closeCustomCategoryBarcodeModalCompletely = function() {
+            const modal = document.getElementById('customCategoryBarcodeModal');
+            const input = document.getElementById('newCategoryNameBarcode');
+            const saveCategoryBarcodeBtn = document.getElementById('saveCategoryBarcodeBtn');
+            
+            // Hide modal
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // Clear input and errors
+            if (input) {
+                input.value = '';
+                input.classList.remove('border-red-500', 'border-yellow-500');
+                
+                const existingError = input.parentNode.querySelector('.duplicate-error');
+                if (existingError) {
+                    existingError.remove();
+                }
+            }
+            
+            // Re-enable button
+            if (saveCategoryBarcodeBtn) {
+                saveCategoryBarcodeBtn.disabled = false;
+                saveCategoryBarcodeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                saveCategoryBarcodeBtn.textContent = 'Save Category';
+            }
+            
+            // Reset selected category data
+            selectedCategoryData = {
+                id: null,
+                name: '',
+                isNew: false
+            };
+            
+            //  CLOSE ALL MODALS - Exit to inventory home
+            closeAllModals();
+            
+            console.log('✅ All modals closed - returned to inventory home');
+        };
 
 </script>
 
 <script>
     // === Barcode Generation Category Functions ===
 
-    // Open Add Category Modal for Barcode Generation
-    window.openAddCategoryModalForBarcode = function() {
-        document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
-        const modal = document.getElementById('addCategoryModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        
-        // ✅ Set flag to indicate this modal was opened from barcode flow
-        modal.setAttribute('data-opened-from', 'barcode');
-        
-        // Clear input and errors
-        const categoryInput = document.getElementById('newCategoryName');
-        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
-        
-        categoryInput.value = '';
-        categoryInput.classList.remove('border-red-500', 'border-yellow-500');
-        categoryInput.focus();
-        
-        // Remove any existing error messages
-        const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
-        if (existingError) {
-            existingError.remove();
-        }
-        
-        // Re-enable button
-        if (saveCategoryBtn) {
-            saveCategoryBtn.disabled = false;
-            saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            saveCategoryBtn.textContent = 'Save Category';
-        }
-
-        // Setup barcode-specific form and validation
-        setupBarcodeCategoryForm();
-        setupBarcodeCategoryValidation();
-    };
-
-    // Close Add Category Modal for Barcode Generation
-    function closeAddCategoryModalForBarcode() {
-        const modal = document.getElementById('addCategoryModal');
-        modal.classList.add('hidden');
-        
-        // Remove the flag
-        modal.removeAttribute('data-opened-from');
-        
-        // Clear input and errors
-        const categoryInput = document.getElementById('newCategoryName');
-        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
-        
-        if (categoryInput) {
-            categoryInput.value = '';
-            categoryInput.classList.remove('border-red-500', 'border-yellow-500');
-            
-            const existingError = categoryInput.parentNode.querySelector('.duplicate-error');
-            if (existingError) {
-                existingError.remove();
-            }
-        }
-        
-        // Re-enable button
-        if (saveCategoryBtn) {
-            saveCategoryBtn.disabled = false;
-            saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            saveCategoryBtn.textContent = 'Save Category';
-        }
-        
-        // Return to barcode category selection modal
-        document.getElementById('chooseCategoryBarcodeModal').classList.remove('hidden');
-        document.getElementById('chooseCategoryBarcodeModal').classList.add('flex');
-    }
-
-    // ✅ Setup real-time validation for barcode category input
-    function setupBarcodeCategoryValidation() {
-        const categoryInput = document.getElementById('newCategoryName');
-        const saveCategoryBtn = document.getElementById('saveCategoryBtn');
-        
-        if (!categoryInput || !saveCategoryBtn) return;
-
-        let categoryTimeout;
-        
-        // Remove any existing input listeners by cloning
-        const newInput = categoryInput.cloneNode(true);
-        categoryInput.parentNode.replaceChild(newInput, categoryInput);
-        
-        newInput.addEventListener('input', function() {
-            clearTimeout(categoryTimeout);
-            
-            // Remove existing error
-            const existingError = this.parentNode.querySelector('.duplicate-error');
-            if (existingError) {
-                existingError.remove();
-            }
-            
-            // Remove border colors and enable button if input is empty
-            if (!this.value.trim()) {
-                this.classList.remove('border-red-500', 'border-yellow-500');
-                saveCategoryBtn.disabled = false;
-                saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                return;
-            }
-            
-            // Check for duplicates after 500ms delay
-            categoryTimeout = setTimeout(async () => {
-                const checkFunction = window.checkExistingName || checkExistingNameLocal;
-                const response = await checkFunction('category', this.value);
-                
-                if (response && response.exists) {
-                    const errorDiv = document.createElement('div');
-                    
-                    if (response.isExactMatch) {
-                        // ❌ EXACT MATCH: Red border, blocking message, DISABLE BUTTON
-                        errorDiv.className = 'duplicate-error text-red-600 text-xs mt-1 font-semibold';
-                        errorDiv.innerHTML = `❌ Category already exists: <strong>"${response.existingName}"</strong>`;
-                        this.classList.add('border-red-500');
-                        this.classList.remove('border-yellow-500');
-                        
-                        // ✅ DISABLE the submit button
-                        saveCategoryBtn.disabled = true;
-                        saveCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                        
-                    } else {
-                        // ⚠️ SIMILAR MATCH: Yellow border, warning message, KEEP BUTTON ENABLED
-                        errorDiv.className = 'duplicate-error text-yellow-600 text-xs mt-1';
-                        errorDiv.innerHTML = `⚠️ Similar category exists: "<strong>${response.existingName}</strong>"<br>
-                                            <span class="text-gray-600">You can proceed, but consider using the existing category</span>`;
-                        this.classList.add('border-yellow-500');
-                        this.classList.remove('border-red-500');
-                        
-                        // ✅ ENABLE the submit button (user can proceed with warning)
-                        saveCategoryBtn.disabled = false;
-                        saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    }
-                    
-                    this.parentNode.appendChild(errorDiv);
-                } else {
-                    // ✅ No duplicates found - enable button
-                    this.classList.remove('border-red-500', 'border-yellow-500');
-                    saveCategoryBtn.disabled = false;
-                    saveCategoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            }, 500);
-        });
-    }
-
-    // ✅ Local check function (fallback if global not available)
+    // Local check function (fallback if global not available)
     async function checkExistingNameLocal(type, value) {
         if (!value.trim()) return null;
         
@@ -2657,9 +2906,9 @@
                 alert('Category added successfully!');
                 closeAddCategoryModalForBarcode();
 
-                // Update the selected category data and proceed to barcode generation
+                // ✅ MODIFIED: Store the new category ID if returned from backend
                 selectedCategoryData = {
-                    id: 'new',
+                    id: data.category_id || 'new', // Use returned ID if available
                     name: categoryName,
                     isNew: true
                 };
@@ -2696,7 +2945,7 @@
                             closeAddCategoryModalForBarcode();
                             
                             selectedCategoryData = {
-                                id: 'new',
+                                id: retryData.category_id || 'new',
                                 name: categoryName,
                                 isNew: true
                             };
@@ -2719,8 +2968,37 @@
 
     // Update the category selection handler
     window.selectCategoryForBarcode = function(categoryId, categoryName) {
+        console.log('selectCategoryForBarcode called:', categoryId, categoryName);
+        
         if (categoryId === 'new') {
-            openAddCategoryModalForBarcode();
+            // Close choose category modal
+            const chooseModal = document.getElementById('chooseCategoryBarcodeModal');
+            if (chooseModal) {
+                chooseModal.classList.add('hidden');
+                chooseModal.classList.remove('flex');
+            }
+            
+            // Open custom category modal
+            const customModal = document.getElementById('customCategoryBarcodeModal');
+            if (customModal) {
+                customModal.classList.remove('hidden');
+                customModal.classList.add('flex');
+                
+                // Clear and focus input - UPDATED ID
+                const input = document.getElementById('newCategoryNameBarcode');
+                if (input) {
+                    input.value = '';
+                    input.classList.remove('border-red-500', 'border-yellow-500');
+                    
+                    // Clear any existing errors
+                    const existingError = input.parentNode.querySelector('.duplicate-error');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                    
+                    setTimeout(() => input.focus(), 100);
+                }
+            }
         } else {
             // Proceed with existing category
             selectedCategoryData = {
@@ -2732,28 +3010,86 @@
         }
     };
 
-    // Close Choose Category Modal for Barcode
-    function closeChooseCategoryBarcodeModal() {
-        document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
-    }
+    // // Close Choose Category Modal for Barcode
+    // function closeChooseCategoryBarcodeModal() {
+    //     document.getElementById('chooseCategoryBarcodeModal').classList.add('hidden');
+    // }
 </script>
 
 
     <!-- Register New Product Modal JavaScript -->
     <script>
-        function openRegisterModal(barcode = '') {
-            closeAllModals();
-            const modal = document.getElementById('registerProductModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex'); // Add this line
-            }
-            // Auto-fill barcode in the register modal
-            const barcodeElement = document.getElementById('autoFilledBarcode');
-            if (barcodeElement && barcode) {
-                barcodeElement.textContent = barcode;
+        // ✅ CORRECTED: Replace the openRegisterModal function around line 3375 with this version
+       function openRegisterModal(barcode = '', categoryData = null) {
+        console.log('Opening register modal with:', { barcode, categoryData }); // Debug log
+        
+        closeAllModals();
+        const modal = document.getElementById('registerProductModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        // Auto-fill barcode in the register modal
+        const barcodeElement = document.getElementById('autoFilledBarcode');
+        if (barcodeElement && barcode) {
+            barcodeElement.textContent = barcode;
+        }
+
+        // ✅ Pre-fill category if provided
+        if (categoryData && categoryData.id && categoryData.name) {
+            const categorySelect = document.getElementById('categorySelect');
+            const customCategoryInput = document.getElementById('customCategory');
+            
+            console.log('Category select element:', categorySelect); // Debug log
+            console.log('Available options:', Array.from(categorySelect?.options || []).map(o => ({ value: o.value, text: o.text }))); // Debug log
+            
+            if (categorySelect) {
+                // ✅ FIX: Use setTimeout to ensure dropdown is fully rendered
+                setTimeout(() => {
+                    // Convert categoryData.id to string for comparison (dropdown values are strings)
+                    const categoryId = String(categoryData.id);
+                    
+                    // Check if the category exists in the dropdown
+                    const optionExists = Array.from(categorySelect.options).some(opt => 
+                        String(opt.value) === categoryId
+                    );
+                    
+                    console.log('Category exists in dropdown:', optionExists, 'Looking for ID:', categoryId); // Debug log
+                    
+                    if (optionExists) {
+                        // ✅ Category exists in dropdown - select it directly
+                        categorySelect.value = categoryId;
+                        
+                        // ✅ Trigger change event to ensure any dependent logic runs
+                        categorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        
+                        // Make sure custom input is hidden
+                        if (customCategoryInput) {
+                            customCategoryInput.classList.add('hidden');
+                            customCategoryInput.value = '';
+                        }
+                        
+                        console.log('Category pre-filled successfully:', categorySelect.value); // Debug log
+                    } else {
+                        // ✅ FALLBACK: Category doesn't exist in dropdown (shouldn't happen but kept for safety)
+                        console.warn('Category not found in dropdown, using custom input fallback'); // Debug log
+                        
+                        categorySelect.value = 'other';
+                        categorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        
+                        if (customCategoryInput) {
+                            setTimeout(() => {
+                                customCategoryInput.value = categoryData.name;
+                                customCategoryInput.classList.remove('hidden');
+                                console.log('Using custom category input:', categoryData.name); // Debug log
+                            }, 100);
+                        }
+                    }
+                }, 150); // Give the DOM time to fully render the modal and dropdown
             }
         }
+    }
 
         function closeRegisterModal() {
             const modal = document.getElementById('registerProductModal');
