@@ -1266,11 +1266,17 @@
         const restockDetailsModal = document.getElementById('restockDetailsModal');
         const bulkRestockForm = document.getElementById('bulkRestockForm');
 
-        // Helper function to get minimum expiration date (7 days from today)
+        const EXPIRATION_DAYS_LIMIT = 7; // Change to 14 for two weeks, 30 for a month, etc.
+
+        // Helper function to get minimum expiration date
         function getMinimumExpirationDate() {
             const today = new Date();
+            today.setHours(0, 0, 0, 0);
             const minDate = new Date(today);
-            minDate.setDate(today.getDate() + 7);
+            
+            // Add the configured days limit + 1 for the date picker
+            minDate.setDate(today.getDate() + EXPIRATION_DAYS_LIMIT + 1);
+            
             return minDate.toISOString().split('T')[0];
         }
 
@@ -1802,20 +1808,24 @@
             if (!input.value) return true;
             
             const selectedDate = new Date(input.value);
+            selectedDate.setHours(0, 0, 0, 0);
+            
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
             const minDate = new Date(today);
-            minDate.setDate(today.getDate() + 7);
+            minDate.setDate(today.getDate() + EXPIRATION_DAYS_LIMIT);
             
             const timeDiff = selectedDate - today;
             const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
             
+            // Remove existing error
             const existingError = input.parentNode.querySelector('.expiration-error');
             if (existingError) {
                 existingError.remove();
             }
             
+            // Check if date is valid (must be AFTER minDate, not equal)
             if (selectedDate < minDate) {
                 input.classList.add('border-red-500');
                 
@@ -1825,9 +1835,9 @@
                 if (daysDiff < 0) {
                     errorDiv.textContent = 'Date cannot be in the past';
                 } else if (daysDiff === 0) {
-                    errorDiv.textContent = 'Date must be at least 7 days from today (selected: today)';
+                    errorDiv.textContent = `Date must be at least ${EXPIRATION_DAYS_LIMIT} days from today (selected: today)`;
                 } else {
-                    errorDiv.textContent = `Date must be at least 7 days from today (selected: ${daysDiff} day${daysDiff !== 1 ? 's' : ''})`;
+                    errorDiv.textContent = `Date must be at least ${EXPIRATION_DAYS_LIMIT} days from today (selected: ${daysDiff} day${daysDiff !== 1 ? 's' : ''})`;
                 }
                 
                 input.parentNode.style.position = 'relative';
@@ -1851,12 +1861,13 @@
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const minDate = new Date(today);
-                minDate.setDate(today.getDate() + 7);
-                
+                minDate.setDate(today.getDate() + EXPIRATION_DAYS_LIMIT);
+
                 expirationInputs.forEach(input => {
                     if (input.value && !validateExpirationDate(input)) {
                         hasInvalidDates = true;
                         const selectedDate = new Date(input.value);
+                        selectedDate.setHours(0, 0, 0, 0);
                         const timeDiff = selectedDate - today;
                         const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
                         
@@ -1870,9 +1881,9 @@
                         }
                     }
                 });
-                
+
                 if (hasInvalidDates) {
-                    showToast('Cannot submit: All products must have expiration dates at least 7 days from today.', 'error');
+                    showToast(`Cannot submit: All products must have expiration dates at least ${EXPIRATION_DAYS_LIMIT} days from today.`, 'error');
                     return;
                 }
                 

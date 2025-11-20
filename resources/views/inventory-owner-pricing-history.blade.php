@@ -91,6 +91,9 @@
                         @php
                             $profitMargin = $p->old_selling_price - $p->old_cost_price;
                             $marginPercentage = $p->old_cost_price > 0 ? ($profitMargin / $p->old_cost_price) * 100 : 0;
+                            
+                            // Calculate days difference as whole number
+                            $daysCount = \Carbon\Carbon::parse($p->effective_from)->diffInDays($p->effective_to);
                         @endphp
                         <tr class="hover:bg-gray-50 transition price-history-row" 
                             data-date="{{ \Carbon\Carbon::parse($p->effective_to)->timestamp }}"
@@ -104,7 +107,7 @@
                                     <span class="text-[10px] text-gray-500 mt-1">To</span>
                                     <span class="text-xs font-medium">{{ \Carbon\Carbon::parse($p->effective_to)->format('M d, Y') }}</span>
                                     <span class="text-[10px] text-gray-400 mt-1">
-                                        {{ \Carbon\Carbon::parse($p->effective_from)->diffInDays($p->effective_to) }} days
+                                        {{ (int)$daysCount }} {{ $daysCount === 1 ? 'day' : 'days' }}
                                     </span>
                                 </div>
                             </td>
