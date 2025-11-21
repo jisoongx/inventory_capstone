@@ -42,19 +42,34 @@
         </div>
 
         {{-- Summary Cards --}}
+        @php
+            // Find the price that sold the most items
+            $bestSellingPeriod = collect($priceHistory)->sortByDesc('total_sold')->first();
+            $bestSellingPrice = $bestSellingPeriod ? $bestSellingPeriod->old_selling_price : 0;
+            $bestSellingQuantity = $bestSellingPeriod ? $bestSellingPeriod->total_sold : 0;
+        @endphp
+
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <p class="text-xs text-blue-700 font-medium">Total Periods</p>
                 <p class="text-lg font-bold text-blue-900">{{ count($priceHistory) }}</p>
             </div>
+            
             <div class="bg-green-50 p-4 rounded-lg border border-green-200">
                 <p class="text-xs text-green-700 font-medium">Best Selling Price</p>
-                <p class="text-lg font-bold text-green-900">₱{{ number_format(collect($priceHistory)->max('old_selling_price'), 2) }}</p>
+                <p class="text-lg font-bold text-green-900">₱{{ number_format($bestSellingPrice, 2) }}</p>
+                <!-- @if($bestSellingQuantity > 0)
+                    <p class="text-[10px] text-green-600 mt-1">Sold {{ $bestSellingQuantity }} items</p>
+                @else
+                    <p class="text-[10px] text-gray-500 mt-1 italic">No sales yet</p>
+                @endif -->
             </div>
+            
             <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
                 <p class="text-xs text-purple-700 font-medium">Highest Revenue</p>
                 <p class="text-lg font-bold text-purple-900">₱{{ number_format(collect($priceHistory)->max('total_sales'), 2) }}</p>
             </div>
+            
             <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <p class="text-xs text-orange-700 font-medium">Most Items Sold</p>
                 <p class="text-lg font-bold text-orange-900">{{ collect($priceHistory)->max('total_sold') }}</p>
