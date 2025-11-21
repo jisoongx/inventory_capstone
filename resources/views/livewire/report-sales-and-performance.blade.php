@@ -331,7 +331,7 @@
                 </div>
             </div>
             <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
-                <table class="w-full text-sm {{ $sbc->isNotEmpty() ? 'w-[90rem]' : 'w-full' }}">
+                <table class="w-full text-sm {{ $sbc->isNotEmpty() ? 'min-w-[65rem]' : 'w-full' }}">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
@@ -426,9 +426,39 @@
                                 </td>
                                 
                                 <!-- Analysis -->
-                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50 w-[40%]
-                                    ">
-                                    {{ $input->insight_summary }}
+                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50
+                                    @if (str_contains($input->insight, 'URGENT')) 
+                                        bg-red-700 text-white border-red-900
+                                    @elseif (str_contains($input->insight, 'critically low')) 
+                                        bg-red-600 text-white border-red-800
+                                    @elseif (str_contains($input->insight, 'Out of stock')) 
+                                        bg-gray-800 text-white border-gray-950
+                                    @elseif (str_contains($input->insight, 'Low stock')) 
+                                        bg-orange-600 text-white border-orange-800
+                                    @elseif (str_contains($input->insight, 'Star performer')) 
+                                        bg-purple-600 text-white border-purple-800
+                                    @elseif (str_contains($input->insight, 'Good sales velocity')) 
+                                        bg-blue-600 text-white border-blue-800
+                                    @elseif (str_contains($input->insight, 'Fast-moving but low margins')) 
+                                        bg-yellow-500 text-gray-900 border-yellow-700
+                                    @elseif (str_contains($input->insight, 'Slow-moving with poor margins')) 
+                                        bg-red-500 text-white border-red-700
+                                    @elseif (str_contains($input->insight, 'Slow-moving')) 
+                                        bg-rose-500 text-white border-rose-700
+                                    @elseif (str_contains($input->insight, 'No recent sales')) 
+                                        bg-red-500 text-white border-red-700
+                                    @elseif (str_contains($input->insight, 'Low profit margin')) 
+                                        bg-rose-600 text-white border-rose-800
+                                    @elseif (str_contains($input->insight, 'Strong profit margins')) 
+                                        bg-green-600 text-white border-green-800
+                                    @elseif (str_contains($input->insight, 'Steady sales')) 
+                                        bg-blue-500 text-white border-blue-700
+                                    @elseif (str_contains($input->insight, 'Stable')) 
+                                        bg-gray-600 text-white border-gray-800
+                                    @else 
+                                        bg-gray-500 text-white border-gray-700
+                                    @endif">
+                                    {{ $input->insight }}
                                 </td>
                             </tr>
                         @empty
@@ -513,7 +543,7 @@
 
             <!-- Table Container -->
             <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
-                <table class="w-full text-sm {{ count($perf ?? []) > 0 ? 'w-full' : 'w-full' }}">
+                <table class="w-full text-sm {{ count($perf ?? []) > 0 ? 'min-w-[80rem]' : 'w-full' }}">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
@@ -525,22 +555,31 @@
                                         </span>
                                     @endif
                                 </button>
-                            </th>                            
+                            </th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Category
+                            </th>
+                            
                             <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
                                 Sales Metrics
-                            </th>                            
+                            </th>
+                            
                             <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
                                 Financial Performance
-                            </th>                            
+                            </th>
+                            
                             <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
                                 Inventory
-                            </th>                            
+                            </th>
+                            
                             <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-blue-50 border-l-2 border-gray-300">
                                 Analysis
                             </th>
                         </tr>
                         <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100">Name</th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
                                 <button wire:click="sortBy('unit_sold')" class="flex items-center gap-1 hover:text-blue-600 mx-auto">
                                     Units Sold
@@ -560,7 +599,8 @@
                                         </span>
                                     @endif
                                 </button>
-                            </th>                            
+                            </th>
+                            
                             <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">COGS</th>
                             <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
                                 <button wire:click="sortBy('profit')" class="flex items-center gap-1 hover:text-blue-600 ml-auto">
@@ -581,14 +621,16 @@
                                         </span>
                                     @endif
                                 </button>
-                            </th>                            
+                            </th>
+                            
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
                                 <div class="flex items-center justify-end gap-1">
                                     <span>Stock Left</span>
                                     <span class="material-symbols-rounded text-gray-500 text-sm cursor-help"
                                         title="Current stock remaining in inventory">info</span>
                                 </div>
-                            </th>                            
+                            </th>
+                            
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Insight</th>
                         </tr>
                     </thead>
@@ -598,14 +640,19 @@
                             <tr class="hover:bg-gray-50 transition-colors duration-150">
                                 <td class="px-4 py-3.5 text-gray-900 font-semibold">
                                     {{ $product->product_name }}
-                                </td>                                
+                                </td>
+                                <td class="px-4 py-3.5 text-gray-600 font-medium">
+                                    {{ $product->category ?? 'N/A' }}
+                                </td>
+                                
                                 <!-- Sales Metrics -->
                                 <td class="px-4 py-3.5 text-center font-bold text-gray-900 bg-gray-50">
                                     {{ number_format($product->unit_sold) }}
                                 </td>
                                 <td class="px-4 py-3.5 text-right font-bold text-green-600 bg-gray-50">
                                     ₱{{ number_format($product->total_sales, 2) }}
-                                </td>                                
+                                </td>
+                                
                                 <!-- Financial Performance -->
                                 <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
                                     ₱{{ number_format($product->cogs, 2) }}
@@ -630,7 +677,8 @@
                                         @endif">
                                         {{ number_format($product->profit_margin_percent, 1) }}%
                                     </span>
-                                </td>                                
+                                </td>
+                                
                                 <!-- Inventory -->
                                 <td class="px-4 py-3.5 text-center font-bold bg-gray-50
                                     @if($product->remaining_stocks == 0) text-red-600
@@ -639,9 +687,29 @@
                                     @else text-blue-600
                                     @endif">
                                     {{ number_format($product->remaining_stocks) }}
-                                </td>                                
+                                </td>
+                                
                                 <!-- Analysis -->
-                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50">
+                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50
+                                    @if (str_contains($product->insight, 'Out of stock')) 
+                                        bg-gray-800 text-white border-gray-950
+                                    @elseif (str_contains($product->insight, 'Low stock')) 
+                                        bg-orange-600 text-white border-orange-800
+                                    @elseif (str_contains($product->insight, 'No sales')) 
+                                        bg-red-600 text-white border-red-800
+                                    @elseif (str_contains($product->insight, 'Unprofitable')) 
+                                        bg-red-700 text-white border-red-900
+                                    @elseif (str_contains($product->insight, 'Low margin')) 
+                                        bg-yellow-500 text-gray-900 border-yellow-700
+                                    @elseif (str_contains($product->insight, 'Performing well')) 
+                                        bg-green-600 text-white border-green-800
+                                    @elseif (str_contains($product->insight, 'Good margin')) 
+                                        bg-blue-600 text-white border-blue-800
+                                    @elseif (str_contains($product->insight, 'Moderate')) 
+                                        bg-blue-500 text-white border-blue-700
+                                    @else 
+                                        bg-gray-600 text-white border-gray-800
+                                    @endif">
                                     {{ $product->insight }}
                                 </td>
                             </tr>
@@ -663,7 +731,7 @@
                     @if(count($perf ?? []) > 0)
                     <tfoot class="sticky bottom-0 z-10 bg-slate-100 shadow-[0_-1px_0_0_rgb(209,213,219)]">
                         <tr class="border-t-2 border-gray-600">
-                            <td class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
+                            <td colspan="2" class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
                                 Total Summary
                             </td>
                             <td class="px-4 text-center font-bold text-xs">
