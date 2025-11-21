@@ -46,6 +46,13 @@ class ReportSalesAndPerformance extends Component
     public $order = 'desc';
     public $categories;
 
+    // Global Return History properties
+    public $showGlobalReturnHistory = false;
+    public $globalReturnHistory = [];
+
+    // Listener for when return is processed
+    protected $listeners = ['returnProcessed' => 'handleReturnProcessed'];
+
     public function mount() {
         $this->currentMonth = now()->month;
         $this->selectedMonth = now()->month;
@@ -76,6 +83,18 @@ class ReportSalesAndPerformance extends Component
         $this->loadCategories();
     }
 
+    public function handleReturnProcessed($receiptId)
+    {
+        // Refresh data when a return is processed
+        $this->getTransactions();
+        $this->getSalesAnalytics();
+        
+        // If the receipt modal is open, refresh it
+        if ($this->showReceiptModal && $this->selectedReceipt == $receiptId) {
+            $this->viewReceipt($receiptId);
+        }
+    }
+
     public function loadCategories() {
         $owner_id = Auth::guard('owner')->user()->owner_id;
         $this->categories = collect(DB::select("
@@ -85,9 +104,6 @@ class ReportSalesAndPerformance extends Component
             ORDER BY category ASC
         ", [$owner_id]));
     }
-
-
-    
 
     public function setQuickDateRange($range) {
         switch ($range) {
@@ -127,9 +143,6 @@ class ReportSalesAndPerformance extends Component
         $this->getTransactions();
         $this->getSalesAnalytics();
     }
-
-
-
 
     public function updatedCurrentMonth() {
         $this->resetPage();
@@ -177,10 +190,186 @@ class ReportSalesAndPerformance extends Component
         }
     }
 
+    public function salesByCategory() {
+        $years = is_array($this->selectedYears) ? $this->selectedYears : [$this->selectedYears ?: now()->year];
+        $months = is_array($this->selectedMonths) ? $this->selectedMonths : [$this->selectedMonths ?: now()->month];
 
+        $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
+        $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
 
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+        
+        $sql = "
+            SELECT
+                c.category,
+                COALESCE(SUM(ritems.item_quantity), 0) AS unit_sold,
+                COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) AS total_sales,
+                COALESCE(SUM(p.cost_price * ritems.item_quantity), 0) AS cogs,
 
+                CASE
+                    WHEN COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) = 0 THEN 0
+                    ELSE (
+                        (SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                        / SUM(p.selling_price * ritems.item_quantity)
+                    ) * 100
+                END AS gross_margin,
 
+                COALESCE((
+                    SELECT p2.name
+                    FROM products p2
+                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                    WHERE p2.category_id = c.category_id
+                    AND r2.owner_id = ?
+                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                    GROUP BY p2.prod_code, p2.name
+                    ORDER BY SUM(ri2.item_quantity) DESC
+                    LIMIT 1
+                ), '—') AS top_product_unit,
+
+                COALESCE((
+                    SELECT p2.name
+                    FROM products p2
+                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
+                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                    WHERE p2.category_id = c.category_id
+                    AND r2.owner_id = ?
+                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                    GROUP BY p2.prod_code, p2.name
+                    ORDER BY SUM(ri2.item_quantity * p2.selling_price) DESC
+                    LIMIT 1
+                ), '—') AS top_product_sales,
+
+                COALESCE(i.stock, 0) AS stock_left,
+
+                COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(
+                    AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0
+                ) AS velocity_ratio,
+
+                COALESCE(i.stock, 0) / NULLIF(
+                    COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
+                ) AS days_of_supply,
+
+                CASE
+                    WHEN COALESCE(i.stock, 0) = 0 
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        AND COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.2
+                        THEN 'URGENT: Fast-moving category out of stock. Immediate reorder required.'
+                    
+                    WHEN COALESCE(i.stock, 0) = 0 AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Out of stock with recent sales. Reorder needed.'
+                    
+                    WHEN COALESCE(i.stock, 0) = 0 AND COALESCE(SUM(ritems.item_quantity), 0) = 0
+                        THEN 'Out of stock and no sales for this month. Evaluate demand before reordering.'
+                    
+                    WHEN COALESCE(i.stock, 0) / NULLIF(
+                            COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
+                        ) < 3 AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Stock critically low. Will run out in less than 3 days at current rate.'
+                    
+                    WHEN COALESCE(i.stock, 0) / NULLIF(
+                            COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
+                        ) BETWEEN 3 AND 7 AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Low stock. Reorder within this week to avoid shortage.'
+                    
+                    WHEN COALESCE(SUM(ritems.item_quantity), 0) = 0 AND COALESCE(i.stock, 0) > 0
+                        THEN 'No recent sales despite stock availability. Reassess demand or consider promotions.'
+                    
+                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.5
+                        AND ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                            / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 > 25
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > GREATEST(
+                            AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER () * 1.5, 10
+                        )
+                        THEN 'Star performer: Fast sales with strong margins. Consider expanding stock.'
+                    
+                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.5
+                        AND ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                            / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 < 15
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > GREATEST(
+                            AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER () * 1.5, 10
+                        )
+                        THEN 'Fast-moving but low margins. Review pricing or supplier costs.'
+                    
+                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) > 1.2
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > GREATEST(
+                            AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 5
+                        )
+                        THEN 'Good sales velocity. Maintain stock levels and monitor trends.'
+                    
+                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) < 0.5
+                        AND ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                            / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 < 15
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Slow-moving with poor margins. Consider discontinuing or clearance.'
+                    
+                    WHEN COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0) < 0.5
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Slow-moving category. Reduce stock levels to free up capital.'
+                    
+                    WHEN ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                        / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 < 10
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Low profit margin. Review pricing or supplier costs.'
+                    
+                    WHEN ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                        / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 BETWEEN 10 AND 25
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Steady sales with modest profit. Maintain visibility and monitor competition.'
+                    
+                    WHEN ((SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
+                        / NULLIF(SUM(p.selling_price * ritems.item_quantity), 0)) * 100 > 25
+                        AND COALESCE(SUM(ritems.item_quantity), 0) > 0
+                        THEN 'Strong profit margins. Consider promotions to boost volume.'
+                    
+                    ELSE 'Stable category performance. Continue monitoring trends.'
+                END AS insight
+                
+            FROM categories c
+            LEFT JOIN products p
+                ON c.category_id = p.category_id
+                AND c.owner_id = ?
+            LEFT JOIN (
+                SELECT c2.category_id, SUM(inv.stock) AS stock
+                FROM inventory inv
+                JOIN products p2 ON inv.prod_code = p2.prod_code
+                JOIN categories c2 ON p2.category_id = c2.category_id
+                WHERE p2.owner_id = ?
+                    and p2.prod_status = 'active'
+                GROUP BY c2.category_id
+            ) i ON i.category_id = p.category_id
+            LEFT JOIN (
+                SELECT ri.prod_code, ri.item_quantity, ri.receipt_id, r.owner_id, r.receipt_date
+                FROM receipt_item ri
+                JOIN receipt r ON r.receipt_id = ri.receipt_id
+                WHERE r.owner_id = ?
+                AND YEAR(r.receipt_date) IN ($yearPlaceholders)
+                AND MONTH(r.receipt_date) IN ($monthPlaceholders)
+            ) AS ritems ON p.prod_code = ritems.prod_code
+            WHERE c.owner_id = ?
+                and p.prod_status = 'active'
+            GROUP BY c.category, c.category_id, i.stock
+            ORDER BY c.category ASC
+        ";
+
+        $bindings = array_merge(
+            [$owner_id], $years, $months,
+            [$owner_id], $years, $months,
+            [$owner_id, $owner_id, $owner_id], $years, $months,
+            [$owner_id]
+        );
+
+        $this->sbc = collect(DB::select($sql, $bindings));
+
+        if (!empty($this->searchWord)) {
+            $search = strtolower($this->searchWord);
+            $this->sbc = $this->sbc->filter(function($item) use ($search) {
+                return str_contains(strtolower($item->category), $search);
+            })->values();
+        }
+    }
 
     public function getTransactions() {
         $owner_id = Auth::guard('owner')->user()->owner_id;
@@ -284,76 +473,120 @@ class ReportSalesAndPerformance extends Component
         try {
             $owner_id = Auth::guard('owner')->user()->owner_id;
             
-            $this->receiptDetails = Receipt::with([
-                'receiptItems.product:prod_code,name,selling_price',
-                'owner:owner_id,firstname,store_name,store_address',
-                'staff:staff_id,firstname'
-            ])
-            ->where('receipt_id', $receiptId)
-            ->where('owner_id', $owner_id)
-            ->first();
+            // Get receipt with raw data - FIXED: owner -> owners
+            $receipt = DB::selectOne("
+                SELECT 
+                    r.*,
+                    o.firstname as owner_firstname,
+                    o.store_name,
+                    o.store_address,
+                    s.firstname as staff_firstname
+                FROM receipt r
+                LEFT JOIN owners o ON r.owner_id = o.owner_id
+                LEFT JOIN staff s ON r.staff_id = s.staff_id
+                WHERE r.receipt_id = ?
+                AND r.owner_id = ?
+            ", [$receiptId, $owner_id]);
     
-            if ($this->receiptDetails) {
-                $items = $this->receiptDetails->receiptItems ?? collect();
-                $subtotal = 0.0;
-                $totalItemDiscounts = 0.0;
-                $totalVat = 0.0;
-    
-                foreach ($items as $it) {
-                    $price = floatval(data_get($it, 'product.selling_price', 0));
-                    $qty = intval($it->item_quantity ?? 0);
-                    $lineTotal = $price * $qty;
-                    $subtotal += $lineTotal;
-    
-                    $itemDiscountValue = floatval($it->item_discount_value ?? 0);
-                    $itemDiscountType = $it->item_discount_type ?? 'percent';
-    
-                    $discountAmount = 0.0;
-                    if ($itemDiscountValue > 0) {
-                        if ($itemDiscountType === 'percent') {
-                            $discountAmount = $lineTotal * ($itemDiscountValue / 100.0);
-                        } else {
-                            $discountAmount = $itemDiscountValue;
-                        }
-                    }
-                    $totalItemDiscounts += $discountAmount;
-                    $totalVat += floatval($it->vat_amount ?? 0);
-                }
-    
-                $receiptDiscountAmount = 0.0;
-                $afterItemDiscounts = $subtotal - $totalItemDiscounts;
-    
-                if (isset($this->receiptDetails->discount_value) && floatval($this->receiptDetails->discount_value) > 0) {
-                    $discValue = floatval($this->receiptDetails->discount_value);
-                    $discType = $this->receiptDetails->discount_type ?? 'amount';
-                    
-                    if ($discType === 'percent') {
-                        $receiptDiscountAmount = $afterItemDiscounts * ($discValue / 100.0);
-                    } else {
-                        $receiptDiscountAmount = $discValue;
-                    }
-                }
-    
-                $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
-                $finalTotal = $afterReceiptDiscount + $totalVat;
-                $amountPaid = floatval($this->receiptDetails->amount_paid ?? 0);
-                $change = $amountPaid - $finalTotal;
-    
-                $this->receiptDetails->computed_subtotal = $subtotal;
-                $this->receiptDetails->total_item_discounts = $totalItemDiscounts;
-                $this->receiptDetails->receipt_discount_amount = $receiptDiscountAmount;
-                $this->receiptDetails->vat_amount = $totalVat;
-                $this->receiptDetails->vat_applied = $totalVat > 0;
-                $this->receiptDetails->computed_total = $finalTotal;
-                $this->receiptDetails->computed_change = $change;
-    
-                $this->showReceiptModal = true;
-                $this->selectedReceipt = $receiptId;
-            } else {
+            if (!$receipt) {
                 session()->flash('error', 'Receipt not found.');
+                return;
             }
+    
+            // Get receipt items
+            $items = DB::select("
+                SELECT 
+                    ri.*,
+                    p.name as product_name,
+                    p.selling_price as current_selling_price
+                FROM receipt_item ri
+                JOIN products p ON ri.prod_code = p.prod_code
+                WHERE ri.receipt_id = ?
+                ORDER BY ri.item_id
+            ", [$receiptId]);
+    
+            $subtotal = 0.0;
+            $totalItemDiscounts = 0.0;
+            $totalVat = 0.0;
+    
+            foreach ($items as $item) {
+                $lineTotal = floatval($item->current_selling_price) * intval($item->item_quantity);
+                $subtotal += $lineTotal;
+    
+                $itemDiscountValue = floatval($item->item_discount_value ?? 0);
+                $itemDiscountType = $item->item_discount_type ?? 'percent';
+    
+                if ($itemDiscountValue > 0) {
+                    if ($itemDiscountType === 'percent') {
+                        $totalItemDiscounts += $lineTotal * ($itemDiscountValue / 100.0);
+                    } else {
+                        $totalItemDiscounts += $itemDiscountValue;
+                    }
+                }
+    
+                $totalVat += floatval($item->vat_amount ?? 0);
+            }
+    
+            $afterItemDiscounts = $subtotal - $totalItemDiscounts;
+            $receiptDiscountAmount = 0.0;
+    
+            if (isset($receipt->discount_value) && floatval($receipt->discount_value) > 0) {
+                $discValue = floatval($receipt->discount_value);
+                $discType = $receipt->discount_type ?? 'amount';
+                
+                if ($discType === 'percent') {
+                    $receiptDiscountAmount = $afterItemDiscounts * ($discValue / 100.0);
+                } else {
+                    $receiptDiscountAmount = $discValue;
+                }
+            }
+    
+            $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
+            $finalTotal = $afterReceiptDiscount + $totalVat;
+            $amountPaid = floatval($receipt->amount_paid ?? 0);
+            $change = $amountPaid - $finalTotal;
+    
+            $this->receiptDetails = (object)[
+                'receipt_id' => $receipt->receipt_id,
+                'receipt_date' => \Carbon\Carbon::parse($receipt->receipt_date),
+                'amount_paid' => $receipt->amount_paid,
+                'discount_type' => $receipt->discount_type,
+                'discount_value' => $receipt->discount_value,
+                'owner' => (object)[
+                    'firstname' => $receipt->owner_firstname,
+                    'store_name' => $receipt->store_name ?? $this->store_info->store_name,
+                    'store_address' => $receipt->store_address ?? $this->store_info->store_address,
+                ],
+                'staff' => $receipt->staff_firstname ? (object)['firstname' => $receipt->staff_firstname] : null,
+                'receiptItems' => collect($items)->map(function($item) {
+                    return (object)[
+                        'item_id' => $item->item_id,
+                        'item_quantity' => $item->item_quantity,
+                        'item_discount_type' => $item->item_discount_type,
+                        'item_discount_value' => $item->item_discount_value,
+                        'vat_amount' => $item->vat_amount,
+                        'prod_code' => $item->prod_code,
+                        'product' => (object)[
+                            'name' => $item->product_name,
+                            'selling_price' => $item->current_selling_price
+                        ]
+                    ];
+                }),
+                'computed_subtotal' => $subtotal,
+                'total_item_discounts' => $totalItemDiscounts,
+                'receipt_discount_amount' => $receiptDiscountAmount,
+                'vat_amount' => $totalVat,
+                'vat_applied' => $totalVat > 0,
+                'computed_total' => $finalTotal,
+                'computed_change' => $change,
+            ];
+    
+            $this->showReceiptModal = true;
+            $this->selectedReceipt = $receiptId;
+            
         } catch (\Exception $e) {
             session()->flash('error', 'Error loading receipt: ' . $e->getMessage());
+            \Log::error('Error in viewReceipt: ' . $e->getMessage());
         }
     }
 
@@ -432,387 +665,51 @@ class ReportSalesAndPerformance extends Component
         return Response::stream($callback, 200, $headers);
     }
 
-    // Add to class properties RETURN MODAL
-    public $showReturnModal = false;
-    public $selectedItemForReturn = null;
-    public $returnQuantity = 1;
-    public $returnReason = '';
-    public $isDamaged = false;
-    public $damageType = '';
-    public $maxReturnQuantity = 0;
-
-// Add these methods
-
-public function openReturnModal($itemId)
+    public function viewGlobalReturnHistory()
 {
     try {
         $owner_id = Auth::guard('owner')->user()->owner_id;
         
-        // Get item details including already returned quantity
-        $item = DB::selectOne("
+        // FIXED: owner -> owners
+        $this->globalReturnHistory = collect(DB::select("
             SELECT 
-                ri.*,
+                ret.return_id,
+                ret.return_date,
+                ret.return_quantity,
+                ret.return_reason,
                 p.name as product_name,
                 p.selling_price,
-                COALESCE(SUM(ret.return_quantity), 0) as already_returned
-            FROM receipt_item ri
+                r.receipt_id,
+                r.receipt_date,
+                CONCAT(COALESCE(o.firstname, ''), ' ', COALESCE(o.lastname, '')) as processed_by_owner,
+                CONCAT(COALESCE(s.firstname, ''), ' ', COALESCE(s.lastname, '')) as processed_by_staff,
+                d.damaged_id,
+                d.damaged_type,
+                (ret.return_quantity * p.selling_price) as refund_amount
+            FROM returned_items ret
+            JOIN receipt_item ri ON ret.item_id = ri.item_id
             JOIN products p ON ri.prod_code = p.prod_code
             JOIN receipt r ON ri.receipt_id = r.receipt_id
-            LEFT JOIN returned_items ret ON ret.item_id = ri.item_id
-            WHERE ri.item_id = ?
-            AND r.owner_id = ?
-            GROUP BY ri.item_id, ri.item_quantity, ri.prod_code, ri.receipt_id, 
-                     ri.item_discount_type, ri.item_discount_value, ri.vat_amount,
-                     p.name, p.selling_price
-        ", [$itemId, $owner_id]);
+            LEFT JOIN owners o ON ret.owner_id = o.owner_id AND ret.staff_id IS NULL
+            LEFT JOIN staff s ON ret.staff_id = s.staff_id
+            LEFT JOIN damaged_items d ON d.return_id = ret.return_id
+            WHERE r.owner_id = ?
+            AND DATE(ret.return_date) BETWEEN ? AND ?
+            ORDER BY ret.return_date DESC
+        ", [$owner_id, $this->dateFrom, $this->dateTo]));
 
-        if (!$item) {
-            session()->flash('error', 'Item not found.');
-            return;
-        }
-
-        $this->selectedItemForReturn = $item;
-        $this->maxReturnQuantity = $item->item_quantity - $item->already_returned;
-        
-        if ($this->maxReturnQuantity <= 0) {
-            session()->flash('error', 'This item has already been fully returned.');
-            return;
-        }
-        
-        $this->returnQuantity = min(1, $this->maxReturnQuantity);
-        $this->returnReason = '';
-        $this->isDamaged = false;
-        $this->damageType = '';
-        $this->showReturnModal = true;
-        
+        $this->showGlobalReturnHistory = true;
     } catch (\Exception $e) {
-        session()->flash('error', 'Error loading item: ' . $e->getMessage());
+        session()->flash('error', 'Error loading return history: ' . $e->getMessage());
+        \Log::error('Error in viewGlobalReturnHistory: ' . $e->getMessage());
     }
 }
 
-public function closeReturnModal()
-{
-    $this->showReturnModal = false;
-    $this->selectedItemForReturn = null;
-    $this->returnQuantity = 1;
-    $this->returnReason = '';
-    $this->isDamaged = false;
-    $this->damageType = '';
-    $this->maxReturnQuantity = 0;
-}
-
-public function submitReturn()
-{
-    $this->validate([
-        'returnQuantity' => 'required|integer|min:1|max:' . $this->maxReturnQuantity,
-        'returnReason' => 'required|string|min:3|max:255',
-        'isDamaged' => 'required|boolean',
-        'damageType' => 'required_if:isDamaged,true|nullable|string|max:20'
-    ], [
-        'returnQuantity.required' => 'Please enter a return quantity.',
-        'returnQuantity.max' => 'Return quantity cannot exceed ' . $this->maxReturnQuantity,
-        'returnReason.required' => 'Please provide a reason for the return.',
-        'returnReason.min' => 'Reason must be at least 3 characters.',
-        'damageType.required_if' => 'Please select the damage type.'
-    ]);
-
-    try {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
-        $staff_id = null;
-        
-        if (Auth::guard('staff')->check()) {
-            $staff_id = Auth::guard('staff')->user()->staff_id;
-        }
-
-        DB::beginTransaction();
-
-        // Create return record
-        $returnId = DB::table('returned_items')->insertGetId([
-            'item_id' => $this->selectedItemForReturn->item_id,
-            'return_quantity' => $this->returnQuantity,
-            'return_reason' => $this->returnReason,
-            'return_date' => now(),
-            'owner_id' => $owner_id,
-            'staff_id' => $staff_id
-        ]);
-
-        if ($this->isDamaged) {
-            // Record in damaged_items table
-            DB::table('damaged_items')->insert([
-                'prod_code' => $this->selectedItemForReturn->prod_code,
-                'damaged_quantity' => $this->returnQuantity,
-                'damaged_date' => now(),
-                'damaged_type' => $this->damageType,
-                'damaged_reason' => $this->returnReason,
-                'return_id' => $returnId,
-                'owner_id' => $owner_id,
-                'staff_id' => $staff_id
-            ]);
-
-            // DECREASE inventory for damaged items (FIFO - remove from oldest stock first)
-            $this->decrementInventoryStock(
-                $this->selectedItemForReturn->prod_code, 
-                $this->returnQuantity, 
-                $owner_id
-            );
-        } else {
-            // Return to inventory for non-damaged items (add back to newest inventory batch)
-            $latestInventory = DB::table('inventory')
-                ->where('prod_code', $this->selectedItemForReturn->prod_code)
-                ->where('owner_id', $owner_id)
-                ->orderBy('date_added', 'desc')
-                ->orderBy('inven_code', 'desc')
-                ->first();
-
-            if ($latestInventory) {
-                DB::table('inventory')
-                    ->where('inven_code', $latestInventory->inven_code)
-                    ->increment('stock', $this->returnQuantity);
-            } else {
-                // Get product details for category_id
-                $product = DB::table('products')
-                    ->where('prod_code', $this->selectedItemForReturn->prod_code)
-                    ->first();
-
-                DB::table('inventory')->insert([
-                    'prod_code' => $this->selectedItemForReturn->prod_code,
-                    'stock' => $this->returnQuantity,
-                    'date_added' => now(),
-                    'owner_id' => $owner_id,
-                    'category_id' => $product->category_id
-                ]);
-            }
-        }
-
-        DB::commit();
-
-        session()->flash('success', 'Return processed successfully. ' . 
-            ($this->isDamaged ? 'Item recorded as damaged.' : 'Stock updated.'));
-        
-        $this->closeReturnModal();
-        $this->viewReceipt($this->selectedReceipt); // Refresh receipt details
-        
-    } catch (\Exception $e) {
-        DB::rollBack();
-        session()->flash('error', 'Error processing return: ' . $e->getMessage());
+    public function closeGlobalReturnHistory()
+    {
+        $this->showGlobalReturnHistory = false;
+        $this->globalReturnHistory = [];
     }
-}
-
-
-
-
-
-
-
-
-    public function salesByCategory() {
-        $years = is_array($this->selectedYears) ? $this->selectedYears : [$this->selectedYears ?: now()->year];
-        $months = is_array($this->selectedMonths) ? $this->selectedMonths : [$this->selectedMonths ?: now()->month];
-
-        $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
-        $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
-
-        $owner_id = Auth::guard('owner')->user()->owner_id;
-        
-        $sql = "
-            SELECT
-                c.category,
-                COALESCE(SUM(ritems.item_quantity), 0) AS unit_sold,
-                COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) AS total_sales,
-                COALESCE(SUM(p.cost_price * ritems.item_quantity), 0) AS cogs,
-
-                CASE
-                    WHEN COALESCE(SUM(p.selling_price * ritems.item_quantity), 0) = 0 THEN 0
-                    ELSE (
-                        (SUM(p.selling_price * ritems.item_quantity) - SUM(p.cost_price * ritems.item_quantity))
-                        / SUM(p.selling_price * ritems.item_quantity)
-                    ) * 100
-                END AS gross_margin,
-
-                COALESCE((
-                    SELECT p2.name
-                    FROM products p2
-                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
-                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
-                    WHERE p2.category_id = c.category_id
-                    AND r2.owner_id = ?
-                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
-                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
-                    GROUP BY p2.prod_code, p2.name
-                    ORDER BY SUM(ri2.item_quantity) DESC
-                    LIMIT 1
-                ), '—') AS top_product_unit,
-
-                COALESCE((
-                    SELECT p2.name
-                    FROM products p2
-                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
-                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
-                    WHERE p2.category_id = c.category_id
-                    AND r2.owner_id = ?
-                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
-                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
-                    GROUP BY p2.prod_code, p2.name
-                    ORDER BY SUM(ri2.item_quantity * p2.selling_price) DESC
-                    LIMIT 1
-                ), '—') AS top_product_sales,
-
-                COALESCE(i.stock, 0) AS stock_left,
-
-                COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(
-                    AVG(COALESCE(SUM(ritems.item_quantity), 0)) OVER (), 0
-                ) AS velocity_ratio,
-
-                COALESCE(i.stock, 0) / NULLIF(
-                    COALESCE(SUM(ritems.item_quantity), 0) / NULLIF(COUNT(DISTINCT ritems.receipt_date), 0), 0
-                ) AS days_of_supply
-                
-            FROM categories c
-            LEFT JOIN products p
-                ON c.category_id = p.category_id
-                AND c.owner_id = ?
-            LEFT JOIN (
-                SELECT c2.category_id, SUM(inv.stock) AS stock
-                FROM inventory inv
-                JOIN products p2 ON inv.prod_code = p2.prod_code
-                JOIN categories c2 ON p2.category_id = c2.category_id
-                WHERE p2.owner_id = ?
-                    and p2.prod_status = 'active'
-                GROUP BY c2.category_id
-            ) i ON i.category_id = p.category_id
-            LEFT JOIN (
-                SELECT ri.prod_code, ri.item_quantity, ri.receipt_id, r.owner_id, r.receipt_date
-                FROM receipt_item ri
-                JOIN receipt r ON r.receipt_id = ri.receipt_id
-                WHERE r.owner_id = ?
-                AND YEAR(r.receipt_date) IN ($yearPlaceholders)
-                AND MONTH(r.receipt_date) IN ($monthPlaceholders)
-            ) AS ritems ON p.prod_code = ritems.prod_code
-            WHERE c.owner_id = ?
-                and p.prod_status = 'active'
-            GROUP BY c.category, c.category_id, i.stock
-            ORDER BY c.category ASC
-        ";
-
-        $bindings = array_merge(
-            [$owner_id], $years, $months,
-            [$owner_id], $years, $months,
-            [$owner_id, $owner_id, $owner_id], $years, $months,
-            [$owner_id]
-        );
-
-
-
-        $collection = collect(DB::select($sql, $bindings));
-
-        $avgStock = $collection->avg('stock_left');
-        $avgUnitSold = $collection->avg('unit_sold');
-        $avgSales = $collection->avg('total_sales');
-        $avgCogsRatio = $collection->map(function($i){
-            return $i->total_sales == 0 ? 0 : $i->cogs / $i->total_sales;
-        })->avg();
-        $avgMargin = $collection->avg('gross_margin');
-
-        $maxUnitSold = $collection->max('unit_sold');
-        $maxSales = $collection->max('total_sales');
-
-        $avgStockLeft = $collection->avg('stock_left');
-        $medianStockLeft = $collection->median('stock_left');
-        $avgTotalSales = $collection->avg('total_sales');
-        $medianTotalSales = $collection->median('total_sales');
-        $avgGrossMargin = $collection->avg('gross_margin');
-        $medianGrossMargin = $collection->median('gross_margin');
-        $medianDaysOfSupply = $collection->median('days_of_supply');
-
-        $count = $collection->count();
-        $variance = $collection->map(fn($i) => pow($i->unit_sold - $avgUnitSold, 2))->sum() / $count;
-        $stddevUnitSold = sqrt($variance);
-
-        $this->sbc = $collection->map(function ($item) use (
-            $stddevUnitSold,
-            $avgUnitSold,
-            $medianDaysOfSupply,
-            $avgTotalSales,
-            $medianTotalSales,
-            $avgGrossMargin,
-            $medianGrossMargin
-        ) {
-            $insights = [];
-            
-            // ===== SALES VELOCITY INSIGHTS =====
-            $zScore = $stddevUnitSold > 0 ? ($item->unit_sold - $avgUnitSold) / $stddevUnitSold : 0;
-            
-            if ($zScore > 1.5) {
-                $insights[] = "This is your top performing category with exceptional sales volume.";
-            } elseif ($zScore > 0.5) {
-                $insights[] = "Strong performer that consistently sells above average.";
-            } elseif ($zScore < -1) {
-                $insights[] = "Sales performance is significantly below expectations.";
-            } elseif ($zScore < -0.3) {
-                $insights[] = "Moving slower than most other categories.";
-            } else {
-                $insights[] = "Sales performance is steady and meets expectations.";
-            }
-            
-            // ===== PROFITABILITY INSIGHTS =====
-            if ($item->gross_margin > $avgGrossMargin * 1.3) {
-                $insights[] = "Excellent profit margins make this a highly profitable category.";
-            } elseif ($item->gross_margin > $avgGrossMargin * 1.1) {
-                $insights[] = "Generates healthy profit margins for your business.";
-            } elseif ($item->gross_margin < $medianGrossMargin * 0.8 && $item->gross_margin > 0) {
-                $insights[] = "Profit margins are lower than desired, consider reviewing pricing.";
-            } else {
-                $insights[] = "Maintains acceptable profit margins within normal range.";
-            }
-            
-            // ===== REVENUE CONTRIBUTION INSIGHTS =====
-            if ($item->total_sales > $avgTotalSales * 1.8) {
-                $insights[] = "Major revenue driver contributing significantly to overall sales.";
-            } elseif ($item->total_sales > $avgTotalSales * 1.3) {
-                $insights[] = "Important revenue source for your business.";
-            } elseif ($item->total_sales < $medianTotalSales * 0.4 && $item->total_sales > 0) {
-                $insights[] = "Revenue contribution is minimal compared to other categories.";
-            }
-            
-            // ===== STOCK LEVEL INSIGHTS =====
-            if ($item->days_of_supply > $medianDaysOfSupply * 2.5) {
-                $insights[] = "Inventory levels are too high, consider reducing future orders.";
-            } elseif ($item->days_of_supply > $medianDaysOfSupply * 1.8) {
-                $insights[] = "Stock levels are comfortable with plenty of supply on hand.";
-            } elseif ($item->days_of_supply < 7 && $item->velocity_ratio > 1.2) {
-                $insights[] = "Critical stock shortage for this fast-selling category, restock immediately.";
-            } elseif ($item->days_of_supply < $medianDaysOfSupply * 0.4 && $item->unit_sold > 0) {
-                $insights[] = "Stock is running low and needs replenishment soon.";
-            } elseif ($item->days_of_supply < 14 && $item->unit_sold > 0) {
-                $insights[] = "Current stock will last less than two weeks.";
-            }
-            
-            // ===== VELOCITY RATING =====
-            if ($item->velocity_ratio > 1.8) {
-                $insights[] = "Products in this category are moving much faster than average.";
-            } elseif ($item->velocity_ratio < 0.4 && $item->velocity_ratio > 0) {
-                $insights[] = "Turnover rate is slow, items are staying on shelves longer.";
-            }
-            
-            return (object) array_merge((array) $item, [
-                'insight' => $insights,
-                'insight_summary' => implode(' ', $insights)
-            ]);
-        });
-
-        
-        if (!empty($this->searchWord)) {
-            $search = strtolower($this->searchWord);
-            $this->sbc = $this->sbc->filter(function($item) use ($search) {
-                return str_contains(strtolower($item->category), $search);
-            })->values();
-        }
-
-
-
-    }
-
-
 
     public function sortBy($field) {
         if ($this->sortField === $field) {
@@ -824,7 +721,6 @@ public function submitReturn()
         $this->sortField = $field;
         $this->prodPerformance();
     }
-
 
     public function prodPerformance() {
         $owner_id = Auth::guard('owner')->user()->owner_id;

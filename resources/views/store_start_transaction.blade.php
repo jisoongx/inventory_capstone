@@ -1,6 +1,24 @@
 @extends('dashboards.owner.owner')
 @section('content')
 
+<!-- Expired Product Warning Modal -->
+<div id="expiredProductModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] hidden">
+    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4 shadow-2xl">
+        <div class="flex items-center justify-center mb-4">
+            <div class="bg-red-100 rounded-full p-3">
+                <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+        </div>
+        <h3 class="text-xl font-bold text-center mb-2 text-gray-900">Expired Product</h3>
+        <p id="expiredProductMessage" class="text-center text-gray-600 mb-6"></p>
+        <button id="closeExpiredModal" class="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors">
+            OK, Got It
+        </button>
+    </div>
+</div>
+
 <!-- Scanner Status Toast (Auto-dismiss) -->
 <div id="scannerToast" class="fixed top-4 right-4 z-[9999] transform transition-all duration-300 translate-x-full opacity-0">
     <div class="bg-white rounded-lg shadow-2xl border-l-4 p-4 min-w-[320px] max-w-md">
@@ -65,7 +83,6 @@
                     <button class="category-pill active" data-category="">
                         All Categories
                     </button>
-                    <!-- Categories will be loaded here dynamically -->
                 </div>
             </div>
 
@@ -100,7 +117,7 @@
        </div>
 
         <!-- Right Side - Cart Items -->
-        <div class="bg-white rounded-lg shadow-lg flex flex-col min-h-0">
+        <div class="bg-white rounded-lg shadow-lg flex flex-col" style="height: 560px;">
             <!-- Receipt Info Header -->
             <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 flex-shrink-0">
                 <div class="text-center">
@@ -110,7 +127,7 @@
                 </div>
             </div>
 
-            <!-- Cart Items -->
+            <!-- Cart Items - Flexible height to show 4-5 items -->
             <div class="flex-1 overflow-y-auto p-4 min-h-0">
                 <div id="cartItems">
                     <!-- Empty Cart State -->
@@ -147,36 +164,6 @@
                         Process Payment
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Quantity Input Modal -->
-<div id="quantityModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold" id="modalProductName">Enter Quantity</h3>
-            <button id="closeQuantityModal" class="text-gray-400 hover:text-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
-                <input type="number" id="quantityInput" min="1" value="1" 
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
-                <p class="text-xs text-gray-500 mt-1">Available: <span id="modalAvailableStock">0</span></p>
-            </div>
-            <div class="flex gap-2">
-                <button id="cancelQuantityBtn" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Cancel
-                </button>
-                <button id="confirmQuantityBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                    Confirm
-                </button>
             </div>
         </div>
     </div>
@@ -389,10 +376,37 @@
 .cart-item {
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
     background: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+/* Highlight animation for newly added items */
+.cart-item.newly-added {
+    animation: highlightPulse 1s ease-in-out;
+    border-color: #10b981;
+    background: linear-gradient(to right, #d1fae5 0%, #ffffff 100%);
+}
+
+@keyframes highlightPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    25% {
+        transform: scale(1.02);
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+        transform: scale(1);
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
 }
 
 .quantity-controls {
@@ -434,13 +448,37 @@
     text-align: center;
     font-weight: 600;
     min-width: 60px;
-    cursor: pointer;
-    transition: all 0.2s;
 }
 
-.quantity-display:hover {
-    background-color: #f3f4f6;
+.quantity-input {
+    width: 70px;
+    padding: 8px 6px;
+    background-color: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+    -moz-appearance: textfield;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.quantity-input:focus {
+    outline: none;
+    border-color: #ef4444;
+    background-color: #fffbeb;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.quantity-input:hover:not(:focus) {
     border-color: #d1d5db;
+    background-color: #f9fafb;
 }
 
 .remove-btn {
@@ -537,7 +575,7 @@ class KioskSystem {
         this.isExpired = {{ $expired ? 'true' : 'false' }};
         this.toastTimeout = null;
         this.toastProgressInterval = null;
-        this.quantityModalData = null;
+        this.lastAddedProdCode = null;
         
         this.init();
     }
@@ -565,12 +603,7 @@ class KioskSystem {
 
         document.getElementById('processPaymentBtn').addEventListener('click', () => {
             if (this.isExpired) {
-                this.showScannerToast(
-                    'Subscription Expired',
-                    'Your subscription has expired. Please renew to continue.',
-                    'error',
-                    3000
-                );
+                this.showExpiredModal('Subscription Expired', 'Your subscription has expired. Please renew to continue.');
                 return;
             }
             
@@ -587,25 +620,6 @@ class KioskSystem {
             window.location.href = '{{ route("store_payment_processor") }}';
         });
 
-        // Quantity Modal Events
-        document.getElementById('closeQuantityModal').addEventListener('click', () => {
-            this.hideModal('quantityModal');
-        });
-
-        document.getElementById('cancelQuantityBtn').addEventListener('click', () => {
-            this.hideModal('quantityModal');
-        });
-
-        document.getElementById('confirmQuantityBtn').addEventListener('click', () => {
-            this.confirmQuantityChange();
-        });
-
-        document.getElementById('quantityInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.confirmQuantityChange();
-            }
-        });
-
         // Remove Modal Events
         document.getElementById('closeRemoveModal').addEventListener('click', () => {
             this.hideModal('removeReasonModal');
@@ -618,6 +632,11 @@ class KioskSystem {
             });
         });
 
+        // Expired Product Modal Events
+        document.getElementById('closeExpiredModal').addEventListener('click', () => {
+            this.hideModal('expiredProductModal');
+        });
+
         // Close modals on click outside
         document.getElementById('removeReasonModal').addEventListener('click', (e) => {
             if (e.target.id === 'removeReasonModal') {
@@ -625,16 +644,16 @@ class KioskSystem {
             }
         });
 
-        document.getElementById('quantityModal').addEventListener('click', (e) => {
-            if (e.target.id === 'quantityModal') {
-                this.hideModal('quantityModal');
+        document.getElementById('expiredProductModal').addEventListener('click', (e) => {
+            if (e.target.id === 'expiredProductModal') {
+                this.hideModal('expiredProductModal');
             }
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.hideModal('removeReasonModal');
-                this.hideModal('quantityModal');
+                this.hideModal('expiredProductModal');
                 this.hideScannerToast();
             }
         });
@@ -656,12 +675,6 @@ class KioskSystem {
                 console.log('%c⚠️%c Scanner not detected within timeout', 
                     'font-size: 16px',
                     'color: #f59e0b; margin-left: 5px');
-                this.showScannerToast(
-                    'Scanner Not Detected',
-                    'Please connect your barcode scanner or select products manually from the grid.',
-                    'warning',
-                    3000
-                );
             }
         }, 2000);
 
@@ -676,13 +689,6 @@ class KioskSystem {
                 console.log('%c✓%c Scanner detected!', 
                     'color: #10b981; font-size: 16px; font-weight: bold',
                     'color: #10b981; margin-left: 5px');
-                
-                this.showScannerToast(
-                    'Scanner Connected',
-                    'Barcode scanner is ready. Start scanning products!',
-                    'success',
-                    2000
-                );
             }
 
             if (this.barcodeTimeout) {
@@ -736,13 +742,6 @@ class KioskSystem {
                     'color: #10b981; margin-left: 5px',
                     'background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 3px; font-weight: 600');
                 await this.addToCart(data.product.prod_code);
-                
-                this.showScannerToast(
-                    'Product Added',
-                    `${data.product.name} has been added to your cart.`,
-                    'success',
-                    2000
-                );
             } else {
                 console.log('%c✕%c Product not found for barcode: %c' + barcode, 
                     'color: #ef4444; font-size: 16px; font-weight: bold',
@@ -868,6 +867,11 @@ class KioskSystem {
         }, 300);
     }
 
+    showExpiredModal(title, message) {
+        document.getElementById('expiredProductMessage').textContent = message;
+        this.showModal('expiredProductModal');
+    }
+
     startRealTimeClock() {
         const updateDateTime = () => {
             const now = new Date();
@@ -958,13 +962,6 @@ class KioskSystem {
         }
         
         this.loadProducts();
-        
-        this.showScannerToast(
-            'Category Changed',
-            `Now showing: ${categoryName}`,
-            'info',
-            1500
-        );
     }
 
     async loadProducts() {
@@ -1028,15 +1025,22 @@ class KioskSystem {
         const card = document.createElement('div');
         const isOutOfStock = product.stock <= 0;
         const isLowStock = product.stock > 0 && product.stock <= product.stock_limit;
+        const hasExpiredOnly = product.has_expired_only || false;
         
         let cardClass = 'product-card';
         let stockBadge = '';
         let stockBadgeClass = 'stock-badge';
         
         if (isOutOfStock) {
-            cardClass += ' out-of-stock';
-            stockBadge = 'Out of Stock';
-            stockBadgeClass += ' out';
+            if (hasExpiredOnly) {
+                cardClass += ' expired';
+                stockBadge = 'Expired';
+                stockBadgeClass += ' expired';
+            } else {
+                cardClass += ' out-of-stock';
+                stockBadge = 'Out of Stock';
+                stockBadgeClass += ' out';
+            }
         } else if (isLowStock) {
             cardClass += ' low-stock';
             stockBadge = 'Low Stock';
@@ -1079,8 +1083,15 @@ class KioskSystem {
             </div>
         `;
 
-        if (!isOutOfStock) {
+        if (!isOutOfStock && !hasExpiredOnly) {
             card.addEventListener('click', () => this.addToCart(product.prod_code));
+        } else if (hasExpiredOnly) {
+            card.addEventListener('click', () => {
+                this.showExpiredModal(
+                    'Product Expired',
+                    `${product.name} only has expired stock available and cannot be sold.`
+                );
+            });
         }
 
         return card;
@@ -1103,8 +1114,13 @@ class KioskSystem {
             const data = await response.json();
             
             if (data.success) {
+                this.lastAddedProdCode = data.newly_added_prod_code || prodCode;
                 this.updateCart(data.cart_items, data.cart_summary);
-                this.showToast(data.message, 'success');
+            } else if (data.expired_product) {
+                this.showExpiredModal(
+                    'Product Expired',
+                    data.message || 'This product only has expired stock and cannot be sold.'
+                );
             } else {
                 this.showToast(data.message, 'error');
             }
@@ -1112,43 +1128,6 @@ class KioskSystem {
             console.error('Error adding to cart:', error);
             this.showToast('Error adding item to cart', 'error');
         }
-    }
-
-    showQuantityModal(prodCode, currentQuantity, availableStock, productName) {
-        this.quantityModalData = {
-            prodCode: prodCode,
-            currentQuantity: currentQuantity,
-            availableStock: availableStock
-        };
-
-        document.getElementById('modalProductName').textContent = productName;
-        document.getElementById('quantityInput').value = currentQuantity;
-        document.getElementById('quantityInput').max = availableStock;
-        document.getElementById('modalAvailableStock').textContent = availableStock;
-
-        this.showModal('quantityModal');
-        document.getElementById('quantityInput').focus();
-        document.getElementById('quantityInput').select();
-    }
-
-    async confirmQuantityChange() {
-        if (!this.quantityModalData) return;
-
-        const newQuantity = parseInt(document.getElementById('quantityInput').value);
-        
-        if (isNaN(newQuantity) || newQuantity < 1) {
-            this.showToast('Please enter a valid quantity', 'error');
-            return;
-        }
-
-        if (newQuantity > this.quantityModalData.availableStock) {
-            this.showToast(`Maximum available stock is ${this.quantityModalData.availableStock}`, 'error');
-            return;
-        }
-
-        await this.updateCartQuantity(this.quantityModalData.prodCode, newQuantity);
-        this.hideModal('quantityModal');
-        this.quantityModalData = null;
     }
 
     async updateCartQuantity(prodCode, quantity) {
@@ -1257,12 +1236,15 @@ class KioskSystem {
             return;
         }
 
-        container.innerHTML = this.cartItems.map(item => `
-            <div class="cart-item" data-prod-code="${item.product.prod_code}">
-                <div class="flex justify-between items-start mb-4">
+        container.innerHTML = this.cartItems.map(item => {
+            const isNewlyAdded = this.lastAddedProdCode && this.lastAddedProdCode === item.product.prod_code;
+            return `
+            <div class="cart-item ${isNewlyAdded ? 'newly-added' : ''}" data-prod-code="${item.product.prod_code}">
+                <div class="flex justify-between items-start mb-3">
                     <div class="flex-1 pr-4">
                         <h4 class="font-semibold text-sm text-gray-900 leading-5 mb-1">${item.product.name}</h4>
                         <p class="text-xs text-gray-500">₱${parseFloat(item.product.selling_price).toFixed(2)} each</p>
+                        <p class="text-xs text-gray-400 mt-1">Available: ${item.current_stock}</p>
                     </div>
                     <button class="remove-btn" onclick="kioskSystem.showRemoveModal('${item.product.prod_code}')">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1274,9 +1256,16 @@ class KioskSystem {
                     <div class="quantity-controls">
                         <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity - 1})" 
                                 ${item.quantity <= 1 ? 'disabled' : ''}>−</button>
-                        <div class="quantity-display" onclick="kioskSystem.showQuantityModal('${item.product.prod_code}', ${item.quantity}, ${item.current_stock}, '${item.product.name.replace(/'/g, "\\'")}')">
-                            ${item.quantity}
-                        </div>
+                        <input 
+                            type="number" 
+                            class="quantity-input" 
+                            value="${item.quantity}"
+                            min="1"
+                            max="${item.current_stock}"
+                            data-prod-code="${item.product.prod_code}"
+                            onchange="kioskSystem.handleQuantityInputChange(this)"
+                            onkeypress="if(event.key === 'Enter') this.blur()"
+                        >
                         <button class="quantity-btn" onclick="kioskSystem.updateCartQuantity('${item.product.prod_code}', ${item.quantity + 1})" 
                                 ${item.quantity >= item.current_stock ? 'disabled' : ''}>+</button>
                     </div>
@@ -1285,7 +1274,43 @@ class KioskSystem {
                     </div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
+
+        // Auto-scroll to newly added item
+        if (this.lastAddedProdCode) {
+            setTimeout(() => {
+                const newItem = container.querySelector(`[data-prod-code="${this.lastAddedProdCode}"]`);
+                if (newItem) {
+                    newItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                
+                // Remove highlight class after animation
+                setTimeout(() => {
+                    const items = container.querySelectorAll('.cart-item.newly-added');
+                    items.forEach(item => item.classList.remove('newly-added'));
+                    this.lastAddedProdCode = null;
+                }, 1000);
+            }, 100);
+        }
+    }
+
+    handleQuantityInputChange(input) {
+        const prodCode = input.dataset.prodCode;
+        let newQuantity = parseInt(input.value);
+        const max = parseInt(input.max);
+        const min = parseInt(input.min);
+
+        if (isNaN(newQuantity) || newQuantity < min) {
+            newQuantity = min;
+            input.value = min;
+        } else if (newQuantity > max) {
+            newQuantity = max;
+            input.value = max;
+            this.showToast(`Maximum available stock is ${max}`, 'error');
+        }
+
+        this.updateCartQuantity(prodCode, newQuantity);
     }
 
     updateCartSummary() {
@@ -1336,7 +1361,7 @@ class KioskSystem {
                     ${iconSvg}
                 </svg>
                 <span>${message}</span>
-            </div>
+                        </div>
         `;
         
         document.body.appendChild(toast);

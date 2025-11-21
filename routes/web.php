@@ -241,7 +241,7 @@ Route::post('/api/kiosk/cart/update', [StoreController::class, 'updateCartItem']
 Route::post('/api/kiosk/cart/remove', [StoreController::class, 'removeCartItem'])->name('remove_cart_item');
 Route::get('/api/kiosk/cart', [StoreController::class, 'getCartItems'])->name('get_cart_items');
 // Damage Items Management
-Route::post('/store/remove-cart-item', [StoreController::class, 'removeCartItem'])->name('remove_cart_item');
+// Route::post('/store/remove-cart-item', [StoreController::class, 'removeCartItem'])->name('remove_cart_item');
 Route::post('/store/record-damage', [StoreController::class, 'recordDamagedItem'])->name('record_damaged_item');
 Route::get('/store/damaged-items', [StoreController::class, 'getDamagedItems'])->name('get_damaged_items');
 // Barcode and payment routes
@@ -260,11 +260,15 @@ Route::middleware(['auth:owner'])->group(function() {
         return view('dashboards.owner.report-sales-and-performance');
     })->name('reports.sales_performance');
 
-    // Return Item Route
-Route::post('/store/return-item', [StoreController::class, 'processReturnItem'])
-->name('store.return_item');
     
-    // Export route (you'll need to create this controller method)
+// Return Item Process
+Route::middleware(['auth:owner,staff'])->group(function() {
+    Route::get('/return-item/{receiptId}', function($receiptId) {
+        return view('dashboards.owner.report-return-item', compact('receiptId'));
+    })->name('return_item');
+});
+
+// Export route (you'll need to create this controller method)
     Route::get('/reports/export-sales-excel', function() {
         // TODO: Implement Excel export
         return back()->with('info', 'Export feature coming soon');
