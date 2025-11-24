@@ -11,6 +11,7 @@ use App\Models\Receipt;
 use App\Models\ReceiptItem;
 use App\Models\Inventory;
 use App\Models\DamagedItem;
+use App\Http\Controllers\ActivityLogController;
 
 class StoreController extends Controller
 {
@@ -906,6 +907,18 @@ class StoreController extends Controller
             session()->forget('transaction_items');
 
             DB::commit();
+
+            // Activity log
+            $user = Auth::guard('owner')->user() ?? Auth::guard('staff')->user();
+            $ip = $request->ip();
+            
+            ActivityLogController::log(
+                'Processed POS transaction',
+                $user instanceof \App\Models\Owner ? 'owner' : 'staff',
+                $user,
+                $ip
+            );
+
 
             $response = [
                 'success' => true,
