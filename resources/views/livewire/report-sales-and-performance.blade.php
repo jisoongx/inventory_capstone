@@ -785,159 +785,168 @@
     </div>
     @endif
 
-    <!-- Receipt Display Modal (View Only - NO RETURN BUTTONS) -->
-    @if($showReceiptModal && $receiptDetails)
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col relative">
-            <!-- Close Button -->
-            <button wire:click="closeReceiptModal" 
-                class="absolute top-4 right-4 z-10 text-white p-2 rounded-lg hover:bg-white/20 transition"
-                title="Close Receipt">
-                <span class="material-symbols-rounded text-xl">close</span>
-            </button>
+<!-- Receipt Display Modal (View Only - NO RETURN BUTTONS) -->
+@if($showReceiptModal && $receiptDetails)
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col relative">
+        <!-- Close Button -->
+        <button wire:click="closeReceiptModal" 
+            class="absolute top-4 right-4 z-10 text-white p-2 rounded-lg hover:bg-white/20 transition"
+            title="Close Receipt">
+            <span class="material-symbols-rounded text-xl">close</span>
+        </button>
 
-            <!-- Receipt Header -->
-            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg flex-shrink-0">
-                <div class="text-center">
-                    <h3 class="text-xl font-bold mb-2">Receipt Details</h3>
-                    <p class="text-sm text-blue-100">Transaction Record</p>
-                </div>
+        <!-- Receipt Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg flex-shrink-0">
+            <div class="text-center">
+                <h3 class="text-xl font-bold mb-2">Receipt Details</h3>
+                <p class="text-sm text-blue-100">Transaction Record</p>
             </div>
+        </div>
 
-            <!-- Receipt Content - Scrollable -->
-            <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
-                <div class="p-6">
-                    <!-- Store Info -->
-                    <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-800">
-                            {{ $receiptDetails->owner->store_name ?? $store_info->store_name ?? 'Store Name' }}
-                        </h2>
+        <!-- Receipt Content - Scrollable -->
+        <div class="flex-1 overflow-y-auto min-h-0" style="max-height: calc(90vh - 120px);">
+            <div class="p-6">
+                <!-- Store Info -->
+                <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        {{ $receiptDetails->owner->store_name ?? $store_info->store_name ?? 'Store Name' }}
+                    </h2>
+                    <p class="text-sm text-gray-600">{{ $store_info->store_address }}</p>
+                </div>
+
+                <!-- Transaction Details -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
+                        <span class="text-sm font-bold text-gray-900">#{{ str_pad($receiptDetails->receipt_id, 6, '0', STR_PAD_LEFT) }}</span>
                     </div>
-
-                    <!-- Transaction Details -->
-                    <div class="mb-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700">Receipt No.:</span>
-                            <span class="text-sm font-bold text-gray-900">#{{ str_pad($receiptDetails->receipt_id, 6, '0', STR_PAD_LEFT) }}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700">Date & Time:</span>
-                            <span class="text-sm text-gray-900">{{ $receiptDetails->receipt_date->format('m/d/Y, h:i:s A') }}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-sm font-medium text-gray-700">Cashier:</span>
-                            <span class="text-sm text-gray-900">
-                                {{ $receiptDetails->staff ? $receiptDetails->staff->firstname : ($receiptDetails->owner ? $receiptDetails->owner->firstname : 'N/A') }}
-                            </span>
-                        </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Date & Time:</span>
+                        <span class="text-sm text-gray-900">{{ $receiptDetails->receipt_date->format('m/d/Y, h:i:s A') }}</span>
                     </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-sm font-medium text-gray-700">Cashier:</span>
+                        <span class="text-sm text-gray-900">
+                            {{ $receiptDetails->staff ? $receiptDetails->staff->firstname : ($receiptDetails->owner ? $receiptDetails->owner->firstname : 'N/A') }}
+                        </span>
+                    </div>
+                </div>
 
-                    <!-- Items List (View Only - NO Return Buttons) -->
-                    <div class="mb-4">
-                        <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
-                        <div class="space-y-2">
-                            @foreach($receiptDetails->receiptItems as $item)
-                                <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                                    <div class="flex justify-between items-start">
-                                        <div class="flex-1 pr-4">
-                                            <div class="text-sm font-medium text-gray-900 mb-1">{{ $item->product->name }}</div>
-                                            <div class="text-xs text-gray-500">
-                                                Quantity: {{ $item->item_quantity }} × ₱{{ number_format($item->product->selling_price, 2) }}
-                                            </div>
-                                            @if(($item->item_discount_value ?? 0) > 0)
-                                                <div class="text-xs text-orange-600 mt-1">
-                                                    Item Discount: 
-                                                    @if(($item->item_discount_type ?? 'percent') == 'percent')
-                                                        {{ $item->item_discount_value }}%
-                                                    @else
-                                                        ₱{{ number_format($item->item_discount_value, 2) }}
-                                                    @endif
-                                                </div>
-                                            @endif
+                <!-- Items List (View Only - NO Return Buttons) -->
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">Items Purchased</h4>
+                    <div class="space-y-2">
+                        @foreach($receiptDetails->receiptItems as $item)
+                            <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1 pr-4">
+                                        <div class="text-sm font-medium text-gray-900 mb-1">{{ $item->product->name }}</div>
+                                        <div class="text-xs text-gray-500">
+                                            Quantity: {{ $item->item_quantity }} × ₱{{ number_format($item->product->selling_price, 2) }}
                                         </div>
-                                        <div class="text-right">
-                                            <div class="text-sm font-bold text-gray-900">
-                                                ₱{{ number_format(($item->product->selling_price * $item->item_quantity), 2) }}
+                                        @if(($item->item_discount_value ?? 0) > 0)
+                                            <div class="text-xs text-orange-600 mt-1">
+                                                Item Discount: 
+                                                @if(($item->item_discount_type ?? 'percent') == 'percent')
+                                                    {{ $item->item_discount_value }}%
+                                                @else
+                                                    ₱{{ number_format($item->item_discount_value, 2) }}
+                                                @endif
                                             </div>
+                                        @endif
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-bold text-gray-900">
+                                            ₱{{ number_format(($item->product->selling_price * $item->item_quantity), 2) }}
                                         </div>
                                     </div>
                                 </div>
-                            @endforeach
-                        </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- Totals -->
+                <div class="border-t-2 border-gray-300 pt-4 space-y-2">
+                    <!-- Total Quantity (Number of Units) -->
+                    <div class="flex justify-between items-center bg-blue-50 -mx-2 px-4 py-2 rounded-lg">
+                        <span class="text-sm font-bold text-gray-900">Total Quantity:</span>
+                        <span class="text-sm font-bold text-blue-600">
+                            {{ $receiptDetails->receiptItems->sum('item_quantity') }}
+                        </span>
                     </div>
 
-                    <!-- Totals -->
-                    <div class="border-t-2 border-gray-300 pt-4 space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">Subtotal:</span>
-                            <span class="text-sm font-bold text-gray-900">
-                                ₱{{ number_format($receiptDetails->computed_subtotal ?? 0, 2) }}
-                            </span>
-                        </div>
-
-                        @if(($receiptDetails->total_item_discounts ?? 0) > 0)
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-orange-600">Item Discounts:</span>
-                            <span class="text-sm font-bold text-orange-600">
-                                -₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
-                            </span>
-                        </div>
-                        @endif
-
-                        @if(($receiptDetails->receipt_discount_amount ?? 0) > 0)
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-orange-600">Receipt Discount:</span>
-                            <span class="text-sm font-bold text-orange-600">
-                                @if(($receiptDetails->discount_type ?? '') == 'percent')
-                                    -{{ $receiptDetails->discount_value ?? 0 }}% (₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }})
-                                @else
-                                    -₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
-                                @endif
-                            </span>
-                        </div>
-                        @endif
-
-                        @if(($receiptDetails->vat_amount ?? 0) > 0)
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-green-700">VAT:</span>
-                            <span class="text-sm font-bold text-green-600">
-                                +₱{{ number_format($receiptDetails->vat_amount, 2) }}
-                            </span>
-                        </div>
-                        @endif
-
-                        <div class="flex justify-between items-center pt-2 border-t">
-                            <span class="text-lg font-bold text-gray-900">Total Amount:</span>
-                            <span class="text-lg font-bold text-blue-600">
-                                ₱{{ number_format($receiptDetails->computed_total ?? 0, 2) }}
-                            </span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
-                            <span class="text-sm text-gray-900">
-                                ₱{{ number_format($receiptDetails->amount_paid ?? 0, 2) }}
-                            </span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">Change:</span>
-                            <span class="text-sm font-bold text-green-600">
-                                ₱{{ number_format($receiptDetails->computed_change ?? 0, 2) }}
-                            </span>
-                        </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Subtotal:</span>
+                        <span class="text-sm font-bold text-gray-900">
+                            ₱{{ number_format($receiptDetails->computed_subtotal ?? 0, 2) }}
+                        </span>
                     </div>
 
-                    <!-- Note about returns -->
-                    <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p class="text-xs text-blue-800 flex items-start gap-2">
-                            <span class="material-symbols-rounded text-sm">info</span>
-                            <span>To process returns for this receipt, click the <strong>Return</strong> button in the Actions column of the transactions table.</span>
-                        </p>
+                    @if(($receiptDetails->total_item_discounts ?? 0) > 0)
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-orange-600">Item Discounts:</span>
+                        <span class="text-sm font-bold text-orange-600">
+                            -₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
+                        </span>
                     </div>
+                    @endif
+
+                    @if(($receiptDetails->receipt_discount_amount ?? 0) > 0)
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-orange-600">Receipt Discount:</span>
+                        <span class="text-sm font-bold text-orange-600">
+                            @if(($receiptDetails->discount_type ?? '') == 'percent')
+                                -{{ $receiptDetails->discount_value ?? 0 }}% (₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }})
+                            @else
+                                -₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
+                            @endif
+                        </span>
+                    </div>
+                    @endif
+
+                    @if(($receiptDetails->vat_amount ?? 0) > 0)
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-green-700">VAT:</span>
+                        <span class="text-sm font-bold text-green-600">
+                            +₱{{ number_format($receiptDetails->vat_amount, 2) }}
+                        </span>
+                    </div>
+                    @endif
+
+                    <div class="flex justify-between items-center pt-2 border-t">
+                        <span class="text-lg font-bold text-gray-900">Total Amount:</span>
+                        <span class="text-lg font-bold text-blue-600">
+                            ₱{{ number_format($receiptDetails->computed_total ?? 0, 2) }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
+                        <span class="text-sm text-gray-900">
+                            ₱{{ number_format($receiptDetails->amount_paid ?? 0, 2) }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Change:</span>
+                        <span class="text-sm font-bold text-green-600">
+                            ₱{{ number_format($receiptDetails->computed_change ?? 0, 2) }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Note about returns -->
+                <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-xs text-blue-800 flex items-start gap-2">
+                        <span class="material-symbols-rounded text-sm">info</span>
+                        <span>To process returns for this receipt, click the <strong>Return</strong> button in the Actions column of the transactions table.</span>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
-    @endif
+</div>
+@endif
 
     <!-- Global Return History Modal -->
     @if($showGlobalReturnHistory)
@@ -1029,7 +1038,7 @@
                                         <td class="px-4 py-3 text-center">
                                             @if($return->damaged_id)
                                                 <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-medium">
-                                                    Damaged: {{ $return->damaged_type }}
+                                                    {{ $return->damaged_type }}
                                                 </span>
                                             @else
                                                 <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
@@ -1041,7 +1050,7 @@
                                             {{ $return->return_reason }}
                                         </td>
                                         <td class="px-4 py-3 text-gray-600 text-xs">
-                                            {{ $return->processed_by_staff ?: $return->processed_by_owner }}
+                                            {{ $return->return_staff_id ? trim($return->staff_fullname) : trim($return->owner_fullname) }}
                                         </td>
                                     </tr>
                                 @endforeach

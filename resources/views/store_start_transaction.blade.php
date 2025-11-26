@@ -1,21 +1,24 @@
 @extends('dashboards.owner.owner')
 @section('content')
 
-<!-- Expired Product Warning Modal -->
+<!-- Expired Product Warning Modal (Auto-dismiss) -->
 <div id="expiredProductModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] hidden">
-    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4 shadow-2xl">
+    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4 shadow-2xl transform transition-all duration-300">
         <div class="flex items-center justify-center mb-4">
             <div class="bg-red-100 rounded-full p-3">
                 <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-. 77-.833-1.964-. 833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                 </svg>
             </div>
         </div>
-        <h3 class="text-xl font-bold text-center mb-2 text-gray-900">Expired Product</h3>
-        <p id="expiredProductMessage" class="text-center text-gray-600 mb-6"></p>
-        <button id="closeExpiredModal" class="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-700 transition-colors">
-            OK, Got It
-        </button>
+        <h3 class="text-xl font-bold text-center mb-2 text-gray-900">Product Unavailable</h3>
+        <p id="expiredProductMessage" class="text-center text-gray-600 mb-4"></p>
+        
+        <!-- Progress bar showing auto-dismiss countdown -->
+        <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+            <div id="expiredModalProgress" class="bg-red-600 h-full transition-all ease-linear" style="width: 100%;"></div>
+        </div>
+        <p class="text-center text-xs text-gray-500 mt-2">Auto-closing... </p>
     </div>
 </div>
 
@@ -47,6 +50,31 @@
         <div class="absolute inset-0 w-3 h-3 bg-white rounded-full animate-ping"></div>
     </div>
     <span class="text-sm font-medium">Scanner Ready</span>
+</div>
+
+<!-- Confirm Remove Item Modal -->
+<div id="confirmRemoveModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4 shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Remove Item</h3>
+            <button id="closeConfirmRemoveModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <p class="text-gray-700 mb-6">Are you sure you want to remove this item from the cart?</p>
+
+        <div class="flex gap-3">
+            <button id="cancelConfirmRemove" class="flex-1 px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                Cancel
+            </button>
+            <button id="confirmRemoveBtn" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
+                Remove
+            </button>
+        </div>
+    </div>
 </div>
 
 <div class="px-4 mb-2">
@@ -146,7 +174,7 @@
                 <!-- Summary -->
                 <div class="bg-white p-3 rounded-lg shadow-sm border">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-medium text-gray-700">Total Items:</span>
+                        <span class="text-xs font-medium text-gray-700">Total Quantity:</span>
                         <span id="totalQuantity" class="text-xs font-bold text-gray-900">0</span>
                     </div>
                     <div class="flex justify-between items-center">
@@ -164,37 +192,6 @@
                         Process Payment
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Remove Item Reason Modal -->
-<div id="removeReasonModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold">Remove Item</h3>
-            <button id="closeRemoveModal" class="text-gray-400 hover:text-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        <div class="space-y-4">
-            <p class="text-gray-700">Please select a reason for removing this item:</p>
-            <div class="space-y-2">
-                <button class="remove-reason-btn w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" data-reason="cancel">
-                    <svg class="inline-block w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
-                    </svg>
-                    Cancel Item
-                </button>
-                <button class="remove-reason-btn w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" data-reason="damage">
-                    <svg class="inline-block w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                    </svg>
-                    Damaged Item
-                </button>
             </div>
         </div>
     </div>
@@ -253,13 +250,13 @@
 }
 
 .product-card.out-of-stock {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
     background-color: #f9fafb;
 }
 
 .product-card.expired {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
     background-color: #fef2f2;
     border-color: #dc2626;
@@ -376,11 +373,22 @@
 .cart-item {
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
     background: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
+}
+
+/* ✅ NEW: Compact cart item text */
+.cart-item h4 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin-bottom: 4px;
+}
+
+.cart-item.text-xs {
+    font-size: 0.75rem;
 }
 
 /* Highlight animation for newly added items */
@@ -409,14 +417,26 @@
     }
 }
 
+/* Expired modal animations */
+#expiredProductModal.bg-white {
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.3s ease-out;
+}
+
+#expiredProductModal.show.bg-white {
+    transform: scale(1);
+    opacity: 1;
+}
+
 .quantity-controls {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 }
 
 .quantity-btn {
-    width: 32px;
+    width: 28px;
     height: 32px;
     border-radius: 50%;
     background-color: #ef4444;
@@ -428,7 +448,7 @@
     cursor: pointer;
     transition: background-color 0.2s;
     font-weight: bold;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .quantity-btn:hover:not(:disabled) {
@@ -451,14 +471,14 @@
 }
 
 .quantity-input {
-    width: 70px;
-    padding: 8px 6px;
+    width: 60px;
+    padding: 6px 4px;
     background-color: #ffffff;
     border: 2px solid #e5e7eb;
     border-radius: 6px;
     text-align: center;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     transition: all 0.2s;
     -moz-appearance: textfield;
 }
@@ -620,27 +640,26 @@ class KioskSystem {
             window.location.href = '{{ route("store_payment_processor") }}';
         });
 
-        // Remove Modal Events
-        document.getElementById('closeRemoveModal').addEventListener('click', () => {
-            this.hideModal('removeReasonModal');
+        // Confirm Remove Modal Events
+        document.getElementById('closeConfirmRemoveModal').addEventListener('click', () => {
+            this.hideModal('confirmRemoveModal');
+            this.removeItemData = null;
         });
 
-        document.querySelectorAll('.remove-reason-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const reason = btn.dataset.reason;
-                this.confirmRemoveItem(reason);
-            });
+        document.getElementById('cancelConfirmRemove').addEventListener('click', () => {
+            this.hideModal('confirmRemoveModal');
+            this.removeItemData = null;
         });
 
-        // Expired Product Modal Events
-        document.getElementById('closeExpiredModal').addEventListener('click', () => {
-            this.hideModal('expiredProductModal');
+        document.getElementById('confirmRemoveBtn').addEventListener('click', () => {
+            this.confirmRemoveItem();
         });
 
         // Close modals on click outside
-        document.getElementById('removeReasonModal').addEventListener('click', (e) => {
-            if (e.target.id === 'removeReasonModal') {
-                this.hideModal('removeReasonModal');
+        document.getElementById('confirmRemoveModal').addEventListener('click', (e) => {
+            if (e.target.id === 'confirmRemoveModal') {
+                this.hideModal('confirmRemoveModal');
+                this.removeItemData = null;
             }
         });
 
@@ -652,9 +671,10 @@ class KioskSystem {
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                this.hideModal('removeReasonModal');
-                this.hideModal('expiredProductModal');
+                this.hideModal('confirmRemoveModal');
+                this.hideExpiredModal();
                 this.hideScannerToast();
+                this.removeItemData = null;
             }
         });
     }
@@ -867,10 +887,51 @@ class KioskSystem {
         }, 300);
     }
 
-    showExpiredModal(title, message) {
-        document.getElementById('expiredProductMessage').textContent = message;
-        this.showModal('expiredProductModal');
-    }
+    showExpiredModal(title, message, duration = 1500) {
+    document.getElementById('expiredProductMessage').textContent = message;
+    
+    const modal = document.getElementById('expiredProductModal');
+    const progressBar = document.getElementById('expiredModalProgress');
+    
+    // Show modal with fade-in animation
+    modal.classList. remove('hidden');
+    setTimeout(() => {
+        modal.querySelector('.bg-white').style.transform = 'scale(1)';
+        modal. querySelector('.bg-white').style. opacity = '1';
+    }, 10);
+    
+    // Reset progress bar
+    progressBar.style.transition = 'none';
+    progressBar.style.width = '100%';
+    
+    // Start countdown animation
+    setTimeout(() => {
+        progressBar. style.transition = `width ${duration}ms linear`;
+        progressBar.style. width = '0%';
+    }, 50);
+    
+    // Auto-dismiss after duration
+    setTimeout(() => {
+        this.hideExpiredModal();
+    }, duration);
+}
+
+// Add new method for hiding with animation
+hideExpiredModal() {
+    const modal = document.getElementById('expiredProductModal');
+    const modalContent = modal.querySelector('.bg-white');
+    
+    // Fade out animation
+    modalContent.style.transform = 'scale(0. 95)';
+    modalContent.style.opacity = '0';
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        // Reset for next time
+        modalContent.style.transform = 'scale(1)';
+        modalContent.style.opacity = '1';
+    }, 300);
+}
 
     startRealTimeClock() {
         const updateDateTime = () => {
@@ -1022,113 +1083,130 @@ class KioskSystem {
     }
 
     createProductCard(product) {
-        const card = document.createElement('div');
-        const isOutOfStock = product.stock <= 0;
-        const isLowStock = product.stock > 0 && product.stock <= product.stock_limit;
-        const hasExpiredOnly = product.has_expired_only || false;
-        
-        let cardClass = 'product-card';
-        let stockBadge = '';
-        let stockBadgeClass = 'stock-badge';
-        
-        if (isOutOfStock) {
-            if (hasExpiredOnly) {
-                cardClass += ' expired';
-                stockBadge = 'Expired';
-                stockBadgeClass += ' expired';
-            } else {
-                cardClass += ' out-of-stock';
-                stockBadge = 'Out of Stock';
-                stockBadgeClass += ' out';
-            }
-        } else if (isLowStock) {
-            cardClass += ' low-stock';
-            stockBadge = 'Low Stock';
-            stockBadgeClass += ' low';
+    const card = document.createElement('div');
+    const isOutOfStock = product.stock <= 0;
+    const isLowStock = product.stock > 0 && product.stock <= product.stock_limit;
+    const hasExpiredOnly = product.has_expired_only || false;
+    
+    // 🔍 DEBUG: Log image URL to console
+    console.log('===================');
+    console.log('Product:', product.name);
+    console.log('Image URL:', product.prod_image);
+    console.log('Has Image:', product. prod_image ? 'YES' : 'NO');
+    console.log('===================');
+    
+    let cardClass = 'product-card';
+    let stockBadge = '';
+    let stockBadgeClass = 'stock-badge';
+    
+    if (isOutOfStock) {
+        if (hasExpiredOnly) {
+            cardClass += ' expired';
+            stockBadge = 'Expired';
+            stockBadgeClass += ' expired';
         } else {
-            stockBadge = 'Available';
-            stockBadgeClass += ' available';
+            cardClass += ' out-of-stock';
+            stockBadge = 'Out of Stock';
+            stockBadgeClass += ' out';
         }
-        
-        card.className = cardClass;
-        card.dataset.prodCode = product.prod_code;
+    } else if (isLowStock) {
+        cardClass += ' low-stock';
+        stockBadge = 'Low Stock';
+        stockBadgeClass += ' low';
+    } else {
+        stockBadge = 'Available';
+        stockBadgeClass += ' available';
+    }
+    
+    card.className = cardClass;
+    card.dataset.prodCode = product.prod_code;
 
-        const hasImage = product.prod_image && product.prod_image.trim() !== '';
-        
-        card.innerHTML = `
-            <div class="product-image ${hasImage ? 'has-image' : ''}">
-                ${hasImage ? 
-                    `<img src="${product.prod_image}" alt="${product.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                     <div style="display:none;" class="w-full h-full flex items-center justify-center">
-                         <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"></path>
-                         </svg>
-                     </div>` :
-                    `<svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"></path>
-                     </svg>`
-                }
-            </div>
-            <div class="product-info">
-                <h4 class="product-name" title="${product.name}">
-                    ${product.name}
-                </h4>
-                <div>
-                    <p class="product-price">₱${parseFloat(product.selling_price).toFixed(2)}</p>
-                    <div class="product-stock-info">
-                        <span class="stock-label">Stock: ${product.stock}</span>
-                        <span class="${stockBadgeClass}">${stockBadge}</span>
-                    </div>
+    const hasImage = product.prod_image && product.prod_image.trim() !== '';
+    
+    card.innerHTML = `
+        <div class="product-image ${hasImage ? 'has-image' : ''}">
+            ${hasImage ? 
+                `<img src="${product.prod_image}" alt="${product.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'; console.error('Failed to load image:', '${product.prod_image}');">
+                 <div style="display:none;" class="w-full h-full flex items-center justify-center">
+                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012. 828 0L20 14m-6-6h.01M6 2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"></path>
+                     </svg>
+                 </div>` :
+                `<svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"></path>
+                 </svg>`
+            }
+        </div>
+        <div class="product-info">
+            <h4 class="product-name" title="${product.name}">
+                ${product.name}
+            </h4>
+            <div>
+                <p class="product-price">₱${parseFloat(product.selling_price).toFixed(2)}</p>
+                <div class="product-stock-info">
+                    <span class="stock-label">Stock: ${product.stock}</span>
+                    <span class="${stockBadgeClass}">${stockBadge}</span>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        if (!isOutOfStock && !hasExpiredOnly) {
-            card.addEventListener('click', () => this.addToCart(product.prod_code));
-        } else if (hasExpiredOnly) {
-            card.addEventListener('click', () => {
-                this.showExpiredModal(
+    if (! isOutOfStock && !hasExpiredOnly) {
+        card.addEventListener('click', () => this.addToCart(product.prod_code));
+        card.style.cursor = 'pointer';
+    } else {
+        card.addEventListener('click', () => {
+            if (hasExpiredOnly) {
+                this. showExpiredModal(
                     'Product Expired',
                     `${product.name} only has expired stock available and cannot be sold.`
                 );
-            });
-        }
-
-        return card;
+            } else {
+                this.showExpiredModal(
+                    'Out of Stock',
+                    `${product.name} is currently out of stock. `
+                );
+            }
+        });
+        card.style.cursor = 'not-allowed';
     }
+
+    return card;
+}
 
     async addToCart(prodCode, quantity = 1) {
-        try {
-            const response = await fetch('{{ route("add_to_kiosk_cart") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    prod_code: prodCode,
-                    quantity: quantity
-                })
-            });
+    try {
+        const response = await fetch('{{ route("add_to_kiosk_cart") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON. stringify({
+                prod_code: prodCode,
+                quantity: quantity
+            })
+        });
 
-            const data = await response.json();
-            
-            if (data.success) {
-                this.lastAddedProdCode = data.newly_added_prod_code || prodCode;
-                this.updateCart(data.cart_items, data.cart_summary);
-            } else if (data.expired_product) {
-                this.showExpiredModal(
-                    'Product Expired',
-                    data.message || 'This product only has expired stock and cannot be sold.'
-                );
-            } else {
-                this.showToast(data.message, 'error');
-            }
-        } catch (error) {
-            console.error('Error adding to cart:', error);
-            this.showToast('Error adding item to cart', 'error');
+        const data = await response.json();
+        
+        if (data.success) {
+            this.lastAddedProdCode = data.newly_added_prod_code || prodCode;
+            this.updateCart(data.cart_items, data.cart_summary);
+        } else if (data.expired_product) {
+            this.showExpiredModal(
+                'Expired Product',
+                data.message || 'This product only has expired stock and cannot be sold.'
+            );
+        } else {
+            // Toast for other errors
+            this.showToast(data.message, 'error');
         }
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        this. showToast('Error adding item to cart', 'error');
     }
+}
 
     async updateCartQuantity(prodCode, quantity) {
         try {
@@ -1159,10 +1237,10 @@ class KioskSystem {
 
     showRemoveModal(prodCode) {
         this.removeItemData = prodCode;
-        this.showModal('removeReasonModal');
+        this.showModal('confirmRemoveModal');
     }
 
-    async confirmRemoveItem(reason) {
+    async confirmRemoveItem() {
         if (!this.removeItemData) return;
 
         try {
@@ -1173,28 +1251,24 @@ class KioskSystem {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({
-                    prod_code: this.removeItemData,
-                    reason: reason,
-                    quantity: 1,
-                    damage_reason: reason === 'damage' ? 'Damaged during transaction' : null
+                    prod_code: this.removeItemData
                 })
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.updateCart(data.cart_items, data.cart_summary);
-                this.showToast(data.message, 'success');
             } else {
                 this.showToast(data.message, 'error');
             }
         } catch (error) {
             console.error('Error removing item:', error);
             this.showToast('Error removing item', 'error');
+        } finally {
+            this.hideModal('confirmRemoveModal');
+            this.removeItemData = null;
         }
-
-        this.hideModal('removeReasonModal');
-        this.removeItemData = null;
     }
 
     async loadCartItems() {
@@ -1244,7 +1318,6 @@ class KioskSystem {
                     <div class="flex-1 pr-4">
                         <h4 class="font-semibold text-sm text-gray-900 leading-5 mb-1">${item.product.name}</h4>
                         <p class="text-xs text-gray-500">₱${parseFloat(item.product.selling_price).toFixed(2)} each</p>
-                        <p class="text-xs text-gray-400 mt-1">Available: ${item.current_stock}</p>
                     </div>
                     <button class="remove-btn" onclick="kioskSystem.showRemoveModal('${item.product.prod_code}')">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1361,7 +1434,7 @@ class KioskSystem {
                     ${iconSvg}
                 </svg>
                 <span>${message}</span>
-                        </div>
+            </div>
         `;
         
         document.body.appendChild(toast);

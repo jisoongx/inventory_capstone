@@ -101,13 +101,13 @@
                         </button>
                     </div>
 
-                    <!-- Change Display - Large and Clear -->
-                    <div id="changeDisplay" class="hidden">
-                        <div class="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-xl shadow-lg">
-                            <p class="text-green-100 text-sm font-semibold mb-1">CHANGE TO RETURN</p>
-                            <p id="changeAmount" class="text-white text-5xl font-bold">₱0.00</p>
+                        <!-- Change Display - Inline -->
+                        <div id="changeDisplay" class="hidden">
+                            <div class="bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 rounded-lg shadow-md flex items-center justify-between">
+                                <p class="text-green-100 text-xs font-medium">CHANGE TO RETURN:</p>
+                                <p id="changeAmount" class="text-white text-2xl font-bold ml-3">₱0.00</p>
+                            </div>
                         </div>
-                    </div>
 
                     <!-- Insufficient Amount Warning -->
                     <div id="insufficientWarning" class="hidden bg-red-50 border-2 border-red-300 p-4 rounded-xl">
@@ -149,7 +149,7 @@
                     <!-- Discounts Toggle (Collapsible) -->
                     <div class="border-t pt-4">
                         <button id="toggleDiscounts" class="w-full flex items-center justify-between p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
-                            <span class="font-semibold text-gray-700">Add Discounts & VAT (Optional)</span>
+                            <span class="font-semibold text-gray-700">Add Discounts & VAT</span>
                             <svg id="discountChevron" class="w-5 h-5 text-gray-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
@@ -223,6 +223,7 @@
             <div class="p-6">
                 <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
                     <h2 id="storeNameReceipt" class="text-xl font-bold text-gray-800">{{ $store_info->store_name ?? 'Store Name' }}</h2>
+                    <p class="text-sm text-gray-600">{{ $store_info->store_address }}</p>
                 </div>
 
                 <div class="mb-4">
@@ -246,35 +247,39 @@
                 </div>
 
                 <div class="border-t-2 border-gray-300 pt-4 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Total Items:</span>
-                        <span id="receiptTotalItems" class="text-sm font-bold text-gray-900">0</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Item Discounts:</span>
-                        <span id="receiptItemDiscounts" class="text-sm font-bold text-orange-600">-₱0.00</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Receipt Discount:</span>
-                        <span id="receiptReceiptDiscount" class="text-sm font-bold text-orange-600">-₱0.00</span>
-                    </div>
-                    <div class="flex justify-between items-center" id="receiptVATRow" style="display:none;">
-                        <span class="text-sm font-medium text-gray-700">VAT:</span>
-                        <span id="receiptVatAmount" class="text-sm font-bold text-green-600">+₱0.00</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-lg font-bold text-gray-900">Total Amount:</span>
-                        <span id="receiptTotalAmount" class="text-lg font-bold text-red-600">₱0.00</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
-                        <span id="receiptAmountPaid" class="text-sm text-gray-900">₱0.00</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Change:</span>
-                        <span id="receiptChange" class="text-sm font-bold text-green-600">₱0.00</span>
-                    </div>
-                </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">Total Quantity:</span>
+        <span id="receiptTotalItems" class="text-sm text-gray-900">0</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">Subtotal:</span>
+        <span id="receiptSubtotal" class="text-sm text-gray-900">₱0.00</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">Item Discounts:</span>
+        <span id="receiptItemDiscounts" class="text-sm text-orange-600">-₱0.00</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">Receipt Discount:</span>
+        <span id="receiptReceiptDiscount" class="text-sm text-orange-600">-₱0.00</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">VAT:</span>
+        <span id="receiptVatAmount" class="text-sm text-green-600">+₱0.00</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-lg font-bold text-gray-900">Total Amount:</span>
+        <span id="receiptTotalAmount" class="text-lg font-bold text-red-600">₱0.00</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">Amount Paid:</span>
+        <span id="receiptAmountPaid" class="text-sm text-gray-900">₱0.00</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">Change:</span>
+        <span id="receiptChange" class="text-sm text-green-600">₱0.00</span>
+    </div>
+</div>
 
                 <div class="text-center mt-6 pt-4 border-t border-gray-200">
                     <p class="text-xs text-gray-500">Thank you for your purchase!</p>
@@ -395,6 +400,7 @@ class PaymentProcessor {
         this.amountPaid = 0;
         this.totalAmount = 0;
         this.discountsExpanded = false;
+        this.storageKey = 'payment_processor_state';
         
         this.init();
     }
@@ -406,6 +412,99 @@ class PaymentProcessor {
         this.loadCartItems();
     }
 
+    // Save state to localStorage
+    saveState() {
+        const state = {
+            amountPaid: document.getElementById('amountPaidInput')?.value || '0',
+            receiptDiscountType: this.receiptDiscount.type,
+            receiptDiscountValue: this.receiptDiscount.value,
+            vatEnabled: this.vatEnabled,
+            vatRate: this.vatRate,
+            itemDiscounts: this.itemDiscounts,
+            discountsExpanded: this.discountsExpanded,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(this.storageKey, JSON.stringify(state));
+    }
+
+    // Load state from localStorage
+    loadState() {
+        try {
+            const savedState = localStorage.getItem(this.storageKey);
+            if (!savedState) return false;
+
+            const state = JSON.parse(savedState);
+            
+            // Check if state is less than 1 hour old
+            const oneHour = 60 * 60 * 1000;
+            if (Date.now() - state.timestamp > oneHour) {
+                localStorage.removeItem(this.storageKey);
+                return false;
+            }
+
+            // Restore amount paid
+            if (state.amountPaid) {
+                const input = document.getElementById('amountPaidInput');
+                if (input) input.value = state.amountPaid;
+            }
+
+            // Restore receipt discount
+            if (state.receiptDiscountType) {
+                this.receiptDiscount.type = state.receiptDiscountType;
+                const typeSelect = document.getElementById('receiptDiscountType');
+                if (typeSelect) typeSelect.value = state.receiptDiscountType;
+            }
+            
+            if (state.receiptDiscountValue) {
+                this.receiptDiscount.value = state.receiptDiscountValue;
+                const valueInput = document.getElementById('receiptDiscountValue');
+                if (valueInput) valueInput.value = state.receiptDiscountValue;
+            }
+
+            // Restore VAT
+            if (state.vatEnabled !== undefined) {
+                this.vatEnabled = state.vatEnabled;
+                const vatCheckbox = document.getElementById('enableVAT');
+                if (vatCheckbox) {
+                    vatCheckbox.checked = state.vatEnabled;
+                    document.getElementById('vatControls').style.display = state.vatEnabled ? 'block' : 'none';
+                }
+            }
+
+            if (state.vatRate) {
+                this.vatRate = state.vatRate;
+                const vatInput = document.getElementById('vatRate');
+                if (vatInput) vatInput.value = state.vatRate;
+            }
+
+            // Restore item discounts
+            if (state.itemDiscounts) {
+                this.itemDiscounts = state.itemDiscounts;
+            }
+
+            // Restore discounts section expanded state
+            if (state.discountsExpanded) {
+                this.discountsExpanded = state.discountsExpanded;
+                const section = document.getElementById('discountsSection');
+                const chevron = document.getElementById('discountChevron');
+                if (section && chevron) {
+                    section.classList.remove('hidden');
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error loading saved state:', error);
+            return false;
+        }
+    }
+
+    // Clear saved state
+    clearState() {
+        localStorage.removeItem(this.storageKey);
+    }
+
     bindEvents() {
         // Quick amount buttons
         document.querySelectorAll('.quick-amount-btn').forEach(btn => {
@@ -414,6 +513,7 @@ class PaymentProcessor {
                 const currentAmount = parseFloat(document.getElementById('amountPaidInput').value) || 0;
                 document.getElementById('amountPaidInput').value = currentAmount + amount;
                 this.calculateChange();
+                this.saveState();
             });
         });
 
@@ -421,6 +521,7 @@ class PaymentProcessor {
         document.getElementById('exactAmountBtn')?.addEventListener('click', () => {
             document.getElementById('amountPaidInput').value = this.totalAmount.toFixed(2);
             this.calculateChange();
+            this.saveState();
         });
 
         // Toggle discounts
@@ -436,17 +537,20 @@ class PaymentProcessor {
                 section.classList.add('hidden');
                 chevron.style.transform = 'rotate(0deg)';
             }
+            this.saveState();
         });
 
         // Receipt discount
         document.getElementById('receiptDiscountType')?.addEventListener('change', (e) => {
             this.receiptDiscount.type = e.target.value;
             this.calculateTotals();
+            this.saveState();
         });
 
         document.getElementById('receiptDiscountValue')?.addEventListener('input', (e) => {
             this.receiptDiscount.value = parseFloat(e.target.value) || 0;
             this.calculateTotals();
+            this.saveState();
         });
 
         // VAT toggle
@@ -454,16 +558,19 @@ class PaymentProcessor {
             this.vatEnabled = e.target.checked;
             document.getElementById('vatControls').style.display = this.vatEnabled ? 'block' : 'none';
             this.calculateTotals();
+            this.saveState();
         });
 
         document.getElementById('vatRate')?.addEventListener('input', (e) => {
             this.vatRate = parseFloat(e.target.value) || 0;
             this.calculateTotals();
+            this.saveState();
         });
 
         // Amount paid
         document.getElementById('amountPaidInput')?.addEventListener('input', () => {
             this.calculateChange();
+            this.saveState();
         });
 
         // Complete payment
@@ -477,8 +584,17 @@ class PaymentProcessor {
         });
 
         document.getElementById('finishTransactionBtn')?.addEventListener('click', () => {
+            this.clearState(); // Clear saved state when starting new transaction
             window.location.href = '{{ route("store_start_transaction") }}';
         });
+
+        // Clear state when navigating back
+        const backButton = document.querySelector('a[href="{{ route("store_start_transaction") }}"]');
+        if (backButton) {
+            backButton.addEventListener('click', () => {
+                this.clearState();
+            });
+        }
     }
 
     updateDateTime() {
@@ -507,26 +623,52 @@ class PaymentProcessor {
                 
                 if (this.cartItems.length === 0) {
                     this.showToast('Cart is empty. Redirecting...', 'error');
+                    this.clearState(); // Clear state if cart is empty
                     setTimeout(() => {
                         window.location.href = '{{ route("store_start_transaction") }}';
                     }, 1500);
                     return;
                 }
                 
+                // Initialize item discounts if not already set
                 this.cartItems.forEach(item => {
-                    this.itemDiscounts[item.product.prod_code] = {
-                        type: 'percent',
-                        value: 0
-                    };
+                    if (!this.itemDiscounts[item.product.prod_code]) {
+                        this.itemDiscounts[item.product.prod_code] = {
+                            type: 'percent',
+                            value: 0
+                        };
+                    }
                 });
                 
                 this.renderCart();
+                
+                // Load saved state AFTER cart is rendered
+                const stateLoaded = this.loadState();
+                
+                // Restore item discount inputs if state was loaded
+                if (stateLoaded) {
+                    this.restoreItemDiscountInputs();
+                }
+                
                 this.calculateTotals();
             }
         } catch (error) {
             console.error('Error loading cart:', error);
             this.showToast('Error loading cart items', 'error');
         }
+    }
+
+    restoreItemDiscountInputs() {
+        // Restore item discount inputs from saved state
+        Object.keys(this.itemDiscounts).forEach(prodCode => {
+            const discount = this.itemDiscounts[prodCode];
+            
+            const typeSelect = document.querySelector(`.item-discount-type[data-product-code="${prodCode}"]`);
+            if (typeSelect) typeSelect.value = discount.type;
+            
+            const valueInput = document.querySelector(`.item-discount-value[data-product-code="${prodCode}"]`);
+            if (valueInput) valueInput.value = discount.value;
+        });
     }
 
     renderCart() {
@@ -599,6 +741,7 @@ class PaymentProcessor {
                 const productCode = e.target.dataset.productCode;
                 this.itemDiscounts[productCode].type = e.target.value;
                 this.calculateTotals();
+                this.saveState();
             });
         });
 
@@ -607,6 +750,7 @@ class PaymentProcessor {
                 const productCode = e.target.dataset.productCode;
                 this.itemDiscounts[productCode].value = parseFloat(e.target.value) || 0;
                 this.calculateTotals();
+                this.saveState();
             });
         });
     }
@@ -787,6 +931,7 @@ class PaymentProcessor {
             const data = await response.json();
 
             if (data.success) {
+                this.clearState(); // Clear saved state after successful payment
                 this.showToast('Payment completed successfully!', 'success');
                 this.showReceiptModal(data);
             } else {
@@ -803,142 +948,210 @@ class PaymentProcessor {
     }
 
     showReceiptModal(paymentData) {
-        document.getElementById('receiptNumber').textContent = paymentData.receipt_id || '{{ $receipt_no ?? "0" }}';
-        document.getElementById('receiptTotalItems').textContent = paymentData.total_quantity;
-        document.getElementById('receiptTotalAmount').textContent = `₱${paymentData.total_amount.toFixed(2)}`;
-        document.getElementById('receiptAmountPaid').textContent = `₱${paymentData.amount_paid.toFixed(2)}`;
-        document.getElementById('receiptChange').textContent = `₱${paymentData.change.toFixed(2)}`;
+    document.getElementById('receiptNumber').textContent = paymentData.receipt_id || '{{ $receipt_no ?? "0" }}';
+    document.getElementById('receiptTotalItems').textContent = paymentData.total_quantity;
+    
+    // Calculate subtotal from receipt items
+    const subtotal = paymentData.subtotal || paymentData.receipt_items.reduce((sum, item) => {
+        return sum + (item.product.selling_price * item.quantity);
+    }, 0);
+    
+    document.getElementById('receiptSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
+    document.getElementById('receiptTotalAmount').textContent = `₱${paymentData.total_amount.toFixed(2)}`;
+    document.getElementById('receiptAmountPaid').textContent = `₱${paymentData.amount_paid.toFixed(2)}`;
+    document.getElementById('receiptChange').textContent = `₱${paymentData.change.toFixed(2)}`;
 
-        const itemDiscountsAmount = paymentData.total_item_discounts ?? 0;
-        const receiptDiscountAmount = paymentData.receipt_discount_amount ?? 0;
-        const vatAmount = paymentData.vat_amount ?? 0;
+    const itemDiscountsAmount = paymentData.total_item_discounts ?? 0;
+    const receiptDiscountAmount = paymentData.receipt_discount_amount ?? 0;
+    const vatAmount = paymentData.vat_amount ?? 0;
 
-        document.getElementById('receiptItemDiscounts').textContent = `-₱${parseFloat(itemDiscountsAmount).toFixed(2)}`;
-        document.getElementById('receiptReceiptDiscount').textContent = `-₱${parseFloat(receiptDiscountAmount).toFixed(2)}`;
-        document.getElementById('receiptVatAmount').textContent = `+₱${parseFloat(vatAmount).toFixed(2)}`;
-        document.getElementById('receiptVATRow').style.display = vatAmount > 0 ? 'flex' : 'none';
+    // Always display all discount and VAT values (even if 0)
+    document.getElementById('receiptItemDiscounts').textContent = `-₱${parseFloat(itemDiscountsAmount).toFixed(2)}`;
+    document.getElementById('receiptReceiptDiscount').textContent = `-₱${parseFloat(receiptDiscountAmount).toFixed(2)}`;
+    document.getElementById('receiptVatAmount').textContent = `+₱${parseFloat(vatAmount).toFixed(2)}`;
+    // VAT row is now always visible - no need to toggle display
 
-        const now = new Date();
-        const options = {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        };
-        document.getElementById('receiptTransactionDate').textContent = now.toLocaleString('en-US', options);
-        
-        const itemsList = document.getElementById('receiptItemsList');
-        if (paymentData.receipt_items && paymentData.receipt_items.length > 0) {
-            itemsList.innerHTML = paymentData.receipt_items.map(item => `
-                <div class="flex justify-between items-start py-2 border-b border-gray-100 last:border-b-0">
-                    <div class="flex-1 pr-2">
-                        <div class="text-sm font-medium text-gray-900">${item.product.name}</div>
-                        <div class="text-xs text-gray-500">${item.quantity} × ₱${parseFloat(item.product.selling_price).toFixed(2)}</div>
-                    </div>
-                    <div class="text-sm font-bold text-gray-900">₱${item.amount.toFixed(2)}</div>
+    const now = new Date();
+    const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    };
+    document.getElementById('receiptTransactionDate').textContent = now.toLocaleString('en-US', options);
+    
+    const itemsList = document.getElementById('receiptItemsList');
+    if (paymentData.receipt_items && paymentData.receipt_items.length > 0) {
+        itemsList.innerHTML = paymentData.receipt_items.map(item => `
+            <div class="flex justify-between items-start py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex-1 pr-2">
+                    <div class="text-sm font-medium text-gray-900">${item.product.name}</div>
+                    <div class="text-xs text-gray-500">${item.quantity} × ₱${parseFloat(item.product.selling_price).toFixed(2)}</div>
                 </div>
-            `).join('');
-        } else {
-            itemsList.innerHTML = '<div class="text-center py-4 text-gray-500">No items found</div>';
-        }
-        
-        if (paymentData.low_stock_warning && paymentData.low_stock_warning.length > 0) {
-            const warningHtml = paymentData.low_stock_warning.map(product => 
-                `<p class="text-xs text-orange-600">⚠️ ${product.name}: ${product.remaining_stock} left</p>`
-            ).join('');
-            
-            const warningDiv = document.createElement('div');
-            warningDiv.className = 'mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg';
-            warningDiv.innerHTML = `
-                <p class="text-sm font-semibold text-orange-800 mb-1">Low Stock Alert:</p>
-                ${warningHtml}
-            `;
-            
-            itemsList.parentElement.appendChild(warningDiv);
-        }
-        
-        document.getElementById('receiptModal').classList.remove('hidden');
+                <div class="text-sm font-bold text-gray-900">₱${item.amount.toFixed(2)}</div>
+            </div>
+        `).join('');
+    } else {
+        itemsList.innerHTML = '<div class="text-center py-4 text-gray-500">No items found</div>';
     }
+    
+    document.getElementById('receiptModal').classList.remove('hidden');
+}
 
-    printReceipt() {
-        const receiptContent = document.querySelector('#receiptModal .overflow-y-auto').innerHTML;
-        
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <title>Receipt - {{ $receipt_no ?? '0' }}</title>
-                    <style>
-                        @page {
-                            size: 48mm auto;
-                            margin: 0;
-                        }
+printReceipt() {
+    const receiptContent = document.querySelector('#receiptModal .overflow-y-auto').innerHTML;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Receipt - {{ $receipt_no ?? '0' }}</title>
+                <style>
+                    @page {
+                        size: 48mm auto;
+                        margin: 0;
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        width: 48mm;
+                        margin: 0 auto;
+                        padding: 3px;
+                        font-size: 10.5px;
+                        color: #000;
+                        background: #fff;
+                        line-height: 1.05;
+                    }
+
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .text-left { text-align: left; }
+                    .font-bold { font-weight: bold; }
+                    .font-semibold { font-weight: 600; }
+                    .font-medium { font-weight: 500; }
+
+                    .text-xl { font-size: 1rem; }
+                    .text-lg { font-size: 0.95rem; }
+                    .text-sm { font-size: 0.8rem; }
+                    .text-xs { font-size: 0.7rem; }
+
+                    .mb-1 { margin-bottom: 1px; }
+                    .mb-2 { margin-bottom: 2px; }
+                    .mb-3 { margin-bottom: 3px; }
+                    .mb-4 { margin-bottom: 4px; }
+                    .mb-6 { margin-bottom: 6px; }
+                    .mt-1 { margin-top: 1px; }
+                    .mt-2 { margin-top: 2px; }
+                    .mt-6 { margin-top: 6px; }
+                    .pb-2 { padding-bottom: 2px; }
+                    .pb-4 { padding-bottom: 4px; }
+                    .pt-4 { padding-top: 4px; }
+                    .py-2 { padding-top: 2px; padding-bottom: 2px; }
+                    .pr-2 { padding-right: 2px; }
+
+                    .border-b { border-bottom: 1px solid #000; }
+                    .border-t { border-top: 1px solid #000; }
+                    .border-b-2 { border-bottom: 2px solid #000; }
+                    .border-t-2 { border-top: 2px solid #000; }
+                    .border-gray-100 { border-color: #000; }
+                    .border-gray-200 { border-color: #000; }
+                    .border-gray-300 { border-color: #000; }
+
+                    /* All colors converted to black for printing */
+                    .text-gray-500,
+                    .text-gray-600,
+                    .text-gray-700,
+                    .text-gray-800,
+                    .text-gray-900,
+                    .text-red-600,
+                    .text-orange-600,
+                    .text-green-600 {
+                        color: #000;
+                    }
+
+                    .flex { display: flex; }
+                    .justify-between { justify-content: space-between; }
+                    .items-center { align-items: center; }
+                    .items-start { align-items: flex-start; }
+                    .flex-1 { flex: 1; }
+
+                    .space-y-2 > * + * { margin-top: 2px; }
+
+                    /* Header alignment - Receipt details right-aligned */
+                    .mb-4 .flex {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+
+                    .mb-4 .flex span:first-child {
+                        text-align: left;
+                    }
+
+                    .mb-4 .flex span:last-child {
+                        text-align: right;
+                    }
+
+                    /* Items list - proper two-column layout */
+                    #receiptItemsList .flex {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        width: 100%;
+                    }
+
+                    #receiptItemsList .flex-1 {
+                        flex: 1;
+                        text-align: left;
+                        padding-right: 4px;
+                    }
+
+                    #receiptItemsList .text-right {
+                        text-align: right;
+                        white-space: nowrap;
+                    }
+
+                    /* Ensure product names stay on left, prices on right */
+                    #receiptItemsList .text-sm.font-medium {
+                        text-align: left;
+                    }
+
+                    #receiptItemsList .text-sm.font-bold {
+                        text-align: right;
+                    }
+
+                    /* Force VAT row to always display */
+                    #receiptVATRow {
+                        display: flex !important;
+                    }
+
+                    @media print {
                         body {
-                            font-family: Arial, sans-serif;
+                            padding: 0;
+                            margin: 0;
                             width: 48mm;
-                            margin: 0 auto;
-                            padding: 3px;
-                            font-size: 10.5px;
-                            color: #000;
-                            background: #fff;
-                            line-height: 1.05;
+                            font-size: 10px;
                         }
-
-                        .text-center { text-align: center; }
-                        .font-bold { font-weight: bold; }
-
-                        .text-xl { font-size: 1rem; }
-                        .text-lg { font-size: 0.95rem; }
-                        .text-sm { font-size: 0.8rem; }
-                        .text-xs { font-size: 0.7rem; }
-
-                        .mb-1 { margin-bottom: 1px; }
-                        .mb-2 { margin-bottom: 2px; }
-                        .mt-1 { margin-top: 1px; }
-                        .mt-2 { margin-top: 2px; }
-
-                        .border-b { border-bottom: 1px solid #000; }
-                        .border-t { border-top: 1px solid #000; }
-
-                        .flex { display: flex; }
-                        .justify-between { justify-content: space-between; }
-                        .items-center { align-items: center; }
-                        .items-start { align-items: flex-start; }
-                        .flex-1 { flex: 1; }
-
-                        .p-1 { padding: 1px; }
-                        .py-1 { padding-top: 1px; padding-bottom: 1px; }
-
-                        .space-y-1 > * + * { margin-top: 1px; }
-
-                        @media print {
-                            body {
-                                padding: 0;
-                                margin: 0;
-                                width: 48mm;
-                                font-size: 10px;
-                            }
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${receiptContent}
-                </body>
-            </html>
-        `);
-        
-        printWindow.document.close();
-        printWindow.focus();
-        
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
-        }, 250);
-    }
+                    }
+                </style>
+            </head>
+            <body>
+                ${receiptContent}
+            </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
 
     showToast(message, type = 'info') {
         const toast = document.createElement('div');

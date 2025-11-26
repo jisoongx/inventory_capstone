@@ -666,44 +666,46 @@ class ReportSalesAndPerformance extends Component
     }
 
     public function viewGlobalReturnHistory()
-{
-    try {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
-        
-        // FIXED: owner -> owners
-        $this->globalReturnHistory = collect(DB::select("
-            SELECT 
-                ret.return_id,
-                ret.return_date,
-                ret.return_quantity,
-                ret.return_reason,
-                p.name as product_name,
-                p.selling_price,
-                r.receipt_id,
-                r.receipt_date,
-                CONCAT(COALESCE(o.firstname, ''), ' ', COALESCE(o.lastname, '')) as processed_by_owner,
-                CONCAT(COALESCE(s.firstname, ''), ' ', COALESCE(s.lastname, '')) as processed_by_staff,
-                d.damaged_id,
-                d.damaged_type,
-                (ret.return_quantity * p.selling_price) as refund_amount
-            FROM returned_items ret
-            JOIN receipt_item ri ON ret.item_id = ri.item_id
-            JOIN products p ON ri.prod_code = p.prod_code
-            JOIN receipt r ON ri.receipt_id = r.receipt_id
-            LEFT JOIN owners o ON ret.owner_id = o.owner_id AND ret.staff_id IS NULL
-            LEFT JOIN staff s ON ret.staff_id = s.staff_id
-            LEFT JOIN damaged_items d ON d.return_id = ret.return_id
-            WHERE r.owner_id = ?
-            AND DATE(ret.return_date) BETWEEN ? AND ?
-            ORDER BY ret.return_date DESC
-        ", [$owner_id, $this->dateFrom, $this->dateTo]));
-
-        $this->showGlobalReturnHistory = true;
-    } catch (\Exception $e) {
-        session()->flash('error', 'Error loading return history: ' . $e->getMessage());
-        \Log::error('Error in viewGlobalReturnHistory: ' . $e->getMessage());
+    {
+        try {
+            $owner_id = Auth::guard('owner')->user()->owner_id;
+            
+            // FIXED: Properly get owner or staff who processed the return
+            $this->globalReturnHistory = collect(DB::select("
+                SELECT 
+                    ret.return_id,
+                    ret.return_date,
+                    ret.return_quantity,
+                    ret.return_reason,
+                    ret.owner_id as return_owner_id,
+                    ret.staff_id as return_staff_id,
+                    p.name as product_name,
+                    p.selling_price,
+                    r.receipt_id,
+                    r.receipt_date,
+                    CONCAT(COALESCE(o.firstname, ''), ' ', COALESCE(o.lastname, '')) as owner_fullname,
+                    CONCAT(COALESCE(s.firstname, ''), ' ', COALESCE(s.lastname, '')) as staff_fullname,
+                    d.damaged_id,
+                    d.damaged_type,
+                    (ret.return_quantity * p.selling_price) as refund_amount
+                FROM returned_items ret
+                JOIN receipt_item ri ON ret.item_id = ri.item_id
+                JOIN products p ON ri.prod_code = p.prod_code
+                JOIN receipt r ON ri.receipt_id = r.receipt_id
+                LEFT JOIN owners o ON ret.owner_id = o.owner_id AND ret.staff_id IS NULL
+                LEFT JOIN staff s ON ret.staff_id = s.staff_id AND s.owner_id = ?
+                LEFT JOIN damaged_items d ON d.return_id = ret.return_id
+                WHERE r.owner_id = ?
+                AND DATE(ret.return_date) BETWEEN ? AND ?
+                ORDER BY ret.return_date DESC
+            ", [$owner_id, $owner_id, $this->dateFrom, $this->dateTo]));
+    
+            $this->showGlobalReturnHistory = true;
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error loading return history: ' . $e->getMessage());
+            \Log::error('Error in viewGlobalReturnHistory: ' . $e->getMessage());
+        }
     }
-}
 
     public function closeGlobalReturnHistory()
     {

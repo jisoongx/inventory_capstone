@@ -10,7 +10,6 @@ use App\Models\Product;
 use App\Models\Receipt;
 use App\Models\ReceiptItem;
 use App\Models\Inventory;
-use App\Models\DamagedItem;
 use App\Http\Controllers\ActivityLogController;
 
 class StoreController extends Controller
@@ -435,7 +434,6 @@ class StoreController extends Controller
                 'success' => false,
                 'message' => 'Error adding item: ' . $e->getMessage()
             ], 500);
-        
         }
     }
 
@@ -555,18 +553,11 @@ class StoreController extends Controller
     {
         $request->validate([
             'prod_code' => 'required|exists:products,prod_code',
-            'reason' => 'required|in:return,damage,cancel',
-            'damage_reason' => 'required_if:reason,damage|nullable|string|max:255',
             'quantity' => 'required|integer|min:1'
         ]);
 
         try {
             $ownerId = $this->getCurrentOwnerId();
-            $staffId = null;
-            
-            if (Auth::guard('staff')->check()) {
-                $staffId = Auth::guard('staff')->user()->staff_id;
-            }
 
             $currentItems = session()->get('transaction_items', []);
             $itemToRemove = null;
@@ -585,36 +576,6 @@ class StoreController extends Controller
                 ], 404);
             }
 
-            if ($request->reason === 'damage') {
-                DB::transaction(function() use ($request, $ownerId, $staffId, $itemToRemove) {
-                    foreach ($itemToRemove['allocated_batches'] as $batch) {
-                        $totalItemQuantity = $itemToRemove['quantity'];
-                        $batchProportion = $batch['quantity'] / $totalItemQuantity;
-                        $damagedQuantityFromBatch = ceil($request->quantity * $batchProportion);
-                        
-                        $actualDamagedQuantity = min($damagedQuantityFromBatch, $batch['quantity']);
-                        
-                        if ($actualDamagedQuantity > 0) {
-                            DamagedItem::create([
-                                'inven_code' => $batch['inven_code'],
-                                'prod_code' => $request->prod_code,
-                                'damaged_quantity' => $actualDamagedQuantity,
-                                'damaged_date' => now(),
-                                'damaged_reason' => $request->damage_reason,
-                                'owner_id' => $ownerId,
-                                'staff_id' => $staffId,
-                                'batch_number' => $batch['batch_number'],
-                                'expiration_date' => $batch['expiration_date']
-                            ]);
-
-                            Inventory::where('inven_code', $batch['inven_code'])
-                                    ->where('owner_id', $ownerId)
-                                    ->decrement('stock', $actualDamagedQuantity);
-                        }
-                    }
-                });
-            }
-
             $currentItems = array_filter($currentItems, function($item) use ($request) {
                 return $item['prod_code'] != $request->prod_code;
             });
@@ -626,7 +587,7 @@ class StoreController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $request->reason === 'damage' ? 'Item marked as damaged and recorded.' : 'Item removed successfully.',
+                'message' => 'Item removed successfully.',
                 'cart_items' => $cartItems['items'],
                 'cart_summary' => [
                     'total_quantity' => $cartItems['total_quantity'],
@@ -881,9 +842,7 @@ class StoreController extends Controller
                         'item_discount_type' => $itemDiscountType,
                         'item_discount_value' => $itemDiscountValue * ($batch['quantity'] / $item['quantity']),
                         'vat_amount' => $itemVatAmount * ($batch['quantity'] / $item['quantity']),
-                        'inven_code' => $batch['inven_code'],
-                        'batch_number' => $batch['batch_number'],
-                        'selling_price' => $product->selling_price
+                        'inven_code' => $batch['inven_code']
                     ]);
                 }
                 
@@ -919,7 +878,6 @@ class StoreController extends Controller
                 $ip
             );
 
-
             $response = [
                 'success' => true,
                 'message' => 'Transaction completed successfully!',
@@ -954,61 +912,6 @@ class StoreController extends Controller
                 'message' => 'Transaction failed: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    private function getFormattedCartItems($items, $ownerId)
-    {
-        $formattedItems = [];
-        $totalAmount = 0;
-        $totalQuantity = 0;
-
-        foreach ($items as $item) {
-            $product = Product::where('prod_code', $item['prod_code'])
-                            ->where('owner_id', $ownerId)
-                            ->first();
-                            
-            if ($product) {
-                $currentStock = Inventory::where('prod_code', $item['prod_code'])
-                                        ->where('owner_id', $ownerId)
-                                        ->where(function($q) {
-                                            $q->whereNull('is_expired')
-                                            ->orWhere('is_expired', 0);
-                                        })
-                                        ->sum('stock');
-                
-                $itemTotal = $product->selling_price * $item['quantity'];
-                
-                $formattedItems[] = [
-                    'prod_code' => $product->prod_code,
-                    'inven_code' => $item['allocated_batches'][0]['inven_code'] ?? null,
-                    'name' => $product->name,
-                    'selling_price' => $product->selling_price,
-                    'quantity' => $item['quantity'],
-                    'subtotal' => $itemTotal,
-                    'current_stock' => $currentStock,
-                    'allocated_batches' => $item['allocated_batches'] ?? [],
-                    'product' => $product,
-                    'amount' => $itemTotal
-                ];
-                
-                $totalAmount += $itemTotal;
-                $totalQuantity += $item['quantity'];
-            }
-        }
-
-        return [
-            'items' => $formattedItems,
-            'total_amount' => $totalAmount,
-            'total_quantity' => $totalQuantity
-        ];
-    }
-
-    private function generateReceiptNumber($ownerId)
-    {
-        $lastReceipt = Receipt::where('owner_id', $ownerId)
-                              ->orderBy('receipt_id', 'desc')
-                              ->first();
-        return $lastReceipt ? $lastReceipt->receipt_id + 1 : 1;
     }
 
     public function showReports(Request $request)
@@ -1097,118 +1000,58 @@ class StoreController extends Controller
         ));
     }
 
-    public function processReturnItem(Request $request)
+    private function getFormattedCartItems($items, $ownerId)
     {
-        $request->validate([
-            'item_id' => 'required|exists:receipt_item,item_id',
-            'return_quantity' => 'required|integer|min:1',
-            'return_reason' => 'required|string|max:255',
-            'is_damaged' => 'required|boolean',
-            'damage_type' => 'required_if:is_damaged,true|nullable|string|max:20'
-        ]);
+        $formattedItems = [];
+        $totalAmount = 0;
+        $totalQuantity = 0;
 
-        DB::beginTransaction();
-
-        try {
-            $ownerId = $this->getCurrentOwnerId();
-            $staffId = null;
-            
-            if (!$ownerId) {
-                throw new \Exception('Unauthorized access');
+        foreach ($items as $item) {
+            $product = Product::where('prod_code', $item['prod_code'])
+                            ->where('owner_id', $ownerId)
+                            ->first();
+                            
+            if ($product) {
+                $currentStock = Inventory::where('prod_code', $item['prod_code'])
+                                        ->where('owner_id', $ownerId)
+                                        ->where(function($q) {
+                                            $q->whereNull('is_expired')
+                                            ->orWhere('is_expired', 0);
+                                        })
+                                        ->sum('stock');
+                
+                $itemTotal = $product->selling_price * $item['quantity'];
+                
+                $formattedItems[] = [
+                    'prod_code' => $product->prod_code,
+                    'inven_code' => $item['allocated_batches'][0]['inven_code'] ?? null,
+                    'name' => $product->name,
+                    'selling_price' => $product->selling_price,
+                    'quantity' => $item['quantity'],
+                    'subtotal' => $itemTotal,
+                    'current_stock' => $currentStock,
+                    'allocated_batches' => $item['allocated_batches'] ?? [],
+                    'product' => $product,
+                    'amount' => $itemTotal
+                ];
+                
+                $totalAmount += $itemTotal;
+                $totalQuantity += $item['quantity'];
             }
-            
-            if (Auth::guard('staff')->check()) {
-                $staffId = Auth::guard('staff')->user()->staff_id;
-            }
-
-            $receiptItem = DB::table('receipt_item')
-                ->join('receipt', 'receipt_item.receipt_id', '=', 'receipt.receipt_id')
-                ->join('products', 'receipt_item.prod_code', '=', 'products.prod_code')
-                ->select('receipt_item.*', 'receipt.owner_id', 'products.name as product_name')
-                ->where('receipt_item.item_id', $request->item_id)
-                ->where('receipt.owner_id', $ownerId)
-                ->first();
-
-            if (!$receiptItem) {
-                throw new \Exception('Receipt item not found or access denied');
-            }
-
-            if ($request->return_quantity > $receiptItem->item_quantity) {
-                throw new \Exception('Return quantity cannot exceed purchased quantity');
-            }
-
-            $returnId = DB::table('returned_items')->insertGetId([
-                'item_id' => $request->item_id,
-                'return_quantity' => $request->return_quantity,
-                'return_reason' => $request->return_reason,
-                'return_date' => now(),
-                'owner_id' => $ownerId,
-                'staff_id' => $staffId
-            ]);
-
-            if ($request->is_damaged) {
-                DB::table('damaged_items')->insert([
-                    'prod_code' => $receiptItem->prod_code,
-                    'damaged_quantity' => $request->return_quantity,
-                    'damaged_date' => now(),
-                    'damaged_type' => $request->damage_type,
-                    'damaged_reason' => $request->return_reason,
-                    'return_id' => $returnId,
-                    'owner_id' => $ownerId,
-                    'staff_id' => $staffId
-                ]);
-            } else {
-                if ($receiptItem->inven_code) {
-                    $inventory = Inventory::where('inven_code', $receiptItem->inven_code)->first();
-                    if ($inventory) {
-                        $inventory->increment('stock', $request->return_quantity);
-                    }
-                } else {
-                    $latestInventory = Inventory::where('prod_code', $receiptItem->prod_code)
-                        ->where('owner_id', $ownerId)
-                        ->orderBy('date_added', 'desc')
-                        ->orderBy('inven_code', 'desc')
-                        ->first();
-
-                    if ($latestInventory) {
-                        $latestInventory->increment('stock', $request->return_quantity);
-                    } else {
-                        $product = Product::where('prod_code', $receiptItem->prod_code)->first();
-                        
-                        Inventory::create([
-                            'prod_code' => $receiptItem->prod_code,
-                            'stock' => $request->return_quantity,
-                            'date_added' => now(),
-                            'owner_id' => $ownerId,
-                            'category_id' => $product->category_id
-                        ]);
-                    }
-                }
-            }
-            
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Return processed successfully',
-                'return_id' => $returnId,
-                'product_name' => $receiptItem->product_name,
-                'returned_quantity' => $request->return_quantity,
-                'is_damaged' => $request->is_damaged
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            \Log::error('Return processing error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Return failed: ' . $e->getMessage()
-            ], 500);
         }
+
+        return [
+            'items' => $formattedItems,
+            'total_amount' => $totalAmount,
+            'total_quantity' => $totalQuantity
+        ];
+    }
+
+    private function generateReceiptNumber($ownerId)
+    {
+        $lastReceipt = Receipt::where('owner_id', $ownerId)
+                              ->orderBy('receipt_id', 'desc')
+                              ->first();
+        return $lastReceipt ? $lastReceipt->receipt_id + 1 : 1;
     }
 }

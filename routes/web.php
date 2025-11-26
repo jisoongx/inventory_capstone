@@ -227,24 +227,23 @@ Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name
 
 
 // Store: Transaction
-// Main transactions routes
+// Main transactions 
 Route::get('/store_start_transaction', [StoreController::class, 'showKioskTransaction'])->name('store_start_transaction');
 Route::get('/store_transactions', [StoreController::class, 'index'])->name('store_transactions');
 Route::get('/report-sales-performance', [StoreController::class, 'showReports'])->name('report-sales-performance');
+
 // API endpoints for kiosk functionality
 Route::get('/api/categories', [StoreController::class, 'getCategories'])->name('get_categories');
 Route::get('/api/kiosk/products', [StoreController::class, 'getKioskProducts'])->name('get_kiosk_products');
 Route::get('/api/receipt/{receiptId}', [StoreController::class, 'getReceiptDetails']);
-// Cart management routes
+
+// Cart management 
 Route::post('/api/kiosk/cart/add', [StoreController::class, 'addToKioskCart'])->name('add_to_kiosk_cart');
 Route::post('/api/kiosk/cart/update', [StoreController::class, 'updateCartItem'])->name('update_cart_item');
 Route::post('/api/kiosk/cart/remove', [StoreController::class, 'removeCartItem'])->name('remove_cart_item');
 Route::get('/api/kiosk/cart', [StoreController::class, 'getCartItems'])->name('get_cart_items');
-// Damage Items Management
-// Route::post('/store/remove-cart-item', [StoreController::class, 'removeCartItem'])->name('remove_cart_item');
-Route::post('/store/record-damage', [StoreController::class, 'recordDamagedItem'])->name('record_damaged_item');
-Route::get('/store/damaged-items', [StoreController::class, 'getDamagedItems'])->name('get_damaged_items');
-// Barcode and payment routes
+
+// Barcode and payment 
 Route::post('/api/barcode/search', [StoreController::class, 'processBarcodeSearch'])->name('process_barcode_search');
 Route::get('/store_payment_processor', [StoreController::class, 'showPaymentProcessor'])
     ->middleware(['auth:owner,staff'])
@@ -254,23 +253,25 @@ Route::post('/api/process_payment', [StoreController::class, 'processPayment'])
     ->name('process_payment');
 
 
-// Sales Performance Reports Routes
+// Sales Performance Reports 
 Route::middleware(['auth:owner'])->group(function() {
+    // Use view route instead of Livewire component
     Route::get('/reports/sales-performance', function() {
-        return view('dashboards.owner.report-sales-and-performance');
+        return view('dashboards.owner.report-sales-performance');
     })->name('reports.sales_performance');
-
     
-// Return Item Process
-Route::middleware(['auth:owner,staff'])->group(function() {
-    Route::get('/return-item/{receiptId}', function($receiptId) {
-        return view('dashboards.owner.report-return-item', compact('receiptId'));
-    })->name('return_item');
-});
-
-// Export route (you'll need to create this controller method)
+    // Export route
     Route::get('/reports/export-sales-excel', function() {
         // TODO: Implement Excel export
         return back()->with('info', 'Export feature coming soon');
     })->name('export_sales_excel');
 });
+
+// Return Item Process - accessible by both owner and staff
+Route::middleware(['auth:owner,staff'])->group(function() {
+    // Use view route instead of Livewire component
+    Route::get('/return-item/{receiptId}', function($receiptId) {
+        return view('dashboards.owner.report-return-item', compact('receiptId'));
+    })->name('return_item');
+});
+
