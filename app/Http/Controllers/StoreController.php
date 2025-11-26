@@ -232,13 +232,13 @@ class StoreController extends Controller
         try {
             $ownerId = $this->getCurrentOwnerId();
             
-            if (!$ownerId) {
+            if (! $ownerId) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access'
                 ], 403);
             }
-
+    
             $categoryId = $request->get('category_id');
             $search = $request->get('search');
             
@@ -249,7 +249,11 @@ class StoreController extends Controller
                         ->where('inventory.owner_id', '=', $ownerId)
                         ->where(function($q) {
                             $q->whereNull('inventory.is_expired')
-                            ->orWhere('inventory.is_expired', '=', 0);
+                              ->orWhere('inventory.is_expired', '=', 0);
+                        })
+                        ->where(function($q) {
+                            $q->whereNull('inventory.expiration_date')
+                              ->orWhere('inventory.expiration_date', '>', DB::raw('CURDATE()'));
                         });
                 })
                 ->select(
@@ -261,11 +265,11 @@ class StoreController extends Controller
                     'products.prod_image',
                     'products.category_id',
                     'categories.category as category_name',
-                    DB::raw('(SELECT inven_code FROM inventory WHERE inventory.prod_code = products.prod_code AND inventory.owner_id = ' . $ownerId . ' AND (inventory.is_expired IS NULL OR inventory.is_expired = 0) AND inventory.stock > 0 ORDER BY inventory.expiration_date ASC LIMIT 1) as inven_code'),
                     DB::raw('COALESCE(SUM(inventory.stock), 0) as stock'),
-                    DB::raw('(SELECT MIN(expiration_date) FROM inventory WHERE inventory.prod_code = products.prod_code AND inventory.owner_id = ' . $ownerId . ' AND (inventory.is_expired IS NULL OR inventory.is_expired = 0) AND inventory.stock > 0) as nearest_expiration')
+                    DB::raw('(SELECT MIN(expiration_date) FROM inventory WHERE inventory.prod_code = products.prod_code AND inventory.owner_id = ' . $ownerId . ' AND (inventory.is_expired IS NULL OR inventory.is_expired = 0) AND inventory.stock > 0 AND (expiration_date IS NULL OR expiration_date > CURDATE())) as nearest_expiration')
                 )
                 ->where('products.owner_id', $ownerId)
+                ->where('products.prod_status', 'active')
                 ->groupBy(
                     'products.prod_code',
                     'products.name',
@@ -277,40 +281,49 @@ class StoreController extends Controller
                     'categories.category'
                 )
                 ->orderBy('products.name');
-
+    
             if ($categoryId) {
                 $query->where('products.category_id', $categoryId);
             }
-
+    
             if ($search) {
                 $query->where(function($q) use ($search) {
                     $q->where('products.name', 'LIKE', "%{$search}%")
-                    ->orWhere('products.barcode', 'LIKE', "%{$search}%");
+                      ->orWhere('products.barcode', 'LIKE', "%{$search}%");
                 });
             }
-
+    
             $products = $query->get();
 
-            // Check if products have expired inventory
             foreach ($products as $product) {
+                // Convert relative path to accessible URL
+                if ($product->prod_image) {
+                    $product->prod_image = asset('storage/' . $product->prod_image);
+                }
+                
+                // Check if products have only expired inventory
                 $product->has_expired_only = false;
                 if ($product->stock == 0) {
                     $expiredStock = DB::table('inventory')
                         ->where('prod_code', $product->prod_code)
                         ->where('owner_id', $ownerId)
-                        ->where('is_expired', 1)
+                        ->where(function($q) {
+                            $q->where('is_expired', 1)
+                              ->orWhere('expiration_date', '<=', DB::raw('CURDATE()'));
+                        })
                         ->sum('stock');
                     if ($expiredStock > 0) {
                         $product->has_expired_only = true;
                     }
                 }
             }
-
+    
             return response()->json([
                 'success' => true,
                 'products' => $products
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error loading products: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error loading products: ' . $e->getMessage()
@@ -324,7 +337,7 @@ class StoreController extends Controller
             'prod_code' => 'required|exists:products,prod_code',
             'quantity' => 'required|integer|min:1'
         ]);
-
+    
         try {
             $ownerId = $this->getCurrentOwnerId();
             
@@ -339,13 +352,14 @@ class StoreController extends Controller
                             ->where('owner_id', $ownerId)
                             ->first();
             
-            if (!$product) {
+            if (! $product) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Product not found or access denied.'
                 ], 404);
             }
-
+    
+            // ✅ FEFO/FIFO Logic: Get available batches sorted properly
             $availableBatches = Inventory::where('prod_code', $product->prod_code)
                                     ->where('owner_id', $ownerId)
                                     ->where('stock', '>', 0)
@@ -353,14 +367,29 @@ class StoreController extends Controller
                                         $q->whereNull('is_expired')
                                             ->orWhere('is_expired', 0);
                                     })
-                                    ->orderBy('expiration_date')
+                                    ->where(function($q) {
+                                        // ✅ Only include items that are NOT expired by date
+                                        $q->whereNull('expiration_date')
+                                          ->orWhere('expiration_date', '>', DB::raw('CURDATE()'));
+                                    })
+                                    ->orderByRaw('
+                                        CASE 
+                                            WHEN expiration_date IS NOT NULL THEN 0
+                                            ELSE 1
+                                        END,
+                                        expiration_date ASC,
+                                        batch_number ASC
+                                    ')
                                     ->get();
-
-            // Check if only expired stock exists
+    
+            // ✅ Check if only expired stock exists (BLOCK SALE)
             if ($availableBatches->isEmpty()) {
                 $expiredStock = Inventory::where('prod_code', $product->prod_code)
                                         ->where('owner_id', $ownerId)
-                                        ->where('is_expired', 1)
+                                        ->where(function($q) {
+                                            $q->where('is_expired', 1)
+                                              ->orWhere('expiration_date', '<=', DB::raw('CURDATE()'));
+                                        })
                                         ->sum('stock');
                 
                 if ($expiredStock > 0) {
@@ -371,10 +400,17 @@ class StoreController extends Controller
                         'product_name' => $product->name
                     ], 400);
                 }
+                
+                // No stock at all
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This product is out of stock.',
+                    'product_name' => $product->name
+                ], 400);
             }
-
+    
             $totalStock = $availableBatches->sum('stock');
-
+    
             $currentItems = session()->get('transaction_items', []);
             $currentQuantity = 0;
             
@@ -384,18 +420,20 @@ class StoreController extends Controller
                     break;
                 }
             }
-
+    
             $newTotalQuantity = $currentQuantity + $request->quantity;
-
+    
+            // ✅ Check stock limit
             if ($totalStock < $newTotalQuantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Insufficient stock. Available: {$totalStock}, In cart: {$currentQuantity}"
+                    'message' => "Insufficient stock.  Available: {$totalStock}, In cart: {$currentQuantity}"
                 ], 400);
             }
-
+    
+            // ✅ Allocate inventory using FEFO/FIFO
             $allocatedBatches = $this->allocateInventoryBatches($availableBatches, $newTotalQuantity);
-
+    
             $itemFound = false;
             foreach ($currentItems as &$item) {
                 if ($item['prod_code'] == $request->prod_code) {
@@ -405,22 +443,22 @@ class StoreController extends Controller
                     break;
                 }
             }
-
-            if (!$itemFound) {
+    
+            if (! $itemFound) {
                 $currentItems[] = [
                     'prod_code' => $request->prod_code,
                     'quantity' => $request->quantity,
                     'allocated_batches' => $allocatedBatches
                 ];
             }
-
+    
             session()->put('transaction_items', $currentItems);
-
+    
             $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
-
+    
             return response()->json([
                 'success' => true,
-                'message' => $product->name . ' added to cart successfully!',
+                'message' => $product->name . ' added to cart successfully! ',
                 'cart_items' => $cartItems['items'],
                 'cart_summary' => [
                     'total_quantity' => $cartItems['total_quantity'],
@@ -428,7 +466,7 @@ class StoreController extends Controller
                 ],
                 'newly_added_prod_code' => $request->prod_code
             ]);
-
+    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -436,7 +474,6 @@ class StoreController extends Controller
             ], 500);
         }
     }
-
     private function allocateInventoryBatches($availableBatches, $requiredQuantity)
     {
         $allocated = [];
@@ -469,7 +506,7 @@ class StoreController extends Controller
             'prod_code' => 'required|exists:products,prod_code',
             'quantity' => 'required|integer|min:0'
         ]);
-
+    
         try {
             $ownerId = $this->getCurrentOwnerId();
             
@@ -479,7 +516,7 @@ class StoreController extends Controller
                     'message' => 'Unauthorized access'
                 ], 403);
             }
-
+    
             $currentItems = session()->get('transaction_items', []);
             
             if ($request->quantity == 0) {
@@ -488,6 +525,7 @@ class StoreController extends Controller
                 });
                 $currentItems = array_values($currentItems);
             } else {
+                // ✅ Use same FEFO/FIFO logic as addToKioskCart
                 $availableBatches = Inventory::where('prod_code', $request->prod_code)
                                         ->where('owner_id', $ownerId)
                                         ->where('stock', '>', 0)
@@ -495,9 +533,20 @@ class StoreController extends Controller
                                             $q->whereNull('is_expired')
                                                 ->orWhere('is_expired', 0);
                                         })
-                                        ->orderBy('expiration_date')
+                                        ->where(function($q) {
+                                            $q->whereNull('expiration_date')
+                                              ->orWhere('expiration_date', '>', DB::raw('CURDATE()'));
+                                        })
+                                        ->orderByRaw('
+                                            CASE 
+                                                WHEN expiration_date IS NOT NULL THEN 0
+                                                ELSE 1
+                                            END,
+                                            expiration_date ASC,
+                                            batch_number ASC
+                                        ')
                                         ->get();
-
+    
                 $totalStock = $availableBatches->sum('stock');
                 
                 if ($totalStock < $request->quantity) {
@@ -506,9 +555,9 @@ class StoreController extends Controller
                         'message' => "Insufficient stock. Available: {$totalStock}"
                     ], 400);
                 }
-
+    
                 $allocatedBatches = $this->allocateInventoryBatches($availableBatches, $request->quantity);
-
+    
                 $itemFound = false;
                 foreach ($currentItems as &$item) {
                     if ($item['prod_code'] == $request->prod_code) {
@@ -518,7 +567,7 @@ class StoreController extends Controller
                         break;
                     }
                 }
-
+    
                 if (!$itemFound) {
                     $currentItems[] = [
                         'prod_code' => $request->prod_code,
@@ -527,11 +576,11 @@ class StoreController extends Controller
                     ];
                 }
             }
-
+    
             session()->put('transaction_items', $currentItems);
             
             $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
-
+    
             return response()->json([
                 'success' => true,
                 'cart_items' => $cartItems['items'],
@@ -540,7 +589,7 @@ class StoreController extends Controller
                     'total_amount' => $cartItems['total_amount']
                 ]
             ]);
-
+    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -552,49 +601,53 @@ class StoreController extends Controller
     public function removeCartItem(Request $request)
     {
         $request->validate([
-            'prod_code' => 'required|exists:products,prod_code',
-            'quantity' => 'required|integer|min:1'
+            'prod_code' => 'required|exists:products,prod_code'
         ]);
-
+    
         try {
             $ownerId = $this->getCurrentOwnerId();
-
-            $currentItems = session()->get('transaction_items', []);
-            $itemToRemove = null;
-            
-            foreach ($currentItems as $item) {
-                if ($item['prod_code'] == $request->prod_code) {
-                    $itemToRemove = $item;
-                    break;
-                }
+    
+            if (!$ownerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
             }
-
-            if (!$itemToRemove) {
+    
+            $currentItems = session()->get('transaction_items', []);
+            $found = false;
+    
+            // Remove the item entirely from cart
+            $currentItems = array_filter($currentItems, function($item) use ($request, &$found) {
+                if ($item['prod_code'] == $request->prod_code) {
+                    $found = true;
+                    return false;
+                }
+                return true;
+            });
+    
+            if (!$found) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Item not found in cart'
                 ], 404);
             }
-
-            $currentItems = array_filter($currentItems, function($item) use ($request) {
-                return $item['prod_code'] != $request->prod_code;
-            });
+    
             $currentItems = array_values($currentItems);
-
             session()->put('transaction_items', $currentItems);
-            
+    
             $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
-
+    
             return response()->json([
                 'success' => true,
-                'message' => 'Item removed successfully.',
+                // ✅ REMOVED: message field (no toast notification needed)
                 'cart_items' => $cartItems['items'],
                 'cart_summary' => [
                     'total_quantity' => $cartItems['total_quantity'],
                     'total_amount' => $cartItems['total_amount']
                 ]
             ]);
-
+    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -842,7 +895,9 @@ class StoreController extends Controller
                         'item_discount_type' => $itemDiscountType,
                         'item_discount_value' => $itemDiscountValue * ($batch['quantity'] / $item['quantity']),
                         'vat_amount' => $itemVatAmount * ($batch['quantity'] / $item['quantity']),
-                        'inven_code' => $batch['inven_code']
+                        'inven_code' => $batch['inven_code'],
+                        'batch_number' => $batch['batch_number'],
+                        'selling_price' => $product->selling_price
                     ]);
                 }
                 
@@ -912,6 +967,61 @@ class StoreController extends Controller
                 'message' => 'Transaction failed: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function getFormattedCartItems($items, $ownerId)
+    {
+        $formattedItems = [];
+        $totalAmount = 0;
+        $totalQuantity = 0;
+
+        foreach ($items as $item) {
+            $product = Product::where('prod_code', $item['prod_code'])
+                            ->where('owner_id', $ownerId)
+                            ->first();
+                            
+            if ($product) {
+                $currentStock = Inventory::where('prod_code', $item['prod_code'])
+                                        ->where('owner_id', $ownerId)
+                                        ->where(function($q) {
+                                            $q->whereNull('is_expired')
+                                            ->orWhere('is_expired', 0);
+                                        })
+                                        ->sum('stock');
+                
+                $itemTotal = $product->selling_price * $item['quantity'];
+                
+                $formattedItems[] = [
+                    'prod_code' => $product->prod_code,
+                    'inven_code' => $item['allocated_batches'][0]['inven_code'] ?? null,
+                    'name' => $product->name,
+                    'selling_price' => $product->selling_price,
+                    'quantity' => $item['quantity'],
+                    'subtotal' => $itemTotal,
+                    'current_stock' => $currentStock,
+                    'allocated_batches' => $item['allocated_batches'] ?? [],
+                    'product' => $product,
+                    'amount' => $itemTotal
+                ];
+                
+                $totalAmount += $itemTotal;
+                $totalQuantity += $item['quantity'];
+            }
+        }
+
+        return [
+            'items' => $formattedItems,
+            'total_amount' => $totalAmount,
+            'total_quantity' => $totalQuantity
+        ];
+    }
+
+    private function generateReceiptNumber($ownerId)
+    {
+        $lastReceipt = Receipt::where('owner_id', $ownerId)
+                              ->orderBy('receipt_id', 'desc')
+                              ->first();
+        return $lastReceipt ? $lastReceipt->receipt_id + 1 : 1;
     }
 
     public function showReports(Request $request)
@@ -998,60 +1108,5 @@ class StoreController extends Controller
             'peak',
             'dateChoice'
         ));
-    }
-
-    private function getFormattedCartItems($items, $ownerId)
-    {
-        $formattedItems = [];
-        $totalAmount = 0;
-        $totalQuantity = 0;
-
-        foreach ($items as $item) {
-            $product = Product::where('prod_code', $item['prod_code'])
-                            ->where('owner_id', $ownerId)
-                            ->first();
-                            
-            if ($product) {
-                $currentStock = Inventory::where('prod_code', $item['prod_code'])
-                                        ->where('owner_id', $ownerId)
-                                        ->where(function($q) {
-                                            $q->whereNull('is_expired')
-                                            ->orWhere('is_expired', 0);
-                                        })
-                                        ->sum('stock');
-                
-                $itemTotal = $product->selling_price * $item['quantity'];
-                
-                $formattedItems[] = [
-                    'prod_code' => $product->prod_code,
-                    'inven_code' => $item['allocated_batches'][0]['inven_code'] ?? null,
-                    'name' => $product->name,
-                    'selling_price' => $product->selling_price,
-                    'quantity' => $item['quantity'],
-                    'subtotal' => $itemTotal,
-                    'current_stock' => $currentStock,
-                    'allocated_batches' => $item['allocated_batches'] ?? [],
-                    'product' => $product,
-                    'amount' => $itemTotal
-                ];
-                
-                $totalAmount += $itemTotal;
-                $totalQuantity += $item['quantity'];
-            }
-        }
-
-        return [
-            'items' => $formattedItems,
-            'total_amount' => $totalAmount,
-            'total_quantity' => $totalQuantity
-        ];
-    }
-
-    private function generateReceiptNumber($ownerId)
-    {
-        $lastReceipt = Receipt::where('owner_id', $ownerId)
-                              ->orderBy('receipt_id', 'desc')
-                              ->first();
-        return $lastReceipt ? $lastReceipt->receipt_id + 1 : 1;
     }
 }

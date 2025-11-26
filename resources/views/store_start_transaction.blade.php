@@ -1092,7 +1092,7 @@ hideExpiredModal() {
     console.log('===================');
     console.log('Product:', product.name);
     console.log('Image URL:', product.prod_image);
-    console.log('Has Image:', product. prod_image ? 'YES' : 'NO');
+    console.log('Has Image:', product.prod_image ? 'YES' : 'NO');
     console.log('===================');
     
     let cardClass = 'product-card';
