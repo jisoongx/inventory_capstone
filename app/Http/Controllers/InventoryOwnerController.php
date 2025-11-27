@@ -221,6 +221,7 @@ public function showProductDetails($prodCode)
     $stockOutSalesHistory = DB::table('receipt_item as ri')
         ->join('receipt as r', 'ri.receipt_id', '=', 'r.receipt_id')
         ->join('products as p', 'ri.prod_code', '=', 'p.prod_code')
+        ->join('inventory as i', 'ri.inven_code', '=', 'i.inven_code')
         ->leftJoin('staff as s', 'r.staff_id', '=', 's.staff_id')
         ->leftJoin('owners as o', 'r.owner_id', '=', 'o.owner_id')
         ->select(
@@ -229,8 +230,29 @@ public function showProductDetails($prodCode)
             'ri.prod_code',
             'r.receipt_id',
             'r.receipt_date',
-            'p.selling_price',
-            DB::raw('(ri.item_quantity * p.selling_price) as total_amount'),
+            'i.batch_number',
+            DB::raw('(
+                SELECT COALESCE(
+                    (SELECT ph.old_selling_price 
+                    FROM pricing_history ph 
+                    WHERE ph.prod_code = ri.prod_code 
+                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to 
+                    ORDER BY ph.effective_from DESC 
+                    LIMIT 1),
+                    p.selling_price
+                )
+            ) as selling_price_used'),
+            DB::raw('(ri.item_quantity * (
+                SELECT COALESCE(
+                    (SELECT ph.old_selling_price 
+                    FROM pricing_history ph 
+                    WHERE ph.prod_code = ri.prod_code 
+                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to 
+                    ORDER BY ph.effective_from DESC 
+                    LIMIT 1),
+                    p.selling_price
+                )
+            )) as total_amount'),
             DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as sold_by')
         )
         ->where('ri.prod_code', $prodCode)
@@ -354,56 +376,288 @@ public function showProductDetails($prodCode)
 }
 
 
-    public function pricingHistory($prodCode)
-    {
-        $ownerId = session('owner_id');
+public function pricingHistory($prodCode)
+{
+    $ownerId = session('owner_id');
 
-        $priceHistory = DB::select("
-            SELECT 
-                ph.price_history_id,
-                ph.prod_code,
-                ph.old_cost_price,
-                ph.old_selling_price,
-                ph.effective_from,
-                ph.effective_to,
-                ph.updated_by,
-                ph.owner_id,
-                IFNULL(SUM(
-                    CASE 
-                        WHEN r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                        THEN ri.item_quantity
-                        ELSE 0
-                    END
-                ), 0) AS total_sold,
-                IFNULL(SUM(
-                    CASE 
-                        WHEN r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                        THEN ri.item_quantity * ph.old_selling_price
-                        ELSE 0
-                    END
-                ), 0) AS total_sales
-            FROM pricing_history ph
-            LEFT JOIN receipt_item ri ON ri.prod_code = ph.prod_code
-            LEFT JOIN receipt r ON r.receipt_id = ri.receipt_id
-            WHERE ph.prod_code = ? 
-            AND ph.owner_id = ? 
-            AND ph.effective_to IS NOT NULL   -- ✅ only show completed/old prices
-            GROUP BY 
-                ph.price_history_id,
-                ph.prod_code,
-                ph.old_cost_price,
-                ph.old_selling_price,
-                ph.effective_from,
-                ph.effective_to,
-                ph.updated_by,
-                ph.owner_id
-            ORDER BY ph.effective_to DESC, ph.effective_from DESC
-        ", [$prodCode, $ownerId]);
+    // Get product name
+    $product = DB::selectOne("
+        SELECT name 
+        FROM products 
+        WHERE prod_code = ? AND owner_id = ?
+    ", [$prodCode, $ownerId]);
 
+    // Get all price periods (historical and current)
+    $allPricePeriods = DB::select("
+        SELECT 
+            ph.price_history_id,
+            ph.old_cost_price as cost_price,
+            ph.old_selling_price as selling_price,
+            ph.effective_from,
+            ph.effective_to,
+            'historical' as period_type
+        FROM pricing_history ph
+        WHERE ph.prod_code = ? 
+        AND ph.owner_id = ? 
+        AND ph.effective_to IS NOT NULL
+        
+        UNION
+        
+        SELECT 
+            NULL as price_history_id,
+            p.cost_price,
+            p.selling_price,
+            COALESCE(
+                (SELECT MAX(effective_to) FROM pricing_history WHERE prod_code = ? AND owner_id = ?),
+                (SELECT MIN(date_added) FROM inventory WHERE prod_code = ? AND owner_id = ?)
+            ) as effective_from,
+            NULL as effective_to,
+            'current' as period_type
+        FROM products p
+        WHERE p.prod_code = ? 
+        AND p.owner_id = ?
+        
+        ORDER BY effective_from DESC
+    ", [$prodCode, $ownerId, $prodCode, $ownerId, $prodCode, $ownerId, $prodCode, $ownerId]);
 
+    // Get all batches with their date_added
+    $allBatches = DB::select("
+        SELECT 
+            i.inven_code,
+            i.batch_number,
+            i.date_added,
+            i.stock as current_stock
+        FROM inventory i
+        WHERE i.prod_code = ? 
+        AND i.owner_id = ?
+        AND (i.is_expired = 0 OR i.is_expired IS NULL)
+        ORDER BY i.batch_number
+    ", [$prodCode, $ownerId]);
 
-        return view('inventory-owner-pricing-history', compact('priceHistory', 'prodCode'));
+    $priceHistory = [];
+    $currentPrice = [];
+
+    // First pass: Calculate when each batch actually sold out
+    $batchSoldOutInfo = [];
+    
+    // Process periods in chronological order
+    $periodsChronological = array_reverse($allPricePeriods);
+    $totalPeriods = count($periodsChronological);
+    
+    // For each batch, track its stock through all periods to find when it sold out
+    foreach ($allBatches as $batch) {
+        $runningStock = null;
+        
+        for ($i = $totalPeriods - 1; $i >= 0; $i--) {
+            $period = $periodsChronological[$i];
+            $periodEnd = $period->effective_to ?? now();
+            
+            if ($batch->date_added > $periodEnd) {
+                continue;
+            }
+            
+            if ($runningStock === null) {
+                $runningStock = $batch->current_stock;
+            }
+            
+            if ($i < $totalPeriods - 1) {
+                $nextPeriod = $periodsChronological[$i + 1];
+                
+                $salesAfter = DB::selectOne("
+                    SELECT IFNULL(SUM(ri.item_quantity), 0) as sold_after
+                    FROM receipt_item ri
+                    INNER JOIN receipt r ON r.receipt_id = ri.receipt_id
+                    WHERE ri.inven_code = ?
+                    AND r.receipt_date > ?
+                    AND r.receipt_date <= ?
+                ", [$batch->inven_code, $periodEnd, $nextPeriod->effective_from]);
+                
+                $damageAfter = DB::selectOne("
+                    SELECT IFNULL(SUM(damaged_quantity), 0) as damaged_after
+                    FROM damaged_items
+                    WHERE inven_code = ?
+                    AND damaged_date > ?
+                    AND damaged_date <= ?
+                ", [$batch->inven_code, $periodEnd, $nextPeriod->effective_from]);
+                
+                $runningStock += ($salesAfter->sold_after ?? 0) + ($damageAfter->damaged_after ?? 0);
+            }
+            
+            if ($runningStock <= 0 && !isset($batchSoldOutInfo[$batch->inven_code])) {
+                $batchSoldOutInfo[$batch->inven_code] = [
+                    'period_index' => $i,
+                    'period_id' => $period->period_type === 'current' ? 'current' : $period->price_history_id
+                ];
+            }
+            
+            $salesDuring = DB::selectOne("
+                SELECT IFNULL(SUM(ri.item_quantity), 0) as sold_during
+                FROM receipt_item ri
+                INNER JOIN receipt r ON r.receipt_id = ri.receipt_id
+                WHERE ri.inven_code = ?
+                AND r.receipt_date >= ?
+                AND r.receipt_date <= ?
+            ", [$batch->inven_code, $period->effective_from, $periodEnd]);
+            
+            $damageDuring = DB::selectOne("
+                SELECT IFNULL(SUM(damaged_quantity), 0) as damaged_during
+                FROM damaged_items
+                WHERE inven_code = ?
+                AND damaged_date >= ?
+                AND damaged_date <= ?
+            ", [$batch->inven_code, $period->effective_from, $periodEnd]);
+            
+            $runningStock += ($salesDuring->sold_during ?? 0) + ($damageDuring->damaged_during ?? 0);
+        }
     }
+
+    // Second pass: Build display data with correct sold out status
+    foreach ($periodsChronological as $periodIndex => $period) {
+        $periodStart = $period->effective_from;
+        $periodEnd = $period->effective_to ?? now();
+        $isCurrent = $period->period_type === 'current';
+        $currentPeriodId = $isCurrent ? 'current' : $period->price_history_id;
+
+        foreach ($allBatches as $batch) {
+            if ($batch->date_added > $periodEnd) {
+                continue;
+            }
+            
+            // Check if batch sold out in a PREVIOUS period
+            if (isset($batchSoldOutInfo[$batch->inven_code])) {
+                $soldOutPeriodIndex = $batchSoldOutInfo[$batch->inven_code]['period_index'];
+                
+                if ($soldOutPeriodIndex < $periodIndex) {
+                    continue;
+                }
+            }
+            
+            // Calculate stock at START of period
+            $batchAddedBeforePeriod = $batch->date_added < $periodStart;
+            
+            if ($batchAddedBeforePeriod) {
+                $salesAfterPeriodStart = DB::selectOne("
+                    SELECT IFNULL(SUM(ri.item_quantity), 0) as sold_after
+                    FROM receipt_item ri
+                    INNER JOIN receipt r ON r.receipt_id = ri.receipt_id
+                    WHERE ri.inven_code = ?
+                    AND r.receipt_date >= ?
+                ", [$batch->inven_code, $periodStart]);
+                
+                $damageAfterPeriodStart = DB::selectOne("
+                    SELECT IFNULL(SUM(damaged_quantity), 0) as damaged_after
+                    FROM damaged_items
+                    WHERE inven_code = ?
+                    AND damaged_date >= ?
+                ", [$batch->inven_code, $periodStart]);
+                
+                $stockAtPeriodStart = $batch->current_stock + 
+                                     ($salesAfterPeriodStart->sold_after ?? 0) + 
+                                     ($damageAfterPeriodStart->damaged_after ?? 0);
+                
+                if ($stockAtPeriodStart <= 0) {
+                    continue;
+                }
+            }
+            
+            // Calculate sales for this batch during this price period
+            $batchData = DB::selectOne("
+                SELECT 
+                    IFNULL(SUM(ri.item_quantity), 0) AS batch_sold,
+                    IFNULL(SUM(ri.item_quantity * ?), 0) AS batch_sales,
+                    IFNULL((
+                        SELECT SUM(di_sub.damaged_quantity)
+                        FROM damaged_items di_sub
+                        WHERE di_sub.inven_code = ?
+                        AND di_sub.damaged_date BETWEEN ? AND ?
+                    ), 0) AS batch_damaged
+                FROM receipt_item ri
+                INNER JOIN receipt r ON r.receipt_id = ri.receipt_id
+                WHERE ri.inven_code = ?
+                AND r.receipt_date BETWEEN ? AND ?
+            ", [
+                $period->selling_price,
+                $batch->inven_code,
+                $periodStart,
+                $periodEnd,
+                $batch->inven_code,
+                $periodStart,
+                $periodEnd
+            ]);
+
+            // Calculate available stock at END of period
+            if ($isCurrent) {
+                $batch_available = $batch->current_stock;
+            } else {
+                $salesAfterPeriod = DB::selectOne("
+                    SELECT IFNULL(SUM(ri.item_quantity), 0) as sold_after
+                    FROM receipt_item ri
+                    INNER JOIN receipt r ON r.receipt_id = ri.receipt_id
+                    WHERE ri.inven_code = ?
+                    AND r.receipt_date > ?
+                ", [$batch->inven_code, $periodEnd]);
+                
+                $damageAfterPeriod = DB::selectOne("
+                    SELECT IFNULL(SUM(damaged_quantity), 0) as damaged_after
+                    FROM damaged_items
+                    WHERE inven_code = ?
+                    AND damaged_date > ?
+                ", [$batch->inven_code, $periodEnd]);
+                
+                $batch_available = $batch->current_stock + 
+                                 ($salesAfterPeriod->sold_after ?? 0) + 
+                                 ($damageAfterPeriod->damaged_after ?? 0);
+            }
+
+            // NEW LOGIC: Determine sold out status
+            // A batch should show as sold out if it sold out in THIS period OR any LATER period
+            $is_sold_out = false;
+            $sold_out_in_this_period = false;
+
+            if (isset($batchSoldOutInfo[$batch->inven_code])) {
+                $soldOutPeriodIndex = $batchSoldOutInfo[$batch->inven_code]['period_index'];
+                
+                // Mark as sold out if it sold out in this period OR later
+                if ($soldOutPeriodIndex >= $periodIndex) {
+                    $is_sold_out = true;
+                    // Only mark as "sold out in this period" if it happened exactly in this period
+                    $sold_out_in_this_period = ($soldOutPeriodIndex === $periodIndex);
+                }
+            }
+
+            $rowData = (object)[
+                'price_history_id' => $period->price_history_id,
+                'prod_code' => $prodCode,
+                'cost_price' => $period->cost_price,
+                'selling_price' => $period->selling_price,
+                'old_cost_price' => $period->cost_price,
+                'old_selling_price' => $period->selling_price,
+                'effective_from' => $periodStart,
+                'effective_to' => $periodEnd,
+                'batch_number' => $batch->batch_number,
+                'inven_code' => $batch->inven_code,
+                'batch_available' => max(0, $batch_available),
+                'batch_sold' => $batchData->batch_sold ?? 0,
+                'batch_sales' => $batchData->batch_sales ?? 0,
+                'batch_damaged' => $batchData->batch_damaged ?? 0,
+                'is_sold_out' => $is_sold_out ? 1 : 0, // NEW: Shows red if sold out now or later
+                'is_sold_out_in_period' => $sold_out_in_this_period ? 1 : 0, // Shows "sold out" label only in the actual period
+                'owner_id' => $ownerId
+            ];
+
+            if ($isCurrent) {
+                $currentPrice[] = $rowData;
+            } else {
+                $priceHistory[] = $rowData;
+            }
+        }
+    }
+
+    $productName = $product ? $product->name : 'Unknown Product';
+
+    return view('inventory-owner-pricing-history', compact('priceHistory', 'currentPrice', 'prodCode', 'productName'));
+}
+
 
 public function edit($prodCode)
 {
