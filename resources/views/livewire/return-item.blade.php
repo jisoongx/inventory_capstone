@@ -42,7 +42,7 @@
                 <div class="border-b border-gray-200 px-6 pt-4">
                     <nav class="-mb-px flex space-x-4">
                         <button @click="activeTab = 'returnable'"
-                            :class="activeTab === 'returnable' ?   'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            :class="activeTab === 'returnable' ?  'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                             class="whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">
                             Returnable Items
                             <span class="ml-2 bg-orange-100 text-orange-600 py-0.5 px-2 rounded-full text-xs font-bold">
@@ -50,7 +50,7 @@
                             </span>
                         </button>
                         <button @click="activeTab = 'history'"
-                            :class="activeTab === 'history' ?  'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            :class="activeTab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                             class="whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">
                             Return History
                             <span class="ml-2 bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs font-bold">
@@ -71,28 +71,13 @@
                                 <p class="text-sm text-gray-400 mt-1">All items have been fully returned</p>
                             </div>
                         @else
-                            <!-- Bulk Actions Bar -->
-                            @if(! empty($selectedItems))
-                            <div class="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-semibold text-orange-900">{{ count($selectedItems) }} item(s) selected</span>
-                                </div>
-                                <button wire:click="openBulkReturnModal"
-                                    class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2">
-                                    <span class="material-symbols-rounded text-sm">undo</span>
-                                    Process Selected Returns
-                                </button>
-                            </div>
-                            @endif
-
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm">
                                     <thead class="bg-gray-100 sticky top-0">
                                         <tr>
                                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs w-12">
                                                 <input type="checkbox" 
-                                                    wire:model. live="selectAll"
-                                                    wire:click="toggleSelectAll"
+                                                    wire:model.live="selectAll"
                                                     class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
                                             </th>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
@@ -161,11 +146,25 @@
                                 </table>
                             </div>
 
+                            <!-- Bulk Actions Bar -->
+                            @if(! empty($selectedItems))
+                            <div class="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-orange-900">{{ count($selectedItems) }} item(s) selected</span>
+                                </div>
+                                <button wire:click="openBulkReturnModal"
+                                    class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2">
+                                    <span class="material-symbols-rounded text-sm">undo</span>
+                                    Process Selected Returns
+                                </button>
+                            </div>
+                            @endif
+
                             <!-- Instructions -->
                             <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
                                 <p class="text-xs text-blue-800 flex items-start gap-2">
                                     <span class="material-symbols-rounded text-sm">info</span>
-                                    <span><strong>Single Return:</strong> Click on any item row.   <strong>Multiple Returns:</strong> Check the boxes and click "Process Selected Returns".</span>
+                                    <span><strong>Single Return:</strong> Click on any item row.  <strong>Multiple Returns:</strong> Check the boxes and click "Process Selected Returns".</span>
                                 </p>
                             </div>
                         @endif
@@ -261,411 +260,332 @@
     </div>
 
     {{-- Single Item Return Modal --}}
-    @if($showReturnModal && ! $isBulkReturn && $selectedItemForReturn)
-    <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4"
-         x-data
-         x-init="$el. focus()"
-         tabindex="-1">
-        <div class="bg-white rounded-lg w-full max-w-lg mx-auto max-h-[90vh] overflow-y-auto shadow-2xl"
-             @click.stop>
-            <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg sticky top-0 z-10">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-bold">Process Return</h3>
-                    <button wire:click="closeReturnModal" type="button" class="text-white hover:text-gray-200 transition">
-                        <span class="material-symbols-rounded text-2xl">close</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="p-6">
-                <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-rounded text-orange-600 text-3xl">inventory_2</span>
-                        <div>
-                            <h4 class="font-bold text-gray-900">{{ $selectedItemForReturn->product_name }}</h4>
-                            <p class="text-sm text-gray-600">
-                                Original Quantity: {{ $selectedItemForReturn->item_quantity }}
-                                @if($selectedItemForReturn->already_returned > 0)
-                                    <span class="text-orange-600 ml-2">({{ $selectedItemForReturn->already_returned }} already returned)</span>
-                                @endif
-                            </p>
-                            <p class="text-sm text-gray-600">Unit Price: ₱{{ number_format($selectedItemForReturn->selling_price, 2) }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <form wire:submit.prevent="submitReturn" class="space-y-4">
-                    <div x-data="{ 
-                        quantity: @entangle('returnQuantity'). live, 
-                        maxQty: {{ $maxReturnQuantity }},
-                        showWarning: false,
-                        checkQuantity() {
-                            this.showWarning = parseInt(this.quantity) > this.maxQty;
-                        }
-                    }">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Return Quantity <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number" 
-                            x-model="quantity"
-                            @input="checkQuantity()"
-                            min="1" 
-                            max="{{ $maxReturnQuantity }}"
-                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            placeholder="Enter quantity to return">
-                        
-                        <div x-show="showWarning" x-transition class="mt-2 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
-                            <span class="material-symbols-rounded text-red-600 text-lg">warning</span>
-                            <div class="flex-1">
-                                <p class="text-red-800 text-xs font-semibold">Quantity Exceeds Limit</p>
-                                <p class="text-red-700 text-xs mt-1">
-                                    You can only return up to <span class="font-bold">{{ $maxReturnQuantity }}</span> 
-                                    {{ $maxReturnQuantity == 1 ? 'item' : 'items' }}.  
-                                    <strong>The return will NOT be processed if you exceed this limit.</strong>
-                                </p>
-                            </div>
-                        </div>
-                        
-                        @error('returnQuantity')
-                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                        @enderror
-                        <p class="text-xs text-gray-500 mt-1">Maximum returnable: <span class="font-bold">{{ $maxReturnQuantity }}</span></p>
-                    </div>
-
-                    {{-- ENHANCED RETURN REASON DROPDOWN --}}
-                    <div x-data="{ 
-                        selectedReason: @entangle('returnReason').live,
-                        isDamaged: false,
-                        reasonLabel: '',
-                        damagedReasons: @js(array_keys($this->damagedReasons)),
-                        updateSelection() {
-                            this.isDamaged = this.damagedReasons.includes(this.selectedReason);
-                            if (this.selectedReason) {
-                                const select = this.$refs.reasonSelect;
-                                const selectedOption = select.options[select.selectedIndex];
-                                this.reasonLabel = selectedOption.text. replace(/^[✓✗]\s*/, '');
-                            }
-                        }
-                    }" x-init="$watch('selectedReason', () => updateSelection())">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Return Reason <span class="text-red-500">*</span>
-                        </label>
-                        
-                        <select x-ref="reasonSelect"
-                                wire:model.live="returnReason"
-                                @change="updateSelection()" 
-                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white hover:border-gray-400">
-                            <option value="">🔍 Select return reason...</option>
-                            
-                            <optgroup label="━━━ ✓ WILL BE RESTOCKED ━━━" class="text-green-700 font-bold">
-                                @foreach($this->inventoryReasons as $key => $label)
-                                    <option value="{{ $key }}" class="text-green-700 py-2">↩️ {{ $label }}</option>
-                                @endforeach
-                            </optgroup>
-                            
-                            <optgroup label="━━━ ⚠ DAMAGED - NOT RESTOCKED ━━━" class="text-red-700 font-bold">
-                                @foreach($this->damagedReasons as $key => $label)
-                                    <option value="{{ $key }}" class="text-red-700 py-2">❌ {{ $label }}</option>
-                                @endforeach
-                            </optgroup>
-                        </select>
-                        
-                        @error('returnReason')
-                            <p class="text-red-500 text-xs mt-2 flex items-center gap-1">
-                                <span class="material-symbols-rounded text-sm">error</span>
-                                {{ $message }}
-                            </p>
-                        @enderror
-                        
-                        {{-- DYNAMIC FEEDBACK CARD --}}
-                        <div x-show="selectedReason" 
-                             x-transition:enter="transition ease-out duration-300"
-                             x-transition:enter-start="opacity-0 transform scale-95"
-                             x-transition:enter-end="opacity-100 transform scale-100"
-                             class="mt-3">
-                            
-                            {{-- Restocked Status --}}
-                            <div x-show="! isDamaged" 
-                                 class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-4 shadow-sm">
-                                <div class="flex items-start gap-3">
-                                    <div class="bg-green-500 rounded-full p-2 flex-shrink-0">
-                                        <span class="material-symbols-rounded text-white text-xl">inventory</span>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-green-700 font-bold text-sm">✓ WILL BE RESTOCKED</span>
-                                        </div>
-                                        <p class="text-green-800 text-xs font-medium" x-text="'Reason: ' + reasonLabel"></p>
-                                        <p class="text-green-700 text-xs mt-2 leading-relaxed">
-                                            <span class="material-symbols-rounded text-xs align-middle">check_circle</span>
-                                            Item will be <strong>returned to inventory</strong> and made available for sale again.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {{-- Damaged Status --}}
-                            <div x-show="isDamaged" 
-                                 class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-xl p-4 shadow-sm">
-                                <div class="flex items-start gap-3">
-                                    <div class="bg-red-500 rounded-full p-2 flex-shrink-0">
-                                        <span class="material-symbols-rounded text-white text-xl">warning</span>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-red-700 font-bold text-sm">⚠ DAMAGED - NOT RESTOCKED</span>
-                                        </div>
-                                        <p class="text-red-800 text-xs font-medium" x-text="'Reason: ' + reasonLabel"></p>
-                                        <p class="text-red-700 text-xs mt-2 leading-relaxed">
-                                            <span class="material-symbols-rounded text-xs align-middle">dangerous</span>
-                                            Item will be <strong>marked as damaged</strong> and <strong>removed from inventory</strong>.  It will not be available for resale.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {{-- HELPFUL INFO BOX --}}
-                        <div class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div class="flex items-start gap-2">
-                                <span class="material-symbols-rounded text-blue-600 text-lg flex-shrink-0">info</span>
-                                <div class="text-xs text-blue-800 leading-relaxed">
-                                    <p class="font-semibold mb-1">Choose the appropriate reason:</p>
-                                    <ul class="space-y-1 ml-1">
-                                        <li class="flex items-start gap-1">
-                                            <span class="text-green-600">↩️</span>
-                                            <span><strong>Green options:</strong> Item can be resold (wrong item, unsealed, etc.)</span>
-                                        </li>
-                                        <li class="flex items-start gap-1">
-                                            <span class="text-red-600">❌</span>
-                                            <span><strong>Red options:</strong> Item cannot be resold (expired, broken, contaminated, etc.)</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700">Return Subtotal:</span>
-                            <span class="text-lg font-bold text-blue-600">
-                                ₱{{ number_format(floatval($selectedItemForReturn->selling_price) * intval($returnQuantity), 2) }}
-                            </span>
-                        </div>
-                        <p class="text-xs text-gray-600">
-                            <span class="material-symbols-rounded text-sm align-middle">info</span>
-                            This amount should be refunded to the customer
-                        </p>
-                    </div>
-
-                    <div class="flex gap-3 pt-4 border-t">
-                        <button type="button" wire:click="closeReturnModal" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">Cancel</button>
-                        <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2">
-                            <span class="material-symbols-rounded text-sm">check_circle</span>
-                            Process Return
-                        </button>
-                    </div>
-                </form>
+@if($showReturnModal && !$isBulkReturn && $selectedItemForReturn)
+<div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4"
+     x-data
+     x-init="$el.focus()"
+     tabindex="-1">
+    <div class="bg-white rounded-lg w-full max-w-3xl mx-auto max-h-[90vh] overflow-y-auto shadow-2xl"
+         @click.stop>
+        <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg sticky top-0 z-10">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold">Process Return</h3>
+                <button wire:click="closeReturnModal" type="button" class="text-white hover:text-gray-200 transition">
+                    <span class="material-symbols-rounded text-2xl">close</span>
+                </button>
             </div>
         </div>
-    </div>
-    @endif
 
-    {{-- Bulk Return Modal --}}
-    @if($showReturnModal && $isBulkReturn && ! empty($bulkReturnItems))
-    <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4"
-         x-data
-         x-init="$el.focus()"
-         tabindex="-1">
-        <div class="bg-white rounded-lg w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto shadow-2xl" @click.stop>
-            <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg sticky top-0 z-10">
-                <div class="flex items-center justify-between">
+        <div class="p-6">
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-rounded text-orange-600 text-3xl">inventory_2</span>
                     <div>
-                        <h3 class="text-xl font-bold">Process Multiple Returns</h3>
-                        <p class="text-sm text-orange-100 mt-1">{{ count($bulkReturnItems) }} item(s) selected</p>
+                        <h4 class="font-bold text-gray-900">{{ $selectedItemForReturn->product_name }}</h4>
+                        <p class="text-sm text-gray-600">
+                            Original Quantity: {{ $selectedItemForReturn->item_quantity }}
+                            @if($selectedItemForReturn->already_returned > 0)
+                                <span class="text-orange-600 ml-2">({{ $selectedItemForReturn->already_returned }} already returned)</span>
+                            @endif
+                        </p>
+                        <p class="text-sm text-gray-600">Unit Price: ₱{{ number_format($selectedItemForReturn->selling_price, 2) }}</p>
                     </div>
-                    <button wire:click="closeReturnModal" type="button" class="text-white hover:text-gray-200">
-                        <span class="material-symbols-rounded text-2xl">close</span>
-                    </button>
                 </div>
             </div>
 
-            <div class="p-6">
-                <form wire:submit.prevent="submitBulkReturn" class="space-y-4">
-                    <div class="border border-gray-200 rounded-lg overflow-hidden">
-                        <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                            <h4 class="font-semibold text-gray-900 text-sm">Items to Return</h4>
-                        </div>
-                        <div class="divide-y divide-gray-200">
-                            @foreach($bulkReturnItems as $itemId => $item)
-                            <div class="p-4 hover:bg-gray-50">
-                                <div class="flex items-start gap-4">
-                                    <span class="material-symbols-rounded text-orange-600 text-2xl mt-1">inventory_2</span>
-                                    <div class="flex-1">
-                                        <h5 class="font-semibold text-gray-900">{{ $item['product_name'] }}</h5>
-                                        <p class="text-xs text-gray-600 mt-1">
-                                            Unit Price: ₱{{ number_format($item['selling_price'], 2) }} • 
-                                            Max Returnable: {{ $item['max_quantity'] }}
-                                        </p>
-                                    </div>
-                                    <div class="w-24">
-                                        <label class="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
-                                        <input type="number"
-                                            wire:model.live="bulkReturnItems. {{ $itemId }}.return_quantity"
-                                            min="1"
-                                            max="{{ $item['max_quantity'] }}"
-                                            class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-orange-500">
-                                        @error("bulkReturnItems.{$itemId}.return_quantity")
-                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-xs text-gray-500">Refund</p>
-                                        <p class="font-bold text-blue-600">₱{{ number_format($item['selling_price'] * $item['return_quantity'], 2) }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-semibold text-gray-700">Total Refund Amount:</span>
-                            <span class="text-2xl font-bold text-blue-600">
-                                ₱{{ number_format(collect($bulkReturnItems)->sum(function($item) { 
-                                    return $item['selling_price'] * $item['return_quantity']; 
-                                }), 2) }}
-                            </span>
-                        </div>
-                    </div>
-
-                    {{-- ENHANCED BULK RETURN REASON DROPDOWN --}}
-                    <div x-data="{ 
-                        selectedReason: @entangle('returnReason').live,
-                        isDamaged: false,
-                        reasonLabel: '',
-                        itemCount: {{ count($bulkReturnItems) }},
-                        damagedReasons: @js(array_keys($this->damagedReasons)),
-                        updateSelection() {
-                            this. isDamaged = this.damagedReasons.includes(this. selectedReason);
-                            if (this.selectedReason) {
-                                const select = this.$refs.reasonSelect;
-                                const selectedOption = select.options[select.selectedIndex];
-                                this.reasonLabel = selectedOption. text.replace(/^[✓✗]\s*/, '');
-                            }
-                        }
-                    }" x-init="$watch('selectedReason', () => updateSelection())">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Return Reason (applies to all items) <span class="text-red-500">*</span>
-                        </label>
-                        
-                        <select x-ref="reasonSelect"
-                                wire:model.live="returnReason"
-                                @change="updateSelection()" 
-                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white hover:border-gray-400">
-                            <option value="">🔍 Select return reason for all items...</option>
-                            
-                            <optgroup label="━━━ ✓ WILL BE RESTOCKED ━━━" class="text-green-700 font-bold">
-                                @foreach($this->inventoryReasons as $key => $label)
-                                    <option value="{{ $key }}" class="text-green-700 py-2">↩️ {{ $label }}</option>
-                                @endforeach
-                            </optgroup>
-                            
-                            <optgroup label="━━━ ⚠ DAMAGED - NOT RESTOCKED ━━━" class="text-red-700 font-bold">
-                                @foreach($this->damagedReasons as $key => $label)
-                                    <option value="{{ $key }}" class="text-red-700 py-2">❌ {{ $label }}</option>
-                                @endforeach
-                            </optgroup>
-                        </select>
-                        
-                        @error('returnReason')
-                            <p class="text-red-500 text-xs mt-2 flex items-center gap-1">
-                                <span class="material-symbols-rounded text-sm">error</span>
-                                {{ $message }}
+            <form wire:submit.prevent="submitReturn" class="space-y-5">
+                {{-- Return Quantity --}}
+                <div x-data="{ 
+                    quantity: @entangle('returnQuantity').live, 
+                    maxQty: {{ $maxReturnQuantity }},
+                    showWarning: false,
+                    checkQuantity() {
+                        this.showWarning = parseInt(this.quantity) > this.maxQty;
+                    }
+                }">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Return Quantity <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" 
+                        x-model="quantity"
+                        @input="checkQuantity()"
+                        min="1" 
+                        max="{{ $maxReturnQuantity }}"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="Enter quantity to return">
+                    
+                    <div x-show="showWarning" x-transition class="mt-2 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
+                        <span class="material-symbols-rounded text-red-600 text-lg">warning</span>
+                        <div class="flex-1">
+                            <p class="text-red-800 text-xs font-semibold">Quantity Exceeds Limit</p>
+                            <p class="text-red-700 text-xs mt-1">
+                                You can only return up to <span class="font-bold">{{ $maxReturnQuantity }}</span> 
+                                {{ $maxReturnQuantity == 1 ? 'item' : 'items' }}.
                             </p>
-                        @enderror
-                        
-                        {{-- DYNAMIC FEEDBACK CARD FOR BULK --}}
-                        <div x-show="selectedReason" 
-                             x-transition:enter="transition ease-out duration-300"
-                             x-transition:enter-start="opacity-0 transform scale-95"
-                             x-transition:enter-end="opacity-100 transform scale-100"
-                             class="mt-3">
-                            
-                            {{-- Restocked Status --}}
-                            <div x-show="!isDamaged" 
-                                 class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-4 shadow-sm">
-                                <div class="flex items-start gap-3">
-                                    <div class="bg-green-500 rounded-full p-2 flex-shrink-0">
-                                        <span class="material-symbols-rounded text-white text-xl">inventory</span>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-green-700 font-bold text-sm">✓ ALL ITEMS WILL BE RESTOCKED</span>
-                                        </div>
-                                        <p class="text-green-800 text-xs font-medium" x-text="'Reason: ' + reasonLabel"></p>
-                                        <p class="text-green-700 text-xs mt-2 leading-relaxed">
-                                            <span class="material-symbols-rounded text-xs align-middle">check_circle</span>
-                                            All <strong x-text="itemCount"></strong> items will be <strong>returned to inventory</strong> and made available for sale again.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {{-- Damaged Status --}}
-                            <div x-show="isDamaged" 
-                                 class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-xl p-4 shadow-sm">
-                                <div class="flex items-start gap-3">
-                                    <div class="bg-red-500 rounded-full p-2 flex-shrink-0">
-                                        <span class="material-symbols-rounded text-white text-xl">warning</span>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-red-700 font-bold text-sm">⚠ ALL ITEMS DAMAGED - NOT RESTOCKED</span>
-                                        </div>
-                                        <p class="text-red-800 text-xs font-medium" x-text="'Reason: ' + reasonLabel"></p>
-                                        <p class="text-red-700 text-xs mt-2 leading-relaxed">
-                                            <span class="material-symbols-rounded text-xs align-middle">dangerous</span>
-                                            All <strong x-text="itemCount"></strong> items will be <strong>marked as damaged</strong> and <strong>removed from inventory</strong>. They will not be available for resale. 
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {{-- HELPFUL INFO BOX --}}
-                        <div class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div class="flex items-start gap-2">
-                                <span class="material-symbols-rounded text-blue-600 text-lg flex-shrink-0">info</span>
-                                <div class="text-xs text-blue-800 leading-relaxed">
-                                    <p class="font-semibold mb-1">This reason will apply to all selected items:</p>
-                                    <ul class="space-y-1 ml-1">
-                                        <li class="flex items-start gap-1">
-                                            <span class="text-green-600">↩️</span>
-                                            <span><strong>Green options:</strong> All items can be resold (wrong item, unsealed, etc.)</span>
-                                        </li>
-                                        <li class="flex items-start gap-1">
-                                            <span class="text-red-600">❌</span>
-                                            <span><strong>Red options:</strong> All items cannot be resold (expired, broken, contaminated, etc.)</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
                         </div>
                     </div>
+                    
+                    @error('returnQuantity')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">Maximum returnable: <span class="font-bold">{{ $maxReturnQuantity }}</span></p>
+                </div>
 
-                    <div class="flex gap-3 pt-4 border-t">
-                        <button type="button" wire:click="closeReturnModal" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">Cancel</button>
-                        <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2">
-                            <span class="material-symbols-rounded text-sm">check_circle</span>
-                            Process All Returns
-                        </button>
+                {{-- Return Action Radio Buttons --}}
+                <div x-data="{ action: @entangle('returnAction').live }">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">
+                        Return Action <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+                               :class="action === 'restock' ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'">
+                            <input type="radio" 
+                                   wire:model.live="returnAction" 
+                                   value="restock"
+                                   class="w-5 h-5 text-green-600 border-gray-300 focus:ring-green-500">
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-rounded text-green-600">inventory</span>
+                                    <span class="font-semibold text-gray-900">Restock</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">Return to inventory</p>
+                            </div>
+                        </label>
+
+                        <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+                               :class="action === 'damage' ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'">
+                            <input type="radio" 
+                                   wire:model.live="returnAction" 
+                                   value="damage"
+                                   class="w-5 h-5 text-red-600 border-gray-300 focus:ring-red-500">
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-rounded text-red-600">warning</span>
+                                    <span class="font-semibold text-gray-900">Damaged</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">Mark as damaged</p>
+                            </div>
+                        </label>
                     </div>
-                </form>
-            </div>
+                    @error('returnAction')
+                        <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
+                    @enderror>
+                </div>
+
+                {{-- Return Reason Dropdown --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Return Reason (Select from list)
+                    </label>
+                    <select wire:model.live="returnReason" 
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                        <option value="">-- Select a reason --</option>
+                        @foreach($this->allReturnReasons as $reason)
+                            <option value="{{ $reason }}">{{ $reason }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Custom Return Reason --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Or Type Custom Reason
+                    </label>
+                    <textarea wire:model.live="customReturnReason" 
+                              rows="2"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                              placeholder="Type your custom return reason here..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Note: Custom reason will be used if provided, otherwise the dropdown selection will be used.
+                    </p>
+                </div>
+
+                {{-- Refund Amount --}}
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Return Subtotal:</span>
+                        <span class="text-lg font-bold text-blue-600">
+                            ₱{{ number_format(floatval($selectedItemForReturn->selling_price) * intval($returnQuantity), 2) }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-600">
+                        <span class="material-symbols-rounded text-sm align-middle">info</span>
+                        This amount should be refunded to the customer
+                    </p>
+                </div>
+
+                {{-- Action Buttons --}}
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="button" wire:click="closeReturnModal" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+                        <span class="material-symbols-rounded text-sm">check_circle</span>
+                        Process Return
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-    @endif
+</div>
+@endif  
+
+{{-- Bulk Return Modal --}}
+@if($showReturnModal && $isBulkReturn && !empty($bulkReturnItems))
+<div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4"
+     x-data
+     x-init="$el.focus()"
+     tabindex="-1">
+    <div class="bg-white rounded-lg w-full max-w-4xl mx-auto max-h-[90vh] overflow-y-auto shadow-2xl" @click.stop>
+        <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg sticky top-0 z-10">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold">Process Multiple Returns</h3>
+                    <p class="text-sm text-orange-100 mt-1">{{ count($bulkReturnItems) }} item(s) selected</p>
+                </div>
+                <button wire:click="closeReturnModal" type="button" class="text-white hover:text-gray-200">
+                    <span class="material-symbols-rounded text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <form wire:submit.prevent="submitBulkReturn" class="space-y-5">
+                {{-- Items List --}}
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                        <h4 class="font-semibold text-gray-900 text-sm">Items to Return</h4>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        @foreach($bulkReturnItems as $itemId => $item)
+                        <div class="p-4 hover:bg-gray-50">
+                            <div class="flex items-start gap-4">
+                                <span class="material-symbols-rounded text-orange-600 text-2xl mt-1">inventory_2</span>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold text-gray-900">{{ $item['product_name'] }}</h5>
+                                    <p class="text-xs text-gray-600 mt-1">
+                                        Unit Price: ₱{{ number_format($item['selling_price'], 2) }} • 
+                                        Max Returnable: {{ $item['max_quantity'] }}
+                                    </p>
+                                </div>
+                                <div class="w-24">
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                                    <input type="number"
+                                        wire:model.live="bulkReturnQuantities.{{ $itemId }}"
+                                        min="1"
+                                        max="{{ $item['max_quantity'] }}"
+                                        class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-orange-500">
+                                    @error("bulkReturnQuantities.{$itemId}")
+                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">Refund</p>
+                                    <p class="font-bold text-blue-600">
+                                        ₱{{ number_format($item['selling_price'] * ($bulkReturnQuantities[$itemId] ?? 1), 2) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Total Refund --}}
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-semibold text-gray-700">Total Refund Amount:</span>
+        <span class="text-2xl font-bold text-blue-600">
+            @php
+                $totalRefund = 0;
+                foreach($bulkReturnItems as $itemId => $item) {
+                    $quantity = $bulkReturnQuantities[$itemId] ?? 1;
+                    $totalRefund += $item['selling_price'] * $quantity;
+                }
+            @endphp
+            ₱{{ number_format($totalRefund, 2) }}
+        </span>
+    </div>
+</div>
+
+                {{-- Return Action Radio Buttons --}}
+                <div x-data="{ action: @entangle('returnAction').live }">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">
+                        Return Action (Applies to all items) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+                               :class="action === 'restock' ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'">
+                            <input type="radio" 
+                                   wire:model.live="returnAction" 
+                                   value="restock"
+                                   class="w-5 h-5 text-green-600 border-gray-300 focus:ring-green-500">
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-rounded text-green-600">inventory</span>
+                                    <span class="font-semibold text-gray-900">Restock All</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">Return all items to inventory</p>
+                            </div>
+                        </label>
+
+                        <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+                               :class="action === 'damage' ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'">
+                            <input type="radio" 
+                                   wire:model.live="returnAction" 
+                                   value="damage"
+                                   class="w-5 h-5 text-red-600 border-gray-300 focus:ring-red-500">
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-rounded text-red-600">warning</span>
+                                    <span class="font-semibold text-gray-900">Mark All Damaged</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">Mark all items as damaged</p>
+                            </div>
+                        </label>
+                    </div>
+                    @error('returnAction')
+                        <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Return Reason Dropdown --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Return Reason (Select from list)
+                    </label>
+                    <select wire:model.live="returnReason" 
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                        <option value="">-- Select a reason --</option>
+                        @foreach($this->allReturnReasons as $reason)
+                            <option value="{{ $reason }}">{{ $reason }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Custom Return Reason --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Or Type Custom Reason
+                    </label>
+                    <textarea wire:model.live="customReturnReason" 
+                              rows="2"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                              placeholder="Type your custom return reason here..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Note: This reason will apply to all selected items. Custom reason will be used if provided, otherwise the dropdown selection will be used.
+                    </p>
+                </div>
+
+                {{-- Action Buttons --}}
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="button" wire:click="closeReturnModal" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+                        <span class="material-symbols-rounded text-sm">check_circle</span>
+                        Process All Returns
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 </div>
