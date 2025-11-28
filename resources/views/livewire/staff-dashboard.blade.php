@@ -72,7 +72,7 @@
                     <div class="space-y-3 mt-auto">
                         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                             <p class="text-white/80 text-sm font-medium mb-1">Current Sales</p>
-                            <p class="text-white font-bold text-3xl tracking-tight">₱{{ number_format($dailySales->dailySales, 2) }}</p>
+                            <p class="text-white font-bold text-3xl tracking-tight">₱{{ number_format($ownCurrentSales->ownDailySales, 2) }}</p>
                         </div>
                     </div>
                 </div>

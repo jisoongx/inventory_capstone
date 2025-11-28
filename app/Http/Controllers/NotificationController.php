@@ -11,19 +11,26 @@ use App\Http\Controllers\ActivityLogController;
 
 class NotificationController extends Controller
 { 
-    public function index() {
+    public function index(Request $request) {
+        $filter = $request->query('filter', 'all'); 
 
-        $notification = collect(DB::select('
-            select notif_title, notif_message, notif_created_on, notif_target, notif_type
-            from notification
-            order by notif_created_on desc;
-        '));
-        
+        $query = 'SELECT notif_title, notif_message, notif_created_on, notif_target, notif_type
+                FROM notification';
+
+        if ($filter === 'specific') {
+            $query .= " WHERE notif_type IN ('specific')";
+        }
+
+        $query .= ' ORDER BY notif_created_on DESC';
+
+        $notification = collect(DB::select($query));
+
         return view('dashboards.super_admin.notification', [
             'notification' => $notification,
+            'filter' => $filter,
         ]);
-        
     }
+
 
     public function send_notification(Request $request) {
         if (Auth::guard('super_admin')->check()) {

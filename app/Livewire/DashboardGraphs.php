@@ -48,9 +48,9 @@ class DashboardGraphs extends Component
         $this->owner_name = $owner->firstname;
 
         $this->year = collect(DB::select("
-            SELECT DISTINCT YEAR(expense_created) AS year
-            FROM expenses
-            WHERE expense_created IS NOT NULL and owner_id = ?
+            SELECT DISTINCT YEAR(receipt_date) AS year
+            FROM receipt
+            WHERE receipt_date IS NOT NULL and owner_id = ?
             ORDER BY year DESC
         ", [$owner_id]))->pluck('year')->toArray();
 
@@ -61,7 +61,15 @@ class DashboardGraphs extends Component
         $this->selectedYear = now()->year;
 
         $this->dailySales = collect(DB::select('
-            select ifnull(sum(p.selling_price * ri.item_quantity), 0) as dailySales
+            select IFNULL(SUM(
+                    p.selling_price * (
+                        ri.item_quantity - IFNULL(
+                            (SELECT SUM(ret.return_quantity) 
+                            FROM returned_items ret 
+                            WHERE ret.item_id = ri.item_id),
+                        0)
+                    )
+                ), 0) as dailySales
             from receipt r
             join receipt_item ri on r.receipt_id = ri.receipt_id
             join products p on ri.prod_code = p.prod_code
@@ -70,7 +78,15 @@ class DashboardGraphs extends Component
         ', [$this->day, $owner_id]))->first();
 
         $this->weeklySales = collect(DB::select('
-            SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS weeklySales
+            SELECT IFNULL(SUM(
+                    p.selling_price * (
+                        ri.item_quantity - IFNULL(
+                            (SELECT SUM(ret.return_quantity) 
+                            FROM returned_items ret 
+                            WHERE ret.item_id = ri.item_id),
+                        0)
+                    )
+                ), 0) AS weeklySales
             FROM receipt r
             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
             JOIN products p ON ri.prod_code = p.prod_code
@@ -79,13 +95,22 @@ class DashboardGraphs extends Component
         ', [$owner_id]))->first();
 
         $this->monthSales = collect(DB::select('
-            SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0) AS monthSales
+            SELECT 
+                IFNULL(SUM(
+                    p.selling_price * (
+                        ri.item_quantity - IFNULL(
+                            (SELECT SUM(ret.return_quantity) 
+                            FROM returned_items ret 
+                            WHERE ret.item_id = ri.item_id),
+                        0)
+                    )
+                ), 0) AS monthSales
             FROM receipt r
             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
-            join products p on ri.prod_code = p.prod_code
-            where month(receipt_date) = ?
+            JOIN products p ON ri.prod_code = p.prod_code
+            WHERE MONTH(receipt_date) = ?
             AND r.owner_id = ?
-            AND year(receipt_date) = ?
+            AND YEAR(receipt_date) = ?
         ', [$currentMonth, $owner_id, $latestYear]))->first();
 
     }
@@ -106,17 +131,25 @@ class DashboardGraphs extends Component
         $latestYear = now()->year;        
         $currentMonth = (int) date('m');
 
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')"); 
 
         $productCategory = collect(DB::select("
-            SELECT
-            c.category,
+            SELECT 
+                c.category,
             COALESCE(
                 SUM(
-                CASE 
-                    WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
-                    THEN p.selling_price * ri.item_quantity
-                    ELSE 0
-                END
+                    CASE 
+                        WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
+                        THEN 
+                            p.selling_price * (
+                                ri.item_quantity - IFNULL(
+                                    (SELECT SUM(ret.return_quantity) 
+                                    FROM returned_items ret 
+                                    WHERE ret.item_id = ri.item_id),
+                                0)
+                            )
+                        ELSE 0
+                    END
                 ), 0
             ) AS total_amount,
             c.category_id
@@ -138,11 +171,18 @@ class DashboardGraphs extends Component
             c.category,
             COALESCE(
                 SUM(
-                CASE 
-                    WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
-                    THEN p.selling_price * ri.item_quantity
-                    ELSE 0
-                END
+                    CASE 
+                        WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
+                        THEN 
+                            p.selling_price * (
+                                ri.item_quantity - IFNULL(
+                                    (SELECT SUM(ret.return_quantity) 
+                                    FROM returned_items ret 
+                                    WHERE ret.item_id = ri.item_id),
+                                0)
+                            )
+                        ELSE 0
+                    END
                 ), 0
             ) AS total_amount,
             c.category_id
@@ -167,7 +207,13 @@ class DashboardGraphs extends Component
                 SELECT
                     p.category_id,
                     YEAR(r.receipt_date) AS year,
-                    SUM(p.selling_price * ri.item_quantity) AS year_total
+                    SUM(p.selling_price * (
+                            ri.item_quantity - IFNULL(
+                                (SELECT SUM(ret.return_quantity) 
+                                FROM returned_items ret 
+                                WHERE ret.item_id = ri.item_id),
+                            0)
+                        )) AS year_total
                 FROM products p
                 JOIN receipt_item ri ON p.prod_code = ri.prod_code
                 JOIN receipt r ON ri.receipt_id = r.receipt_id
@@ -232,7 +278,13 @@ class DashboardGraphs extends Component
             LEFT JOIN (
                 SELECT 
                     MONTH(r.receipt_date) AS month,
-                    SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+                    SUM(p.selling_price * (
+                            ri.item_quantity - IFNULL(
+                                (SELECT SUM(ret.return_quantity) 
+                                FROM returned_items ret 
+                                WHERE ret.item_id = ri.item_id),
+                            0)
+                        )) AS monthly_sales
                 FROM 
                     receipt r
                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
@@ -260,22 +312,25 @@ class DashboardGraphs extends Component
         if ($previousSales > 0) {
             $salesChangePercent = (($latestSales - $previousSales) / $previousSales) * 100;
         } else {
-            $salesChangePercent = $latestSales > 0 ? 100 : 0; // Handle division by zero
+            $salesChangePercent = $latestSales > 0 ? 100 : 0; 
         }
 
         if ($previousLoss > 0) {
             $lossChangePercent = (($latestLoss - $previousLoss) / $previousLoss) * 100;
         } else {
-            $lossChangePercent = $latestLoss > 0 ? 100 : 0; // Handle division by zero
+            $lossChangePercent = $latestLoss > 0 ? 100 : 0; 
         }
 
         $previousSalesAll = array_slice($this->sales, 0, -1);
 
-        if(array_sum($previousSalesAll)==0) {
+        if(array_sum($previousSalesAll)==0 && $this->lossPercentage == 0) {
             $this->salesInsights = "This is your baseline month. Future sales comparisons will be based on this data.";
             $this->salesState = 'Start';
             $this->lossInsights = "This is your baseline month. Future loss comparisons will be based on this data.";
             $this->lossState = 'Start';
+            $this->insight = "Your store has just started operations. Insights will appear once more data is collected.";
+            $this->performanceLabel = "Start";
+            return;
         } else {
             
             if($salesChangePercent > 0) {

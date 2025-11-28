@@ -209,6 +209,11 @@ Route::post('/inventory/check-barcode-edit', [InventoryOwnerController::class, '
 
 
 
+//notification super admin
+Route::get('/super-admin/notification', [NotificationController::class, 'index'])->name('dashboards.super_admin.notification');
+Route::post('/super-admin/notification/send', [NotificationController::class, 'send_notification'])->name('dashboards.super_admin.notification.send');
+
+
 
 
 

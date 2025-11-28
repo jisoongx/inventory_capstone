@@ -195,7 +195,7 @@ class ReportInventory extends Component
                 AND i.stock > 0
                 AND DATEDIFF(i.expiration_date, CURDATE()) <= 60
             GROUP BY p.prod_code, i.batch_number
-            ORDER BY days_until_expiry ASC;
+            ORDER BY days_until_expiry DESC;
         ", [$owner_id]));
 
         DB::insert("
@@ -205,7 +205,8 @@ class ReportInventory extends Component
                 WHERE expiration_date <= CURDATE()
                 AND stock > 0
                 AND is_expired is null
-        ", [$owner_id]);
+                and owner_id = ?
+        ", [$owner_id, $owner_id]);
 
         DB::statement("
             UPDATE inventory

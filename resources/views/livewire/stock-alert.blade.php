@@ -35,10 +35,7 @@
                     
                     <div class="flex-1">
                         <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
-                        <p class="text-xs text-black">Total stocks: {{ $p->total_stock }}</p>
-                        <p class="text-xs font-medium">{{ $p->expired_stock }} expired, 
-                            <span class="font-bold">{{ $p->remaining_stock }} items left</span>
-                        </p>
+                        <span class="font-bold text-xs">{{ $p->remaining_stock }} items left</span>
                     </div>
 
                     <div class="flex items-center gap-2">

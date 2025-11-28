@@ -59,32 +59,36 @@
                             @endif
                         </span>
                     </div>
-                        @if(empty($year[0]))
-                            <div class="flex flex-col items-center justify-center py-24 px-8 text-gray-500 text-center">
-                                <span class="material-symbols-rounded-big text-slate-400">bar_chart</span>
-                                <p class="mt-2 text-xs font-semibold">No sales by category found for this year.</p>
+                    <div class="overflow-x-auto mt-2 scrollbar-custom">
+                        <div class="relative w-[24rem] h-[20rem]">
+                            <div id="productChart" 
+                                x-data="{ updating: false }" 
+                                x-init="initProductChart()"
+
+                                x-on:livewire-processing.self="updating = true"
+                                x-on:livewire-processed.self="initProductChart(); updating = false"
+
+                                data-categories='@json($categories ?? [])' 
+                                data-products='@json($products ?? [])' 
+                                data-products-prev='@json($productsPrev ?? [])' 
+                                data-products-ave='@json($productsAve ?? [])'
+                                data-year='@json($year ?? [])'
+
+                                :class="{'opacity-0 transition-opacity duration-150': updating}"
+                                class="w-[24rem] h-[20rem]">
+                                <canvas></canvas>
                             </div>
-                        @else
-                            <div class="overflow-x-auto mt-2 scrollbar-custom" >
-                                <div id="productChart" 
-                                    x-data="{ updating: false }" 
-                                    x-init="initProductChart()"
 
-                                    x-on:livewire-processing.self="updating = true"
-                                    x-on:livewire-processed.self="initProductChart(); updating = false"
+                            <!-- Overlaid Message -->
+                           @if(empty($year) || count($year) === 0)
+                            <p class="absolute inset-0 flex items-center justify-center 
+                                    text-xs font-semibold text-gray-600">
+                                No sales by category found for this year yet.
+                            </p>
+                            @endif
+                        </div>
+                    </div>
 
-                                    data-categories='@json($categories ?? [])' 
-                                    data-products='@json($products ?? [])' 
-                                    data-products-prev='@json($productsPrev ?? [])' 
-                                    data-products-ave='@json($productsAve ?? [])'
-                                    data-year='@json($year ?? [])'
-
-                                    :class="{'opacity-0 transition-opacity duration-150': updating}"
-                                    class="relative w-[24rem] h-[20rem]">
-                                    <canvas></canvas>
-                                </div>
-                            </div>
-                        @endif
                 </div>
 
                 <!-- sales vs loss -->
@@ -131,6 +135,7 @@
                                             @elseif($performanceLabel === 'Good') bg-yellow-400 text-black
                                             @elseif($performanceLabel === 'Warning') bg-orange-500 text-white
                                             @elseif($performanceLabel === 'Critical') bg-red-500 text-white
+                                            @elseif($performanceLabel === 'Start') bg-blue-500 text-white
                                             @else bg-gray-400 text-white @endif">
                                             {{ $performanceLabel }}
                                         </span>

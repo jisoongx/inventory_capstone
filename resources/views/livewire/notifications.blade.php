@@ -80,12 +80,9 @@
                                     </div>
                                     <p class="text-gray-600 text-xs leading-relaxed line-clamp-2 mb-3">{{ $notif->notif_message }}</p>
                                     <div class="flex items-center gap-2">
-                                        <button type="button" class="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-white font-medium rounded-lg text-xs transition-colors duration-200 shadow-sm">
+                                        <a href="{{ route('subscription.selection') }}" class="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-white font-medium rounded-lg text-xs transition-colors duration-200 shadow-sm">
                                             Renew
-                                        </button>
-                                        <button type="button" class="bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200">
-                                            Dismiss
-                                        </button>
+                                        </a>
                                     </div>
                                     <span class="text-[11px] text-gray-500 font-medium block mt-2">{{ \Carbon\Carbon::parse($notif->notif_created_on)->diffForHumans() }}</span>
                                 </div>

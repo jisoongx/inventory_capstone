@@ -119,7 +119,13 @@ class MonthlyNetProfitGraph extends Component
             LEFT JOIN (
                 SELECT 
                     MONTH(r.receipt_date) AS month,
-                    SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+                    SUM(p.selling_price * (
+                            ri.item_quantity - IFNULL(
+                                (SELECT SUM(ret.return_quantity) 
+                                FROM returned_items ret 
+                                WHERE ret.item_id = ri.item_id),
+                            0)
+                        )) AS monthly_sales
                 FROM 
                     receipt r
                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
@@ -225,7 +231,13 @@ class MonthlyNetProfitGraph extends Component
             LEFT JOIN (
                 SELECT 
                     MONTH(r.receipt_date) AS month,
-                    SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+                    SUM(p.selling_price * (
+                            ri.item_quantity - IFNULL(
+                                (SELECT SUM(ret.return_quantity) 
+                                FROM returned_items ret 
+                                WHERE ret.item_id = ri.item_id),
+                            0)
+                        )) AS monthly_sales
                 FROM 
                     receipt r
                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id

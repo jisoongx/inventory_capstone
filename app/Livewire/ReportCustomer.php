@@ -236,7 +236,7 @@ class ReportCustomer extends Component
                 'supportCount' => "{$pair->times_bought_together} / {$totalTransactions}",
                 'confidenceText' => $percentage . '%',
                 'lift' => 'N/A',
-                'summary' => "These products appeared together in {$pair->times_bought_together} transactions.
+                'summary' => "These products appeared together in {$pair->times_bought_together} transactions. 
                             Consider bundling these products or placing them near each other in your store.",
             ];
         }

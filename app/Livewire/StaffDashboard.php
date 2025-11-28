@@ -13,6 +13,7 @@ class StaffDashboard extends Component
     public $dailySales;
     public $weeklySales;
     public $monthSales;
+    public $ownCurrentSales;
 
     public $dateDisplay;
     public $staff_name;
@@ -73,6 +74,15 @@ class StaffDashboard extends Component
             AND r.owner_id = ?
             AND year(receipt_date) = ?
         ', [$currentMonth, $owner_id, $latestYear]))->first();
+
+        $this->ownCurrentSales = collect(DB::select("
+            select ifnull(sum(p.selling_price * ri.item_quantity), 0) as ownDailySales
+            from receipt r
+            join receipt_item ri on r.receipt_id = ri.receipt_id
+            join products p on ri.prod_code = p.prod_code
+            where date(receipt_date) = ?
+            and r.staff_id = ?
+        ", [$day, $staff_id]))->first();
     }
 
     public function stockAlert() {

@@ -173,8 +173,12 @@
                         Clear All
                     </a> -->
                     <div>
-                        <button type="button" class="text-xs hover:bg-gray-200 p-1 px-2 rounded">All</button>
-                        <button type="button" class="text-xs hover:bg-gray-200 p-1 px-2 rounded">Specific</button>
+                        <a href="{{ route('dashboards.super_admin.notification', ['filter' => 'all']) }}">
+                            <button type="button" class="text-xs hover:bg-gray-200 p-1 px-2 rounded {{ $filter === 'all' ? 'bg-gray-300' : '' }}">All</button>
+                        </a>
+                        <a href="{{ route('dashboards.super_admin.notification', ['filter' => 'specific']) }}">
+                            <button type="button" class="text-xs hover:bg-gray-200 p-1 px-2 rounded {{ $filter === 'specific' ? 'bg-gray-300' : '' }}">Specific</button>
+                        </a>
                     </div>
                 </div>
 
