@@ -14,9 +14,36 @@
         scrollbar-width: none;
         /* Firefox */
     }
-</style>
-<div class="px-3 sm:px-4 lg:px-6 py-1 sm:py-2 lg:py-4 bg-slate-50 animate-slide-down">
 
+    .status-indicator {
+        font-weight: bold;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: capitalize;
+    }
+
+    .status-received {
+        background-color: #16a34a;
+        /* Green */
+        color: white;
+    }
+
+    .status-cancelled {
+        background-color: #dc2626;
+        /* Red */
+        color: white;
+    }
+
+    .status-pending {
+        background-color: #facc15;
+        /* Yellow */
+        color: black;
+    }
+</style>
+
+<div class="px-3 sm:px-4 lg:px-6 py-1 sm:py-2 lg:py-4 bg-slate-50 animate-slide-down">
 
     <div class="flex flex-col lg:flex-row gap-4">
 
@@ -43,7 +70,6 @@
                             <span class="material-symbols-rounded text-sm">download</span>
                             Export
                         </button>
-
                     </form>
 
                     <button id="printBtn" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
@@ -51,11 +77,26 @@
                         Print
                     </button>
 
+                    <form id="statusForm" method="POST" action="{{ route('restock.updateStatus') }}">
+                        @csrf
+                        <input type="hidden" name="restock_id" id="statusRestockId" value="{{ $restocks->first()->restock_id ?? '' }}">
+
+                        <button name="status" value="received"
+                            class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-green-700 rounded-md hover:bg-green-700 transition">
+                            <span class="material-symbols-rounded text-sm">check_circle</span>
+                            Received
+                        </button>
+
+                        <button name="status" value="cancelled"
+                            class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-red-600 rounded-md hover:bg-red-600 transition">
+                            <span class="material-symbols-rounded text-sm">cancel</span>
+                            Cancel
+                        </button>
+                    </form>
                 </div>
             </div>
 
             <div id="restockContent" class="transition-opacity duration-300 opacity-100 pt-6 min-h-[380px]">
-
                 @if($restocks->count())
                 @php
                 $latest = $restocks->first();
@@ -63,20 +104,30 @@
                 @endphp
 
                 <div class="flex items-center justify-between mb-4">
-
                     <span class="text-xs font-medium bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
                         {{ \Carbon\Carbon::parse($latest->restock_created)->format('F d, Y • h:i A') }}
                     </span>
+
+                    <!-- Status indicator -->
+                    <span class="status-indicator
+        @if($latest->status == 'received') 
+            status-received
+        @elseif($latest->status == 'cancelled') 
+            status-cancelled
+        @else 
+            status-pending 
+        @endif">
+                        {{ ucfirst($latest->status) }}
+                    </span>
                 </div>
+
 
                 <div class="overflow-x-auto overflow-y-auto max-h-[48vh] no-scrollbar border border-slate-200 rounded-lg">
                     <table class="w-full text-sm">
                         <thead class="bg-slate-100 text-slate-600 sticky top-0 z-10">
-
                             <tr>
                                 <th class="px-4 py-3 text-left font-semibold">Product</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
-                                <!-- <th class="px-4 py-3 text-center font-semibold w-32">Cost Price</th> -->
                                 <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
                             </tr>
                         </thead>
@@ -85,7 +136,6 @@
                             <tr>
                                 <td class="px-4 py-3">{{ $item->name }}</td>
                                 <td class="px-4 py-3 text-center">{{ $item->item_quantity }}</td>
-                                <!-- <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td> -->
                                 <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
                             @endforeach
@@ -98,8 +148,6 @@
                                 </td>
                             </tr>
                         </tfoot>
-
-
                     </table>
                 </div>
                 @else
@@ -112,6 +160,7 @@
             </div>
         </div>
 
+        <!-- History Sidebar -->
         <div class="w-full lg:w-96 bg-white shadow-md min-h-[560px] rounded p-6 sm:p-8 self-start border-t-4 border-green-300">
             <h2 class="text-md font-semibold text-green-800 mb-1">History</h2>
             <p class="text-sm text-slate-500 mb-6 text-sm">Select a past list to view its details.</p>
@@ -126,6 +175,11 @@
                     class="p-4 rounded-lg cursor-pointer transition-all duration-200 @if($index === 0) bg-green-50 border-green-500 @else border border-slate-200 hover:border-green-400 hover:bg-green-50/50 @endif"
                     onclick="showRestock('{{ $restock->restock_id }}')">
 
+                    @php
+                    $items = $restockItems->where('restock_id', $restock->restock_id);
+                    @endphp
+
+                    <!-- History info -->
                     <div class="flex items-center justify-between">
                         <div class="text-sm font-semibold text-green-600">
                             {{ \Carbon\Carbon::parse($restock->restock_created)->format('M d, Y') }}
@@ -138,18 +192,31 @@
                         {{ \Carbon\Carbon::parse($restock->restock_created)->format('h:i A') }}
                     </div>
 
+                    <!-- Hidden template for main content -->
                     <div class="hidden" id="restock-{{ $restock->restock_id }}">
                         <div class="flex items-center justify-between mb-4">
-
+                            <!-- Date -->
                             <span class="text-xs font-medium bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
                                 {{ \Carbon\Carbon::parse($restock->restock_created)->format('F d, Y • h:i A') }}
                             </span>
+
+                            <!-- Modern Status Indicator (Tailwind only) -->
+                            <span class="inline-flex items-center text-xs font-medium px-3 py-1 rounded-full shadow-sm
+                @if($restock->status == 'received') bg-green-600 text-white
+                @elseif($restock->status == 'cancelled') bg-red-600 text-white
+                @else bg-yellow-400 text-gray-800 @endif">
+                                <span class="w-2 h-2 rounded-full mr-2
+                    @if($restock->status == 'received') bg-white
+                    @elseif($restock->status == 'cancelled') bg-white
+                    @else bg-gray-800 @endif"></span>
+                                {{ ucfirst($restock->status) }}
+                            </span>
                         </div>
+
+                        <!-- Restock items table -->
                         <div class="overflow-x-auto overflow-y-auto max-h-[48vh] border border-slate-200 rounded-lg custom-scrollbar">
                             <table class="w-full text-sm">
-
                                 <thead class="bg-slate-100 text-slate-600 sticky top-0 z-10">
-
                                     <tr>
                                         <th class="px-4 py-3 text-left font-semibold">Product</th>
                                         <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
@@ -167,7 +234,7 @@
                                     </tr>
                                     @endforeach
                                 </tbody>
-                                <tfoot class=" border-t-4 border-slate-100 font-bold text-indigo-500">
+                                <tfoot class="border-t-4 border-slate-100 font-bold text-indigo-500">
                                     <tr>
                                         <td colspan="3" class="px-4 py-3 text-left">Total</td>
                                         <td class="px-4 py-3 text-center">
@@ -175,12 +242,11 @@
                                         </td>
                                     </tr>
                                 </tfoot>
-
                             </table>
-
                         </div>
                     </div>
                 </li>
+
                 @endforeach
             </ul>
             @else
@@ -198,130 +264,8 @@
             const id = firstHistory.id.replace('history-', '');
             showRestock(id, false);
         }
-
-        // EXPORT check
-        const exportForm = document.getElementById('exportForm');
-        exportForm?.addEventListener('submit', function(e) {
-            const table = document.querySelector('#restockContent table');
-            if (!table || table.querySelectorAll('tbody tr').length === 0) {
-                e.preventDefault(); // stop form submit
-                alert('No data to export!');
-                return false;
-            }
-        });
-
-        // PRINT check
-        const printBtn = document.getElementById('printBtn');
-        printBtn?.addEventListener('click', function() {
-            const table = document.querySelector('#restockContent table');
-            if (!table || table.querySelectorAll('tbody tr').length === 0) {
-                alert('No data to print!');
-                return;
-            }
-
-            const printWindow = window.open('', '', 'height=600,width=800');
-            printWindow.document.open();
-            printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Restock List</title>
-                    <style>
-                        @page {
-                            size: 58mm auto;
-                            margin: 0;
-                        }
-                        
-                        html, body {
-                            width: 58mm;
-                            margin: 0;
-                            padding: 3mm;
-                            font-family: 'Courier New', Courier, monospace;
-                            font-size: 9px;
-                            line-height: 1.4;
-                            color: #000;
-                            background: #fff;
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
-                        
-                        h2 {
-                            text-align: center;
-                            font-size: 12px;
-                            margin: 0 0 3mm 0;
-                            letter-spacing: 0.5px;
-                            font-weight: bold;
-                        }
-                        
-                        .header-info {
-                            margin-bottom: 3mm;
-                            letter-spacing: 0.3px;
-                        }
-                        
-                        .divider {
-                            border-bottom: 1px solid #000;
-                            margin: 2mm 0;
-                        }
-                        
-                        .dashed-divider {
-                            border-bottom: 1px dashed #000;
-                            margin: 2mm 0;
-                        }
-                        
-                        .item {
-                            margin-bottom: 2mm;
-                            letter-spacing: 0.3px;
-                        }
-                        
-                        .item-name {
-                            font-weight: bold;
-                            margin-bottom: 0.5mm;
-                        }
-                        
-                        .total-section {
-                            margin-top: 3mm;
-                            padding-top: 2mm;
-                            border-top: 1px solid #000;
-                            font-weight: bold;
-                            font-size: 11px;
-                        }
-                        
-                        @media print {
-                            html, body {
-                                width: 58mm;
-                                margin: 0;
-                            }
-                            
-                            * {
-                                color: #000 !important;
-                                background: transparent !important;
-                                -webkit-print-color-adjust: exact !important;
-                                print-color-adjust: exact !important;
-                            }
-                        }
-                    </style>
-                </head>
-            <body>
-                <h2>SHOPLYTIX RESTOCK LIST</h2>
-                ${document.getElementById('restockContent').innerHTML}
-            </body>
-            </html>
-        `);
-            printWindow.document.close();
-
-            printWindow.onload = function() {
-                printWindow.focus();
-                printWindow.print();
-            };
-        });
-        
-
-
-        
     });
 
-    /**
-     * Show restock details in the main container and update export inputs
-     */
     function showRestock(id, animate = true) {
         const templateEl = document.getElementById('restock-' + id);
         if (!templateEl) return;
@@ -339,28 +283,11 @@
             el.classList.add('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
         });
         const activeEl = document.getElementById('history-' + id);
+        document.getElementById('statusRestockId').value = id;
+
         activeEl.classList.remove('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
         activeEl.classList.add('bg-green-50', 'border-green-500');
-
-        // Populate export inputs
-        const restockCreatedSpan = templateEl.querySelector('span.text-xs.font-medium.bg-green-100');
-        const rows = templateEl.querySelectorAll('tbody tr');
-        const items = [];
-
-        rows.forEach(row => {
-            if (row.children.length >= 4) {
-                items.push({
-                    name: row.children[0].innerText,
-                    quantity: row.children[1].innerText,
-                    cost_price: row.children[2].innerText,
-                    subtotal: row.children[3].innerText
-                });
-            }
-        });
-
-        document.getElementById('exportRestockId').value = id;
-        document.getElementById('exportRestockCreated').value = restockCreatedSpan ? restockCreatedSpan.innerText : '';
-        document.getElementById('exportRestockItems').value = JSON.stringify(items);
     }
 </script>
+
 @endsection

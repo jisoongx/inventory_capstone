@@ -222,6 +222,9 @@ Route::get('/restock-suggestions', [RestockController::class, 'restockSuggestion
 Route::post('/restock/list/export-pdf', [RestockController::class, 'exportPdf'])->name('owner.exportPdf');
 Route::post('/restock/finalize', [RestockController::class, 'finalize'])->name('restock.finalize');
 Route::get('/restock/list', [RestockController::class, 'list'])->name('restock.list');
+Route::post('/owner/restock/update-status', [RestockController::class, 'updateStatus'])
+    ->name('restock.updateStatus');
+
 Route::get('/restock', [RestockController::class, 'showRestockPage'])->name('restock.page');
 Route::get('/seasonal-trends', [RestockController::class, 'topProducts']) ->name('seasonal_trends');
 

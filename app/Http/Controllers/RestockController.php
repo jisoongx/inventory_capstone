@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class RestockController extends Controller
 {
@@ -42,7 +43,9 @@ class RestockController extends Controller
         return $pdf->download('restock-' . $restockCreated . '.pdf');
     }
 
-    //     public function restockSuggestion(Request $request)
+
+
+    // public function restockSuggestion(Request $request)
     // {
     //     $ownerId = Auth::guard('owner')->id();
     //     $currentYear = now()->year;
@@ -60,28 +63,46 @@ class RestockController extends Controller
     //         ->where('owner_id', $ownerId)
     //         ->groupBy('prod_code');
 
-    //     // 3️⃣ Products with aggregated stock + sales
+    //     // 3️⃣ Products + Sales + Stock + Expired Stock
     //     $products = DB::table('products')
     //         ->join('categories', 'products.category_id', '=', 'categories.category_id')
     //         ->leftJoinSub($inventoryAgg, 'inventory', function ($join) {
     //             $join->on('products.prod_code', '=', 'inventory.prod_code');
     //         })
-    //         ->leftJoin(DB::raw("
-    //             (
-    //                 SELECT 
-    //                     ri.prod_code,
-    //                     SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} AND MONTH(r.receipt_date) = {$currentMonth} THEN ri.item_quantity ELSE 0 END) AS sold_this_month,
-    //                     SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} THEN ri.item_quantity ELSE 0 END) AS sold_this_year
-    //                 FROM receipt_item ri
-    //                 INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
-    //                 GROUP BY ri.prod_code
-    //             ) AS sales
-    //         "), 'products.prod_code', '=', 'sales.prod_code')
-    //         // 🧩 Exclude already finalized restocks
-    //         ->leftJoin('restock_item', 'restock_item.inven_code', '=', 'products.prod_code')
-    //         ->whereNull('restock_item.inven_code')
+    //         ->leftJoin(DB::raw("(
+    //     SELECT 
+    //         ri.prod_code,
+    //         SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
+    //                  AND MONTH(r.receipt_date) = {$currentMonth} 
+    //                  THEN ri.item_quantity ELSE 0 END) AS sold_this_month,
+    //         SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
+    //                  THEN ri.item_quantity ELSE 0 END) AS sold_this_year
+    //     FROM receipt_item ri
+    //     INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
+    //     GROUP BY ri.prod_code
+    // ) AS sales"), 'products.prod_code', '=', 'sales.prod_code')
+    //         ->leftJoin(DB::raw("(
+    //     SELECT 
+    //         prod_code,
+    //         SUM(stock) as expired_stock
+    //     FROM inventory
+    //     WHERE expiration_date < CURDATE() AND is_expired = 1
+    //     GROUP BY prod_code
+    // ) AS expired"), 'products.prod_code', '=', 'expired.prod_code')
+
+    //          ->whereNotExists(function ($q) use ($ownerId) {
+    //     $q->select(DB::raw(1))
+    //         ->from('restock_item')
+    //         ->join('inventory', 'inventory.inven_code', '=', 'restock_item.inven_code')
+    //         ->join('restock', 'restock.restock_id', '=', 'restock_item.restock_id')
+    //         ->where('restock.owner_id', $ownerId)
+    //         ->where('restock.status', 'pending')  // don't suggest products already pending
+    //         ->whereColumn('inventory.prod_code', 'products.prod_code');
+    // })
+
     //         ->where('products.owner_id', $ownerId)
-    //         ->select( 
+    //         ->where('products.prod_status', 'active')
+    //         ->select(
     //             'products.prod_code',
     //             'products.name',
     //             'categories.category',
@@ -91,30 +112,36 @@ class RestockController extends Controller
     //             DB::raw('COALESCE(inventory.total_stock, 0) as stock'),
     //             'products.stock_limit',
     //             DB::raw('COALESCE(sales.sold_this_month, 0) as sold_this_month'),
-    //             DB::raw('COALESCE(sales.sold_this_year, 0) as sold_this_year')
+    //             DB::raw('COALESCE(sales.sold_this_year, 0) as sold_this_year'),
+    //             DB::raw('COALESCE(expired.expired_stock, 0) as expired_stock')
     //         )
     //         ->get()
     //         ->map(function ($product) use ($daysInMonth) {
 
-    //             // 🧮 1️⃣ Compute Safe Stock (Target Level)
-    //             // Target stock = stock_limit * 2 (double the limit for safety)
-    //             $targetStock = $product->stock_limit * 2;
+    //             // ================================
+    //             // 🧮 STEP 1: BASE ROP CALCULATION
+    //             // ================================
 
-    //             // Optional smarter adjustment:
-    //             // If selling fast this month, raise the target level slightly
+    //             $avgDailyDemand = $product->sold_this_month / max($daysInMonth, 1);
+    //             $leadTime = 5; // configurable later per supplier
+    //             $safetyStock = $product->stock_limit;
+    //             $reorderPoint = round(($avgDailyDemand * $leadTime) + $safetyStock);
+
+    //             // ==================================
+    //             // ⚙️ STEP 2: ADAPTIVE OLD FORMULA
+    //             // ==================================
+
+    //             $targetStock = $product->stock_limit * 2;
     //             if ($product->sold_this_month > $product->stock_limit) {
-    //                 $targetStock *= 1.3; // 30% extra buffer for fast-sellers
+    //                 $targetStock *= 1.3;
     //             }
 
-    //             // --- 2️⃣ Adaptive Low-Stock Formula ---
-    //             // Instead of comparing just to the limit, we use safe target
     //             $multiplier = 1.2;
     //             if ($product->sold_this_month > $product->stock_limit) {
     //                 $multiplier = 1.5;
     //             }
     //             $lowStockQty = max(($targetStock * $multiplier) - $product->stock, 0);
 
-    //             // --- 3️⃣ Top-Selling Formula ---
     //             $topSellingQty = 0;
     //             if ($product->sold_this_month > $product->stock_limit) {
     //                 $topSellingQty = max(
@@ -123,186 +150,81 @@ class RestockController extends Controller
     //                 );
     //             }
 
-    //             // --- 4️⃣ Suggested Quantity (choose stronger signal)
-    //             if ($lowStockQty > 0 && $topSellingQty > 0) {
-    //                 $suggestedQty = ceil(max($lowStockQty, $topSellingQty) * 1.25);
+    //             // ================================
+    //             // 🚀 STEP 3: COMBINED SMART SUGGESTION
+    //             // ================================
+
+    //             $isLowStock = $product->stock <= $reorderPoint;
+    //             $isTopSelling = $product->sold_this_month > $product->stock_limit;
+
+    //             if ($isLowStock && $isTopSelling) {
+    //                 $multiplierFinal = 3.0;
+    //             } elseif ($isTopSelling) {
+    //                 $multiplierFinal = 2.5;
+    //             } elseif ($isLowStock) {
+    //                 $multiplierFinal = 2.0;
     //             } else {
-    //                 $suggestedQty = max($lowStockQty, $topSellingQty);
+    //                 $multiplierFinal = 1.5;
     //             }
+
+    //             // Target stock using ROP model
+    //             $ropTargetStock = round($reorderPoint * $multiplierFinal);
+
+    //             // Final suggested quantity considering expired stock
+    //             $suggestedQty = max(
+    //                 ($ropTargetStock - $product->stock),
+    //                 max($lowStockQty, $topSellingQty)
+    //             );
+
+    //             // Reduce suggestion for expired products
+    //             if ($product->expired_stock > 0) {
+    //                 $suggestedQty = max($suggestedQty - ($product->expired_stock * 0.5), 0);  // Decrease suggestion based on expired stock
+    //             }
+
+    //             // Final suggestion (after rounding)
     //             $suggestedQty = (int) round($suggestedQty);
 
-    //             // --- 5️⃣ Reason
+    //             // ============================
+    //             // 📋 STEP 4: REASON + BADGE
+    //             // ============================
     //             $reason = null;
-    //             if ($lowStockQty > 0) $reason = '⚠️ Low Stock';
-    //             if ($topSellingQty > 0) $reason = $reason ? $reason . ' + 🚀 Top Selling' : '🚀 Top Selling';
+    //             if ($isLowStock) {
+    //                 $reason = 'Low Stock';
+    //             }
 
-    //             $product->target_stock = (int) round($targetStock);
-    //             $product->suggested_quantity = $suggestedQty;
-    //             $product->reason = $reason;
+    //             if ($isTopSelling) {
+    //                 $reason = isset($reason) ? $reason . ' + Top Selling' : 'Top Selling';
+    //             }
 
-    //             // --- 6️⃣ Badge color
-    //             if (str_contains($reason, '⚠️')) {
+    //             if (str_contains($reason, 'Low Stock')) {
     //                 $product->reason_badge = 'background-color:#fef3c7;color:#92400e;';
-    //             } elseif (str_contains($reason, '🚀')) {
+    //             } elseif (str_contains($reason, 'Top Selling')) {
     //                 $product->reason_badge = 'background-color:#dcfce7;color:#166534;';
     //             } else {
     //                 $product->reason_badge = 'background-color:#e2e8f0;color:#334155;';
     //             }
 
-    //             return $product;
-    //         })
-    //         ->filter(function ($product) {
-    //             // show only if below stock limit and needs restock
-    //             return $product->suggested_quantity > 0 && $product->stock < $product->stock_limit;
-    //         })
-    //         ->sortBy('stock')
-    //         ->values();
-
-    //     // --- 7️⃣ For dropdown (unchanged)
-    //     $allProducts = DB::table('products')
-    //         ->leftJoinSub(
-    //             DB::table('inventory')
-    //                 ->select('prod_code', DB::raw('SUM(stock) as total_stock'))
-    //                 ->where('owner_id', $ownerId)
-    //                 ->groupBy('prod_code'),
-    //             'inventory',
-    //             function ($join) {
-    //                 $join->on('products.prod_code', '=', 'inventory.prod_code');
-    //             }
-    //         )
-    //         ->where('products.owner_id', $ownerId)
-    //         ->select(
-    //             'products.prod_code as inven_code',
-    //             'products.name',
-    //             'products.cost_price',
-    //             DB::raw('COALESCE(inventory.total_stock, 0) as stock')
-    //         )
-    //         ->get();
-
-    //     return view('dashboards.owner.restock_suggestion', compact('products', 'categories', 'currentYear', 'currentMonth', 'allProducts'));
-    // }
-
-    // public function restockSuggestion(Request $request)
-    // {
-    //     $ownerId = Auth::guard('owner')->id();
-    //     $currentYear = now()->year;
-    //     $currentMonth = now()->month;
-    //     $daysInMonth = now()->daysInMonth;
-
-    //     // 1️⃣ Categories (for dropdowns)
-    //     $categories = DB::table('categories')
-    //         ->where('owner_id', $ownerId)
-    //         ->get();
-
-    //     // 2️⃣ Aggregate inventory per product
-    //     $inventoryAgg = DB::table('inventory')
-    //         ->select('prod_code', DB::raw('SUM(stock) as total_stock'))
-    //         ->where('owner_id', $ownerId)
-    //         ->groupBy('prod_code');
-
-    //     // 3️⃣ Main Product Data with Sales and Stock
-    //     $products = DB::table('products')
-    //         ->join('categories', 'products.category_id', '=', 'categories.category_id')
-    //         ->leftJoinSub($inventoryAgg, 'inventory', function ($join) {
-    //             $join->on('products.prod_code', '=', 'inventory.prod_code');
-    //         })
-    //         ->leftJoin(DB::raw("
-    //         (
-    //             SELECT 
-    //                 ri.prod_code,
-    //                 SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
-    //                          AND MONTH(r.receipt_date) = {$currentMonth} 
-    //                          THEN ri.item_quantity ELSE 0 END) AS sold_this_month,
-    //                 SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
-    //                          THEN ri.item_quantity ELSE 0 END) AS sold_this_year
-    //             FROM receipt_item ri
-    //             INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
-    //             GROUP BY ri.prod_code
-    //         ) AS sales
-    //     "), 'products.prod_code', '=', 'sales.prod_code')
-    //         // 🧩 Exclude already finalized restocks
-    //         ->leftJoin('restock_item', 'restock_item.inven_code', '=', 'products.prod_code')
-    //         ->whereNull('restock_item.inven_code')
-    //         ->where('products.owner_id', $ownerId)
-    //         ->select(
-    //             'products.prod_code',
-    //             'products.name',
-    //             'categories.category',
-    //             'products.category_id',
-    //             'products.cost_price',
-    //             'products.selling_price',
-    //             DB::raw('COALESCE(inventory.total_stock, 0) as stock'),
-    //             'products.stock_limit',
-    //             DB::raw('COALESCE(sales.sold_this_month, 0) as sold_this_month'),
-    //             DB::raw('COALESCE(sales.sold_this_year, 0) as sold_this_year')
-    //         )
-    //         ->get()
-    //         ->map(function ($product) use ($daysInMonth) {
-
-    //             // ================================
-    //             // 🧮 TRUE REORDER POINT (ROP) MODEL
-    //             // ================================
-
-    //             // 1️⃣ Average Daily Demand (ADD)
-    //             $avgDailyDemand = $product->sold_this_month / max($daysInMonth, 1);
-
-    //             // 2️⃣ Lead Time (in days)
-    //             // You can store this per supplier or product in future
-    //             $leadTime = 5; // e.g., 5 days delivery time
-
-    //             // 3️⃣ Safety Stock
-    //             // Option A: Fixed buffer using stock limit
-    //             $safetyStock = $product->stock_limit;
-
-    //             // Option B (Adaptive): 25% of expected demand during lead time
-    //             // $safetyStock = round(($avgDailyDemand * $leadTime) * 0.25);
-
-    //             // 4️⃣ Reorder Point (ROP)
-    //             $reorderPoint = round(($avgDailyDemand * $leadTime) + $safetyStock);
-
-    //             // 5️⃣ Target Stock Level (Goal after restock)
-    //             $targetStock = round($reorderPoint * 2);
-
-    //             // 6️⃣ Suggested Quantity (how much to order)
-    //             $suggestedQty = max($targetStock - $product->stock, 0);
-
-    //             // 7️⃣ Restock Reason
-    //             $reason = null;
-    //             if ($product->stock <= $reorderPoint) {
-    //                 $reason = '⚠️ Low stocks';
-    //             }
-    //             if ($avgDailyDemand > ($product->stock_limit / 2)) {
-    //                 $reason = $reason ? $reason . ' + 🚀 High Demand' : '🚀 High Demand';
-    //             }
-
-    //             // 8️⃣ Badge Color Styling
-    //             if (str_contains($reason, '⚠️')) {
-    //                 $product->reason_badge = 'background-color:#fef3c7;color:#92400e;';
-    //             } elseif (str_contains($reason, '🚀')) {
-    //                 $product->reason_badge = 'background-color:#dcfce7;color:#166534;';
-    //             } else {
-    //                 $product->reason_badge = 'background-color:#e2e8f0;color:#334155;';
-    //             }
-
-    //             // 9️⃣ Attach Computed Fields for Display
+    //             // ============================
+    //             // 📊 Attach computed fields
+    //             // ============================
     //             $product->avg_daily_demand = round($avgDailyDemand, 2);
     //             $product->lead_time = $leadTime;
     //             $product->safety_stock = $safetyStock;
     //             $product->reorder_point = $reorderPoint;
-    //             $product->target_stock = $targetStock;
-    //             $product->suggested_quantity = (int) $suggestedQty;
+    //             $product->target_stock = (int) round($ropTargetStock);
+    //             $product->suggested_quantity = $suggestedQty;
     //             $product->reason = $reason;
 
     //             return $product;
     //         })
     //         ->filter(function ($product) {
-    //             // ✅ Show only products needing restock
-    //             return $product->suggested_quantity > 0 && $product->stock <= $product->reorder_point;
+    //             return $product->suggested_quantity > 0
+    //                 && ($product->stock <= $product->stock_limit || $product->sold_this_month > $product->stock_limit);
     //         })
     //         ->sortBy('stock')
     //         ->values();
 
-    //     // --- 7️⃣ For dropdown (unchanged)
+    //     // Dropdown data (unchanged)
     //     $allProducts = DB::table('products')
     //         ->leftJoinSub(
     //             DB::table('inventory')
@@ -323,7 +245,6 @@ class RestockController extends Controller
     //         )
     //         ->get();
 
-    //     // 🏁 Return to View
     //     return view('dashboards.owner.restock_suggestion', compact('products', 'categories', 'currentYear', 'currentMonth', 'allProducts'));
     // }
 
@@ -351,33 +272,37 @@ class RestockController extends Controller
             ->leftJoinSub($inventoryAgg, 'inventory', function ($join) {
                 $join->on('products.prod_code', '=', 'inventory.prod_code');
             })
-            ->leftJoin(DB::raw("
-            (
-                SELECT 
-                    ri.prod_code,
-                    SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
-                             AND MONTH(r.receipt_date) = {$currentMonth} 
-                             THEN ri.item_quantity ELSE 0 END) AS sold_this_month,
-                    SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
-                             THEN ri.item_quantity ELSE 0 END) AS sold_this_year
-                FROM receipt_item ri
-                INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
-                GROUP BY ri.prod_code
-            ) AS sales
-        "), 'products.prod_code', '=', 'sales.prod_code')
-            // Join expired products to adjust stock suggestions
-            ->leftJoin(DB::raw("
-            (
-                SELECT 
-                    prod_code,
-                    SUM(stock) as expired_stock
-                FROM inventory
-                WHERE expiration_date < CURDATE() AND is_expired = 1 -- Expired products
-                GROUP BY prod_code
-            ) AS expired
-        "), 'products.prod_code', '=', 'expired.prod_code')
-            ->leftJoin('restock_item', 'restock_item.inven_code', '=', 'products.prod_code')
-            ->whereNull('restock_item.inven_code')
+            ->leftJoin(DB::raw("(
+            SELECT 
+                ri.prod_code,
+                SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
+                         AND MONTH(r.receipt_date) = {$currentMonth} 
+                         THEN ri.item_quantity ELSE 0 END) AS sold_this_month,
+                SUM(CASE WHEN YEAR(r.receipt_date) = {$currentYear} 
+                         THEN ri.item_quantity ELSE 0 END) AS sold_this_year
+            FROM receipt_item ri
+            INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
+            GROUP BY ri.prod_code
+        ) AS sales"), 'products.prod_code', '=', 'sales.prod_code')
+            ->leftJoin(DB::raw("(
+            SELECT 
+                prod_code,
+                SUM(stock) as expired_stock
+            FROM inventory
+            WHERE expiration_date < CURDATE() AND is_expired = 1
+            GROUP BY prod_code
+        ) AS expired"), 'products.prod_code', '=', 'expired.prod_code')
+
+            ->whereNotExists(function ($q) use ($ownerId) {
+                // Changed from inven_code to prod_code
+                $q->select(DB::raw(1))
+                    ->from('restock_item')
+                    ->join('restock', 'restock.restock_id', '=', 'restock_item.restock_id')
+                    ->where('restock.owner_id', $ownerId)
+                    ->where('restock.status', 'pending')  // don't suggest products already pending
+                    ->whereColumn('restock_item.prod_code', 'products.prod_code'); // Join based on prod_code now
+            })
+
             ->where('products.owner_id', $ownerId)
             ->where('products.prod_status', 'active')
             ->select(
@@ -391,7 +316,7 @@ class RestockController extends Controller
                 'products.stock_limit',
                 DB::raw('COALESCE(sales.sold_this_month, 0) as sold_this_month'),
                 DB::raw('COALESCE(sales.sold_this_year, 0) as sold_this_year'),
-                DB::raw('COALESCE(expired.expired_stock, 0) as expired_stock')  // Include expired stock
+                DB::raw('COALESCE(expired.expired_stock, 0) as expired_stock')
             )
             ->get()
             ->map(function ($product) use ($daysInMonth) {
@@ -526,94 +451,175 @@ class RestockController extends Controller
         return view('dashboards.owner.restock_suggestion', compact('products', 'categories', 'currentYear', 'currentMonth', 'allProducts'));
     }
 
-    
 
 
+    // public function finalize(Request $request)
+    // {
 
+    //     $ownerId = auth()->guard('owner')->id();
 
+    //     // 1️⃣ Validate Inputs
+    //     $request->validate([
+    //         'products.*' => 'exists:products,prod_code',
+    //         'quantities.*' => 'integer|min:1',
+    //         'custom_products.*' => 'exists:products,prod_code', // ✅ Changed from inventory to products
+    //         'custom_quantities.*' => 'integer|min:1',
+    //     ]);
 
+    //     // 2️⃣ Create Restock Header
+    //     $restockId = DB::table('restock')->insertGetId([
+    //         'owner_id' => $ownerId,
+    //         'restock_created' => now(),
+    //     ]);
 
+    //     $items = [];
 
+    //     // 3️⃣ Add Regular Products
+    //     if ($request->filled('products')) {
+    //         foreach ($request->products as $prodCode) {
+    //             $inventory = DB::table('inventory')
+    //                 ->where('prod_code', $prodCode)
+    //                 ->where('owner_id', $ownerId)
+    //                 ->first();
 
+    //             if (!$inventory) continue;
 
+    //             $qty = $request->quantities[$prodCode] ?? null;
+    //             if (!$qty || $qty < 1) continue;
 
+    //             $items[] = [
+    //                 'restock_id' => $restockId,
+    //                 'inven_code' => $inventory->inven_code,
+    //                 'item_quantity' => $qty,
+    //             ];
+    //         }
+    //     }
 
+    //     // 4️⃣ Add Custom Products
+    //     if ($request->filled('custom_products')) {
+    //         foreach ($request->custom_products as $prodCode) {
+    //             $qty = $request->custom_quantities[$prodCode] ?? null;
+    //             if (!$qty || $qty < 1) continue;
 
+    //             // ✅ Look up inventory record for this product code
+    //             $inventory = DB::table('inventory')
+    //                 ->where('prod_code', $prodCode)
+    //                 ->where('owner_id', $ownerId)
+    //                 ->first();
 
+    //             if (!$inventory) continue;
 
+    //             $items[] = [
+    //                 'restock_id' => $restockId,
+    //                 'inven_code' => $inventory->inven_code, // use actual inven_code
+    //                 'item_quantity' => $qty,
+    //             ];
+    //         }
+    //     }
 
+    //     // 5️⃣ Error if no items
+    //     if (empty($items)) {
+    //         return redirect()->route('restock_suggestion')
+    //             ->with('error', 'No products selected for restock.');
+    //     }
+
+    //     // 6️⃣ Combine duplicates
+    //     $items = collect($items)
+    //         ->groupBy('inven_code')
+    //         ->map(function ($group) use ($restockId) {
+    //             return [
+    //                 'restock_id' => $restockId,
+    //                 'inven_code' => $group->first()['inven_code'],
+    //                 'item_quantity' => $group->sum('item_quantity'),
+    //             ];
+    //         })
+    //         ->values()
+    //         ->toArray();
+
+    //     // 7️⃣ Insert
+    //     DB::table('restock_item')->insert($items);
+
+    //     // 8️⃣ Log activity
+    //     ActivityLogController::log(
+    //         'Finalized a restock list',
+    //         'owner',
+    //         auth('owner')->user(),
+    //         $request->ip()
+    //     );
+
+    //     return redirect()->route('restock_suggestion')
+    //         ->with('success', 'Restock list successfully created!');
+    // }
 
     public function finalize(Request $request)
     {
         $ownerId = auth()->guard('owner')->id();
 
-        // Validate inputs
+        // 1️⃣ Validate Inputs
         $request->validate([
-            'products.*' => 'exists:inventory,inven_code',
+            'products.*' => 'exists:products,prod_code',
             'quantities.*' => 'integer|min:1',
-            'custom_products.*' => 'exists:inventory,inven_code',
+            'custom_products.*' => 'exists:products,prod_code',
             'custom_quantities.*' => 'integer|min:1',
         ]);
 
-        // Create restock header
+        // 2️⃣ Create Restock Header
         $restockId = DB::table('restock')->insertGetId([
             'owner_id' => $ownerId,
             'restock_created' => now(),
         ]);
 
-        $items = [];
-
-
-        // Add products from main table
+        // 3️⃣ Add Regular Products (Direct Insert)
         if ($request->filled('products')) {
-            foreach ($request->products as $code) {
-                $items[] = [
-                    'inven_code' => $code,
-                    'item_quantity' => $request->quantities[$code] ?? 0,
-                ];
-            }
-        }
+            foreach ($request->products as $prodCode) {
+                // Directly fetch the quantity from the form input
+                $qty = $request->quantities[$prodCode] ?? null;
+                if (!$qty || $qty < 1) continue;
 
-        // Add custom products from modal
-        if ($request->filled('custom_products')) {
-            foreach ($request->custom_products as $code) {
-                $items[] = [
-                    'inven_code' => $code,
-                    'item_quantity' => $request->custom_quantities[$code] ?? 0,
-                ];
-            }
-        }
-
-        // Combine duplicates by inven_code
-        $items = collect($items)
-            ->groupBy('inven_code')
-            ->map(function ($group, $inven_code) use ($restockId) {
-                return [
+                // Directly insert the product and quantity into the restock_item table
+                DB::table('restock_item')->insert([
                     'restock_id' => $restockId,
-                    'inven_code' => $inven_code,
-                    'item_quantity' => array_sum(array_column($group->toArray(), 'item_quantity')),
-                ];
-            })
-            ->values()
-            ->toArray();
-
-        // Insert all items at once
-        if (!empty($items)) {
-            DB::table('restock_item')->insert($items);
+                    'prod_code' => $prodCode,  // Store prod_code instead of inven_code
+                    'item_quantity' => $qty,
+                ]);
+            }
         }
 
-        $user = auth('owner')->user();
-        $ip = $request->ip();
+        // 4️⃣ Add Custom Products (Direct Insert)
+        if ($request->filled('custom_products')) {
+            foreach ($request->custom_products as $prodCode) {
+                $qty = $request->custom_quantities[$prodCode] ?? null;
+                if (!$qty || $qty < 1) continue;
 
+                // Directly insert the custom product and quantity into the restock_item table
+                DB::table('restock_item')->insert([
+                    'restock_id' => $restockId,
+                    'prod_code' => $prodCode,  // Store prod_code instead of inven_code
+                    'item_quantity' => $qty,
+                ]);
+            }
+        }
+
+        // 5️⃣ Error if no items
+        if (!DB::table('restock_item')->where('restock_id', $restockId)->exists()) {
+            return redirect()->route('restock_suggestion')
+                ->with('error', 'No products selected for restock.');
+        }
+
+        // 6️⃣ Log activity
         ActivityLogController::log(
             'Finalized a restock list',
             'owner',
-            $user,
-            $ip
+            auth('owner')->user(),
+            $request->ip()
         );
 
-        return redirect()->route('restock_suggestion');
+        return redirect()->route('restock_suggestion')
+            ->with('success', 'Restock list successfully created!');
     }
+
+
+
 
 
     public function list()
@@ -623,11 +629,12 @@ class RestockController extends Controller
         $restocks = DB::table('restock')
             ->where('owner_id', $ownerId)
             ->orderByDesc('restock_created')
+            ->select('restock_id', 'restock_created', 'status')  // Make sure to select status
             ->get();
 
+
         $restockItems = DB::table('restock_item')
-            ->join('inventory', 'restock_item.inven_code', '=', 'inventory.inven_code')
-            ->join('products', 'inventory.prod_code', '=', 'products.prod_code')
+            ->join('products', 'restock_item.prod_code', '=', 'products.prod_code')  // Use prod_code directly
             ->select(
                 'restock_item.*',
                 'products.name',
@@ -638,8 +645,26 @@ class RestockController extends Controller
             ->get();
 
 
+
         return view('dashboards.owner.restock_list', compact('restocks', 'restockItems'));
     }
+
+    public function updateStatus(Request $request)
+    {
+        $request->validate([
+            'restock_id' => 'required|integer',
+            'status' => 'required|in:received,cancelled'
+        ]);
+
+        DB::table('restock')
+            ->where('restock_id', $request->restock_id)
+            ->update([
+                'status' => $request->status
+            ]);
+
+        return back()->with('success', 'Restock status updated!');
+    }
+
 
     public function topProducts(Request $request)
     {
