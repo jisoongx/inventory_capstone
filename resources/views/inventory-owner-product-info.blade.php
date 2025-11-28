@@ -8,7 +8,7 @@
     @livewire('expiration-container')
 </div>
 
-<div class="max-w-6xl mx-auto py-4"> 
+<div class="max-w-6xl mx-auto py-3"> 
 
 <!-- Product Information Section (Modified) -->
 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -105,7 +105,7 @@
                 </div>
                 <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
                     <p class="text-xs text-amber-700 font-medium">Total Items Sold</p>
-                    <p class="text-xl font-bold text-orange-900">{{ $totalStockOutSold }}</p>
+                    <p class="text-xl font-bold text-amber-900">{{ $totalStockOutSold }}</p>
                 </div>
                 <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
                     <p class="text-xs text-purple-700 font-medium">Total Revenue</p>
@@ -115,9 +115,9 @@
 
             <!-- Damaged & Expired Cards -->
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <p class="text-xs text-orange-700 font-medium">Damaged Items</p>
-                    <p class="text-xl font-bold text-amber-900">{{ $totalDamaged }}</p>
+                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <p class="text-xs text-red-700 font-medium">Damaged Items</p>
+                    <p class="text-xl font-bold text-red-900">{{ $totalDamaged }}</p>
                 </div>
                 <div class="bg-red-50 p-4 rounded-lg border border-red-200">
                     <p class="text-xs text-red-700 font-medium">Expired Items</p>
@@ -189,36 +189,76 @@
 
 <!-- Stock-In History Section -->
 <div id="stockInSection" class="tab-content">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-md font-semibold">Stock-In History</h2>
-        <div class="flex gap-2 flex-wrap">
-            <select id="stockInSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                <option value="" disabled selected>Select sort option</option>
-                <option value="date_desc">Date (Newest First)</option>
-                <option value="date_asc">Date (Oldest First)</option>
-                <option value="batch_desc">Batch (Newest First)</option>
-                <option value="batch_asc">Batch (Oldest First)</option>
-                <option value="quantity_desc">Quantity (High to Low)</option>
-                <option value="quantity_asc">Quantity (Low to High)</option>
-            </select>
-            <input type="text" id="stockInSearch" placeholder="Search batch..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-            <input type="date" id="dateFrom" placeholder="From Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-            <input type="date" id="dateTo" placeholder="To Date" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-            <button onclick="filterStockInTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
-            <button onclick="resetStockInFilters()" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">Reset</button>
+    <div class="bg-green-50 rounded-lg p-3 mb-4 border border-green-200">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
+            <!-- Sort By -->
+            <div class="lg:col-span-3">
+                <label class="flex items-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                    <span class="material-symbols-outlined text-sm text-green-600">sort</span>
+                    Sort By
+                </label>
+                <select id="stockInSort" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white transition-all hover:border-green-400">
+                    <option value="" disabled selected>Choose sorting...</option>
+                    <option value="date_desc">📅 Date Added (Newest First)</option>
+                    <option value="date_asc">📅 Date Added (Oldest First)</option>
+                    <option value="batch_desc">📦 Batch (Newest First)</option>
+                    <option value="batch_asc">📦 Batch (Oldest First)</option>
+                    <option value="quantity_desc">📊 Quantity (High to Low)</option>
+                    <option value="quantity_asc">📊 Quantity (Low to High)</option>
+                </select>
+            </div>
+
+            <!-- Search Batch -->
+            <div class="lg:col-span-3">
+                <label class="flex items-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                    <span class="material-symbols-outlined text-sm text-green-600">search</span>
+                    Search Batch
+                </label>
+                <input type="text" id="stockInSearch" placeholder="Search (e.g. batch-1)" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white transition-all hover:border-green-400">
+            </div>
+
+            <!-- Date Range -->
+            <div class="lg:col-span-4">
+                <label class="flex items-center justify-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                    <span class="material-symbols-outlined text-sm text-green-600">calendar_month</span>
+                    Date Range Filter
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="relative">
+                        <label class="absolute -top-1.5 left-2 bg-white rounded-md px-1 text-[9px] font-medium text-gray-700 z-10">From</label>
+                        <input type="date" id="dateFrom" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2 py-2 focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white transition-all hover:border-green-400">
+                    </div>
+                    <div class="relative">
+                        <label class="absolute -top-1.5 left-2 bg-white rounded-md px-1 text-[9px] font-medium text-gray-700 z-10">To</label>
+                        <input type="date" id="dateTo" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2 py-2 focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white transition-all hover:border-green-400">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="lg:col-span-2 flex gap-2">
+                <button onclick="filterStockInTable()" class="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 active:scale-95 transition-all shadow-md hover:shadow-lg">
+                    <span class="material-symbols-outlined text-base">check_circle</span>
+                    Apply
+                </button>
+                <button onclick="resetStockInFilters()" class="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 active:scale-95 transition-all shadow-md hover:shadow-lg">
+                    <span class="material-symbols-outlined text-base">refresh</span>
+                    Reset
+                </button>
+            </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="bg-white shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full table-auto border border-gray-100">
-                <thead class="bg-gray-100 text-gray-700 text-sm">
+            <table class="min-w-full table-auto border border-green-200">
+                <thead class="bg-green-50 text-gray-700 text-sm">
                     <tr>
-                        <th class="px-4 py-3 border">Batch Number</th>
-                        <th class="px-4 py-3 border">Total Quantity</th>
-                        <th class="px-4 py-3 border">Date Added</th>
-                        <th class="px-4 py-3 border">Expiration Date</th>
-                        <th class="px-4 py-3 border">Days Until Expiry</th>
+                        <th class="px-4 py-3">Batch Number</th>
+                        <th class="px-4 py-3">Total Quantity</th>
+                        <th class="px-4 py-3">Date Added</th>
+                        <th class="px-4 py-3">Expiration Date</th>
+                        <th class="px-4 py-3">Days Until Expiry</th>
                     </tr>
                 </thead>
                 <tbody id="stockInTableBody">
@@ -227,31 +267,32 @@
                             $firstBatch = $batches->first();
                             $totalBatchQuantity = $firstBatch->original_quantity;
                             
-                            // Calculate days based on date only (not time)
                             if ($firstBatch->expiration_date) {
                                 $expirationDate = \Carbon\Carbon::parse($firstBatch->expiration_date)->startOfDay();
                                 $today = \Carbon\Carbon::today();
-                                
-                                // Calculate the difference in days
                                 $expiryDays = $today->diffInDays($expirationDate, false);
                             } else {
                                 $expiryDays = null;
                             }
                         @endphp
-                        <tr class="hover:bg-gray-50" data-batch="{{ $batchNumber }}" data-date="{{ \Carbon\Carbon::parse($firstBatch->date_added)->timestamp }}" data-quantity="{{ $totalBatchQuantity }}">
-                            <td class="px-4 py-3 border text-center text-sm">{{ $batchNumber }}</td>
-                            <td class="px-4 py-3 border text-center text-sm">{{ $totalBatchQuantity }}</td>
-                            <td class="px-4 py-3 border text-center text-sm">
+                        <tr class="hover:bg-gray-50 border-t data-row" data-batch="{{ $batchNumber }}" data-date="{{ \Carbon\Carbon::parse($firstBatch->date_added)->timestamp }}" data-quantity="{{ $totalBatchQuantity }}">
+                            <td class="px-4 py-3 text-center text-sm">
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-medium">
+                                    {{ $batchNumber }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm">{{ $totalBatchQuantity }}</td>
+                            <td class="px-4 py-3 text-center text-sm">
                                 {{ \Carbon\Carbon::parse($firstBatch->date_added)->format('M j, Y') }}
                             </td>
-                            <td class="px-4 py-3 border text-center text-sm">
+                            <td class="px-4 py-3 text-center text-sm">
                                 @if($firstBatch->expiration_date)
                                     {{ \Carbon\Carbon::parse($firstBatch->expiration_date)->format('M j, Y') }}
                                 @else
                                     —
                                 @endif
                             </td>
-                            <td class="px-4 py-3 border text-center text-sm">
+                            <td class="px-4 py-3 text-center text-sm">
                                 @if($expiryDays !== null)
                                     <span class="{{ $expiryDays < 0 ? 'text-red-600 font-medium' : ($expiryDays == 0 ? 'text-orange-600 font-medium' : 'text-blue-600 font-medium') }}">
                                         @if($expiryDays > 0)
@@ -259,9 +300,7 @@
                                         @elseif($expiryDays == 0)
                                             Expires today
                                         @else
-                                            @php
-                                                $daysAgo = abs($expiryDays);
-                                            @endphp
+                                            @php $daysAgo = abs($expiryDays); @endphp
                                             Expired {{ $daysAgo }} day{{ $daysAgo > 1 ? 's' : '' }} ago
                                         @endif
                                     </span>
@@ -271,10 +310,25 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="5" class="text-center py-6 text-gray-500">No stock-in records found.</td>
+                        <tr class="no-data-row">
+                            <td colspan="5" class="text-center py-8 text-gray-500">
+                                <div class="flex flex-col items-center gap-2">
+                                    <span class="material-symbols-outlined text-4xl text-gray-300">inventory_2</span>
+                                    <span class="font-medium">No data available</span>
+                                    <span class="text-xs text-gray-400">Stock-in records will appear here once added</span>
+                                </div>
+                            </td>
                         </tr>
                     @endforelse
+                    <tr class="no-results-row hidden">
+                        <td colspan="5" class="text-center py-8 text-gray-500">
+                            <div class="flex flex-col items-center gap-2">
+                                <span class="material-symbols-outlined text-4xl text-gray-300">search_off</span>
+                                <span class="font-medium">No results found</span>
+                                <span class="text-xs text-gray-400">Try adjusting your filters or search criteria</span>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -299,65 +353,129 @@
 
         <!-- Sales History Sub-Tab -->
         <div id="salesSubSection" class="subtab-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-md font-semibold">Sales History</h3>
-                <div class="flex gap-2 flex-wrap">
-                    <select id="salesSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                        <option value="" disabled selected>Select sort option</option>
-                        <option value="date_desc">Date (Newest First)</option>
-                        <option value="date_asc">Date (Oldest First)</option>
-                        <option value="quantity_desc">Quantity (High to Low)</option>
-                        <option value="quantity_asc">Quantity (Low to High)</option>
-                        <option value="amount_desc">Amount (High to Low)</option>
-                    </select>
-                    <!-- <input type="text" id="salesSearch" placeholder="Search receipt..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100"> -->
-                    <input type="date" id="salesDateFrom" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <input type="date" id="salesDateTo" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <button onclick="filterSalesTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
-                    <button onclick="resetSalesFilters()" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">Reset</button>
+            <div class="bg-amber-50 rounded-lg p-3 mb-4 border border-amber-200">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
+                    <!-- Sort By -->
+                    <div class="lg:col-span-3">
+                        <label class="flex items-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                            <span class="material-symbols-outlined text-sm text-amber-600">sort</span>
+                            Sort By
+                        </label>
+                        <select id="salesSort" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all hover:border-amber-400">
+                            <option value="" disabled selected>Choose sorting...</option>
+                            <option value="date_desc">📅 Date Sold (Newest First)</option>
+                            <option value="date_asc">📅 Date Sold (Oldest First)</option>
+                            <option value="quantity_desc">📊 Quantity (High to Low)</option>
+                            <option value="quantity_asc">📊 Quantity (Low to High)</option>
+                            <option value="amount_desc">💰 Amount (High to Low)</option>
+                            <option value="batch_desc">📦 Batch (Newest First)</option>
+                            <option value="batch_asc">📦 Batch (Oldest First)</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Batch -->
+                    <div class="lg:col-span-3">
+                        <label class="flex items-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                            <span class="material-symbols-outlined text-sm text-amber-600">search</span>
+                            Search Batch
+                        </label>
+                        <input type="text" id="salesSearch" placeholder="Search (e.g. batch-1)" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all hover:border-amber-400">
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="lg:col-span-4">
+                        <label class="flex items-center justify-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                            <span class="material-symbols-outlined text-sm text-amber-600">calendar_month</span>
+                            Date Range Filter
+                        </label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="relative">
+                                <label class="absolute -top-1.5 left-2 bg-white rounded-md px-1 text-[9px] font-medium text-gray-700 z-10">From</label>
+                                <input type="date" id="salesDateFrom" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2 py-2 focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all hover:border-amber-400">
+                            </div>
+                            <div class="relative">
+                                <label class="absolute -top-1.5 left-2 bg-white rounded-md px-1 text-[9px] font-medium text-gray-700 z-10">To</label>
+                                <input type="date" id="salesDateTo" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2 py-2 focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all hover:border-amber-400">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="lg:col-span-2 flex gap-2">
+                        <button onclick="filterSalesTable()" class="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-amber-600 text-white px-3 py-2 rounded-lg hover:bg-amber-700 active:scale-95 transition-all shadow-md hover:shadow-lg">
+                            <span class="material-symbols-outlined text-base">check_circle</span>
+                            Apply
+                        </button>
+                        <button onclick="resetSalesFilters()" class="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 active:scale-95 transition-all shadow-md hover:shadow-lg">
+                            <span class="material-symbols-outlined text-base">refresh</span>
+                            Reset
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="bg-white shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full table-auto border border-gray-100">
-                        <thead class="bg-gray-100 text-gray-700 text-sm">
+                    <table class="min-w-full table-auto border border-amber-200">
+                        <thead class="bg-amber-50 text-gray-700 text-sm">
                             <tr>
-                                <th class="px-4 py-3 border">Date Sold</th>
-                                <th class="px-4 py-3 border">Quantity Sold</th>
-                                <th class="px-4 py-3 border">Unit Price</th>
-                                <th class="px-4 py-3 border">Total Amount</th>
-                                <th class="px-4 py-3 border">Sold By</th>
+                                <th class="px-4 py-3">Date Sold</th>
+                                <th class="px-4 py-3">Batch Number</th>
+                                <th class="px-4 py-3">Quantity Sold</th>
+                                <th class="px-4 py-3">Price Used</th>
+                                <th class="px-4 py-3">Total Amount</th>
+                                <th class="px-4 py-3">Sold By</th>
                             </tr>
                         </thead>
                         <tbody id="salesTableBody">
                             @forelse ($stockOutSalesHistory as $sale)
-                                <tr class="hover:bg-gray-50 text-sm" 
+                                <tr class="hover:bg-gray-50 text-sm border-t data-row" 
                                     data-date="{{ \Carbon\Carbon::parse($sale->receipt_date)->timestamp }}" 
                                     data-quantity="{{ $sale->quantity_sold }}" 
-                                    data-amount="{{ $sale->total_amount }}">
-                                    <td class="px-4 py-3 border text-center">
+                                    data-amount="{{ $sale->total_amount }}"
+                                    data-batch="{{ $sale->batch_number ?? 'N/A' }}">
+                                    <td class="px-4 py-3 text-center">
                                         {{ \Carbon\Carbon::parse($sale->receipt_date)->format('M j, Y g:i A') }}
                                     </td>
-                                    <td class="px-4 py-3 border text-center">{{ $sale->quantity_sold }}</td>
-                                    <td class="px-4 py-3 border text-center">₱{{ number_format($sale->selling_price, 2) }}</td>
-                                    <td class="px-4 py-3 border text-center font-medium">₱{{ number_format($sale->total_amount, 2) }}</td>
-                                    <td class="px-4 py-3 border text-center">{{ $sale->sold_by }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-medium">
+                                            {{ $sale->batch_number ?? 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center font-medium">{{ $sale->quantity_sold }}</td>
+                                    <td class="px-4 py-3 text-center font-medium">₱{{ number_format($sale->selling_price_used, 2) }}</td>
+                                    <td class="px-4 py-3 text-center font-semibold">₱{{ number_format($sale->total_amount, 2) }}</td>
+                                    <td class="px-4 py-3 text-center">{{ $sale->sold_by }}</td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="5" class="text-center py-6 text-gray-500">No sales records found.</td>
+                                <tr class="no-data-row">
+                                    <td colspan="6" class="text-center py-8 text-gray-500">
+                                        <div class="flex flex-col items-center gap-2">
+                                            <span class="material-symbols-outlined text-4xl text-gray-300">receipt_long</span>
+                                            <span class="font-medium">No data available</span>
+                                            <span class="text-xs text-gray-400">Sales records will appear here once transactions are made</span>
+                                        </div>
+                                    </td>
                                 </tr>
                             @endforelse
+                            <tr class="no-results-row hidden">
+                                <td colspan="6" class="text-center py-8 text-gray-500">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <span class="material-symbols-outlined text-4xl text-gray-300">search_off</span>
+                                        <span class="font-medium">No results found</span>
+                                        <span class="text-xs text-gray-400">Try adjusting your filters or search criteria</span>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                         @if($stockOutSalesHistory->count() > 0)
-                        <tfoot class="bg-gray-50">
-                            <tr class="text-sm font-semibold">
-                                <td class="px-4 py-3 border text-right">Total</td>
-                                <td class="px-4 py-3 border text-center">{{ $totalStockOutSold }}</td>
-                                <td class="px-4 py-3 border text-center">—</td>
-                                <td class="px-4 py-3 border text-center">₱{{ number_format($totalRevenue, 2) }}</td>
-                                <td class="px-4 py-3 border text-center">—</td>
+                        <tfoot class="bg-gray-50" id="salesTableFooter">
+                            <tr class="text-sm font-semibold border-t-2">
+                                <td class="px-4 py-3 text-right" colspan="2">Total</td>
+                                <td class="px-4 py-3 text-center text-amber-600 font-bold" id="salesTotalQuantity">{{ $totalStockOutSold }}</td>
+                                <td class="px-4 py-3 text-center">—</td>
+                                <td class="px-4 py-3 text-center text-amber-600 font-bold" id="salesTotalAmount">₱{{ number_format($totalRevenue, 2) }}</td>
+                                <td class="px-4 py-3 text-center">—</td>
                             </tr>
                         </tfoot>
                         @endif
@@ -368,69 +486,149 @@
 
         <!-- Damaged/Expired Items Sub-Tab -->
         <div id="damagedSubSection" class="subtab-content hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-md font-semibold">Damaged/Expired Items</h3>
-                <div class="flex gap-2 flex-wrap">
-                    <select id="damagedSort" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                        <option value="" disabled selected>Select sort option</option>
-                        <option value="date_desc">Date (Newest First)</option>
-                        <option value="date_asc">Date (Oldest First)</option>
-                        <option value="quantity_desc">Quantity (High to Low)</option>
-                        <option value="quantity_asc">Quantity (Low to High)</option>
-                        <option value="batch_desc">Batch (Newest First)</option>
-                        <option value="batch_asc">Batch (Oldest First)</option>
-                    </select>
-                    <input type="text" id="damagedSearch" placeholder="Search type..." class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <input type="date" id="damagedDateFrom" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <input type="date" id="damagedDateTo" class="text-xs border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-100">
-                    <button onclick="filterDamagedTable()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Apply Filter</button>
-                    <button onclick="resetDamagedFilters()" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">Reset</button>
+            <div class="bg-red-50 rounded-lg p-3 mb-4 border border-red-200">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
+                    <!-- Sort By -->
+                    <div class="lg:col-span-3">
+                        <label class="flex items-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                            <span class="material-symbols-outlined text-sm text-red-600">sort</span>
+                            Sort By
+                        </label>
+                        <select id="damagedSort" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white transition-all hover:border-red-400">
+                            <option value="" disabled selected>Choose sorting...</option>
+                            <option value="date_desc">📅 Date (Newest First)</option>
+                            <option value="date_asc">📅 Date (Oldest First)</option>
+                            <option value="quantity_desc">📊 Quantity (High to Low)</option>
+                            <option value="quantity_asc">📊 Quantity (Low to High)</option>
+                            <option value="batch_desc">📦 Batch (Newest First)</option>
+                            <option value="batch_asc">📦 Batch (Oldest First)</option>
+                        </select>
+                    </div>
+
+                    <!-- Filter Type -->
+                    <div class="lg:col-span-3">
+                        <label class="flex items-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                            <span class="material-symbols-outlined text-sm text-red-600">filter_alt</span>
+                            Filter Type
+                        </label>
+                        <select id="damagedTypeFilter" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white transition-all hover:border-red-400">
+                            <option value="">All Types</option>
+                            <option value="Expired">🕐 Expired</option>
+                            <option value="Broken">💔 Broken</option>
+                            <option value="Spoiled">🗑️ Spoiled</option>
+                            <option value="Damaged">⚠️ Damaged</option>
+                            <option value="Defective">🔧 Defective</option>
+                            <option value="Contaminated">☣️ Contaminated</option>
+                            <option value="Crushed">📦 Crushed</option>
+                            <option value="Leaking">💧 Leaking</option>
+                            <option value="Torn">✂️ Torn</option>
+                            <option value="Wet">🌊 Wet/Water Damaged</option>
+                            <option value="Mold">🦠 Mold/Fungus</option>
+                            <option value="Pest">🐛 Pest Damage</option>
+                            <option value="Temperature">🌡️ Temperature Abuse</option>
+                            <option value="Recalled">🚫 Recalled</option>
+                            <option value="Missing Parts">🧩 Missing Parts/Incomplete</option>
+                            <option value="Wrong Item">❌ Wrong Item Received</option>
+                            <option value="Unsealed">📭 Unsealed/Opened</option>
+                            <option value="Faded">🎨 Faded/Discolored</option>
+                            <option value="Stolen">🔒 Stolen/Lost</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="lg:col-span-4">
+                        <label class="flex items-center justify-center gap-1 text-[11px] font-semibold text-gray-700 mb-1.5">
+                            <span class="material-symbols-outlined text-sm text-red-600">calendar_month</span>
+                            Date Range Filter
+                        </label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="relative">
+                                <label class="absolute -top-1.5 left-2 bg-white rounded-md px-1 text-[9px] font-medium text-gray-700 z-10">From</label>
+                                <input type="date" id="damagedDateFrom" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2 py-2 focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white transition-all hover:border-red-400">
+                            </div>
+                            <div class="relative">
+                                <label class="absolute -top-1.5 left-2 bg-white rounded-md px-1 text-[9px] font-medium text-gray-600 z-10">To</label>
+                                <input type="date" id="damagedDateTo" class="w-full text-xs border-2 border-gray-300 rounded-lg px-2 py-2 focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white transition-all hover:border-red-400">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="lg:col-span-2 flex gap-2">
+                        <button onclick="filterDamagedTable()" class="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 active:scale-95 transition-all shadow-md hover:shadow-lg">
+                            <span class="material-symbols-outlined text-base">check_circle</span>
+                            Apply
+                        </button>
+                        <button onclick="resetDamagedFilters()" class="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 active:scale-95 transition-all shadow-md hover:shadow-lg">
+                            <span class="material-symbols-outlined text-base">refresh</span>
+                            Reset
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="bg-white shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full table-auto border border-gray-100">
-                        <thead class="bg-gray-100 text-gray-700 text-sm">
+                    <table class="min-w-full table-auto border border-red-200">
+                        <thead class="bg-red-50 text-gray-700 text-sm">
                             <tr>
-                                <th class="px-4 py-3 border">Batch Number</th>
-                                <th class="px-4 py-3 border">Date Out</th>
-                                <th class="px-4 py-3 border">Quantity Out</th>
-                                <th class="px-4 py-3 border">Type</th>
-                                <th class="px-4 py-3 border">Processed By</th>
+                                <th class="px-4 py-3">Batch Number</th>
+                                <th class="px-4 py-3">Date Out</th>
+                                <th class="px-4 py-3">Quantity Out</th>
+                                <th class="px-4 py-3">Type</th>
+                                <th class="px-4 py-3">Processed By</th>
                             </tr>
                         </thead>
                         <tbody id="damagedTableBody">
                             @forelse ($stockOutDamagedHistory as $damaged)
-                                <tr class="hover:bg-gray-50 text-sm" 
+                                <tr class="hover:bg-gray-50 text-sm border-t data-row" 
                                     data-date="{{ \Carbon\Carbon::parse($damaged->damaged_date)->timestamp }}" 
                                     data-quantity="{{ $damaged->damaged_quantity }}" 
                                     data-batch="{{ $damaged->batch_number ?? 'N/A' }}">
-                                    <td class="px-4 py-3 border text-center">{{ $damaged->batch_number ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3 border text-center">
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-medium">
+                                            {{ $damaged->batch_number ?? 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
                                         {{ \Carbon\Carbon::parse($damaged->damaged_date)->format('M j, Y') }}
                                     </td>
-                                    <td class="px-4 py-3 border text-center">{{ $damaged->damaged_quantity }}</td>
-                                    <td class="px-4 py-3 border text-center">
+                                    <td class="px-4 py-3 text-center">{{ $damaged->damaged_quantity }}</td>
+                                    <td class="px-4 py-3 text-center">
                                         <span class="px-2 py-1 text-xs rounded-full {{ $damaged->damaged_type == 'Expired' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800' }}">
                                             {{ $damaged->damaged_type }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 border text-center">{{ $damaged->reported_by }}</td>
+                                    <td class="px-4 py-3 text-center">{{ $damaged->reported_by }}</td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="5" class="text-center py-6 text-gray-500">No damaged/expired items found.</td>
+                                <tr class="no-data-row">
+                                    <td colspan="5" class="text-center py-8 text-gray-500">
+                                        <div class="flex flex-col items-center gap-2">
+                                            <span class="material-symbols-outlined text-4xl text-gray-300">broken_image</span>
+                                            <span class="font-medium">No data available</span>
+                                            <span class="text-xs text-gray-400">Damaged or expired items will appear here once reported</span>
+                                        </div>
+                                    </td>
                                 </tr>
                             @endforelse
+                            <tr class="no-results-row hidden">
+                                <td colspan="5" class="text-center py-8 text-gray-500">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <span class="material-symbols-outlined text-4xl text-gray-300">search_off</span>
+                                        <span class="font-medium">No results found</span>
+                                        <span class="text-xs text-gray-400">Try adjusting your filters or search criteria</span>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                         @if($stockOutDamagedHistory->count() > 0)
-                        <tfoot class="bg-gray-50">
-                            <tr class="text-sm font-semibold">
-                                <td class="px-4 py-3 border text-right">Total</td>
-                                <td class="px-4 py-3 border text-center">—</td>
-                                <td class="px-4 py-3 border text-center">{{ $totalStockOutDamaged }}</td>
-                                <td colspan="2" class="px-4 py-3 border text-center">—</td>
+                        <tfoot class="bg-gray-50" id="damagedTableFooter">
+                            <tr class="text-sm font-semibold border-t-2">
+                                <td class="px-4 py-3 text-right">Total</td>
+                                <td class="px-4 py-3 text-center">—</td>
+                                <td class="px-4 py-3 text-center font-bold text-red-600" id="damagedTotalQuantity">{{ $totalStockOutDamaged }}</td>
+                                <td colspan="2" class="px-4 py-3 text-center">—</td>
                             </tr>
                         </tfoot>
                         @endif
@@ -441,64 +639,79 @@
 </div>
 
 <script>
+// Helper function to update table visibility
+function updateTableVisibility(tableBodyId) {
+    const tableBody = document.getElementById(tableBodyId);
+    const dataRows = tableBody.querySelectorAll('.data-row');
+    const noDataRow = tableBody.querySelector('.no-data-row');
+    const noResultsRow = tableBody.querySelector('.no-results-row');
+    
+    // Count visible data rows
+    const visibleRows = Array.from(dataRows).filter(row => row.style.display !== 'none');
+    
+    // If there are no data rows at all (empty from database)
+    if (dataRows.length === 0) {
+        if (noDataRow) noDataRow.classList.remove('hidden');
+        if (noResultsRow) noResultsRow.classList.add('hidden');
+        return;
+    }
+    
+    // If there are data rows but none are visible (filtered out)
+    if (visibleRows.length === 0) {
+        if (noDataRow) noDataRow.classList.add('hidden');
+        if (noResultsRow) noResultsRow.classList.remove('hidden');
+    } else {
+        // There are visible rows
+        if (noDataRow) noDataRow.classList.add('hidden');
+        if (noResultsRow) noResultsRow.classList.add('hidden');
+    }
+}
+
 // Tab switching functionality
 function switchTab(tabName) {
-    // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.add('hidden');
     });
     
-    // Remove active styles from all tabs
     document.querySelectorAll('.tab-button').forEach(button => {
         button.classList.remove('border-blue-500', 'text-blue-600');
         button.classList.add('border-transparent', 'text-gray-500');
     });
     
-    // Show selected tab content
     document.getElementById(tabName + 'Section').classList.remove('hidden');
     
-    // Add active styles to selected tab
     document.getElementById(tabName + 'Tab').classList.add('border-blue-500', 'text-blue-600');
     document.getElementById(tabName + 'Tab').classList.remove('border-transparent', 'text-gray-500');
 
-    // If switching to stock-out, show sales sub-tab by default
     if (tabName === 'stockOut') {
         switchSubTab('sales');
     }
 }
 
-// Sub-tab switching functionality for stock-out
+// Sub-tab switching functionality
 function switchSubTab(subTabName) {
-    // Hide all sub-tab contents
     document.querySelectorAll('.subtab-content').forEach(tab => {
         tab.classList.add('hidden');
     });
     
-    // Remove active styles from all sub-tabs
     document.querySelectorAll('.subtab-button').forEach(button => {
         button.classList.remove('border-blue-500', 'text-blue-600');
         button.classList.add('border-transparent', 'text-gray-500');
     });
     
-    // Show selected sub-tab content
     document.getElementById(subTabName + 'SubSection').classList.remove('hidden');
     
-    // Add active styles to selected sub-tab
     document.getElementById(subTabName + 'SubTab').classList.add('border-blue-500', 'text-blue-600');
     document.getElementById(subTabName + 'SubTab').classList.remove('border-transparent', 'text-gray-500');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Setup table filtering
-    setupTableFiltering('stockInSearch', 'stockInTableBody');
-    setupTableFiltering('damagedSearch', 'damagedTableBody');
-    
     // Initialize with default sort
     sortStockInTable('date_desc');
     sortSalesTable('date_desc');
     sortDamagedTable('date_desc');
     
-    // Add event listeners for sort dropdowns to trigger sorting immediately
+    // Add event listeners for sort dropdowns
     const stockInSort = document.getElementById('stockInSort');
     if (stockInSort) {
         stockInSort.addEventListener('change', function() {
@@ -519,26 +732,31 @@ document.addEventListener('DOMContentLoaded', function() {
             sortDamagedTable(this.value);
         });
     }
-});
-
-function setupTableFiltering(searchInputId, tableBodyId) {
-    const searchInput = document.getElementById(searchInputId);
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            const rows = document.querySelectorAll(`#${tableBodyId} tr`);
-            
-            rows.forEach(row => {
-                const rowText = row.textContent.toLowerCase();
-                if (rowText.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+    
+    // Add live search for stock-in batch
+    const stockInSearch = document.getElementById('stockInSearch');
+    if (stockInSearch) {
+        stockInSearch.addEventListener('input', function() {
+            filterStockInTable();
         });
     }
-}
+    
+    // Add live search for sales batch
+    const salesSearch = document.getElementById('salesSearch');
+    if (salesSearch) {
+        salesSearch.addEventListener('input', function() {
+            filterSalesTable();
+        });
+    }
+    
+    // Add live filter for damaged type
+    const damagedTypeFilter = document.getElementById('damagedTypeFilter');
+    if (damagedTypeFilter) {
+        damagedTypeFilter.addEventListener('change', function() {
+            filterDamagedTable();
+        });
+    }
+});
 
 // Stock-In Table Functions
 function filterStockInTable() {
@@ -546,31 +764,34 @@ function filterStockInTable() {
     const dateFrom = document.getElementById('dateFrom').value;
     const dateTo = document.getElementById('dateTo').value;
     
-    const rows = document.querySelectorAll('#stockInTableBody tr');
+    const rows = document.querySelectorAll('#stockInTableBody .data-row');
     
     rows.forEach(row => {
         const batchNumber = row.getAttribute('data-batch')?.toLowerCase() || '';
         const rowDate = new Date(parseInt(row.getAttribute('data-date')) * 1000);
+        rowDate.setHours(0, 0, 0, 0);
+        
         let shouldShow = true;
         
-        // Search filter
         if (searchTerm && !batchNumber.includes(searchTerm)) {
             shouldShow = false;
         }
         
-        // Date range filter
         if (dateFrom) {
             const fromDate = new Date(dateFrom);
+            fromDate.setHours(0, 0, 0, 0);
             if (rowDate < fromDate) shouldShow = false;
         }
         if (dateTo) {
             const toDate = new Date(dateTo);
-            toDate.setHours(23, 59, 59, 999); // End of day
+            toDate.setHours(0, 0, 0, 0);
             if (rowDate > toDate) shouldShow = false;
         }
         
         row.style.display = shouldShow ? '' : 'none';
     });
+    
+    updateTableVisibility('stockInTableBody');
 }
 
 function sortStockInTable(sortValue = null) {
@@ -578,18 +799,14 @@ function sortStockInTable(sortValue = null) {
         sortValue = document.getElementById('stockInSort').value;
     }
     
-    // Skip if no valid sort option selected
     if (!sortValue || sortValue === '') {
         return;
     }
     
     const tableBody = document.getElementById('stockInTableBody');
-    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    const rows = Array.from(tableBody.querySelectorAll('.data-row'));
     
-    // Filter out the "No records" row if it exists
-    const dataRows = rows.filter(row => row.querySelector('td:not([colspan])'));
-    
-    dataRows.sort((a, b) => {
+    rows.sort((a, b) => {
         switch(sortValue) {
             case 'date_desc':
                 return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
@@ -608,27 +825,26 @@ function sortStockInTable(sortValue = null) {
         }
     });
     
-    // Clear and re-append sorted rows
+    // Get static rows
+    const noDataRow = tableBody.querySelector('.no-data-row');
+    const noResultsRow = tableBody.querySelector('.no-results-row');
+    
+    // Clear and re-append
     tableBody.innerHTML = '';
-    if (dataRows.length > 0) {
-        dataRows.forEach(row => {
-            tableBody.appendChild(row);
-        });
-    } else {
-        // Re-add the "No records" row if that's all we have
-        rows.forEach(row => {
-            tableBody.appendChild(row);
-        });
-    }
+    rows.forEach(row => tableBody.appendChild(row));
+    if (noDataRow) tableBody.appendChild(noDataRow);
+    if (noResultsRow) tableBody.appendChild(noResultsRow);
+    
+    updateTableVisibility('stockInTableBody');
 }
 
 function resetStockInFilters() {
     document.getElementById('stockInSearch').value = '';
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value = '';
-    document.getElementById('stockInSort').selectedIndex = 0; // Reset to "Select sort option"
+    document.getElementById('stockInSort').selectedIndex = 0;
     
-    const rows = document.querySelectorAll('#stockInTableBody tr');
+    const rows = document.querySelectorAll('#stockInTableBody .data-row');
     rows.forEach(row => {
         row.style.display = '';
     });
@@ -638,28 +854,39 @@ function resetStockInFilters() {
 
 // Sales Table Functions
 function filterSalesTable() {
+    const searchTerm = document.getElementById('salesSearch').value.toLowerCase();
     const dateFrom = document.getElementById('salesDateFrom').value;
     const dateTo = document.getElementById('salesDateTo').value;
     
-    const rows = document.querySelectorAll('#salesTableBody tr');
+    const rows = document.querySelectorAll('#salesTableBody .data-row');
     
     rows.forEach(row => {
         const rowDate = new Date(parseInt(row.getAttribute('data-date')) * 1000);
+        rowDate.setHours(0, 0, 0, 0);
+        
+        const batchNumber = row.getAttribute('data-batch')?.toLowerCase() || '';
         let shouldShow = true;
         
-        // Date range filter
+        if (searchTerm && !batchNumber.includes(searchTerm)) {
+            shouldShow = false;
+        }
+        
         if (dateFrom) {
             const fromDate = new Date(dateFrom);
+            fromDate.setHours(0, 0, 0, 0);
             if (rowDate < fromDate) shouldShow = false;
         }
         if (dateTo) {
             const toDate = new Date(dateTo);
-            toDate.setHours(23, 59, 59, 999);
+            toDate.setHours(0, 0, 0, 0);
             if (rowDate > toDate) shouldShow = false;
         }
         
         row.style.display = shouldShow ? '' : 'none';
     });
+    
+    updateTableVisibility('salesTableBody');
+    updateSalesFooter();  // ADD THIS LINE
 }
 
 function sortSalesTable(sortValue = null) {
@@ -667,18 +894,14 @@ function sortSalesTable(sortValue = null) {
         sortValue = document.getElementById('salesSort').value;
     }
     
-    // Skip if no valid sort option selected
     if (!sortValue || sortValue === '') {
         return;
     }
     
     const tableBody = document.getElementById('salesTableBody');
-    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    const rows = Array.from(tableBody.querySelectorAll('.data-row'));
     
-    // Filter out the "No records" row if it exists
-    const dataRows = rows.filter(row => row.querySelector('td:not([colspan])'));
-    
-    dataRows.sort((a, b) => {
+    rows.sort((a, b) => {
         switch(sortValue) {
             case 'date_desc':
                 return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
@@ -692,68 +915,78 @@ function sortSalesTable(sortValue = null) {
                 return parseFloat(b.getAttribute('data-amount')) - parseFloat(a.getAttribute('data-amount'));
             case 'amount_asc':
                 return parseFloat(a.getAttribute('data-amount')) - parseFloat(b.getAttribute('data-amount'));
+            case 'batch_desc':
+                return b.getAttribute('data-batch').localeCompare(a.getAttribute('data-batch'));
+            case 'batch_asc':
+                return a.getAttribute('data-batch').localeCompare(b.getAttribute('data-batch'));
             default:
                 return 0;
         }
     });
     
+    // Get static rows
+    const noDataRow = tableBody.querySelector('.no-data-row');
+    const noResultsRow = tableBody.querySelector('.no-results-row');
+    
     tableBody.innerHTML = '';
-    if (dataRows.length > 0) {
-        dataRows.forEach(row => {
-            tableBody.appendChild(row);
-        });
-    } else {
-        // Re-add the "No records" row if that's all we have
-        rows.forEach(row => {
-            tableBody.appendChild(row);
-        });
-    }
+    rows.forEach(row => tableBody.appendChild(row));
+    if (noDataRow) tableBody.appendChild(noDataRow);
+    if (noResultsRow) tableBody.appendChild(noResultsRow);
+    
+    updateTableVisibility('salesTableBody');
+    updateSalesFooter();  // ADD THIS LINE
 }
 
 function resetSalesFilters() {
+    document.getElementById('salesSearch').value = '';
     document.getElementById('salesDateFrom').value = '';
     document.getElementById('salesDateTo').value = '';
-    document.getElementById('salesSort').selectedIndex = 0; // Reset to "Select sort option"
+    document.getElementById('salesSort').selectedIndex = 0;
     
-    const rows = document.querySelectorAll('#salesTableBody tr');
+    const rows = document.querySelectorAll('#salesTableBody .data-row');
     rows.forEach(row => {
         row.style.display = '';
     });
     
     sortSalesTable('date_desc');
+    updateSalesFooter();  // ADD THIS LINE
 }
 
 // Damaged Table Functions
 function filterDamagedTable() {
-    const searchTerm = document.getElementById('damagedSearch').value.toLowerCase();
+    const typeFilter = document.getElementById('damagedTypeFilter').value.toLowerCase();
     const dateFrom = document.getElementById('damagedDateFrom').value;
     const dateTo = document.getElementById('damagedDateTo').value;
     
-    const rows = document.querySelectorAll('#damagedTableBody tr');
+    const rows = document.querySelectorAll('#damagedTableBody .data-row');
     
     rows.forEach(row => {
         const rowText = row.textContent.toLowerCase();
         const rowDate = new Date(parseInt(row.getAttribute('data-date')) * 1000);
+        rowDate.setHours(0, 0, 0, 0);
+        
         let shouldShow = true;
         
-        // Search filter
-        if (searchTerm && !rowText.includes(searchTerm)) {
+        if (typeFilter && !rowText.includes(typeFilter)) {
             shouldShow = false;
         }
         
-        // Date range filter
         if (dateFrom) {
             const fromDate = new Date(dateFrom);
+            fromDate.setHours(0, 0, 0, 0);
             if (rowDate < fromDate) shouldShow = false;
         }
         if (dateTo) {
             const toDate = new Date(dateTo);
-            toDate.setHours(23, 59, 59, 999);
+            toDate.setHours(0, 0, 0, 0);
             if (rowDate > toDate) shouldShow = false;
         }
         
         row.style.display = shouldShow ? '' : 'none';
     });
+    
+    updateTableVisibility('damagedTableBody');
+    updateDamagedFooter();  // ADD THIS LINE
 }
 
 function sortDamagedTable(sortValue = null) {
@@ -761,18 +994,14 @@ function sortDamagedTable(sortValue = null) {
         sortValue = document.getElementById('damagedSort').value;
     }
     
-    // Skip if no valid sort option selected
     if (!sortValue || sortValue === '') {
         return;
     }
     
     const tableBody = document.getElementById('damagedTableBody');
-    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    const rows = Array.from(tableBody.querySelectorAll('.data-row'));
     
-    // Filter out the "No records" row if it exists
-    const dataRows = rows.filter(row => row.querySelector('td:not([colspan])'));
-    
-    dataRows.sort((a, b) => {
+    rows.sort((a, b) => {
         switch(sortValue) {
             case 'date_desc':
                 return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
@@ -791,31 +1020,92 @@ function sortDamagedTable(sortValue = null) {
         }
     });
     
+    // Get static rows
+    const noDataRow = tableBody.querySelector('.no-data-row');
+    const noResultsRow = tableBody.querySelector('.no-results-row');
+    
     tableBody.innerHTML = '';
-    if (dataRows.length > 0) {
-        dataRows.forEach(row => {
-            tableBody.appendChild(row);
-        });
-    } else {
-        // Re-add the "No records" row if that's all we have
-        rows.forEach(row => {
-            tableBody.appendChild(row);
-        });
-    }
+    rows.forEach(row => tableBody.appendChild(row));
+    if (noDataRow) tableBody.appendChild(noDataRow);
+    if (noResultsRow) tableBody.appendChild(noResultsRow);
+    
+    updateTableVisibility('damagedTableBody');
+    updateDamagedFooter();  // ADD THIS LINE
 }
 
 function resetDamagedFilters() {
-    document.getElementById('damagedSearch').value = '';
+    document.getElementById('damagedTypeFilter').selectedIndex = 0;
     document.getElementById('damagedDateFrom').value = '';
     document.getElementById('damagedDateTo').value = '';
-    document.getElementById('damagedSort').selectedIndex = 0; // Reset to "Select sort option"
+    document.getElementById('damagedSort').selectedIndex = 0;
     
-    const rows = document.querySelectorAll('#damagedTableBody tr');
+    const rows = document.querySelectorAll('#damagedTableBody .data-row');
     rows.forEach(row => {
         row.style.display = '';
     });
     
     sortDamagedTable('date_desc');
+    updateDamagedFooter();  // ADD THIS LINE
+}
+
+// Helper function to update sales table footer totals
+function updateSalesFooter() {
+    const footer = document.getElementById('salesTableFooter');
+    if (!footer) return;
+    
+    const dataRows = document.querySelectorAll('#salesTableBody .data-row');
+    const visibleRows = Array.from(dataRows).filter(row => row.style.display !== 'none');
+    
+    // Hide footer if no visible rows
+    if (visibleRows.length === 0) {
+        footer.style.display = 'none';
+        return;
+    }
+    
+    // Show footer and calculate totals
+    footer.style.display = '';
+    
+    let totalQuantity = 0;
+    let totalAmount = 0;
+    
+    visibleRows.forEach(row => {
+        totalQuantity += parseFloat(row.getAttribute('data-quantity')) || 0;
+        totalAmount += parseFloat(row.getAttribute('data-amount')) || 0;
+    });
+    
+    // Update footer cells
+    document.getElementById('salesTotalQuantity').textContent = totalQuantity;
+    document.getElementById('salesTotalAmount').textContent = '₱' + totalAmount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Helper function to update damaged table footer totals
+function updateDamagedFooter() {
+    const footer = document.getElementById('damagedTableFooter');
+    if (!footer) return;
+    
+    const dataRows = document.querySelectorAll('#damagedTableBody .data-row');
+    const visibleRows = Array.from(dataRows).filter(row => row.style.display !== 'none');
+    
+    // Hide footer if no visible rows
+    if (visibleRows.length === 0) {
+        footer.style.display = 'none';
+        return;
+    }
+    
+    // Show footer and calculate totals
+    footer.style.display = '';
+    
+    let totalQuantity = 0;
+    
+    visibleRows.forEach(row => {
+        totalQuantity += parseFloat(row.getAttribute('data-quantity')) || 0;
+    });
+    
+    // Update footer cell
+    document.getElementById('damagedTotalQuantity').textContent = totalQuantity;
 }
 </script>
 
