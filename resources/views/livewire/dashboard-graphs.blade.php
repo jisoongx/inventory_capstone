@@ -31,7 +31,7 @@
                 </div>
             </div>
 
-            <div wire:poll.15s="pollAll" wire:keep-alive class="hidden"></div>
+            <div wire:poll.3s="pollAll" wire:keep-alive class="hidden"></div>
             <div class="flex gap-3 pr-3 w-full">
 
                 <!-- sales by category -->
@@ -42,6 +42,11 @@
                             <span class="flex items-center gap-1">
                                 <span class="w-3 h-3 bg-red-600 inline-block rounded-full"></span>
                                 <span class="text-xs">{{ $year[0] ?? '' }}</span>
+                            </span>
+                        @else
+                            <span class="flex items-center gap-1">
+                                <span class="w-3 h-3 bg-red-600 inline-block rounded-full"></span>
+                                <span class="text-xs">{{ $year[0] ?? now()->year }}</span>
                             </span>
                         @endif
 
@@ -60,7 +65,7 @@
                         </span>
                     </div>
                     <div class="overflow-x-auto mt-2 scrollbar-custom">
-                        <div class="relative w-[24rem] h-[20rem]">
+                        <div class="relative w-[50rem] h-[20rem]">
                             <div id="productChart" 
                                 x-data="{ updating: false }" 
                                 x-init="initProductChart()"
@@ -75,7 +80,7 @@
                                 data-year='@json($year ?? [])'
 
                                 :class="{'opacity-0 transition-opacity duration-150': updating}"
-                                class="w-[24rem] h-[20rem]">
+                                class="w-[50rem] h-[20rem]">
                                 <canvas></canvas>
                             </div>
 

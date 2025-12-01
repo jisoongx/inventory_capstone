@@ -13,71 +13,37 @@ class StockAlert extends Component
     public $topProd;
 
 
-    public function stockAlert() {
+    public function stockAlert()
+{
+    $owner_id = Auth::guard('owner')->user()->owner_id;
 
-        $owner_id = Auth::guard('owner')->user()->owner_id;
+    $results = DB::select("
+        SELECT 
+            v.name AS prod_name,
+            p.prod_image,
+            v.reorder_point,
+            v.total_stock,
+            v.warning_threshold,
+            v.danger_threshold,
+            v.stock_status,
+            v.days_of_supply_remaining
 
-        $results = DB::select("
-            SELECT 
-                p.name AS prod_name, 
-                p.prod_image, 
-                p.stock_limit,
+        FROM vw_adaptive_inventory_levels v
+        JOIN products p ON p.prod_code = v.prod_code
 
-                -- Total stock OR 0 if no inventory
-                IFNULL(SUM(i.stock), 0) AS total_stock,
+        WHERE p.owner_id = ?
+          AND p.prod_status = 'active'
+          AND v.stock_status IN ('CRITICAL', 'REORDER_NOW', 'OUT_OF_STOCK')
 
-                -- Usable stock
-                IFNULL(SUM(
-                    CASE 
-                        WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
-                        THEN i.stock 
-                        ELSE 0 
-                    END
-                ), 0) AS remaining_stock,
+        ORDER BY v.total_stock ASC
+    ", [$owner_id]);
 
-                -- Stock status
-                CASE
-                    WHEN IFNULL(SUM(
-                        CASE 
-                            WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
-                            THEN i.stock 
-                            ELSE 0 
-                        END
-                    ),0) = 0 THEN 'Critical'
-                    WHEN IFNULL(SUM(
-                        CASE 
-                            WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
-                            THEN i.stock 
-                            ELSE 0 
-                        END
-                    ),0) <= 3 THEN 'Critical'
-                    WHEN IFNULL(SUM(
-                        CASE 
-                            WHEN i.expiration_date IS NULL OR i.expiration_date > CURDATE() 
-                            THEN i.stock 
-                            ELSE 0 
-                        END
-                    ),0) <= p.stock_limit THEN 'Reorder'
-                    ELSE 'Normal'
-                END AS status
+    $this->prod = collect($results)->map(function ($item) {
+        $item->image_url = asset('storage/' . ltrim($item->prod_image, '/'));
+        return $item;
+    });
+}
 
-            FROM products p
-            LEFT JOIN inventory i ON p.prod_code = i.prod_code
-            WHERE p.owner_id = ?
-            AND p.prod_status = 'active'
-            GROUP BY p.prod_code, p.name, p.stock_limit, p.prod_image
-            HAVING status IN ('Critical', 'Reorder')
-            ORDER BY remaining_stock ASC;
-        ", [$owner_id]);
-
-
-
-        $this->prod = collect($results)->map(function ($item) {
-            $item->image_url = asset('storage/' . ltrim($item->prod_image, '/'));
-            return $item;
-        });
-
-    }
 
 
     public function expirationNotice() {

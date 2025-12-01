@@ -231,33 +231,56 @@ public function showProductDetails($prodCode)
             'r.receipt_id',
             'r.receipt_date',
             'i.batch_number',
+
+            // Selling price used for this sale
             DB::raw('(
                 SELECT COALESCE(
                     (SELECT ph.old_selling_price 
-                    FROM pricing_history ph 
-                    WHERE ph.prod_code = ri.prod_code 
-                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to 
-                    ORDER BY ph.effective_from DESC 
+                    FROM pricing_history ph
+                    WHERE ph.prod_code = ri.prod_code
+                    AND r.receipt_date >= ph.effective_from
+                    AND (r.receipt_date <= ph.effective_to OR ph.effective_to IS NULL)
+                    ORDER BY ph.effective_from DESC
                     LIMIT 1),
                     p.selling_price
                 )
             ) as selling_price_used'),
-            DB::raw('(ri.item_quantity * (
+
+            // Old cost price at the time of sale
+            DB::raw('(
+                SELECT COALESCE(
+                    (SELECT ph.old_cost_price 
+                    FROM pricing_history ph
+                    WHERE ph.prod_code = ri.prod_code
+                    AND r.receipt_date >= ph.effective_from
+                    AND (r.receipt_date <= ph.effective_to OR ph.effective_to IS NULL)
+                    ORDER BY ph.effective_from DESC
+                    LIMIT 1),
+                    p.cost_price
+                )
+            ) as cost_price_used'),
+
+            // Total amount
+            DB::raw('ri.item_quantity * (
                 SELECT COALESCE(
                     (SELECT ph.old_selling_price 
-                    FROM pricing_history ph 
-                    WHERE ph.prod_code = ri.prod_code 
-                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to 
-                    ORDER BY ph.effective_from DESC 
+                    FROM pricing_history ph
+                    WHERE ph.prod_code = ri.prod_code
+                    AND r.receipt_date >= ph.effective_from
+                    AND (r.receipt_date <= ph.effective_to OR ph.effective_to IS NULL)
+                    ORDER BY ph.effective_from DESC
                     LIMIT 1),
                     p.selling_price
                 )
-            )) as total_amount'),
+            ) as total_amount'),
+
+            // Who sold it
             DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as sold_by')
         )
         ->where('ri.prod_code', $prodCode)
         ->orderBy('r.receipt_date', 'desc')
         ->get();
+
 
     // Stock-out from Damaged/Expired Items
     $stockOutDamagedHistory = DB::table('damaged_items as di')
@@ -868,17 +891,16 @@ public function update(Request $request, $prodCode)
         $updateData['prod_image'] = $photoPath;
     }
 
-    // Check if price changed compared to current product
     if ($product->cost_price != $finalCostPrice || $product->selling_price != $finalSellingPrice) {
 
-        // Close the current active price record (old price)
+        // Close current active pricing record
         DB::table('pricing_history')
             ->where('prod_code', $prodCode)
             ->where('owner_id', $ownerId)
             ->whereNull('effective_to')
             ->update(['effective_to' => now()]);
 
-        // Insert the new active price record (new price)
+        // Insert new active pricing record
         DB::table('pricing_history')->insert([
             'prod_code'         => $prodCode,
             'old_cost_price'    => $finalCostPrice,
@@ -889,6 +911,7 @@ public function update(Request $request, $prodCode)
             'effective_to'      => null,
         ]);
     }
+
 
     // Update product table
     DB::table('products')
@@ -1892,7 +1915,6 @@ public function bulkRestock(Request $request)
             // Insert inventory record
             DB::table('inventory')->insert([
                 'prod_code' => $prodCode,
-                'category_id' => $categoryId,
                 'stock' => $qty,
                 'batch_number' => $nextBatchNumber,
                 'expiration_date' => $expiration,

@@ -94,7 +94,15 @@ class ComparativeAnalysis extends Component
             LEFT JOIN (
                 SELECT 
                     MONTH(r.receipt_date) AS month,
-                    SUM(p.selling_price * ri.item_quantity) AS monthly_sales
+                    SUM(ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
+                        )) AS monthly_sales
                 FROM 
                     receipt r
                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id

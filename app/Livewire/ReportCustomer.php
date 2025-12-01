@@ -326,14 +326,54 @@ class ReportCustomer extends Component
                     SELECT 
                         DATE(r.receipt_date) AS date,
                         COUNT(DISTINCT r.receipt_id) AS total_transaction,
-                        SUM(ri.item_quantity * p.selling_price) AS total_sales,
-                        (SUM(ri.item_quantity * p.selling_price) / COUNT(DISTINCT r.receipt_id)) AS average_sales,
+                        SUM(ri.item_quantity * COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            )) AS total_sales,
+                        (SUM(ri.item_quantity * COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            )) / COUNT(DISTINCT r.receipt_id)) AS average_sales,
                         (
                             (
-                                SUM(ri.item_quantity * p.selling_price)
-                                - LAG(SUM(ri.item_quantity * p.selling_price)) OVER (ORDER BY DATE(r.receipt_date))
+                                SUM(ri.item_quantity * COALESCE(
+                                        (SELECT ph.old_selling_price
+                                        FROM pricing_history ph
+                                        WHERE ph.prod_code = ri.prod_code
+                                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                        ORDER BY ph.effective_from DESC
+                                        LIMIT 1),
+                                        p.selling_price
+                                    ))
+                                - LAG(SUM(ri.item_quantity * COALESCE(
+                                            (SELECT ph.old_selling_price
+                                            FROM pricing_history ph
+                                            WHERE ph.prod_code = ri.prod_code
+                                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                            ORDER BY ph.effective_from DESC
+                                            LIMIT 1),
+                                            p.selling_price
+                                        ))) OVER (ORDER BY DATE(r.receipt_date))
                             ) / NULLIF(
-                                LAG(SUM(ri.item_quantity * p.selling_price)) OVER (ORDER BY DATE(r.receipt_date)),
+                                LAG(SUM(ri.item_quantity * COALESCE(
+                                            (SELECT ph.old_selling_price
+                                            FROM pricing_history ph
+                                            WHERE ph.prod_code = ri.prod_code
+                                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                            ORDER BY ph.effective_from DESC
+                                            LIMIT 1),
+                                            p.selling_price
+                                        ))) OVER (ORDER BY DATE(r.receipt_date)),
                                 0
                             )
                         ) * 100 AS sales_change_percent,

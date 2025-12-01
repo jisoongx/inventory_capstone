@@ -61,6 +61,10 @@
                             <span class="text-xs">Inventory Reports</span>
                             <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
                         </a>
+                        <a href="{{ route('dashboards.owner.masterlist_pricing_history') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                            <span class="text-xs">Pricing History Masterlist</span>
+                            <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3) ? '' : 'invisible' }}">crown</span>
+                        </a>
                         <a href="{{ route('dashboards.owner.trend') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                             <span class="text-xs">Product Trends</span>
                             <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>

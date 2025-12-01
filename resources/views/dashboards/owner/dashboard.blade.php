@@ -11,11 +11,8 @@
 
         <!-- tables dapit -->
         <div class="space-y-4 w-full">
-            @livewire('comparative-analysis')
-
             @livewire('stock-alert')
-            
-           
+            @livewire('comparative-analysis')            
         </div>
     </div>
 

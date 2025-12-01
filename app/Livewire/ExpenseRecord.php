@@ -101,7 +101,15 @@ class ExpenseRecord extends Component
                 WHERE e.owner_id = ?
                 AND e.expense_created BETWEEN ? AND ?) AS expenseTotal,
 
-                (SELECT IFNULL(SUM(p.selling_price * ri.item_quantity), 0)
+                (SELECT IFNULL(SUM(ri.item_quantity * COALESCE(
+                                    (SELECT ph.old_selling_price
+                                    FROM pricing_history ph
+                                    WHERE ph.prod_code = ri.prod_code
+                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                    ORDER BY ph.effective_from DESC
+                                    LIMIT 1),
+                                    p.selling_price
+                                )), 0)
                 FROM receipt r
                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
                 JOIN products p ON p.prod_code = ri.prod_code

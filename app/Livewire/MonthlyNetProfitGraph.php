@@ -41,9 +41,9 @@ class MonthlyNetProfitGraph extends Component
         $this->dateDisplay = Carbon::now('Asia/Manila');
 
         $this->year = collect(DB::select("
-            SELECT DISTINCT YEAR(expense_created) AS year
-            FROM expenses
-            WHERE expense_created IS NOT NULL and owner_id = ?
+            SELECT DISTINCT YEAR(receipt_date) AS year
+            FROM receipt
+            WHERE receipt_date IS NOT NULL and owner_id = ?
             ORDER BY year DESC
         ", [$owner_id]))->pluck('year')->toArray();
 
@@ -119,21 +119,21 @@ class MonthlyNetProfitGraph extends Component
             LEFT JOIN (
                 SELECT 
                     MONTH(r.receipt_date) AS month,
-                    SUM(p.selling_price * (
-                            ri.item_quantity - IFNULL(
-                                (SELECT SUM(ret.return_quantity) 
-                                FROM returned_items ret 
-                                WHERE ret.item_id = ri.item_id),
-                            0)
+                    SUM(ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
                         )) AS monthly_sales
-                FROM 
-                    receipt r
+                FROM receipt r
                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
                 JOIN products p ON p.prod_code = ri.prod_code
-                WHERE 
-                    r.owner_id = ? AND
-                    p.owner_id = r.owner_id AND
-                    YEAR(r.receipt_date) = ?
+                WHERE r.owner_id = ? 
+                AND p.owner_id = r.owner_id
+                AND YEAR(r.receipt_date) = ?
                 GROUP BY MONTH(r.receipt_date)
             ) s ON m.month = s.month
             ORDER BY m.month
@@ -231,12 +231,14 @@ class MonthlyNetProfitGraph extends Component
             LEFT JOIN (
                 SELECT 
                     MONTH(r.receipt_date) AS month,
-                    SUM(p.selling_price * (
-                            ri.item_quantity - IFNULL(
-                                (SELECT SUM(ret.return_quantity) 
-                                FROM returned_items ret 
-                                WHERE ret.item_id = ri.item_id),
-                            0)
+                    SUM(ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
                         )) AS monthly_sales
                 FROM 
                     receipt r

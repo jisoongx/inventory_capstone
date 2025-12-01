@@ -66,6 +66,8 @@ Route::view('/reports/inventory-reports', 'dashboards.owner.report-inventory-rep
 Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-customer-and-behavior')->name('dashboards.owner.trend');
 Route::view('/report/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('report.sales.performance');
 
+Route::view('/owner/masterlist-pricing-history', 'dashboards.owner.masterlist-pricing-history')->name('dashboards.owner.masterlist_pricing_history');
+
 
 
 

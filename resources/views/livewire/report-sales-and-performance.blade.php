@@ -342,7 +342,7 @@
                                 Stock Status
                             </th>
                             
-                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
                                 Financial Performance
                             </th>
                             
@@ -357,23 +357,15 @@
                         <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
                             
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Units Sold</th>
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
-                                <div class="flex items-center justify-end gap-1">
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Units Sold</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
+                                <div class="flex items-center justify-center gap-1">
                                     <span>Stock Left</span>
-                                    <span class="material-symbols-rounded text-gray-500 text-sm cursor-help"
-                                        title="Current stock remaining in inventory">info</span>
+                                    <span class="material-symbols-rounded text-gray-500 text-sm cursor-help" title="Current stock remaining in inventory">info</span>
                                 </div>
                             </th>
                             
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Total Sales</th>
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
-                                <div class="flex items-center justify-end gap-1">
-                                    <span>COGS</span>
-                                    <span class="material-symbols-rounded text-gray-500 text-sm cursor-help"
-                                        title="Cost of Goods Sold (COGS) is the total amount we paid to buy the inventory that customers have purchased. It's the direct cost of the products themselves.">info</span>
-                                </div>
-                            </th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Total Sales</th>
                             
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Gross Margin %</th>
                             
@@ -389,10 +381,10 @@
                                 </td>
                                 
                                 <!-- Stock Status -->
-                                <td class="px-4 py-3.5 text-right font-bold text-gray-900 bg-gray-50">
+                                <td class="px-4 py-3.5 text-center font-bold text-gray-900 bg-gray-50">
                                     {{ number_format($input->unit_sold) }}
                                 </td>
-                                <td class="px-4 py-3.5 text-right font-semibold bg-gray-50
+                                <td class="px-4 py-3.5 text-center font-semibold bg-gray-50
                                     @if($input->stock_left == 0) text-red-600
                                     @elseif($input->stock_left < 10) text-orange-600
                                     @elseif($input->stock_left < 50) text-yellow-600
@@ -402,11 +394,8 @@
                                 </td>
                                 
                                 <!-- Financial Performance -->
-                                <td class="px-4 py-3.5 text-right font-bold text-green-600 bg-gray-50">
+                                <td class="px-4 py-3.5 text-center font-bold text-green-600 bg-gray-50">
                                     ₱{{ number_format($input->total_sales, 2) }}
-                                </td>
-                                <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
-                                    ₱{{ number_format($input->cogs, 2) }}
                                 </td>
                                 
                                 <!-- Profitability -->
@@ -426,39 +415,8 @@
                                 </td>
                                 
                                 <!-- Analysis -->
-                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50
-                                    @if (str_contains($input->insight, 'URGENT')) 
-                                        bg-red-700 text-white border-red-900
-                                    @elseif (str_contains($input->insight, 'critically low')) 
-                                        bg-red-600 text-white border-red-800
-                                    @elseif (str_contains($input->insight, 'Out of stock')) 
-                                        bg-gray-800 text-white border-gray-950
-                                    @elseif (str_contains($input->insight, 'Low stock')) 
-                                        bg-orange-600 text-white border-orange-800
-                                    @elseif (str_contains($input->insight, 'Star performer')) 
-                                        bg-purple-600 text-white border-purple-800
-                                    @elseif (str_contains($input->insight, 'Good sales velocity')) 
-                                        bg-blue-600 text-white border-blue-800
-                                    @elseif (str_contains($input->insight, 'Fast-moving but low margins')) 
-                                        bg-yellow-500 text-gray-900 border-yellow-700
-                                    @elseif (str_contains($input->insight, 'Slow-moving with poor margins')) 
-                                        bg-red-500 text-white border-red-700
-                                    @elseif (str_contains($input->insight, 'Slow-moving')) 
-                                        bg-rose-500 text-white border-rose-700
-                                    @elseif (str_contains($input->insight, 'No recent sales')) 
-                                        bg-red-500 text-white border-red-700
-                                    @elseif (str_contains($input->insight, 'Low profit margin')) 
-                                        bg-rose-600 text-white border-rose-800
-                                    @elseif (str_contains($input->insight, 'Strong profit margins')) 
-                                        bg-green-600 text-white border-green-800
-                                    @elseif (str_contains($input->insight, 'Steady sales')) 
-                                        bg-blue-500 text-white border-blue-700
-                                    @elseif (str_contains($input->insight, 'Stable')) 
-                                        bg-gray-600 text-white border-gray-800
-                                    @else 
-                                        bg-gray-500 text-white border-gray-700
-                                    @endif">
-                                    {{ $input->insight }}
+                                <td class="">
+                                    -
                                 </td>
                             </tr>
                         @empty
@@ -482,17 +440,14 @@
                             <td class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
                                 Total Summary
                             </td>
-                            <td class="px-4 text-right font-bold text-xs">
+                            <td class="px-4 text-center font-bold text-xs">
                                 {{ number_format($sbc->sum('unit_sold')) }}
                             </td>
-                            <td class="px-4 text-right font-bold text-xs text-blue-600">
+                            <td class="px-4 text-center font-bold text-xs text-blue-600">
                                 {{ number_format($sbc->sum('stock_left')) }}
                             </td>
-                            <td class="px-4 text-right font-bold text-xs text-green-600">
+                            <td class="px-4 text-center font-bold text-xs text-green-600">
                                 ₱{{ number_format($sbc->sum('total_sales'), 2) }}
-                            </td>
-                            <td class="px-4 text-right font-bold text-xs">
-                                ₱{{ number_format($sbc->sum('cogs'), 2) }}
                             </td>
                             <td class="px-4 text-center font-bold text-xs text-yellow-700">
                                 {{ $sbc->sum('total_sales') > 0 ? number_format((($sbc->sum('total_sales') - $sbc->sum('cogs')) / $sbc->sum('total_sales')) * 100, 1) : '0.0' }}%
@@ -579,50 +534,28 @@
                         <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
-                            
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
-                                <button wire:click="sortBy('unit_sold')" class="flex items-center gap-1 hover:text-blue-600 mx-auto">
+                                <button wire:click="sortBy('unit_sold')" class="flex items-center gap-1 justify-center hover:text-blue-600">
                                     Units Sold
-                                    @if($sortField === 'unit_sold')
-                                        <span class="material-symbols-rounded text-sm">
-                                            {{ $order === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        </span>
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
-                                <button wire:click="sortBy('total_sales')" class="flex items-center gap-1 hover:text-blue-600 ml-auto">
-                                    Total Sales
-                                    @if($sortField === 'total_sales')
-                                        <span class="material-symbols-rounded text-sm">
-                                            {{ $order === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        </span>
-                                    @endif
-                                </button>
-                            </th>
-                            
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">COGS</th>
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">
-                                <button wire:click="sortBy('profit')" class="flex items-center gap-1 hover:text-blue-600 ml-auto">
-                                    Profit
-                                    @if($sortField === 'profit')
-                                        <span class="material-symbols-rounded text-sm">
-                                            {{ $order === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        </span>
-                                    @endif
+                                    <span class="text-xs font-bold">↓↑</span>
                                 </button>
                             </th>
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
-                                <button wire:click="sortBy('profit_margin_percent')" class="flex items-center gap-1 hover:text-blue-600 mx-auto">
-                                    Margin %
-                                    @if($sortField === 'profit_margin_percent')
-                                        <span class="material-symbols-rounded text-sm">
-                                            {{ $order === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        </span>
-                                    @endif
+                                <button wire:click="sortBy('total_sales')" class="flex items-center gap-1 justify-center hover:text-blue-600">
+                                    Total Sales
+                                    <span class="text-sm">↓↑</span>
                                 </button>
                             </th>
-                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">COGS</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
+                                <button wire:click="sortBy('profit')" class="flex items-center gap-1 justify-center hover:text-blue-600">
+                                    Profit
+                                    <span class="text-sm">↓↑</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
+                                Margin %
+                            </th>
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
                                 <div class="flex items-center justify-end gap-1">
                                     <span>Stock Left</span>
@@ -649,15 +582,15 @@
                                 <td class="px-4 py-3.5 text-center font-bold text-gray-900 bg-gray-50">
                                     {{ number_format($product->unit_sold) }}
                                 </td>
-                                <td class="px-4 py-3.5 text-right font-bold text-green-600 bg-gray-50">
+                                <td class="px-4 py-3.5 text-center font-bold text-green-600 bg-gray-50">
                                     ₱{{ number_format($product->total_sales, 2) }}
                                 </td>
                                 
                                 <!-- Financial Performance -->
-                                <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
+                                <td class="px-4 py-3.5 text-center font-semibold text-gray-700 bg-gray-50">
                                     ₱{{ number_format($product->cogs, 2) }}
                                 </td>
-                                <td class="px-4 py-3.5 text-right font-bold bg-gray-50
+                                <td class="px-4 py-3.5 text-center font-bold bg-gray-50
                                     @if($product->profit > 0) text-green-600
                                     @elseif($product->profit < 0) text-red-600
                                     @else text-gray-600
@@ -737,13 +670,13 @@
                             <td class="px-4 text-center font-bold text-xs">
                                 {{ number_format(collect($perf)->sum('unit_sold')) }}
                             </td>
-                            <td class="px-4 text-right font-bold text-xs text-green-600">
+                            <td class="px-4 text-center font-bold text-xs text-green-600">
                                 ₱{{ number_format(collect($perf)->sum('total_sales'), 2) }}
                             </td>
-                            <td class="px-4 text-right font-bold text-xs">
+                            <td class="px-4 text-center font-bold text-xs">
                                 ₱{{ number_format(collect($perf)->sum('cogs'), 2) }}
                             </td>
-                            <td class="px-4 text-right font-bold text-xs text-green-600">
+                            <td class="px-4 text-center font-bold text-xs text-green-600">
                                 ₱{{ number_format(collect($perf)->sum('profit'), 2) }}
                             </td>
                             <td class="px-4 text-center font-bold text-xs text-yellow-600">

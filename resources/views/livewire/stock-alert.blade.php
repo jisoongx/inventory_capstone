@@ -16,9 +16,9 @@
             :class="open ? 'overflow-y-auto' : 'overflow-hidden'">
             @forelse ($prod as $p)
                 <div class="rounded-xl p-2 flex items-center gap-4 border
-                    {{ $p->status === 'Critical' ? 'border-red-500 text-red-600' : '' }}
-                    {{ $p->status === 'Reorder' ? 'border-orange-500 text-orange-600' : '' }}
-                    {{ $p->status === 'Normal' ? 'border-slate-500 text-slate-600' : '' }}">
+                    {{ $p->stock_status === 'CRITICAL' ? 'border-red-500 text-red-600' : '' }}
+                    {{ $p->stock_status === 'REORDER_NOW' ? 'border-orange-500 text-orange-600' : '' }}
+                    {{ $p->stock_status === 'OUT_OF_STOCK' ? 'border-red-700 text-red-700' : '' }}">
                     
 
                     @if($p->prod_image)
@@ -35,15 +35,15 @@
                     
                     <div class="flex-1">
                         <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
-                        <span class="font-bold text-xs">{{ $p->remaining_stock }} items left</span>
+                        <span class="font-bold text-xs">{{ $p->total_stock }} items left</span>
                     </div>
 
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full
-                            {{ $p->status === 'Critical' ? 'bg-red-500' : '' }}
-                            {{ $p->status === 'Reorder' ? 'bg-orange-500' : '' }}
-                            {{ $p->status === 'Normal' ? 'bg-slate-500' : '' }}"></span>
-                        <span class="font-semibold text-xs">{{ $p->status }}</span>
+                            {{ $p->stock_status === 'CRITICAL' ? 'bg-red-500' : '' }}
+                            {{ $p->stock_status === 'REORDER_NOW' ? 'bg-orange-500' : '' }}
+                            {{ $p->stock_status === 'OUT_OF_STOCK' ? 'bg-red-700' : '' }}"></span>
+                        <span class="font-semibold text-xs">{{ $p->stock_status }}</span>
                     </div>
                 </div>
             @empty
