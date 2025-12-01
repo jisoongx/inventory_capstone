@@ -61,6 +61,7 @@ class BillingController extends Controller
         }
 
         $paymentsInPeriod = Payment::with('subscription.planDetails')
+            ->whereNotIn('payment_mode', ['free', 'free trial'])
             ->when($startDate, fn($query) => $query->whereBetween('payment_date', [$startDate, $endDate]))
             ->get();
 
@@ -124,6 +125,7 @@ class BillingController extends Controller
             ->selectRaw("SUM(CASE WHEN `plans`.`plan_title` = 'Premium' THEN `payment`.`payment_amount` ELSE 0 END) as premium_revenue")
             ->join('subscriptions', 'payment.subscription_id', '=', 'subscriptions.subscription_id')
             ->join('plans', 'subscriptions.plan_id', '=', 'plans.plan_id')
+            ->whereNotIn('payment.payment_mode', ['free', 'free trial'])
             ->when($revStartDate, fn($query) => $query->whereBetween('payment.payment_date', [$revStartDate, $revEndDate]))
             ->groupBy('month')
             ->orderBy('month', 'desc')
@@ -146,9 +148,10 @@ class BillingController extends Controller
 
         $clientsQuery = Owner::whereHas('subscriptions.payments')
             ->with([
-                'subscriptions' => function ($q) {
-                    $q->with(['planDetails', 'payments']);
-                }
+                'subscriptions' => fn($q) => $q->with([
+                    'planDetails',
+                    'payments' => fn($q2) => $q2->whereNotIn('payment_mode', ['free', 'free trial'])
+                ])
             ]);
 
 
@@ -218,6 +221,7 @@ class BillingController extends Controller
             'subscription.planDetails'
         ])
             ->where('owner_id', $owner->owner_id)
+            ->where('payment_mode', '!=', 'free')
             ->orderByDesc('payment_date')
             ->get();
 

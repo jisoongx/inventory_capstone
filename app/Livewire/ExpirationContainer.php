@@ -26,10 +26,9 @@ class ExpirationContainer extends Component
             order by subscription_id desc
             limit 1", [$owner_id]))->first();
 
-        if ($owner->subscription_end <= date('Y-m-d')) {
+        if ($owner && $owner->subscription_end !== null && $owner->subscription_end <= date('Y-m-d')) {
             return $this->isExpired = true;
         }
-
     }
 
     public function render()

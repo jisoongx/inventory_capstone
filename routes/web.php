@@ -16,6 +16,7 @@ use App\Http\Controllers\RestockController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\PaypalWebhookController;
 use App\Livewire\ExpenseRecord;
 use App\Livewire\ReportSalesAndPerformance;
 
@@ -30,7 +31,8 @@ use App\Http\Controllers\InventoryOwnerSettingsController;
 
 Route::get('/', function () {
     return view('login');
-});
+})->name('login');
+
 
 Route::get('/verify-email/{token}', [RegisterController::class, 'verifyEmail'])->name('owner.verify');
 Route::get('/resend-verification', [RegisterController::class, 'resendVerification'])
@@ -128,6 +130,9 @@ Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']
 Route::get('/subscription/select', [SubscriptionController::class, 'create'])->name('subscription.selection');
 Route::post('/subscribe/{planId}', [SubscriptionController::class, 'store'])->name('subscription.store');
 Route::get('/owner/upgrade/', [SubscriptionController::class, 'upgrade'])->name('owner.upgrade');
+Route::post('/owner/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('owner.subscription.cancel');
+ // disables the 'web' middleware group which includes CSRF
+
 
 // Route::post('/subscribe/basic', [SubscriptionController::class, 'subscribeBasic'])
 //     ->name('owner.subscribe.basic');

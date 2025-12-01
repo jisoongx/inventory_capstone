@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shoplytix Subscription Plans</title>
-    <script src="https://www.sandbox.paypal.com/sdk/js?client-id=AfhEjCadB5uvvu8lW7Q1kxNbo9uyBkd0OCtDIlTgw-mid22lSDCUDPhd7YWEeHydaQVwjjyCpiyyrGuW&currency=PHP"></script>
+    <script src="https://www.sandbox.paypal.com/sdk/js?client-id=AfhEjCadB5uvvu8lW7Q1kxNbo9uyBkd0OCtDIlTgw-mid22lSDCUDPhd7YWEeHydaQVwjjyCpiyyrGuW&vault=true&intent=subscription&currency=PHP"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
 
@@ -149,15 +149,15 @@
                         <p class="mt-2 text-sm text-slate-500">All the essentials to get your business started.</p>
                         <p class="mt-6">
                             <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱0</span>
-                            <span class="text-base font-medium text-slate-500">Free for 1 month</span>
+                            <span class="text-base font-medium text-slate-500">Free</span>
                         </p>
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                             <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Daily, weekly, and monthly sales tracking</li>
-                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Comparative sales analysis</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock alert, expiration notice, and top-selling products</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales and loss analysis ( chart included)</li>
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Monthly net profit overview</li>
-                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales by category and loss analysis</li>
-                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Up to 50 inventory products</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Up to 50 inventory items</li>
 
                             </ul>
 
@@ -187,16 +187,14 @@
                         <h3 class="text-lg font-bold text-orange-600">Standard</h3>
                         <p class="mt-2 text-sm text-slate-500">Enhanced tools to keep your business organized and efficient.</p>
                         <p class="mt-6">
-                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱250</span>
-                            <span class="text-base font-medium text-slate-500">/6 months</span>
+                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱500</span>
+                            <span class="text-base font-medium text-slate-500">/month</span>
                         </p>
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Basic Plan</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 products)</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock alert & expiration notice</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Top selling products dashboard</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales Performance reports</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 items)</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales ans stock performance reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock loss, damage, and expiration reports</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>One staff account</li>
 
@@ -219,18 +217,17 @@
                         <h3 class="text-lg font-bold text-red-600">Premium</h3>
                         <p class="mt-2 text-sm text-slate-500">Unlock powerful tools for growth and efficiency.</p>
                         <p class="mt-6">
-                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱500</span>
-                            <span class="text-base font-medium text-slate-500">/year</span>
+                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱1500</span>
+                            <span class="text-base font-medium text-slate-500">/month</span>
                         </p>
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Standard Plan</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product performance analysis</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product Association Analysis</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales Frequency Analysis</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock Suggestion List</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product trends</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Seasonal trend analysis</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs for both owner & staff</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Unlimited inventory products</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Add and manage multiple staff</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Unlimited inventory items</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Add and manage multiple staff accounts</li>
                         </ul>
 
                     </div>
@@ -247,184 +244,58 @@
         </main>
     </div>
 
-    <!-- <script>
-        function openModal(planId, planName, planPrice) {
-            const modal = document.getElementById('paymentModal');
-            const modalContent = document.getElementById('modalContent');
-            const paymentFormView = document.getElementById('paymentFormView');
-            const successView = document.getElementById('successView');
-            const selectedPlanName = document.getElementById('selectedPlanName');
-            const selectedPlanPrice = document.getElementById('selectedPlanPrice');
-            const paypalContainer = document.getElementById('paypal-button-container');
 
-            // Reset views
-            paymentFormView.classList.remove('hidden');
-            successView.classList.add('hidden');
-
-            // Update plan info
-            selectedPlanName.textContent = planName;
-            selectedPlanPrice.textContent = planPrice === 0 ? "₱0" : `₱${planPrice}`;
-
-            // Clear PayPal container
-            paypalContainer.innerHTML = "";
-
-            // Show modal
-            modal.classList.remove('hidden');
-            modal.style.visibility = 'visible';
-            setTimeout(() => modal.classList.remove('opacity-0'), 10);
-
-            // 🟡 Special case: BASIC plan (no PayPal)
-            // 🟡 Special case: BASIC plan (no PayPal)
-            if (planName.trim().toLowerCase() === "basic") {
-                // Hide all views first
-                paymentFormView.classList.add('hidden');
-                successView.classList.add('hidden');
-
-                // Show a temporary message while checking eligibility
-                paypalContainer.innerHTML = `<div class="text-center py-4 text-slate-600">Checking your free plan eligibility...</div>`;
-
-                fetch(`/subscribe/${planId}`, {
-                        method: "POST",
-                        credentials: "same-origin",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({})
-                    })
-                    .then(async response => {
-                        let data = {};
-                        try {
-                            data = await response.json();
-                        } catch (e) {
-                            console.error(e);
-                        }
-
-                        if (response.ok && data.success) {
-                            // ✅ First-time user → show activating message
-                            paymentFormView.classList.remove('hidden');
-                            paypalContainer.innerHTML = `<div class="text-center py-4 text-slate-600">Activating your free plan...</div>`;
-
-                            setTimeout(() => {
-                                paymentFormView.classList.add('hidden');
-                                successView.classList.remove('hidden');
-                                document.querySelector("#successView h2").textContent = "Basic Plan Activated!";
-                                document.querySelector("#successView p").textContent = data.message || "Your 1-month free access is now active.";
-                                setTimeout(() => window.location.href = "/owner/dashboard", 2000);
-                            }, 1000);
-
-                        } else {
-                            // ❌ Already used → ONLY show alert or notice, do NOT show Confirm Purchase
-                            alert(data.message || "You have already used our one-time free Basic plan.");
-                            // optionally close modal automatically:
-                            modal.classList.add('opacity-0');
-                            setTimeout(() => modal.classList.add('hidden'), 300);
-                        }
-                    })
-                    .catch(err => {
-                        alert("Something went wrong checking the Basic plan.");
-                        console.error(err);
-                    });
-
-                return; // Stop here, no PayPal needed
-            }
-
-
-
-            // 🟢 For Standard / Premium plans → render PayPal buttons
-            paypal.Buttons({
-                createOrder: function(data, actions) {
-                    return actions.order.create({
-                        purchase_units: [{
-                            description: planName,
-                            amount: {
-                                currency_code: "PHP",
-                                value: planPrice
-                            }
-                        }]
-                    });
-                },
-                onApprove: function(data, actions) {
-                    return actions.order.capture().then(details => {
-                        return fetch(`/subscribe/${planId}`, {
-                                method: 'POST',
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                                },
-                                body: JSON.stringify({
-                                    paypal_order_id: data.orderID,
-                                    plan_id: planId
-                                })
-                            }).then(res => res.json())
-                            .then(response => {
-                                paymentFormView.classList.add('hidden');
-                                successView.classList.remove('hidden');
-                            });
-                    });
-                },
-                onError: function(err) {
-                    alert("Something went wrong with PayPal payment.");
-                    console.error(err);
-                }
-            }).render("#paypal-button-container");
-        }
-
-        // Close modal
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
-            const modal = document.getElementById('paymentModal');
-            modal.classList.add('opacity-0'); // fade-out
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        });
-    </script> -->
 
     <script>
         const plans = {
             3: {
                 name: "Basic",
                 price: 0,
-                duration: "1 month free access",
+                duration: "Free",
                 features: [
                     "Daily, weekly, and monthly sales tracking",
-                    "Comparative sales analysis",
+                    "Stock alert, expiration notice, and top-selling products",
+                    "Sales and loss analysis(chart included)",
                     "Monthly net profit overview",
-                    "Sales by category and loss analysis",
-                    "Up to 50 inventory products"
+                    "Up to 50 inventory items"
                 ]
             },
             1: {
                 name: "Standard",
-                price: 250,
-                duration: "6 months",
+                price: 500,
+                duration: "month",
                 features: [
                     "All features from Basic Plan",
-                    "Inventory expansion (up to 200 inventory products)",
-                    "Stock alert & expiration notice",
-                    "Top selling products dashboard",
-                    "Sales performance reports",
-                    "Inventory reports",
+                    "Inventory expansion (up to 200 inventory items)",
+                    "Sales ans stock performance reports",
+                    "Stock loss, damage, and expiration reports",
                     "Activity logs",
                     "One staff account"
                 ]
             },
             2: {
                 name: "Premium",
-                price: 500,
-                duration: "1 year",
+                price: 1500,
+                duration: "month",
                 features: [
                     "All features from Standard Plan",
-                    "Product performance analysis",
+                    "Product association analysis",
+                    "Sales frequency analysis",
                     "Restock suggestion list",
-                    "Product trends",
                     "Seasonal trend analysis",
-                    "Activity logs for both owner & staff",
-                    "Unlimited inventory products",
-                    "Add and manage multiple staff"
+                    "Unlimited inventory items",
+                    "Add and manage multiple staff account"
                 ]
             }
         };
 
-        function openModal(planId, planName, planPrice) {
+        // Map plan IDs to PayPal subscription plan IDs (from your PayPal dashboard)
+        const PAYPAL_PLAN_IDS = {
+            1: "P-7C785523EJ448962XNEV5C6Q", // replace with your actual PayPal plan ID
+            2: "P-9BL62740BA150960NNEV5EJI" // replace with your actual PayPal plan ID
+        };
+
+        function openModal(planId) {
             const modal = document.getElementById('paymentModal');
             const overview = document.getElementById('planOverview');
             const paymentForm = document.getElementById('paymentFormView');
@@ -435,120 +306,123 @@
             paymentForm.classList.add('hidden');
             successView.classList.add('hidden');
 
-            // Fill overview content
+            // Fill plan overview
             const plan = plans[planId];
             document.getElementById('overviewPlanName').textContent = plan.name;
-            document.getElementById('overviewPlanPrice').textContent = `₱${plan.price}`;
+            document.getElementById('overviewPlanPrice').textContent = plan.price === 0 ? "₱0" : `₱${plan.price}`;
             document.getElementById('overviewPlanDuration').textContent = plan.duration;
 
             const featuresList = document.getElementById('overviewFeatures');
             featuresList.innerHTML = plan.features.map(f => `
-            <li class="flex items-start gap-2"><span class="material-symbols-rounded text-green-500 text-base mt-0.5">check_circle</span>${f}</li>
-        `).join('');
+        <li class="flex items-start gap-2">
+            <span class="material-symbols-rounded text-green-500 text-base mt-0.5">check_circle</span>${f}
+        </li>
+    `).join('');
 
             modal.classList.remove('hidden');
             setTimeout(() => modal.classList.remove('opacity-0'), 10);
 
-            // Handle "Cancel" and "Continue"
+            // Cancel button
             document.getElementById('cancelOverview').onclick = () => {
                 modal.classList.add('opacity-0');
                 setTimeout(() => modal.classList.add('hidden'), 300);
             };
 
+            // Confirm button → start payment / subscription
             document.getElementById('confirmOverview').onclick = () => {
                 overview.classList.add('hidden');
-                startPaymentFlow(planId, plan.name, plan.price);
+                startSubscriptionFlow(planId);
             };
         }
 
-        function startPaymentFlow(planId, planName, planPrice) {
-            const modal = document.getElementById('paymentModal');
+        function startSubscriptionFlow(planId) {
+            const plan = plans[planId];
             const paymentFormView = document.getElementById('paymentFormView');
             const successView = document.getElementById('successView');
             const selectedPlanName = document.getElementById('selectedPlanName');
             const selectedPlanPrice = document.getElementById('selectedPlanPrice');
             const paypalContainer = document.getElementById('paypal-button-container');
 
+            // Show payment form
             paymentFormView.classList.remove('hidden');
             successView.classList.add('hidden');
+            selectedPlanName.textContent = plan.name;
+            selectedPlanPrice.textContent = plan.price === 0 ? "₱0" : `₱${plan.price}`;
             paypalContainer.innerHTML = "";
 
-            selectedPlanName.textContent = planName;
-            selectedPlanPrice.textContent = planPrice === 0 ? "₱0" : `₱${planPrice}`;
+            // Handle Basic plan → no PayPal, just direct activation
+            if (plan.name.toLowerCase() === "basic") {
+                // Hide payment form (if it was visible)
+                paymentFormView.classList.add('hidden');
 
-            // BASIC PLAN → direct fetch
-            if (planName.toLowerCase() === "basic") {
-                paypalContainer.innerHTML = `<div class="text-center py-4 text-slate-600">Activating your free plan...</div>`;
+                // Show the success view
+                successView.classList.remove('hidden');
+
+                // Update success view text
+                document.querySelector("#successView h2").textContent = "Basic Plan Activated!";
+                document.querySelector("#successView p").textContent = "You now have access to the Basic plan forever!";
+
+                // Optional: you can still do a backend call if you want to store that the user availed it
                 fetch(`/subscribe/${planId}`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({})
-                    })
-                    .then(async res => {
-                        const data = await res.json().catch(() => ({}));
-                        if (res.ok && data.success) {
-                            setTimeout(() => {
-                                paymentFormView.classList.add('hidden');
-                                successView.classList.remove('hidden');
-                            }, 1000);
-                        } else {
-                            alert(data.message || "You have already used the Basic plan.");
-                            modal.classList.add('opacity-0');
-                            setTimeout(() => modal.classList.add('hidden'), 300);
-                        }
-                    })
-                    .catch(() => alert("Something went wrong."));
-                return;
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({})
+                }).catch(() => console.log("Basic plan activation recorded."));
+
+                return; // stop further execution
             }
 
-            // STANDARD / PREMIUM → PayPal
+
+            // Standard / Premium → PayPal subscription
             paypal.Buttons({
-                createOrder: function(data, actions) {
-                    return actions.order.create({
-                        purchase_units: [{
-                            description: planName,
-                            amount: {
-                                currency_code: "PHP",
-                                value: planPrice
-                            }
-                        }]
+                style: {
+                    layout: 'vertical',
+                    color: 'gold',
+                    shape: 'rect',
+                    label: 'subscribe'
+                },
+                createSubscription: function(data, actions) {
+                    return actions.subscription.create({
+                        plan_id: PAYPAL_PLAN_IDS[planId]
                     });
                 },
                 onApprove: function(data, actions) {
-                    return actions.order.capture().then(details => {
-                        return fetch(`/subscribe/${planId}`, {
-                                method: 'POST',
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                                },
-                                body: JSON.stringify({
-                                    paypal_order_id: data.orderID,
-                                    plan_id: planId
-                                })
-                            }).then(res => res.json())
-                            .then(response => {
-                                paymentFormView.classList.add('hidden');
-                                successView.classList.remove('hidden');
-                            });
-                    });
+                    fetch(`/subscribe/${planId}`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                paypal_order_id: data.subscriptionID,
+                                plan_id: planId
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(() => {
+                            paymentFormView.classList.add('hidden');
+                            successView.classList.remove('hidden');
+                        })
+                        .catch(() => alert("Failed to activate subscription on backend."));
                 },
                 onError: function(err) {
-                    alert("Something went wrong with PayPal payment.");
+                    alert("Something went wrong with PayPal subscription.");
                     console.error(err);
                 }
             }).render("#paypal-button-container");
         }
 
+        // Close modal button
         document.getElementById('closeModalBtn').addEventListener('click', () => {
             const modal = document.getElementById('paymentModal');
             modal.classList.add('opacity-0');
             setTimeout(() => modal.classList.add('hidden'), 300);
         });
     </script>
+
 
 
 </body>

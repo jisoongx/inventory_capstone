@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('check:expiration')->daily();
         $schedule->command('check:expiredProduct')->everyMinute();
+        $schedule->command('paypal:update-subscriptions')->everyFiveMinutes();
     }
 
     protected function commands(): void

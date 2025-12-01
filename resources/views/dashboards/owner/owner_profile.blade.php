@@ -92,9 +92,30 @@
                                 <h2 class="text-lg font-semibold text-slate-800">
                                     {{ ucfirst($subscription->planDetails->plan_title) }} Plan
                                 </h2>
+
+                                @php
+                                $status = ucfirst($subscription->status); // use DB status
+                                $statusColor = 'text-green-600';
+                                if ($subscription->status === 'cancelled') {
+                                $statusColor = 'text-red-600';
+                                } elseif ($subscription->status === 'expired') {
+                                $statusColor = 'text-gray-500';
+                                }
+                                @endphp
+
+                                {{-- Status below plan title --}}
+                                <p class="text-sm font-medium {{ $statusColor }} mt-1">
+                                    Status: {{ $status }}
+                                </p>
+                                @if($subscription->subscription_end)
                                 <p class="text-sm text-slate-500 mt-1">
                                     Active until {{ \Carbon\Carbon::parse($subscription->subscription_end)->format('F j, Y') }}
                                 </p>
+                                @else
+                                <p class="text-sm text-slate-500 mt-1">
+                                    Free Access
+                                </p>
+                                @endif
 
                                 <p class="mt-4 text-xs text-slate-500 leading-snug">
                                     Note: Downgrading to a lower plan will not include any refund for the remaining time on your current
@@ -102,13 +123,27 @@
                                 </p>
                             </div>
 
-                            <div class="mt-6 flex justify-center">
+                            @php
+                            $isDisabled = $subscription->status === 'cancelled'
+                            || $subscription->status === 'expired'
+                            || strtolower($subscription->planDetails->plan_title) === 'basic';
+                            @endphp
+
+                            <div class="mt-4 flex justify-center gap-3">
                                 <a href="{{ route('owner.upgrade') }}"
                                     class="inline-flex items-center px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">
-                                    <span class="material-symbols-rounded text-base mr-1">upgrade</span>
-                                    Change / Upgrade Plan
+                                    Change Plan
                                 </a>
+
+                                <button id="cancelSubscriptionBtn"
+                                    class="inline-flex items-center px-5 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition
+        {{ $isDisabled ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                    {{ $isDisabled ? 'disabled' : '' }}>
+                                    Cancel Subscription
+                                </button>
                             </div>
+
+
                         </div>
                     </div>
 
@@ -449,6 +484,33 @@
 
         setDetailsEditMode(false);
     });
+
+    document.getElementById('cancelSubscriptionBtn').addEventListener('click', function() {
+        if (this.disabled) return; // exit if disabled
+        if (!confirm("Are you sure you want to cancel your subscription?")) return;
+
+        fetch("{{ route('owner.subscription.cancel') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.success);
+                    window.location.reload();
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            })
+            .catch(err => {
+                alert("Something went wrong. Please try again.");
+            });
+    });
 </script>
+
+
 
 @endsection

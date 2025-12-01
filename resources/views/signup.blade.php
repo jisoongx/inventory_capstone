@@ -15,7 +15,7 @@
     <div class="w-full max-w-3xl bg-white backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 px-8 sm:px-10 md:px-12 py-8 md:py-10">
 
         <!-- Logo -->
-        <div class="flex items-center mb-8">
+        <div class="flex items-center mb-5">
             <img src="{{ asset('assets/logo.png') }}" class="w-14 h-14 object-contain mr-3" alt="Shoplytix Logo" />
             <h1 class="text-red-600 font-bold text-2xl tracking-wide">SHOPLYTIX</h1>
         </div>
@@ -56,41 +56,7 @@
                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
-                <div>
-                    <input type="email" name="email" placeholder="Email Address" required value="{{ old('email') }}"
-                        class="w-full px-4 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
-                    @error('email')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
 
-            <!-- Password + Confirm -->
-            <!-- Password + Confirm -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                @foreach([['password','Password'], ['password_confirmation','Confirm Password']] as $pw)
-                <div class="relative flex flex-col">
-                    <!-- Input Field with Eye Icon inside the container -->
-                    <div class="relative">
-                        <input type="password" id="{{ $pw[0] }}" name="{{ $pw[0] }}" placeholder="{{ $pw[1] }}" required
-                            class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
-
-                        <!-- Eye Icon for Password Visibility Toggle -->
-                        <span id="{{ $pw[0] }}Icon"
-                            class="material-symbols-rounded absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 cursor-pointer hidden"></span>
-                    </div>
-
-                    <!-- Error Message -->
-                    @error($pw[0])
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-                @endforeach
-            </div>
-
-
-            <!-- Contact + Checkboxes -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
                 <div>
                     <input type="text" name="contact" placeholder="Contact Number" required value="{{ old('contact') }}"
                         class="w-full px-4 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
@@ -99,52 +65,95 @@
                     @enderror
                 </div>
 
-                <div class="flex flex-col space-y-2 text-xs">
-                    <label class="flex items-center gap-2">
-                        <input type="checkbox" required class="shrink-0 border-gray-400 accent-red-600" />
-                        <span>
-                            I agree to the
-                            <a href="#" class="text-red-600 hover:underline">Terms of Service</a> and
-                            <a href="#" class="text-red-600 hover:underline">Privacy Policy</a>.
-                        </span>
-                    </label>
+            </div>
+
+            <!-- Password + Confirm -->
+            <!-- Password + Confirm -->
+
+            <div>
+                <input type="email" name="email" placeholder="Email Address" required value="{{ old('email') }}"
+                    class="w-full px-4 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
+                @error('email')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+            <!-- PASSWORD SECTION -->
+            <div class="space-y-2">
+
+                <!-- Password + Confirm (2 columns) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <!-- LEFT: Password -->
+                    <div>
+                        <div class="relative">
+                            <input type="password" id="password" name="password" placeholder="Password" required
+                                class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent" />
+                            <span id="passwordIcon"
+                                class="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 cursor-pointer hidden"></span>
+                        </div>
+                        @error('password')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- RIGHT: Confirm Password -->
+                    <div>
+                        <div class="relative">
+                            <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirm Password" required
+                                class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent" />
+                            <span id="password_confirmationIcon"
+                                class="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 cursor-pointer hidden"></span>
+                        </div>
+                        @error('password_confirmation')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                 </div>
 
+                <!-- Password Requirements -->
+                <p class="text-gray-500 text-xs mt-1 text-center md:text-left">
+                    Note: Password must be minimum of 8 characters with uppercase, lowercase, number & special character
+                </p>
+
+                <!-- Terms Checkbox -->
+                <label class="flex items-center gap-2 mt-2 text-gray-700 text-xs cursor-pointer">
+                    <input type="checkbox" required class="w-4 h-4 border-gray-400 rounded accent-red-600" />
+                    <span>
+                        I agree to the
+                        <a href="#" class="text-red-600 hover:underline font-medium">Terms of Service</a>
+                        and
+                        <a href="#" class="text-red-600 hover:underline font-medium">Privacy Policy</a>.
+                    </span>
+                </label>
+
             </div>
 
-            <!-- Submit Button -->
-            <div class="text-center">
-                <button type="submit"
-                    class="bg-red-600 text-white px-16 py-3 rounded-xl text-sm font-medium shadow-lg hover:bg-red-700 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 transform">
-                    Sign Up
-                </button>
-            </div>
-        </form>
-    </div>
+            <!-- Sign Up Button -->
+            <button class="w-full bg-red-600 text-white py-2.5 rounded-xl mt-4 hover:bg-red-700">
+                Sign Up
+            </button>
 
-    <script>
-        // For each password input, toggle visibility icon like in login
-        document.querySelectorAll('input[type="password"]').forEach(input => {
-            const icon = document.getElementById(input.id + "Icon");
+            <script>
+                // Password visibility toggle
+                document.querySelectorAll('input[type="password"]').forEach(input => {
+                    const icon = document.getElementById(input.id + "Icon");
 
-            input.addEventListener("input", () => {
-                if (input.value) {
-                    icon.classList.remove("hidden");
-                    icon.textContent = "visibility_off"; // show eye-off when typing
-                } else {
-                    icon.classList.add("hidden");
-                    icon.textContent = "";
-                    input.type = "password"; // reset type if cleared
-                }
-            });
+                    input.addEventListener("input", () => {
+                        if (input.value) {
+                            icon.classList.remove("hidden");
+                            icon.textContent = "visibility_off";
+                        } else {
+                            icon.classList.add("hidden");
+                            icon.textContent = "";
+                            input.type = "password";
+                        }
+                    });
 
-            icon.addEventListener("click", () => {
-                const isHidden = input.type === "password";
-                input.type = isHidden ? "text" : "password";
-                icon.textContent = isHidden ? "visibility" : "visibility_off";
-            });
-        });
-    </script>
-</body>
-
-</html>
+                    icon.addEventListener("click", () => {
+                        const isHidden = input.type === "password";
+                        input.type = isHidden ? "text" : "password";
+                        icon.textContent = isHidden ? "visibility" : "visibility_off";
+                    });
+                });
+            </script>

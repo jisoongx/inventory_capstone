@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
+
 class RestockController extends Controller
 {
 
@@ -622,19 +623,20 @@ class RestockController extends Controller
 
 
 
+
     public function list()
     {
         $ownerId = auth()->guard('owner')->id();
 
+        // Fetch all restocks
         $restocks = DB::table('restock')
             ->where('owner_id', $ownerId)
             ->orderByDesc('restock_created')
-            ->select('restock_id', 'restock_created', 'status')  // Make sure to select status
             ->get();
 
-
+        // Fetch all restock items + product info
         $restockItems = DB::table('restock_item')
-            ->join('products', 'restock_item.prod_code', '=', 'products.prod_code')  // Use prod_code directly
+            ->join('products', 'restock_item.prod_code', '=', 'products.prod_code')
             ->select(
                 'restock_item.*',
                 'products.name',
@@ -644,10 +646,79 @@ class RestockController extends Controller
             ->orderByDesc('restock_item.restock_id')
             ->get();
 
+        foreach ($restockItems as $item) {
 
+            $restock = $restocks->firstWhere('restock_id', $item->restock_id);
+
+            if (!$restock || in_array($restock->status, ['resolved', 'cancelled'])) {
+                continue; // do not update these
+            }
+
+            $restockCreated = Carbon::parse($restock->restock_created);
+
+            // Total stock added after restock created
+            $totalAdded = DB::table('inventory')
+                ->where('prod_code', $item->prod_code)
+                ->where('owner_id', $ownerId)
+                ->where('last_updated', '>=', $restockCreated)
+                ->sum('stock');
+
+            // Last stock add event
+            $lastStock = DB::table('inventory')
+                ->where('prod_code', $item->prod_code)
+                ->where('owner_id', $ownerId)
+                ->where('last_updated', '>=', $restockCreated)
+                ->orderByDesc('last_updated')
+                ->first();
+
+            // Determine status
+            if ($totalAdded == 0) {
+                $status = 'pending';
+                $lastStockDate = null;
+            } elseif ($totalAdded < $item->item_quantity) {
+                $status = 'in_progress';
+                $lastStockDate = $lastStock->last_updated ?? null;
+            } else {
+                $status = 'complete';
+                $lastStockDate = $lastStock->last_updated ?? null;
+            }
+
+            // Update DB
+            DB::table('restock_item')
+                ->where('item_id', $item->item_id)
+                ->update([
+                    'item_status' => $status,
+                    'item_restock_date' => $lastStockDate
+                ]);
+
+            // Update object for Blade rendering
+            $item->item_status = $status;
+            $item->item_restock_date = $lastStockDate;
+        }
+
+
+        // Update RESTOCK status
+        foreach ($restocks as $restock) {
+
+            if (in_array($restock->status, ['resolved', 'cancelled'])) {
+                continue;
+            }
+
+            $items = $restockItems->where('restock_id', $restock->restock_id);
+
+            if ($items->every(fn($i) => $i->item_status === 'complete')) {
+
+                DB::table('restock')
+                    ->where('restock_id', $restock->restock_id)
+                    ->update(['status' => 'resolved']);
+
+                $restock->status = 'resolved';
+            }
+        }
 
         return view('dashboards.owner.restock_list', compact('restocks', 'restockItems'));
     }
+
 
     public function updateStatus(Request $request)
     {
@@ -656,14 +727,31 @@ class RestockController extends Controller
             'status' => 'required|in:received,cancelled'
         ]);
 
+        $restockId = $request->restock_id;
+        $status = $request->status;
+
+        // Update restock status
         DB::table('restock')
-            ->where('restock_id', $request->restock_id)
-            ->update([
-                'status' => $request->status
-            ]);
+            ->where('restock_id', $restockId)
+            ->update(['status' => $status]);
+
+        // If cancelled, update all related restock items to cancelled
+        if ($status === 'cancelled') {
+            DB::table('restock_item')
+                ->where('restock_id', $restockId)
+                ->update(['item_status' => 'cancelled']);
+        }
+
+        ActivityLogController::log(
+            "Marked restock list #{$restockId} as {$status}",
+            'owner',
+            auth('owner')->user(),
+            $request->ip()
+        );
 
         return back()->with('success', 'Restock status updated!');
     }
+
 
 
     public function topProducts(Request $request)
@@ -740,6 +828,7 @@ class RestockController extends Controller
          */
         $allProducts = DB::table('products')
             ->where('owner_id', $ownerId)
+            ->where('products.prod_status', 'active')
             ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
             ->select('prod_code', 'name', 'prod_image')
             ->get();

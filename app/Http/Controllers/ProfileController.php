@@ -48,8 +48,13 @@ class ProfileController extends Controller
         // Get the most recent subscription based on the farthest 'subscription_end' date
         $subscription = $owner->subscription()
             ->with('planDetails')
-            ->orderByDesc('subscription_end')  // Sort by the latest subscription end date
-            ->first();  // Fetch the most recent (latest) subscription
+            ->where(function ($q) {
+                $q->whereNull('subscription_end')
+                    ->orWhere('subscription_end', '>=', now());
+            })
+            ->orderByDesc('subscription_id')
+            ->first();
+
 
         return view('dashboards.owner.owner_profile', compact('owner', 'subscription'));
     }

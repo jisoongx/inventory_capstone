@@ -37,8 +37,8 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ; // 
     @section('page-header')
     <div class="flex items-center gap-3 text-gray-800">
 
-        <h2 class="text-lg font-semibold ml-3">Welcome, Admin!</h2>
-        <span class="material-symbols-rounded text-blue-600 align-middle">waving_hand</span>
+        <h2 class="text-lg font-bold ml-3">Welcome back, Admin!</h2>
+        <!-- <span class="material-symbols-rounded text-blue-600 align-middle">waving_hand</span> -->
         <span class="text-gray-400">|</span>
         <span id="date" class="text-sm font-medium text-slate-600"></span>
         <span id="clock" class="text-sm font-medium text-slate-600"></span>
@@ -96,6 +96,13 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ; // 
     $statCards=[ 'active'=> ['count' => $activeCount, 'label' => 'Active Subscriptions', 'icon' => 'verified', 'color' => 'emerald', 'hint' => 'Currently billed'],
     'expired' => ['count' => $expiredCount, 'label' => 'Expired Subscriptions', 'icon' => 'cancel', 'color' => 'red', 'hint' => 'Needs follow-up'],
     'upcoming' => ['count' => $upcomingCount, 'label' => 'Expiring Soon', 'icon' => 'schedule', 'color' => 'amber', 'hint' => 'Renewals due'],
+    'cancelled' => [
+    'count' => $cancelledCount,
+    'label' => 'Cancelled Subscriptions',
+    'icon' => 'block', // pick a relevant material icon
+    'color' => 'gray',
+    'hint' => 'User cancelled'
+    ]
     ];
     $activeTab = request('status', 'active');
     @endphp
@@ -153,12 +160,18 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ; // 
 
                         {{-- Plan Filters (for 'active' and 'expired') --}}
                         <div id="plan-filters" class="flex gap-2">
+                            @php
+                            $status = $activeTab ?? 'active';
+                            @endphp
+                            @if($status !== 'expired')
                             <a href="?plan=3" data-filter-key="plan" data-filter-value="3"
                                 class="filter-link rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-all flex items-center gap-2 text-yellow-500 
-                                 hover:bg-yellow-50 focus:ring-2 focus:ring-yellow-400">
+ hover:bg-yellow-50 focus:ring-2 focus:ring-yellow-400"
+                                @if(in_array($status, ['expired','cancelled'])) style="display:none" @endif>
                                 <span class="material-symbols-outlined text-base text-yellow-500">magic_button</span>
                                 <span>Basic</span>
                             </a>
+                            @endif
                             <a href="?plan=1" data-filter-key="plan" data-filter-value="1"
                                 class="filter-link rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-all flex items-center gap-2 text-orange-500 
                                 hover:bg-orange-50 focus:ring-2 focus:ring-orange-400">
@@ -342,9 +355,28 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ; // 
             const filterForm = document.getElementById('filterForm');
             let debounceTimeout;
 
+            const updatePlanFilters = (status) => {
+                const planFilters = document.getElementById('plan-filters');
+                if (!planFilters) return;
+
+                // Show all buttons first
+                planFilters.querySelectorAll('a').forEach(btn => btn.style.display = 'flex');
+
+                // Hide Basic if expired
+                if (status === 'expired' || status === 'cancelled') {
+                    const basicBtn = planFilters.querySelector('a[data-filter-value="3"]');
+                    if (basicBtn) basicBtn.style.display = 'none';
+                }
+
+                // Show/hide the entire filter container depending on status
+                planFilters.style.display = ['active', 'expired', 'cancelled'].includes(status) ? 'flex' : 'none';
+            };
+
+
             const syncUIWithURL = () => {
                 const params = new URLSearchParams(window.location.search);
                 const status = params.get('status') || 'active';
+                updatePlanFilters(status);
                 const plan = params.get('plan');
                 const range = params.get('range');
 
@@ -379,7 +411,8 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ; // 
 
 
 
-                document.getElementById('plan-filters').style.display = ['active', 'expired'].includes(status) ? 'flex' : 'none';
+                document.getElementById('plan-filters').style.display = ['active', 'expired', 'cancelled'].includes(status) ? 'flex' : 'none';
+
                 document.getElementById('expiry-filters').style.display = status === 'upcoming' ? 'flex' : 'none';
 
                 // Update active classes for plan/range buttons

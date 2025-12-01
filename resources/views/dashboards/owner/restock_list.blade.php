@@ -24,7 +24,7 @@
         text-transform: capitalize;
     }
 
-    .status-received {
+    .status-resolved {
         background-color: #16a34a;
         /* Green */
         color: white;
@@ -76,23 +76,21 @@
                         <span class="material-symbols-rounded text-sm">print</span>
                         Print
                     </button>
+                    <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                        @if($restocks->count())
+                        <form id="statusForm" method="POST" action="{{ route('restock.updateStatus') }}">
+                            @csrf
+                            <input type="hidden" name="restock_id" id="statusRestockId" value="{{ $restocks->first()->restock_id ?? '' }}">
 
-                    <form id="statusForm" method="POST" action="{{ route('restock.updateStatus') }}">
-                        @csrf
-                        <input type="hidden" name="restock_id" id="statusRestockId" value="{{ $restocks->first()->restock_id ?? '' }}">
+                            <button name="status" value="cancelled"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-red-600 rounded-md hover:bg-red-600 transition">
+                                <span class="material-symbols-rounded text-sm">cancel</span>
+                                Cancel
+                            </button>
+                        </form>
+                        @endif
+                    </div>
 
-                        <button name="status" value="received"
-                            class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-green-700 rounded-md hover:bg-green-700 transition">
-                            <span class="material-symbols-rounded text-sm">check_circle</span>
-                            Received
-                        </button>
-
-                        <button name="status" value="cancelled"
-                            class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-red-600 rounded-md hover:bg-red-600 transition">
-                            <span class="material-symbols-rounded text-sm">cancel</span>
-                            Cancel
-                        </button>
-                    </form>
                 </div>
             </div>
 
@@ -110,8 +108,8 @@
 
                     <!-- Status indicator -->
                     <span class="status-indicator
-        @if($latest->status == 'received') 
-            status-received
+        @if($latest->status == 'resolved') 
+            status-resolved
         @elseif($latest->status == 'cancelled') 
             status-cancelled
         @else 
@@ -128,6 +126,8 @@
                             <tr>
                                 <th class="px-4 py-3 text-left font-semibold">Product</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
+                                <th class="px-4 py-3 text-center font-semibold w-32">Status</th>
+                                <th class="px-4 py-3 text-center font-semibold w-32">Restock Date</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
                             </tr>
                         </thead>
@@ -136,6 +136,16 @@
                             <tr>
                                 <td class="px-4 py-3">{{ $item->name }}</td>
                                 <td class="px-4 py-3 text-center">{{ $item->item_quantity }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    @if($item->item_status == 'complete')
+                                    <span class="px-2 py-1 rounded bg-green-600 text-white text-xs">{{ ucfirst($item->item_status) }}</span>
+                                    @elseif($item->item_status == 'in_progress')
+                                    <span class="px-2 py-1 rounded bg-yellow-400 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
+                                    @else
+                                    <span class="px-2 py-1 rounded bg-gray-300 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-center">{{ $item->item_restock_date ? \Carbon\Carbon::parse($item->item_restock_date)->format('M d, Y') : '-' }}</td>
                                 <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
                             @endforeach
@@ -202,11 +212,11 @@
 
                             <!-- Modern Status Indicator (Tailwind only) -->
                             <span class="inline-flex items-center text-xs font-medium px-3 py-1 rounded-full shadow-sm
-                @if($restock->status == 'received') bg-green-600 text-white
+                @if($restock->status == 'resolved') bg-green-600 text-white
                 @elseif($restock->status == 'cancelled') bg-red-600 text-white
                 @else bg-yellow-400 text-gray-800 @endif">
                                 <span class="w-2 h-2 rounded-full mr-2
-                    @if($restock->status == 'received') bg-white
+                    @if($restock->status == 'resolved') bg-white
                     @elseif($restock->status == 'cancelled') bg-white
                     @else bg-gray-800 @endif"></span>
                                 {{ ucfirst($restock->status) }}
@@ -222,6 +232,8 @@
                                         <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
                                         <th class="px-4 py-3 text-center font-semibold w-32">Cost Price</th>
                                         <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
+                                        <th class="px-4 py-3 text-center font-semibold w-32">Status</th>
+                                        <th class="px-4 py-3 text-center font-semibold w-32">Restock Date</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-200">
@@ -231,6 +243,16 @@
                                         <td class="px-4 py-3 text-center font-mono text-slate-700">{{ $item->item_quantity }}</td>
                                         <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td>
                                         <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
+                                        <td class="px-4 py-3 text-center">
+                                            @if($item->item_status == 'complete')
+                                            <span class="px-2 py-1 rounded bg-green-600 text-white text-xs">{{ ucfirst($item->item_status) }}</span>
+                                            @elseif($item->item_status == 'in_progress')
+                                            <span class="px-2 py-1 rounded bg-yellow-400 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
+                                            @else
+                                            <span class="px-2 py-1 rounded bg-gray-300 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3 text-center">{{ $item->item_restock_date ? \Carbon\Carbon::parse($item->item_restock_date)->format('M d, Y') : '-' }}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
