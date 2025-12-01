@@ -211,6 +211,7 @@ Route::post('/owner/check-existing-name', [InventoryOwnerSettingsController::cla
 //Route for edit product details name and barcode error trap
 Route::post('/inventory/check-name', [InventoryOwnerController::class, 'checkProductName'])->name('inventory-owner-check-name');
 Route::post('/inventory/check-barcode-edit', [InventoryOwnerController::class, 'checkBarcodeEdit'])->name('inventory-owner-check-barcode-edit');
+Route::get('/inventory/get-product-pricing/{prodCode}', [InventoryOwnerController::class, 'getProductPricing'])->name('inventory.get-product-pricing');
 
 
 

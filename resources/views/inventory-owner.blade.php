@@ -232,8 +232,8 @@
     <!-- Header with Tip and Filter -->
     <div class="px-4 py-2 bg-gray-100 flex justify-between items-center">
         <p class="text-xs text-gray-400 flex items-center gap-2">
-            <span class="material-symbols-outlined text-sm">info</span>
-            <span><strong>Tip:</strong> Click on any product row to quickly restock that item</span>
+            <span class="material-symbols-outlined text-xs">info</span>
+            <span class="text-xs"><strong>Tip:</strong> Click on any product row to quickly restock that item</span>
         </p>
         
         <div class="flex items-center gap-2">
@@ -626,49 +626,240 @@
 
     <!-- Restock Details Modal -->
     <div id="restockDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-2xl p-6 w-[95%] max-w-4xl shadow-xl relative">
-            <button id="closeRestockDetailsModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-            <h2 class="text-xl font-semibold text-center text-[#B50612] mb-4">Restock Details</h2>
-
-            <form id="bulkRestockForm" method="POST">
-                @csrf
-                <input type="hidden" name="category_id" id="restockCategoryId">
-
-                <div class="max-h-[360px] overflow-y-auto border rounded p-2">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-100 sticky top-0">
-                            <tr>
-                                <th class="p-2 text-left">Product</th>
-                                <th class="p-2 text-center">Current Stock</th>
-                                <th class="p-2 text-center">Add Qty</th>
-                                <th class="p-2 text-center">Expiration Date</th>
-                                <th class="p-2 text-center">
-                                    <span class="font-semibold">Batch No.</span>
-                                    <span class="font-normal text-gray-500 text-xs">(auto-filled)</span>
-                                </th>
-                                <th class="p-2 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="restockRowsContainer"></tbody>
-                    </table>
+        <div class="bg-white rounded-2xl w-[95%] max-w-6xl shadow-xl relative flex flex-col max-h-[90vh]">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-[#B50612] to-[#8B0410] px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-lg">
+                        <span class="material-symbols-outlined text-white text-2xl">inventory</span>
+                    </div>
+                    <h2 class="text-white text-xl font-bold">Restock Details</h2>
                 </div>
+                <button id="closeRestockDetailsModal" class="text-white hover:bg-white/20 p-2 rounded-lg transition">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
 
-                <div class="mt-4 flex justify-end gap-2">
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto px-6 py-6">
+                <form id="bulkRestockForm" method="POST">
+                    @csrf
+                    <input type="hidden" name="category_id" id="restockCategoryId">
+
+                    <!-- Products Table -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[#B50612]">inventory_2</span>
+                            Stock Information
+                        </h3>
+                        <div class="border rounded-lg overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100 sticky top-0">
+                                    <tr>
+                                        <th class="p-3 text-left">Product</th>
+                                        <th class="p-3 text-center">Current Stock</th>
+                                        <th class="p-3 text-center">Add Qty</th>
+                                        <th class="p-3 text-center">Expiration Date</th>
+                                        <th class="p-3 text-center">
+                                            <span class="font-semibold">Batch No.</span>
+                                            <span class="font-normal text-gray-500 text-xs">(auto-filled)</span>
+                                        </th>
+                                        <th class="p-3 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="restockRowsContainer"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pricing & Tax Section (Only shows when single product) -->
+                    <div id="pricingSection" class="hidden mb-6">
+                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200">
+                            <h3 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-green-600 text-lg">payments</span>
+                                Update Pricing & Tax (Optional)
+                            </h3>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <!-- Left Column: Current Prices Display -->
+                                <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                    <h4 class="text-xs font-semibold text-gray-700 mb-3">Current Prices</h4>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Cost Price:</span>
+                                            <span id="currentCostDisplay" class="font-semibold">₱0.00</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Selling Price:</span>
+                                            <span id="currentSellingDisplay" class="font-semibold">₱0.00</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">VAT Category:</span>
+                                            <span id="currentVatDisplay" class="font-semibold">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: New Price Inputs -->
+                                <div class="space-y-4">
+                                    <!-- Bulk Purchase Calculator -->
+                                    <div>
+                                        <button type="button" onclick="toggleRestockBulkCalculator()" 
+                                            class="w-full flex items-center justify-between p-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition text-left">
+                                            <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                                                <span class="material-symbols-outlined text-blue-600 text-sm">calculate</span>
+                                                Bulk Purchase Calculator
+                                                <span class="text-gray-500 font-normal">(Optional)</span>
+                                            </span>
+                                            <span class="material-symbols-outlined text-blue-600 text-lg" id="restockBulkToggleIcon">expand_more</span>
+                                        </button>
+                                        
+                                        <div id="restockBulkCalculatorSection" class="hidden mt-2 p-3 bg-white rounded-lg border border-blue-200 space-y-2">
+                                            <p class="text-xs text-gray-600">💡 Buy in bulk (pack/box) but sell in smaller units</p>
+                                            
+                                            <div class="grid grid-cols-3 gap-2">
+                                                <div>
+                                                    <label class="block text-xs text-gray-600 mb-1">Quantity</label>
+                                                    <input type="number" id="restockBulkQuantity" min="1" placeholder="Enter quantity" 
+                                                        class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                                                </div>
+                                                <div class="col-span-2">
+                                                    <label class="block text-xs text-gray-600 mb-1">Per</label>
+                                                    <select id="restockBulkUnit" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                                                        <option value="">Select...</option>
+                                                        <option value="pack">Pack</option>
+                                                        <option value="box">Box</option>
+                                                        <option value="dozen">Dozen (12 pcs)</option>
+                                                        <option value="bundle">Bundle</option>
+                                                        <option value="case">Case</option>
+                                                        <option value="kg">Kilogram (kg)</option>
+                                                        <option value="sack">Sack</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Bulk Cost Price</label>
+                                                <input type="number" step="0.01" min="0" id="restockBulkCostPrice" placeholder="₱0.00"
+                                                    class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                                            </div>
+                                            
+                                            <div class="pt-2 border-t border-gray-200">
+                                                <div class="flex justify-between items-center text-xs mb-2">
+                                                    <span class="font-semibold text-gray-700">Cost per unit:</span>
+                                                    <span id="restockCalculatedUnitCost" class="font-bold text-green-600">₱0.00</span>
+                                                </div>
+                                                <button type="button" onclick="applyRestockBulkCost()" 
+                                                    class="w-full px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded hover:bg-blue-600 transition">
+                                                    Apply to Cost Price
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Cost Price & Tax Category -->
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-1.5 mt-2">
+                                                New Cost Price
+                                            </label>
+                                            <input type="number" step="0.01" min="0" name="new_cost_price" id="newCostPrice" placeholder="Leave blank to keep current"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 text-sm">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
+                                                Tax Category
+                                                <button type="button" onclick="toggleRestockVatInfo()" class="text-blue-500 hover:text-blue-700">
+                                                    <span class="material-symbols-outlined text-sm">info</span>
+                                                </button>
+                                            </label>
+                                            <select id="newVatCategory" name="new_vat_category"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 text-sm">
+                                                <option value="">Keep Current</option>
+                                                <option value="vat_exempt">VAT-Exempt (0%)</option>
+                                                <option value="vat_inclusive">VAT-Inclusive (12%)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- VAT Info Panel -->
+                                    <div id="restockVatInfoPanel" class="hidden p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                                        <p class="font-semibold text-blue-900 mb-1.5">📋 Tax Guidelines:</p>
+                                        <ul class="space-y-1 text-blue-800 text-xs">
+                                            <li><strong>0%:</strong> Raw vegetables, fruits, meat, fish, eggs, rice</li>
+                                            <li><strong>12%:</strong> Processed foods, beverages, snacks, household items</li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Markup -->
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select id="newMarkupType" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-600">
+                                            <option value="percentage">Percentage %</option>
+                                            <option value="fixed">Fixed ₱</option>
+                                        </select>
+                                        <input type="number" id="newMarkupValue" placeholder="Markup Value" min="0" step="0.01"
+                                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-600">
+                                    </div>
+
+                                    <!-- New Selling Price -->
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 mb-1.5">New Selling Price per Unit</label>
+                                        <input type="number" step="0.01" name="new_selling_price" id="newSellingPrice" placeholder="Leave blank to keep current"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-sm font-semibold mb-2" readonly>
+                                        
+                                        <!-- Compact Tax Breakdown -->
+                                        <div id="newTaxBreakdown" class="p-2.5 bg-white rounded-lg border border-gray-200">
+                                            <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">Cost:</span>
+                                                    <span id="newCostDisplay" class="font-medium">₱0.00</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span id="newMarkupLabel" class="text-blue-600">Markup:</span>
+                                                    <span id="newMarkupAmount" class="font-medium text-blue-600">₱0.00</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">Base:</span>
+                                                    <span id="newBasePrice" class="font-medium">₱0.00</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span id="newTaxLabel" class="text-green-700">VAT (12%):</span>
+                                                    <span id="newTaxAmount" class="font-medium text-green-700">₱0.00</span>
+                                                </div>
+                                            </div>
+                                            <div class="pt-1.5 mt-1.5 border-t border-gray-300 flex justify-between font-semibold text-gray-900">
+                                                <span>Total Price:</span>
+                                                <span id="newTotalPrice">₱0.00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden field to store product code for pricing update -->
+                    <input type="hidden" name="pricing_prod_code" id="pricingProdCode">
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-2xl">
+                <div class="flex justify-end gap-3">
                     <button type="button" onclick="closeRestockDetails()"
-                        class="px-4 py-2 border rounded bg-gray-300 hover:bg-gray-400 transition">
+                        class="px-6 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition">
                         Cancel
                     </button>
-                    <button type="submit"
-                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-all duration-200 transform hover:scale-105">
+                    <button type="submit" form="bulkRestockForm"
+                        class="px-6 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition shadow-lg hover:shadow-xl flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">check_circle</span>
                         Save Restock
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
-
 
 
     <!-- Type Barcode Modal -->
@@ -698,7 +889,7 @@
                         class="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:border-red-600 mb-4 placeholder:text-sm"
                         inputmode="text"
                         title="Only letters and numbers are allowed"
-                        maxlength="25"
+                        maxlength="15"
                         pattern="[A-Za-z0-9]+"
                         required>
 
@@ -987,132 +1178,374 @@
     </div>
 </div>
 
-    <!-- Register New Product Modal -->
-    <div id="registerProductModal"
-        class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+<!-- Register New Product Modal with Integrated Restock -->
+<div id="registerProductModal"
+    class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50 p-4">
 
-        <div class="bg-white rounded-lg w-[50%] min-h-[550px] shadow-lg relative flex flex-col items-center">
+    <div class="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] shadow-2xl relative flex flex-col">
 
-            <!-- Red Top Bar -->
-            <div class="bg-[#B50612] w-full h-16 flex items-center justify-between px-6 rounded-t-lg">
-                <h2 class="text-white text-lg font-medium">REGISTER NEW PRODUCT</h2>
-                <button onclick="closeRegisterModal()" class="text-white hover:text-gray-200">
-                    <span class="material-symbols-outlined text-white">close</span>
-                </button>
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-[#B50612] to-[#8B0410] px-6 py-4 rounded-t-xl flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-lg">
+                    <span class="material-symbols-outlined text-white text-2xl">add_shopping_cart</span>
+                </div>
+                <h2 class="text-white text-xl font-bold">Register New Product</h2>
             </div>
+            <button onclick="closeRegisterModal()" class="text-white hover:bg-white/20 p-2 rounded-lg transition">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
 
-            <!-- Scrollable Modal Content -->
-            <div class="flex-1 w-full flex flex-row px-6 py-6 mb-6 mt-2 overflow-y-auto space-x-6">
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto px-6 py-6">
+            <form id="registerProductForm" class="space-y-5">
 
-                <!-- Left Side (Form Fields) -->
-                <form id="registerProductForm" class="w-1/2 space-y-4">
+                <!-- Main Grid Layout - 2 Columns -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-                    <!-- Product Name -->
-                    <input type="text" name="name" placeholder="Product Name"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
+                    <!-- LEFT COLUMN -->
+                    <div class="space-y-5">
+                        
+                        <!-- Product Image & Barcode Row -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Product Image Upload -->
+                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col">
+                                <h3 class="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[#B50612] text-base">image</span>
+                                    Product Image
+                                </h3>
+                                <div class="flex-1 flex items-center justify-center">
+                                    <label for="productPhoto"
+                                        class="w-full max-w-[180px] aspect-square flex items-center justify-center border-2 border-dashed border-[#B50612] rounded-lg cursor-pointer hover:bg-gray-100 transition relative overflow-hidden group">
+                                        <div class="text-center">
+                                            <span class="material-symbols-outlined text-[#B50612] text-3xl" id="uploadIcon">add_photo_alternate</span>
+                                            <p class="text-xs text-gray-500 mt-1">Click to upload</p>
+                                        </div>
+                                        <img id="previewImage" class="absolute inset-0 w-full h-full object-cover hidden rounded-lg" />
+                                        <input type="file" id="productPhoto" name="photo" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
+                                    </label>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2 text-center" id="fileName">JPG, PNG, WEBP (Max 2MB)</p>
+                            </div>
 
-                    <!-- Description -->
-                    <textarea name="description" placeholder="Description"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm"></textarea>
-
-                    <!-- Category + Unit -->
-                    <div class="flex space-x-2">
-                        <!-- Category -->
-                        <div class="w-1/2">
-                            <select id="categorySelect" name="category_id"
-                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm mb-2"
-                                required>
-                                <option value="">Category</option>
-                                @foreach($categories as $cat)
-                                <option value="{{ $cat->category_id }}">{{ $cat->category }}</option>
-                                @endforeach
-                                <option value="other">Other...</option>
-                            </select>
-
-                            <input type="text" id="customCategory" name="custom_category"
-                                placeholder="Enter new category"
-                                class="hidden w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm">
+                            <!-- Barcode Display -->
+                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col">
+                                <h3 class="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[#B50612] text-base">barcode_scanner</span>
+                                    Barcode
+                                </h3>
+                                <div class="bg-white rounded-lg p-3 text-center shadow-md flex-1 flex flex-col justify-center">
+                                    <img id="barcodeImage" src="{{ asset('assets/barcode.png') }}"
+                                        alt="Barcode Preview" class="w-full max-w-[160px] mx-auto object-contain mb-2">
+                                    <div id="autoFilledBarcode"
+                                        class="mt-2 px-3 py-1.5 bg-gray-100 rounded-lg font-mono text-xs text-gray-800 tracking-widest">
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1.5">(auto-filled)</p>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Unit -->
-                        <div class="w-1/2">
-                            <select id="unitSelect" name="unit_id"
-                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm mb-2"
-                                required>
-                                <option value="">Unit</option>
-                                @foreach($units as $unit)
-                                <option value="{{ $unit->unit_id }}">{{ $unit->unit }}</option>
-                                @endforeach
-                                <option value="other">Other...</option>
-                            </select>
+                        <!-- Product Information -->
+                        <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#B50612] text-lg">inventory_2</span>
+                                Product Information
+                            </h3>
 
-                            <input type="text" id="customUnit" name="custom_unit"
-                                placeholder="Enter new unit"
-                                class="hidden w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-green-600 text-sm">
+                            <!-- Product Name -->
+                            <div class="mb-3">
+                                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Product Name *</label>
+                                <input type="text" name="name" placeholder="Enter product name" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B50612] focus:border-transparent text-sm placeholder-gray-400 transition">
+                            </div>
+
+                            <!-- Description -->
+                            <div class="mb-3">
+                                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
+                                <textarea name="description" placeholder="Enter product description (optional)" rows="2"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B50612] focus:border-transparent text-sm placeholder-gray-400 resize-none transition"></textarea>
+                            </div>
+
+                            <!-- Category & Unit Grid -->
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <!-- Category -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1.5">Category *</label>
+                                    <select id="categorySelect" name="category_id" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B50612] focus:border-transparent text-sm transition">
+                                        <option value="">Select...</option>
+                                        @foreach($categories as $cat)
+                                        <option value="{{ $cat->category_id }}">{{ $cat->category }}</option>
+                                        @endforeach
+                                        <option value="other">Other...</option>
+                                    </select>
+                                    <input type="text" id="customCategory" name="custom_category"
+                                        placeholder="New category"
+                                        class="hidden w-full px-3 py-2 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B50612] focus:border-transparent text-sm transition">
+                                </div>
+
+                                <!-- Unit -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1.5">Unit *</label>
+                                    <select id="unitSelect" name="unit_id" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B50612] focus:border-transparent text-sm transition">
+                                        <option value="">Select...</option>
+                                        @foreach($units as $unit)
+                                        <option value="{{ $unit->unit_id }}">{{ $unit->unit }}</option>
+                                        @endforeach
+                                        <option value="other">Other...</option>
+                                    </select>
+                                    <input type="text" id="customUnit" name="custom_unit"
+                                        placeholder="New unit"
+                                        class="hidden w-full px-3 py-2 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent text-sm transition">
+                                </div>
+                            </div>
+
+                            <!-- Stock Limit -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Minimum Stock Alert *</label>
+                                <input type="number" name="stock_limit" placeholder="e.g., 5" min="0" step="1" required
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B50612] focus:border-transparent text-sm placeholder-gray-400 transition">
+                                <p class="text-xs text-gray-500 mt-1">Warn when stock is at or below this number</p>
+                            </div>
+                        </div>
+
+                        <!-- Pricing Section -->
+                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+                            <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-green-600 text-lg">payments</span>
+                                Pricing & Tax
+                            </h3>
+
+                            <!-- Bulk Purchase Calculator (Collapsible) -->
+                            <div class="mb-3">
+                                <button type="button" onclick="toggleBulkCalculator()" 
+                                    class="w-full flex items-center justify-between p-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition text-left">
+                                    <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-blue-600 text-sm">calculate</span>
+                                        Bulk Purchase Calculator
+                                        <span class="text-gray-500 font-normal">(Optional)</span>
+                                    </span>
+                                    <span class="material-symbols-outlined text-blue-600 text-lg" id="bulkToggleIcon">expand_more</span>
+                                </button>
+                                
+                                <div id="bulkCalculatorSection" class="hidden mt-2 p-3 bg-white rounded-lg border border-blue-200 space-y-2">
+                                    <p class="text-xs text-gray-600">
+                                        💡 Buy in bulk (pack/box) but sell in smaller units
+                                    </p>
+                                    
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">Quantity</label>
+                                            <input type="number" id="bulkQuantity" min="1" placeholder="Enter quantity" 
+                                                class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm placeholder-gray-400">
+                                        </div>
+                                        <div class="col-span-2">
+                                            <label class="block text-xs text-gray-600 mb-1">Per</label>
+                                            <select id="bulkUnit" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                                                <option value="">Select...</option>
+                                                <option value="pack">Pack</option>
+                                                <option value="box">Box</option>
+                                                <option value="dozen">Dozen (12 pcs)</option>
+                                                <option value="bundle">Bundle</option>
+                                                <option value="case">Case</option>
+                                                <option value="kg">Kilogram (kg)</option>
+                                                <option value="sack">Sack</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">Bulk Cost Price</label>
+                                        <input type="number" step="0.01" min="0" id="bulkCostPrice" placeholder="₱0.00"
+                                            class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm placeholder-gray-400">
+                                    </div>
+                                    
+                                    <div class="pt-2 border-t border-gray-200">
+                                        <div class="flex justify-between items-center text-xs mb-2">
+                                            <span class="font-semibold text-gray-700">Cost per unit:</span>
+                                            <span id="calculatedUnitCost" class="font-bold text-green-600">₱0.00</span>
+                                        </div>
+                                        <button type="button" onclick="applyBulkCost()" 
+                                            class="w-full px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded hover:bg-blue-600 transition">
+                                            Apply to Cost Price
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cost Price & Tax Category Row -->
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1.5 mt-2">
+                                        Cost Price *
+                                    </label>
+                                    <input type="number" step="0.01" min="0" name="cost_price" id="costPrice" placeholder="0.00" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent text-sm placeholder-gray-400 transition">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
+                                        Tax Category *
+                                        <button type="button" onclick="toggleVatInfo()" class="text-blue-500 hover:text-blue-700">
+                                            <span class="material-symbols-outlined text-sm">info</span>
+                                        </button>
+                                    </label>
+                                    <select id="vatCategory" name="vat_category" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 text-sm transition">
+                                        <option value="vat_exempt">VAT-Exempt (0%)</option>
+                                        <option value="vat_inclusive" selected>VAT-Inclusive (12%)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- VAT Info Panel (Hidden by default) -->
+                            <div id="vatInfoPanel" class="hidden mb-3 p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                                <p class="font-semibold text-blue-900 mb-1.5">📋 Tax Guidelines:</p>
+                                <ul class="space-y-1 text-blue-800 text-xs">
+                                    <li><strong>0%:</strong> Raw vegetables, fruits, meat, fish, eggs, rice</li>
+                                    <li><strong>12%:</strong> Processed foods, beverages, snacks, household items</li>
+                                </ul>
+                            </div>
+
+                            <!-- Markup Row -->
+                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                <select id="markupType" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-600 transition">
+                                    <option value="percentage">Percentage %</option>
+                                    <option value="fixed">Fixed ₱</option>
+                                </select>
+                                <input type="number" id="markupValue" placeholder="Markup Value" min="0" step="0.01"
+                                    class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-600 placeholder-gray-400 transition">
+                            </div>
+
+                            <!-- Selling Price with Compact Breakdown -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Selling Price per Unit *</label>
+                                <input type="number" step="0.01" name="selling_price" id="sellingPrice" placeholder="0.00" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-sm font-semibold mb-2" readonly>
+                                
+                                <!-- Compact Tax Breakdown -->
+                                <div id="taxBreakdown" class="p-2.5 bg-white rounded-lg border border-gray-200">
+                                    <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Cost:</span>
+                                            <span id="costDisplay" class="font-medium">₱0.00</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span id="markupLabel" class="text-blue-600">Markup:</span>
+                                            <span id="markupAmount" class="font-medium text-blue-600">₱0.00</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Base:</span>
+                                            <span id="basePrice" class="font-medium">₱0.00</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span id="taxLabel" class="text-green-700">VAT (12%):</span>
+                                            <span id="taxAmount" class="font-medium text-green-700">₱0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="pt-1.5 mt-1.5 border-t border-gray-300 flex justify-between font-semibold text-gray-900">
+                                        <span>Total Price:</span>
+                                        <span id="totalPrice">₱0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- RIGHT COLUMN: Initial Stock -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-orange-200 h-full flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-orange-600 text-lg">inventory</span>
+                                    Initial Stock (Optional)
+                                </h3>
+                                <button type="button" id="addBatchBtn"
+                                    class="px-3 py-1.5 bg-orange-500 text-white text-xs font-semibold rounded-lg hover:bg-orange-600 transition flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">add</span>
+                                    Add Batch
+                                </button>
+                            </div>
+
+                            <p class="text-xs text-gray-600 mb-3 bg-white/60 p-2.5 rounded-lg">
+                                <span class="material-symbols-outlined text-xs align-middle">info</span>
+                                Add initial stock batches. You can skip this and add stock later.
+                            </p>
+
+                            <!-- Batch Rows Container -->
+                            <div id="batchRowsContainer" class="space-y-3 flex-1 overflow-y-auto pr-2">
+                                <!-- Initial empty state message -->
+                                <div id="emptyBatchMessage" class="text-center py-12 text-gray-400">
+                                    <span class="material-symbols-outlined text-5xl">inventory_2</span>
+                                    <p class="text-sm mt-2">No batches added yet</p>
+                                    <p class="text-xs">Click "Add Batch" to start</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Stock Limit -->
-                    <input type="number" name="stock_limit" placeholder="Minimum Stock Limit" min="0" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
-                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 placeholder:text-sm text-sm" required>
+                </div>
 
-                    <!-- Pricing -->
-                    <div class="border rounded-lg p-3 bg-gray-100">
-                        <h3 class="font-semibold text-sm text-center mb-2">Pricing</h3>
+            </form>
+        </div>
 
-                        <!-- Cost Price -->
-                        <input type="number" step="0.01" min="0" name="cost_price" id="costPrice" placeholder="Cost Price"
-                            class="w-full px-3 py-2 mb-2 border border-gray-300 rounded focus:outline-none focus:border-red-600 text-sm" required>
-
-                        <!-- Markup Type -->
-                        <div class="flex space-x-2 mb-2">
-                            <select id="markupType" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
-                                <option value="percentage">Percentage %</option>
-                                <option value="fixed">Fixed ₱</option>
-                            </select>
-                            <input type="number" id="markupValue" placeholder="Markup Value" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
-                                class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm">
-                        </div>
-
-                        <!-- Selling Price -->
-                        <input type="number" step="0.01" name="selling_price" id="sellingPrice" placeholder="Selling Price"
-                            class="w-full px-3 py-2 border border-gray-300 rounded text-sm" readonly>
-                    </div>
-                </form>
-
-                <!-- Right Side (Photo & Barcode) -->
-                <div class="flex flex-col items-center w-1/2 space-y-16">
-
-                    <!-- Upload Photo -->
-                    <div class="flex flex-col items-center space-y-2.5">
-                        <label for="productPhoto"
-                            class="w-32 h-32 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg cursor-pointer hover:bg-gray-50 relative overflow-hidden">
-                            <span class="material-symbols-outlined text-red-500 text-xl" id="uploadIcon">add_a_photo</span>
-                            <img id="previewImage" class="absolute inset-0 w-full h-full object-cover hidden rounded-lg" />
-                            <input type="file" id="productPhoto" name="photo" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
-                        </label>
-                        <span class="text-xs text-red-500" id="fileName">Upload Photo</span>
-                    </div>
-
-                    <!-- Barcode -->
-                    <div class="flex flex-col items-center space-y-1">
-                        <img id="barcodeImage" src="{{ asset('assets/barcode.png') }}"
-                            alt="Barcode Preview" class="w-48 object-contain">
-                        <div id="autoFilledBarcode"
-                            class="px-4 py-2 bg-gray-100 rounded font-mono text-base text-gray-800 tracking-widest">
-                        </div>
-                        <span class="text-xs text-gray-500">(auto-filled from typed barcode)</span>
-                    </div>
-
-                    <!-- Submit Button -->
+        <!-- Footer with Action Buttons -->
+        <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-xl">
+            <div class="flex justify-between items-center">
+                <p class="text-xs text-gray-500">* Required fields</p>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeRegisterModal()"
+                        class="px-6 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition">
+                        Cancel
+                    </button>
                     <button type="submit" form="registerProductForm"
-                        class="inline-flex items-center justify-center px-8 py-3 text-sm font-medium rounded-lg shadow-md text-white bg-green-500 hover:green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
-                        Submit
+                        class="px-6 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition shadow-lg hover:shadow-xl flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">check_circle</span>
+                        Register Product
                     </button>
                 </div>
             </div>
         </div>
+
     </div>
+</div>
+
+<!-- Batch Row Template (Hidden) -->
+<template id="batchRowTemplate">
+    <div class="batch-row bg-white rounded-lg p-3.5 border-2 border-orange-200 relative">
+        <button type="button" class="remove-batch-btn absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition shadow-md z-10">
+            <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+        
+        <div class="space-y-2.5">
+            <!-- Batch Label -->
+            <div class="flex items-center justify-between bg-orange-50 px-3 py-1.5 rounded-lg">
+                <span class="text-xs font-bold text-orange-700 batch-label">Batch #1</span>
+                <span class="material-symbols-outlined text-orange-400 text-sm">inventory</span>
+            </div>
+
+            <!-- Quantity -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Quantity *</label>
+                <input type="number" name="batches[INDEX][quantity]" min="1" placeholder="Enter quantity" required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm transition"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+            </div>
+
+            <!-- Expiration Date -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Expiration Date (Optional)</label>
+                <input type="date" name="batches[INDEX][expiration_date]" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm transition expiration-date-input">
+                <p class="text-xs text-gray-500 mt-1">Must be at least 7 days from today</p>
+            </div>
+        </div>
+    </div>
+</template>
 
 
 
@@ -1684,7 +2117,7 @@
                     <button 
                     type="button" 
                     class="flex-1 bg-red-600 text-white text-xs font-medium px-3 py-1 rounded hover:bg-red-700 transition"
-                    onclick="this.closest('tr').remove()">
+                    onclick="this.closest('tr').remove(); checkPricingVisibility();">
                     Remove
                     </button>
                 </div>
@@ -1698,7 +2131,77 @@
                     validateExpirationDate(this);
                 });
             }
+            
+            // Check if pricing section should be shown
+            checkPricingVisibility();
         };
+
+        // Check if pricing section should be visible (only for single product restock)
+        function checkPricingVisibility() {
+            const container = document.getElementById('restockRowsContainer');
+            const rows = container.querySelectorAll('tr');
+            const pricingSection = document.getElementById('pricingSection');
+            const pricingProdCode = document.getElementById('pricingProdCode');
+            
+            // Get unique product codes
+            const productCodes = new Set();
+            rows.forEach(row => {
+                const prodCodeInput = row.querySelector('input[name*="[prod_code]"]');
+                if (prodCodeInput) {
+                    productCodes.add(prodCodeInput.value);
+                }
+            });
+            
+            // Show pricing section only if exactly one unique product
+            if (productCodes.size === 1) {
+                const prodCode = Array.from(productCodes)[0];
+                pricingSection.classList.remove('hidden');
+                pricingProdCode.value = prodCode;
+                
+                // Fetch current pricing info
+                fetchProductPricingInfo(prodCode);
+            } else {
+                pricingSection.classList.add('hidden');
+                pricingProdCode.value = '';
+                clearPricingFields();
+            }
+        }
+
+        // Fetch product pricing information
+        function fetchProductPricingInfo(prodCode) {
+            fetch(`/inventory/get-product-pricing/${prodCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Display current prices
+                        document.getElementById('currentCostDisplay').textContent = '₱' + parseFloat(data.cost_price).toFixed(2);
+                        document.getElementById('currentSellingDisplay').textContent = '₱' + parseFloat(data.selling_price).toFixed(2);
+                        document.getElementById('currentVatDisplay').textContent = data.vat_category === 'vat_exempt' ? 'VAT-Exempt' : 'VAT-Inclusive';
+                        
+                        // Clear new price fields
+                        clearPricingFields();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pricing info:', error);
+                });
+        }
+
+        // Clear pricing input fields
+        function clearPricingFields() {
+            document.getElementById('newCostPrice').value = '';
+            document.getElementById('newVatCategory').value = '';
+            document.getElementById('newMarkupType').value = 'percentage';
+            document.getElementById('newMarkupValue').value = '';
+            document.getElementById('newSellingPrice').value = '';
+            
+            // Clear breakdown
+            document.getElementById("newCostDisplay").textContent = '₱0.00';
+            document.getElementById("newMarkupAmount").textContent = '₱0.00';
+            document.getElementById("newBasePrice").textContent = '₱0.00';
+            document.getElementById("newTaxAmount").textContent = '₱0.00';
+            document.getElementById("newTotalPrice").textContent = '₱0.00';
+        }
 
         // === Duplicate Row for the Same Product (increments batch) ===
         window.duplicateBatchRow = function(button, prodCode, prodName, categoryId, currentStock) {
@@ -1855,6 +2358,7 @@
             bulkRestockForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
+                // Validate expiration dates
                 const expirationInputs = document.querySelectorAll('.expiration-date-input');
                 let hasInvalidDates = false;
                 const invalidProducts = [];
@@ -1888,6 +2392,20 @@
                 }
                 
                 const formData = new FormData(bulkRestockForm);
+                
+                // Add pricing data if present
+                const newCostPrice = document.getElementById('newCostPrice').value;
+                const newSellingPrice = document.getElementById('newSellingPrice').value;
+                const newVatCategory = document.getElementById('newVatCategory').value;
+                const pricingProdCode = document.getElementById('pricingProdCode').value;
+                
+                if (pricingProdCode && (newCostPrice || newSellingPrice || newVatCategory)) {
+                    formData.append('update_pricing', '1');
+                    if (newCostPrice) formData.append('new_cost_price', newCostPrice);
+                    if (newSellingPrice) formData.append('new_selling_price', newSellingPrice);
+                    if (newVatCategory) formData.append('new_vat_category', newVatCategory);
+                    formData.append('pricing_prod_code', pricingProdCode);
+                }
 
                 fetch('/inventory/bulk-restock', {
                         method: 'POST',
@@ -1966,6 +2484,173 @@
     }
 </script>
 
+<script>
+ // ===== RESTOCK PRICING FUNCTIONALITY =====
+
+// Toggle VAT info in restock modal
+function toggleRestockVatInfo() {
+    const panel = document.getElementById('restockVatInfoPanel');
+    if (panel) {
+        panel.classList.toggle('hidden');
+    }
+}
+
+// Toggle bulk calculator in restock modal
+function toggleRestockBulkCalculator() {
+    const section = document.getElementById('restockBulkCalculatorSection');
+    const toggleIcon = document.getElementById('restockBulkToggleIcon');
+    
+    if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        toggleIcon.textContent = 'expand_less';
+    } else {
+        section.classList.add('hidden');
+        toggleIcon.textContent = 'expand_more';
+        // Clear fields
+        document.getElementById('restockBulkQuantity').value = '';
+        document.getElementById('restockBulkUnit').value = '';
+        document.getElementById('restockBulkCostPrice').value = '';
+        document.getElementById('restockCalculatedUnitCost').textContent = '₱0.00';
+    }
+}
+
+// Calculate unit cost from bulk purchase in restock modal
+function calculateRestockBulkUnitCost() {
+    const bulkQuantity = parseFloat(document.getElementById('restockBulkQuantity').value) || 0;
+    const bulkCostPrice = parseFloat(document.getElementById('restockBulkCostPrice').value) || 0;
+    const bulkUnit = document.getElementById('restockBulkUnit').value;
+    
+    if (bulkQuantity <= 0 || bulkCostPrice <= 0) {
+        document.getElementById('restockCalculatedUnitCost').textContent = '₱0.00';
+        return 0;
+    }
+    
+    let effectiveQuantity = bulkQuantity;
+    if (bulkUnit === 'dozen') {
+        effectiveQuantity = 12;
+    }
+    
+    const unitCost = bulkCostPrice / effectiveQuantity;
+    document.getElementById('restockCalculatedUnitCost').textContent = '₱' + unitCost.toFixed(2);
+    
+    return unitCost;
+}
+
+// Apply bulk cost to restock cost price
+function applyRestockBulkCost() {
+    const unitCost = calculateRestockBulkUnitCost();
+    
+    if (unitCost > 0) {
+        document.getElementById('newCostPrice').value = unitCost.toFixed(2);
+        calculateRestockSellingPrice();
+        
+        const calculatedCostEl = document.getElementById('restockCalculatedUnitCost');
+        const originalText = calculatedCostEl.textContent;
+        calculatedCostEl.textContent = '✓ Applied!';
+        calculatedCostEl.classList.add('text-green-600');
+        
+        setTimeout(() => {
+            calculatedCostEl.textContent = originalText;
+        }, 2000);
+    } else {
+        alert('Please fill in all bulk purchase fields correctly.');
+    }
+}
+
+// Calculate new selling price in restock modal
+function calculateRestockSellingPrice() {
+    const cost = parseFloat(document.getElementById("newCostPrice").value) || 0;
+    const type = document.getElementById("newMarkupType").value;
+    const markup = parseFloat(document.getElementById("newMarkupValue").value) || 0;
+    const vatCategory = document.getElementById("newVatCategory").value;
+    
+    // If no cost price entered, don't calculate
+    if (cost === 0) {
+        document.getElementById("newSellingPrice").value = '';
+        document.getElementById("newCostDisplay").textContent = '₱0.00';
+        document.getElementById("newMarkupAmount").textContent = '₱0.00';
+        document.getElementById("newBasePrice").textContent = '₱0.00';
+        document.getElementById("newTaxAmount").textContent = '₱0.00';
+        document.getElementById("newTotalPrice").textContent = '₱0.00';
+        return;
+    }
+    
+    let markupAmount = 0;
+    let basePrice = cost;
+
+    if (type === "percentage") {
+        markupAmount = cost * (markup / 100);
+        basePrice = cost + markupAmount;
+    } else {
+        markupAmount = markup;
+        basePrice = cost + markupAmount;
+    }
+
+    // Determine VAT based on selection or keep current
+    let taxAmount = 0;
+    let taxLabel = '';
+    let sellingPrice = basePrice;
+    
+    // Get current VAT if not changing
+    const currentVat = document.getElementById('currentVatDisplay').textContent;
+    const effectiveVat = vatCategory || (currentVat === 'VAT-Exempt' ? 'vat_exempt' : 'vat_inclusive');
+
+    if (effectiveVat === 'vat_exempt') {
+        taxAmount = 0;
+        taxLabel = 'VAT (0%)';
+        sellingPrice = basePrice;
+    } else {
+        taxAmount = basePrice * 0.12;
+        taxLabel = 'VAT (12%)';
+        sellingPrice = basePrice + taxAmount;
+    }
+
+    const markupLabel = type === "percentage" 
+        ? `Markup (${markup}%):` 
+        : `Markup (₱${markup}):`;
+
+    document.getElementById("newSellingPrice").value = sellingPrice.toFixed(2);
+    document.getElementById("newCostDisplay").textContent = '₱' + cost.toFixed(2);
+    document.getElementById("newMarkupLabel").textContent = markupLabel;
+    document.getElementById("newMarkupAmount").textContent = '₱' + markupAmount.toFixed(2);
+    document.getElementById("newBasePrice").textContent = '₱' + basePrice.toFixed(2);
+    document.getElementById("newTaxLabel").textContent = taxLabel + ':';
+    document.getElementById("newTaxAmount").textContent = '₱' + taxAmount.toFixed(2);
+    document.getElementById("newTotalPrice").textContent = '₱' + sellingPrice.toFixed(2);
+    
+    const taxAmountEl = document.getElementById("newTaxAmount");
+    if (effectiveVat === 'vat_exempt') {
+        taxAmountEl.parentElement.classList.add('text-gray-500');
+        taxAmountEl.parentElement.classList.remove('text-green-700');
+    } else {
+        taxAmountEl.parentElement.classList.add('text-green-700');
+        taxAmountEl.parentElement.classList.remove('text-gray-500');
+    }
+}
+
+// Initialize pricing event listeners for restock modal
+document.addEventListener("DOMContentLoaded", () => {
+    ["newCostPrice", "newMarkupType", "newMarkupValue", "newVatCategory"].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener("input", calculateRestockSellingPrice);
+            element.addEventListener("change", calculateRestockSellingPrice);
+        }
+    });
+    
+    // Bulk calculator listeners for restock
+    const restockBulkQuantity = document.getElementById('restockBulkQuantity');
+    const restockBulkCostPrice = document.getElementById('restockBulkCostPrice');
+    const restockBulkUnit = document.getElementById('restockBulkUnit');
+    
+    if (restockBulkQuantity && restockBulkCostPrice && restockBulkUnit) {
+        [restockBulkQuantity, restockBulkCostPrice, restockBulkUnit].forEach(el => {
+            el.addEventListener('input', calculateRestockBulkUnitCost);
+            el.addEventListener('change', calculateRestockBulkUnitCost);
+        });
+    }
+});
+</script>
 
 <!-- Type Barcode Modal JavaScript -->
 <script>
@@ -3690,6 +4375,361 @@
         });
     </script>
 
+<!-- for new register product with integrated add stock  -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const EXPIRATION_DAYS_LIMIT = 7;
+    let batchCounter = 0;
+
+    // Get minimum expiration date (7 days from today)
+    function getMinimumExpirationDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const minDate = new Date(today);
+        minDate.setDate(today.getDate() + EXPIRATION_DAYS_LIMIT + 1);
+        return minDate.toISOString().split('T')[0];
+    }
+
+    // Generate batch number (will be converted to P{prodCode}-BATCH-{number} on backend)
+    function generateBatchNumber() {
+        batchCounter++;
+        return `BATCH-${batchCounter}`;
+    }
+    
+    // Note: The actual batch number stored in database will be P{prodCode}-BATCH-{number}
+    // This is just a temporary display number for the user during registration
+
+    // Add batch row
+    function addBatchRow() {
+        const container = document.getElementById('batchRowsContainer');
+        const emptyMessage = document.getElementById('emptyBatchMessage');
+        const template = document.getElementById('batchRowTemplate');
+        
+        // Hide empty message
+        if (emptyMessage) {
+            emptyMessage.style.display = 'none';
+        }
+
+        // Clone template
+        const clone = template.content.cloneNode(true);
+        const batchRow = clone.querySelector('.batch-row');
+        
+        // Increment counter
+        batchCounter++;
+        
+        // Set batch label (for display only - backend will generate actual batch number)
+        const batchLabel = clone.querySelector('.batch-label');
+        batchLabel.textContent = `Batch #${batchCounter}`;
+        
+        // Update indices in input names
+        const inputs = clone.querySelectorAll('input[name*="INDEX"]');
+        inputs.forEach(input => {
+            input.name = input.name.replace('INDEX', batchCounter - 1);
+        });
+
+        // Set min date for expiration
+        const expirationInput = clone.querySelector('.expiration-date-input');
+        expirationInput.min = getMinimumExpirationDate();
+        
+        // Add expiration validation
+        expirationInput.addEventListener('change', function() {
+            validateExpirationDate(this);
+        });
+
+        // Remove batch handler
+        const removeBtn = clone.querySelector('.remove-batch-btn');
+        removeBtn.addEventListener('click', function() {
+            batchRow.remove();
+            
+            // Renumber remaining batches
+            const remainingBatches = container.querySelectorAll('.batch-row');
+            remainingBatches.forEach((row, index) => {
+                const label = row.querySelector('.batch-label');
+                if (label) {
+                    label.textContent = `Batch #${index + 1}`;
+                }
+            });
+            
+            // Update batch counter
+            batchCounter = remainingBatches.length;
+            
+            // Show empty message if no batches left
+            if (remainingBatches.length === 0 && emptyMessage) {
+                emptyMessage.style.display = 'block';
+            }
+        });
+
+        container.appendChild(batchRow);
+    }
+
+    // Validate expiration date
+    function validateExpirationDate(input) {
+        if (!input.value) return true;
+        
+        const selectedDate = new Date(input.value);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const minDate = new Date(today);
+        minDate.setDate(today.getDate() + EXPIRATION_DAYS_LIMIT);
+        
+        const timeDiff = selectedDate - today;
+        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        
+        // Remove existing error
+        const existingError = input.parentNode.querySelector('.expiration-error');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        if (selectedDate < minDate) {
+            input.classList.add('border-red-500');
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'expiration-error text-red-500 text-xs mt-1';
+            
+            if (daysDiff < 0) {
+                errorDiv.textContent = 'Date cannot be in the past';
+            } else if (daysDiff === 0) {
+                errorDiv.textContent = `Date must be at least ${EXPIRATION_DAYS_LIMIT} days from today (selected: today)`;
+            } else {
+                errorDiv.textContent = `Date must be at least ${EXPIRATION_DAYS_LIMIT} days from today (selected: ${daysDiff} day${daysDiff !== 1 ? 's' : ''})`;
+            }
+            
+            input.parentNode.appendChild(errorDiv);
+            return false;
+        } else {
+            input.classList.remove('border-red-500');
+            return true;
+        }
+    }
+
+    // Add batch button
+    document.getElementById('addBatchBtn').addEventListener('click', addBatchRow);
+
+    // Photo preview (existing code)
+    const photoInput = document.getElementById("productPhoto");
+    const previewImage = document.getElementById("previewImage");
+    const uploadIcon = document.getElementById("uploadIcon");
+    const fileName = document.getElementById("fileName");
+
+    if (photoInput) {
+        photoInput.addEventListener("change", function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewImage.classList.remove("hidden");
+                    uploadIcon.style.display = "none";
+                    fileName.textContent = photoInput.files[0].name;
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+
+    // Pricing calculation (existing code)
+    ["costPrice", "markupType", "markupValue", "vatCategory"].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener("input", calculateSellingPrice);
+            element.addEventListener("change", calculateSellingPrice);
+        }
+    });
+
+    // Category/Unit toggle (existing code)
+    const categorySelect = document.getElementById("categorySelect");
+    const customCategory = document.getElementById("customCategory");
+    const unitSelect = document.getElementById("unitSelect");
+    const customUnit = document.getElementById("customUnit");
+
+    if (categorySelect) {
+        categorySelect.addEventListener("change", () => {
+            if (categorySelect.value === "other") {
+                customCategory.classList.remove("hidden");
+                customCategory.required = true;
+                categorySelect.classList.remove('text-gray-400');
+                categorySelect.classList.add('text-gray-900');
+            } else {
+                customCategory.classList.add("hidden");
+                customCategory.required = false;
+            }
+        });
+    }
+
+    if (unitSelect) {
+        unitSelect.addEventListener("change", () => {
+            if (unitSelect.value === "other") {
+                customUnit.classList.remove("hidden");
+                customUnit.required = true;
+                unitSelect.classList.remove('text-gray-400');
+                unitSelect.classList.add('text-gray-900');
+            } else {
+                customUnit.classList.add("hidden");
+                customUnit.required = false;
+                // Change text color based on selection
+                if (unitSelect.value === "") {
+                    unitSelect.classList.add('text-gray-400');
+                    unitSelect.classList.remove('text-gray-900');
+                } else {
+                    unitSelect.classList.remove('text-gray-400');
+                    unitSelect.classList.add('text-gray-900');
+                }
+            }
+        });
+    }
+});
+
+// Calculate selling price with VAT (existing function - enhanced)
+function calculateSellingPrice() {
+    const cost = parseFloat(document.getElementById("costPrice").value) || 0;
+    const type = document.getElementById("markupType").value;
+    const markup = parseFloat(document.getElementById("markupValue").value) || 0;
+    const vatCategory = document.getElementById("vatCategory").value;
+    
+    let markupAmount = 0;
+    let basePrice = cost;
+
+    // Apply markup to cost
+    if (type === "percentage") {
+        markupAmount = cost * (markup / 100);
+        basePrice = cost + markupAmount;
+    } else {
+        markupAmount = markup;
+        basePrice = cost + markupAmount;
+    }
+
+    // Calculate VAT based on category
+    let taxAmount = 0;
+    let taxLabel = '';
+    let sellingPrice = basePrice;
+
+    if (vatCategory === 'vat_exempt') {
+        taxAmount = 0;
+        taxLabel = 'VAT (0%)';
+        sellingPrice = basePrice;
+    } else {
+        // vat_inclusive - default 12% VAT
+        taxAmount = basePrice * 0.12;
+        taxLabel = 'VAT (12%)';
+        sellingPrice = basePrice + taxAmount;
+    }
+
+    // Update markup label based on type
+    const markupLabel = type === "percentage" 
+        ? `Markup (${markup}%):` 
+        : `Markup (₱${markup}):`;
+
+    // Update all display fields
+    document.getElementById("sellingPrice").value = sellingPrice.toFixed(2);
+    document.getElementById("costDisplay").textContent = '₱' + cost.toFixed(2);
+    document.getElementById("markupLabel").textContent = markupLabel;
+    document.getElementById("markupAmount").textContent = '₱' + markupAmount.toFixed(2);
+    document.getElementById("basePrice").textContent = '₱' + basePrice.toFixed(2);
+    document.getElementById("taxLabel").textContent = taxLabel + ':';
+    document.getElementById("taxAmount").textContent = '₱' + taxAmount.toFixed(2);
+    document.getElementById("totalPrice").textContent = '₱' + sellingPrice.toFixed(2);
+    
+    // Change tax amount color based on category
+    const taxAmountEl = document.getElementById("taxAmount");
+    if (vatCategory === 'vat_exempt') {
+        taxAmountEl.parentElement.classList.add('text-gray-500');
+        taxAmountEl.parentElement.classList.remove('text-green-700');
+    } else {
+        taxAmountEl.parentElement.classList.add('text-green-700');
+        taxAmountEl.parentElement.classList.remove('text-gray-500');
+    }
+}
+
+// Toggle VAT info panel
+function toggleVatInfo() {
+    const panel = document.getElementById('vatInfoPanel');
+    if (panel) {
+        panel.classList.toggle('hidden');
+    }
+}
+
+// Toggle bulk calculator
+function toggleBulkCalculator() {
+    const section = document.getElementById('bulkCalculatorSection');
+    const toggleIcon = document.getElementById('bulkToggleIcon');
+    
+    if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        toggleIcon.textContent = 'expand_less';
+    } else {
+        section.classList.add('hidden');
+        toggleIcon.textContent = 'expand_more';
+        // Clear bulk calculator fields
+        document.getElementById('bulkQuantity').value = '';
+        document.getElementById('bulkUnit').value = '';
+        document.getElementById('bulkCostPrice').value = '';
+        document.getElementById('calculatedUnitCost').textContent = '₱0.00';
+    }
+}
+
+// Calculate unit cost from bulk purchase
+function calculateBulkUnitCost() {
+    const bulkQuantity = parseFloat(document.getElementById('bulkQuantity').value) || 0;
+    const bulkCostPrice = parseFloat(document.getElementById('bulkCostPrice').value) || 0;
+    const bulkUnit = document.getElementById('bulkUnit').value;
+    
+    if (bulkQuantity <= 0 || bulkCostPrice <= 0) {
+        document.getElementById('calculatedUnitCost').textContent = '₱0.00';
+        return 0;
+    }
+    
+    let effectiveQuantity = bulkQuantity;
+    
+    // Handle special units with known quantities
+    if (bulkUnit === 'dozen') {
+        effectiveQuantity = 12; // Always 12 pieces per dozen
+    }
+    
+    const unitCost = bulkCostPrice / effectiveQuantity;
+    document.getElementById('calculatedUnitCost').textContent = '₱' + unitCost.toFixed(2);
+    
+    return unitCost;
+}
+
+// Apply bulk cost to main cost price field
+function applyBulkCost() {
+    const unitCost = calculateBulkUnitCost();
+    
+    if (unitCost > 0) {
+        document.getElementById('costPrice').value = unitCost.toFixed(2);
+        calculateSellingPrice();
+        
+        // Show success message
+        const calculatedCostEl = document.getElementById('calculatedUnitCost');
+        const originalText = calculatedCostEl.textContent;
+        calculatedCostEl.textContent = '✓ Applied!';
+        calculatedCostEl.classList.add('text-green-600');
+        
+        setTimeout(() => {
+            calculatedCostEl.textContent = originalText;
+        }, 2000);
+    } else {
+        alert('Please fill in all bulk purchase fields correctly.');
+    }
+}
+
+// Add event listeners for bulk calculator
+document.addEventListener("DOMContentLoaded", function() {
+    const bulkQuantityInput = document.getElementById('bulkQuantity');
+    const bulkCostPriceInput = document.getElementById('bulkCostPrice');
+    const bulkUnitSelect = document.getElementById('bulkUnit');
+    
+    if (bulkQuantityInput && bulkCostPriceInput && bulkUnitSelect) {
+        [bulkQuantityInput, bulkCostPriceInput, bulkUnitSelect].forEach(el => {
+            el.addEventListener('input', calculateBulkUnitCost);
+            el.addEventListener('change', calculateBulkUnitCost);
+        });
+    }
+});
+</script>
 
 
 

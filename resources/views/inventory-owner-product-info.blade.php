@@ -444,7 +444,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-center font-medium">{{ $sale->quantity_sold }}</td>
                                     <td class="px-4 py-3 text-center font-medium">₱{{ number_format($sale->selling_price_used, 2) }}</td>
-                                    <td class="px-4 py-3 text-center font-semibold">₱{{ number_format($sale->total_amount, 2) }}</td>
+                                    <td class="px-4 py-3 text-center font-medium">₱{{ number_format($sale->total_amount, 2) }}</td>
                                     <td class="px-4 py-3 text-center">{{ $sale->sold_by }}</td>
                                 </tr>
                             @empty

@@ -993,16 +993,16 @@ public function registerProduct(Request $request)
 {
     $ownerId = session('owner_id');
 
-    $ownerPlan = DB::select("select plan_id from subscriptions where owner_id = ? and status = 'active'", [$ownerId]);
+    // Check product limits
+    $ownerPlan = DB::selectOne("SELECT plan_id FROM subscriptions WHERE owner_id = ? AND status = 'active'", [$ownerId]);
+    $productCount = DB::selectOne("SELECT COUNT(prod_code) as count FROM products WHERE owner_id = ?", [$ownerId])->count;
 
-    $productCount = DB::select("select count(prod_code) from products where owner_id = ?", [$ownerId]);
-
-    if ($ownerPlan == 3 && $productCount >= 50) {
-        return back()->with('warning', "Your current Basic plan allows up to 50 products only. Upgrade your plan to add more items.");
+    if ($ownerPlan && $ownerPlan->plan_id == 3 && $productCount >= 50) {
+        return response()->json(['success' => false, 'message' => 'Your current Basic plan allows up to 50 products only. Upgrade to add more.'], 422);
     }
 
-    if ($ownerPlan == 1 && $productCount >= 200) {
-        return back()->with('warning', "Your current Standard plan allows up to 200 products only. Upgrade your plan to add more items.");
+    if ($ownerPlan && $ownerPlan->plan_id == 1 && $productCount >= 200) {
+        return response()->json(['success' => false, 'message' => 'Your current Standard plan allows up to 200 products only. Upgrade to add more.'], 422);
     }
 
     $validated = $request->validate([
@@ -1010,6 +1010,7 @@ public function registerProduct(Request $request)
         'name' => 'required|string|max:100',
         'cost_price' => 'required|numeric|min:0',
         'selling_price' => 'required|numeric|min:0',
+        'vat_category' => 'required|in:vat_exempt,vat_inclusive',
         'description' => 'nullable|string',
         'category_id' => 'nullable',
         'unit_id' => 'nullable',
@@ -1017,14 +1018,45 @@ public function registerProduct(Request $request)
         'custom_unit' => 'nullable|string|max:50',
         'photo' => 'nullable|image|max:2048',
         'stock_limit' => 'required|integer|min:0',
-        'expiration_date' => 'nullable|date',
-        'batch_number' => 'nullable|string|max:50',
+        'batches' => 'nullable|array',
+        'batches.*.quantity' => 'required_with:batches|integer|min:1',
+        'batches.*.expiration_date' => 'nullable|date',
         'confirmed_similar' => 'nullable|string',
         'confirmed_category' => 'nullable|string',
         'confirmed_unit' => 'nullable|string'
     ]);
 
-    // Check for existing/similar product names BUT skip this check if user already confirmed similar product
+    // Validate expiration dates (must be at least 7 days from today)
+    if (!empty($validated['batches'])) {
+        $today = now()->startOfDay();
+        $minDate = now()->addDays(7)->startOfDay();
+        $invalidDates = [];
+
+        foreach ($validated['batches'] as $index => $batch) {
+            if (!empty($batch['expiration_date'])) {
+                $expirationDate = \Carbon\Carbon::parse($batch['expiration_date'])->startOfDay();
+                $daysDiff = $today->diffInDays($expirationDate, false);
+
+                if ($expirationDate->lt($minDate)) {
+                    $batchNum = $index + 1;
+                    if ($daysDiff < 0) {
+                        $invalidDates[] = "Batch #{$batchNum} (date is in the past)";
+                    } else {
+                        $invalidDates[] = "Batch #{$batchNum} (only {$daysDiff} day(s) away, needs 7 days minimum)";
+                    }
+                }
+            }
+        }
+
+        if (!empty($invalidDates)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid expiration dates: ' . implode(', ', $invalidDates)
+            ], 422);
+        }
+    }
+
+    // Check for existing/similar product names
     $confirmedSimilar = $request->input('confirmed_similar') === '1';
     
     if (!$confirmedSimilar) {
@@ -1034,27 +1066,19 @@ public function registerProduct(Request $request)
         
         $productMatch = $this->findProductNameMatch($validated['name'], $existingProducts);
         
-        if ($productMatch) {
-            // Only block exact matches
-            if ($productMatch['isExact']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Product name already exists: ' . $productMatch['name']
-                ], 422);
-            }
+        if ($productMatch && $productMatch['isExact']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product name already exists: ' . $productMatch['name']
+            ], 422);
         }
     }
 
-    // ✅ Combined validation approach for categories
+    // Handle category
     if ($validated['category_id'] === 'other' && !empty($validated['custom_category'])) {
-        $confirmedCategory = $request->input('confirmed_category') === '1'; // 🆕 NEW
+        $confirmedCategory = $request->input('confirmed_category') === '1';
         
-        if (!$confirmedCategory) { // 🆕 Only validate if not confirmed
-            $existingCategories = DB::table('categories')
-                ->where('owner_id', $ownerId)
-                ->get();
-            
-            // Check 1: Exact case-insensitive match
+        if (!$confirmedCategory) {
             $exactMatch = DB::table('categories')
                 ->where('owner_id', $ownerId)
                 ->whereRaw('LOWER(category) = ?', [strtolower($validated['custom_category'])])
@@ -1066,19 +1090,8 @@ public function registerProduct(Request $request)
                     'message' => 'Category already exists: ' . $exactMatch->category
                 ], 422);
             }
-            
-            // Check 2: Semantic similarity - DON'T BLOCK, just inform
-            $normalizedInput = $this->normalizeName($validated['custom_category']);
-            $semanticMatch = $this->findSemanticMatch($normalizedInput, $existingCategories, 'category');
-
-            if ($semanticMatch) {
-                // REMOVED: The blocking return statement
-                // Frontend will handle the confirmation dialog
-                // Just continue to create the category
-            }
         }
 
-        // Both checks passed (or user confirmed) - create the new category
         $categoryId = DB::table('categories')->insertGetId([
             'category' => $validated['custom_category'],
             'owner_id' => $ownerId,
@@ -1087,30 +1100,25 @@ public function registerProduct(Request $request)
         $categoryId = $validated['category_id'];
     }
 
-    //Handle unit - Check for duplicates (with parenthesis awareness)
+    // Handle unit
     if ($validated['unit_id'] === 'other' && !empty($validated['custom_unit'])) {
-        $confirmedUnit = $request->input('confirmed_unit') === '1'; // 🆕 NEW
+        $confirmedUnit = $request->input('confirmed_unit') === '1';
         
-        if (!$confirmedUnit) { // 🆕 Only validate if not confirmed
+        if (!$confirmedUnit) {
             $existingUnits = DB::table('units')
                 ->where('owner_id', $ownerId)
                 ->get();
             
             $unitMatchResult = $this->findUnitMatch($validated['custom_unit'], $existingUnits);
 
-            if ($unitMatchResult) {
-                // 🔴 MODIFIED: Only block exact matches
-                if ($unitMatchResult['isExact']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Unit already exists: ' . $unitMatchResult['unit']
-                    ], 422);
-                }
-                // For similar matches, don't block - frontend will handle confirmation
+            if ($unitMatchResult && $unitMatchResult['isExact']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unit already exists: ' . $unitMatchResult['unit']
+                ], 422);
             }
         }
 
-        // If no exact match found (or user confirmed), create the new unit
         $unitId = DB::table('units')->insertGetId([
             'unit' => $validated['custom_unit'],
             'owner_id' => $ownerId,
@@ -1119,29 +1127,22 @@ public function registerProduct(Request $request)
         $unitId = $validated['unit_id'];
     }
 
-    // Handle photo upload with default fallback
+    // Handle photo upload
     if ($request->hasFile('photo')) {
         $photoPath = $request->file('photo')->store('product_images', 'public');
     } else {
-        // Store relative path to your default image in public/assets
         $photoPath = 'assets/no-product-image.png';
     }
 
-    // Check if product exists
-    $product = DB::table('products')
-        ->where('barcode', $validated['barcode'])
-        ->where('owner_id', $ownerId)
-        ->first();
-
-    if ($product) {
-        $prodCode = $product->prod_code;
-    } else {
+    DB::beginTransaction();
+    try {
         // Insert product
         $prodCode = DB::table('products')->insertGetId([
             'barcode' => $validated['barcode'],
             'name' => $validated['name'],
             'cost_price' => $validated['cost_price'],
             'selling_price' => $validated['selling_price'],
+            'vat_category' => $validated['vat_category'],
             'description' => $validated['description'] ?? null,
             'owner_id' => $ownerId,
             'staff_id' => null,
@@ -1150,31 +1151,69 @@ public function registerProduct(Request $request)
             'prod_image' => $photoPath,
             'stock_limit' => $validated['stock_limit'],
         ]);
+
+        // Insert pricing history
+        DB::table('pricing_history')->insert([
+            'prod_code' => $prodCode,
+            'old_cost_price' => $validated['cost_price'],
+            'old_selling_price' => $validated['selling_price'],
+            'owner_id' => $ownerId,
+            'updated_by' => session('staff_id') ?? null,
+            'effective_from' => now(),
+            'effective_to' => null,
+        ]);
+
+        // ✅ Insert initial stock batches if provided
+        if (!empty($validated['batches'])) {
+            $batchNumber = 1; // Start from BATCH-1
+            
+            foreach ($validated['batches'] as $batch) {
+                // Generate batch number in the format P{prodCode}-BATCH-{number}
+                $batchNumberFormatted = "P{$prodCode}-BATCH-{$batchNumber}";
+                
+                DB::table('inventory')->insert([
+                    'prod_code' => $prodCode,
+                    'category_id' => $categoryId,
+                    'stock' => $batch['quantity'],
+                    'batch_number' => $batchNumberFormatted,
+                    'expiration_date' => $batch['expiration_date'] ?? null,
+                    'owner_id' => $ownerId,
+                    'date_added' => now(),
+                    'last_updated' => now(),
+                ]);
+                
+                $batchNumber++; // Increment for next batch
+            }
+        }
+
+        DB::commit();
+
+        // Log activity
+        $ip = $request->ip();
+        $guard = 'owner';
+        $user = Auth::guard('owner')->user();
+        
+        $stockInfo = !empty($validated['batches']) 
+            ? ' with ' . count($validated['batches']) . ' initial batch(es)' 
+            : '';
+            
+        ActivityLogController::log(
+            'Registered new product: ' . $validated['name'] . $stockInfo,
+            $guard,
+            $user,
+            $ip
+        );
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Product registered successfully!' . $stockInfo
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Product registration error: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'Failed to register product.'], 500);
     }
-
-    // Insert initial pricing record for the newly registered product
-    DB::table('pricing_history')->insert([
-        'prod_code'         => $prodCode,
-        'old_cost_price'    => $validated['cost_price'],
-        'old_selling_price' => $validated['selling_price'],
-        'owner_id'          => $ownerId,
-        'updated_by'        => session('staff_id') ?? null,
-        'effective_from'    => now(),
-        'effective_to'      => null, // current active price
-    ]);
-
-    $ip = $request->ip();
-    $guard = 'owner';
-    $user = Auth::guard('owner')->user();
-
-    ActivityLogController::log(
-        'Registered new product: ' . $validated['name'],
-        $guard,
-        $user,
-        $ip
-    );
-    
-    return response()->json(['success' => true]);
 }
 
 
@@ -1783,9 +1822,9 @@ public function bulkRestock(Request $request)
         return response()->json(['success' => false, 'message' => 'No products provided for restocking.']);
     }
     
-    // ✅ Validate expiration dates (must be at least 7 days from today)
+    // Validate expiration dates (must be at least 7 days from today)
     $today = now()->startOfDay();
-    $minDate = now()->addDays(7)->startOfDay(); // 7 days from today
+    $minDate = now()->addDays(7)->startOfDay();
     $invalidDates = [];
     
     foreach ($items as $index => $it) {
@@ -1793,15 +1832,10 @@ public function bulkRestock(Request $request)
         
         if ($expiration) {
             $expirationDate = \Carbon\Carbon::parse($expiration)->startOfDay();
+            $daysDiff = $today->diffInDays($expirationDate, false);
             
-            // Calculate days difference
-            $daysDiff = $today->diffInDays($expirationDate, false); // false = can be negative
-            
-            // Check if expiration date is less than 7 days from today
             if ($expirationDate->lt($minDate)) {
                 $prodCode = $it['prod_code'] ?? 'Unknown';
-                
-                // Get product name for better error message
                 $product = DB::table('products')
                     ->where('prod_code', $prodCode)
                     ->where('owner_id', $ownerId)
@@ -1818,7 +1852,6 @@ public function bulkRestock(Request $request)
         }
     }
     
-    // ✅ If any invalid dates found, return error
     if (!empty($invalidDates)) {
         $message = 'Cannot restock: All products must have expiration dates at least 7 days from today.<br><br>' . implode('<br>', $invalidDates);
         return response()->json([
@@ -1830,6 +1863,7 @@ public function bulkRestock(Request $request)
     
     DB::beginTransaction();
     try {
+        // Process restocking items
         foreach ($items as $it) {
             $prodCode = $it['prod_code'] ?? null;
             $qty = (int) ($it['qty'] ?? 0);
@@ -1838,23 +1872,24 @@ public function bulkRestock(Request $request)
             
             if (!$prodCode || $qty <= 0) continue;
             
-            // ✅ MODIFIED: Get latest batch for THIS specific product using new format
+            // Get latest batch for this specific product
             $latestBatch = DB::table('inventory')
                 ->where('prod_code', $prodCode)
                 ->where('owner_id', $ownerId)
                 ->orderBy('inven_code', 'desc')
                 ->value('batch_number');
             
-            // ✅ MODIFIED: Parse new format P{prodCode}-BATCH-{number}
+            // Parse batch number format P{prodCode}-BATCH-{number}
             if ($latestBatch && preg_match('/P\d+-BATCH-(\d+)/', $latestBatch, $m)) {
                 $nextNumber = ((int)$m[1]) + 1;
             } else {
-                $nextNumber = 1; // First batch for this product
+                $nextNumber = 1;
             }
             
-            // ✅ MODIFIED: Generate batch number in format P{prodCode}-BATCH-{number}
+            // Generate next batch number
             $nextBatchNumber = "P{$prodCode}-BATCH-{$nextNumber}";
             
+            // Insert inventory record
             DB::table('inventory')->insert([
                 'prod_code' => $prodCode,
                 'category_id' => $categoryId,
@@ -1867,77 +1902,117 @@ public function bulkRestock(Request $request)
             ]);
         }
         
+        // Handle pricing update if provided
+        $updatePricing = $request->input('update_pricing');
+        $pricingProdCode = $request->input('pricing_prod_code');
+        
+        if ($updatePricing && $pricingProdCode) {
+            $newCostPrice = $request->input('new_cost_price');
+            $newSellingPrice = $request->input('new_selling_price');
+            $newVatCategory = $request->input('new_vat_category');
+            
+            // Get current product data
+            $currentProduct = DB::table('products')
+                ->where('prod_code', $pricingProdCode)
+                ->where('owner_id', $ownerId)
+                ->first(['cost_price', 'selling_price', 'vat_category']);
+            
+            if (!$currentProduct) {
+                throw new \Exception('Product not found for pricing update.');
+            }
+            
+            // Determine final values (use new if provided, otherwise keep current)
+            $finalCostPrice = $newCostPrice ?: $currentProduct->cost_price;
+            $finalSellingPrice = $newSellingPrice ?: $currentProduct->selling_price;
+            $finalVatCategory = $newVatCategory ?: $currentProduct->vat_category;
+            
+            // Check if pricing actually changed
+            $priceChanged = ($currentProduct->cost_price != $finalCostPrice) || 
+                           ($currentProduct->selling_price != $finalSellingPrice) ||
+                           ($currentProduct->vat_category != $finalVatCategory);
+            
+            if ($priceChanged) {
+                // Close current active price record in pricing history
+                DB::table('pricing_history')
+                    ->where('prod_code', $pricingProdCode)
+                    ->where('owner_id', $ownerId)
+                    ->whereNull('effective_to')
+                    ->update(['effective_to' => now()]);
+                
+                // Insert new price record in pricing history
+                DB::table('pricing_history')->insert([
+                    'prod_code' => $pricingProdCode,
+                    'old_cost_price' => $finalCostPrice,
+                    'old_selling_price' => $finalSellingPrice,
+                    'owner_id' => $ownerId,
+                    'updated_by' => session('staff_id') ?? null,
+                    'effective_from' => now(),
+                    'effective_to' => null,
+                ]);
+                
+                // Update product table with new pricing
+                DB::table('products')
+                    ->where('prod_code', $pricingProdCode)
+                    ->where('owner_id', $ownerId)
+                    ->update([
+                        'cost_price' => $finalCostPrice,
+                        'selling_price' => $finalSellingPrice,
+                        'vat_category' => $finalVatCategory,
+                    ]);
+            }
+        }
+        
         DB::commit();
         
+        // Log activity
         $ip = $request->ip();
         $guard = 'owner';
         $user = Auth::guard('owner')->user();
-        ActivityLogController::log('Bulk Restock Products', $guard, $user, $ip);
         
-        return response()->json(['success' => true, 'message' => 'Restock saved successfully.']);
+        $activityMessage = 'Bulk Restock Products';
+        if ($updatePricing && $pricingProdCode && isset($priceChanged) && $priceChanged) {
+            $activityMessage .= ' with Price Update';
+        }
+        
+        ActivityLogController::log($activityMessage, $guard, $user, $ip);
+        
+        $successMessage = 'Restock saved successfully.';
+        if ($updatePricing && $pricingProdCode && isset($priceChanged) && $priceChanged) {
+            $successMessage .= ' Pricing has been updated and recorded in history.';
+        }
+        
+        return response()->json(['success' => true, 'message' => $successMessage]);
+        
     } catch (\Exception $e) {
         DB::rollBack();
         \Log::error('Bulk restock error: ' . $e->getMessage());
-        return response()->json(['success' => false, 'message' => 'Failed to save bulk restock. Check logs.']);
+        return response()->json(['success' => false, 'message' => 'Failed to save bulk restock: ' . $e->getMessage()]);
     }
 }
 
-    // public function store(Request $request)
-    // {
-    //     $ownerId = Auth::guard('owner')->id();
 
-    //     try {
-    //         $validated = $request->validate([
-    //             'prod_code' => 'required|exists:products,prod_code',
-    //             'damaged_quantity' => 'required|integer|min:1',
-    //             'damaged_type' => 'required|string|max:20',
-    //             'damaged_reason' => 'required|string|max:255',
-    //         ]);
+public function getProductPricing($prodCode)
+{
+    $ownerId = session('owner_id');
+    
+    $product = DB::table('products')
+        ->where('prod_code', $prodCode)
+        ->where('owner_id', $ownerId)
+        ->first(['cost_price', 'selling_price', 'vat_category']);
+    
+    if (!$product) {
+        return response()->json(['success' => false, 'message' => 'Product not found.']);
+    }
+    
+    return response()->json([
+        'success' => true,
+        'cost_price' => $product->cost_price,
+        'selling_price' => $product->selling_price,
+        'vat_category' => $product->vat_category ?? 'vat_inclusive'
+    ]);
+}
 
-    //         $totalStock = DB::table('inventory')
-    //             ->where('prod_code', $validated['prod_code'])
-    //             ->where('owner_id', $ownerId)
-    //             ->sum('stock');
 
-    //         if ($totalStock === 0) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'message' => 'Product stock is zero. Cannot record damage.'
-    //             ]);
-    //         }
-
-    //         if ($validated['damaged_quantity'] > $totalStock) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'message' => 'Damaged quantity exceeds available stock.'
-    //             ]);
-    //         }
-
-    //         DB::table('damaged_items')->insert([
-    //             'prod_code' => $validated['prod_code'],
-    //             'damaged_quantity' => $validated['damaged_quantity'],
-    //             'damaged_type' => $validated['damaged_type'],
-    //             'damaged_reason' => $validated['damaged_reason'],
-    //             'owner_id' => $ownerId,
-    //             'damaged_date' => now(),
-    //         ]);
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Damaged item recorded successfully!'
-    //         ]);
-    //     } catch (\Illuminate\Validation\ValidationException $e) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => $e->validator->errors()->first()
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'An unexpected error occurred.'
-    //         ]);
-    //     }
-    // }
     public function store(Request $request)
     {
         $ownerId = Auth::guard('owner')->id();
@@ -2015,80 +2090,8 @@ public function bulkRestock(Request $request)
 
 
 
-    // public function showDamageItemsForm()
-    // {
-    //     $ownerId = Auth::guard('owner')->id();
 
-    //     // Fetch all products for the product dropdown
-    //     $products = DB::table('products')
-    //         ->where('owner_id', $ownerId)
-    //         ->get();
 
-    //     // Fetch all damaged items recorded by the logged-in owner
-    //     $damagedItems = DB::table('damaged_items')
-    //         ->join('products', 'damaged_items.prod_code', '=', 'products.prod_code')
-    //         ->join('inventory', 'damaged_items.inven_code', '=', 'inventory.inven_code') // Join with inventory to get batch_number
-    //         ->where('damaged_items.owner_id', $ownerId)
-    //         ->select('damaged_items.*', 'products.name as product_name', 'inventory.batch_number') // Include batch_number from inventory
-    //         ->orderBy('damaged_items.damaged_date', 'desc') // Show latest records first
-    //         ->get();
-
-    //     // Return the view with both products and damaged items data
-    //     return view('damage-items', compact('damagedItems', 'products'));
-    // }
-
-    // public function showDamageItemsForm()
-    // {
-    //     $ownerId = Auth::guard('owner')->id();
-
-    //     $expiredInventories = DB::table('inventory')
-    //         ->where('owner_id', $ownerId)
-    //         ->where('stock', '>', 0)
-    //         ->where(function ($query) {
-    //             $query->whereDate('expiration_date', '<=', now())  
-    //                 ->orWhere('is_expired', 1);
-    //         })
-    //         ->get();
-
-    //     foreach ($expiredInventories as $expired) {
-
-    //         $alreadyRecorded = DB::table('damaged_items')
-    //             ->where('inven_code', $expired->inven_code)
-    //             ->where('damaged_type', 'Expired')
-    //             ->exists();
-
-    //         if (!$alreadyRecorded) {
-    //             DB::table('damaged_items')->insert([
-    //                 'prod_code' => $expired->prod_code,
-    //                 'damaged_quantity' => $expired->stock,
-    //                 'damaged_type' => 'Expired',
-    //                 'damaged_reason' => 'Product has reached its expiration date.',
-    //                 'owner_id' => $ownerId,
-    //                 'damaged_date' => now(),
-    //                 'inven_code' => $expired->inven_code
-                   
-    //             ]);
-
-    //             DB::table('inventory')
-    //                 ->where('inven_code', $expired->inven_code)
-    //                 ->update(['is_expired' => 1, 'stock' => 0]);
-    //         }
-    //     }
-
-    //     $products = DB::table('products')
-    //         ->where('owner_id', $ownerId)
-    //         ->get();
-
-    //     $damagedItems = DB::table('damaged_items')
-    //         ->join('products', 'damaged_items.prod_code', '=', 'products.prod_code')
-    //         ->join('inventory', 'damaged_items.inven_code', '=', 'inventory.inven_code')
-    //         ->where('damaged_items.owner_id', $ownerId)
-    //         ->select('damaged_items.*', 'products.name as product_name', 'inventory.batch_number')
-    //         ->orderBy('damaged_items.damaged_date', 'desc')
-    //         ->get();
-
-    //     return view('damage-items', compact('damagedItems', 'products'));
-    // }
 }
 
     
