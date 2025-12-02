@@ -894,10 +894,10 @@ class KioskSystem {
     const progressBar = document.getElementById('expiredModalProgress');
     
     // Show modal with fade-in animation
-    modal.classList. remove('hidden');
+    modal.classList.remove('hidden');
     setTimeout(() => {
         modal.querySelector('.bg-white').style.transform = 'scale(1)';
-        modal. querySelector('.bg-white').style. opacity = '1';
+        modal.querySelector('.bg-white').style.opacity = '1';
     }, 10);
     
     // Reset progress bar
@@ -906,8 +906,8 @@ class KioskSystem {
     
     // Start countdown animation
     setTimeout(() => {
-        progressBar. style.transition = `width ${duration}ms linear`;
-        progressBar.style. width = '0%';
+        progressBar.style.transition = `width ${duration}ms linear`;
+        progressBar.style.width = '0%';
     }, 50);
     
     // Auto-dismiss after duration
@@ -922,7 +922,7 @@ hideExpiredModal() {
     const modalContent = modal.querySelector('.bg-white');
     
     // Fade out animation
-    modalContent.style.transform = 'scale(0. 95)';
+    modalContent.style.transform = 'scale(0.95)';
     modalContent.style.opacity = '0';
     
     setTimeout(() => {
@@ -1026,30 +1026,39 @@ hideExpiredModal() {
     }
 
     async loadProducts() {
-        this.showLoading();
+    this.showLoading();
+    
+    try {
+        const search = document.getElementById('searchInput').value;
         
-        try {
-            const search = document.getElementById('searchInput').value;
-            
-            const params = new URLSearchParams();
-            if (this.activeCategory) params.append('category_id', this.activeCategory);
-            if (search) params.append('search', search);
-            
-            const response = await fetch(`{{ route("get_kiosk_products") }}?${params}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                this.currentProducts = data.products;
-                this.renderProducts();
-            } else {
-                this.showNoProducts();
-            }
-        } catch (error) {
-            console.error('Error loading products:', error);
-            this.showToast('Error loading products', 'error');
+        const params = new URLSearchParams();
+        if (this.activeCategory) params.append('category_id', this.activeCategory);
+        if (search) params.append('search', search);
+        
+        const url = `{{ route("get_kiosk_products") }}?${params}`;
+        console.log('🔍 Fetching products from:', url); // ✅ DEBUG
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        console.log('📦 API Response:', data); // ✅ DEBUG
+        console.log('✓ Success:', data.success); // ✅ DEBUG
+        console.log('📊 Products count:', data.products?.length); // ✅ DEBUG
+        
+        if (data.success) {
+            this.currentProducts = data.products;
+            console.log('✅ Products loaded:', this.currentProducts.length); // ✅ DEBUG
+            this.renderProducts();
+        } else {
+            console.log('❌ API returned success: false'); // ✅ DEBUG
             this.showNoProducts();
         }
+    } catch (error) {
+        console.error('💥 Error loading products:', error); // ✅ DEBUG
+        this.showToast('Error loading products', 'error');
+        this.showNoProducts();
     }
+}
 
     showLoading() {
         document.getElementById('loadingProducts').classList.remove('hidden');
@@ -1157,7 +1166,7 @@ hideExpiredModal() {
     } else {
         card.addEventListener('click', () => {
             if (hasExpiredOnly) {
-                this. showExpiredModal(
+                this.showExpiredModal(
                     'Product Expired',
                     `${product.name} only has expired stock available and cannot be sold.`
                 );
@@ -1182,7 +1191,7 @@ hideExpiredModal() {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
-            body: JSON. stringify({
+            body: JSON.stringify({
                 prod_code: prodCode,
                 quantity: quantity
             })
@@ -1204,7 +1213,7 @@ hideExpiredModal() {
         }
     } catch (error) {
         console.error('Error adding to cart:', error);
-        this. showToast('Error adding item to cart', 'error');
+        this.showToast('Error adding item to cart', 'error');
     }
 }
 

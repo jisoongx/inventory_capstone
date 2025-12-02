@@ -1,4 +1,4 @@
-<?php
+<? php
 
 namespace App\Models;
 
@@ -15,6 +15,7 @@ class Product extends Model
         'name',
         'cost_price',
         'selling_price',
+        'vat_category',  // ✅ Add this line
         'stock_limit',
         'description',
         'owner_id',
@@ -27,7 +28,8 @@ class Product extends Model
     protected $casts = [
         'cost_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
-        'stock_limit' => 'integer'
+        'stock_limit' => 'integer',
+        'vat_category' => 'string'  // ✅ Add this line (optional but good practice)
     ];
 
     // Relationships
