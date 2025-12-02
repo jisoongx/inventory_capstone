@@ -178,7 +178,7 @@
                                 Date & Time
                             </th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
-                                Total Qty
+                                Total Quantity
                             </th>
                             
                             <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
@@ -840,14 +840,19 @@
                     </div>
                     @endif
 
-                    @if(($receiptDetails->vat_amount ?? 0) > 0)
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-green-700">VAT:</span>
-                        <span class="text-sm font-bold text-green-600">
-                            +₱{{ number_format($receiptDetails->vat_amount, 2) }}
-                        </span>
-                    </div>
-                    @endif
+<!-- Display VAT Breakdown (always show if any VAT exists) -->
+@if(($receiptDetails->vat_amount_inclusive ?? 0) > 0 || ($receiptDetails->vat_amount_exempt ?? 0) > 0)
+<div class="border-t pt-2 mt-2 space-y-1">
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">VAT-Inclusive:</span>
+        <span class="text-sm text-blue-600">₱{{ number_format($receiptDetails->vat_amount_inclusive ?? 0, 2) }}</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700">VAT-Exempt:</span>
+        <span class="text-sm text-gray-600">₱{{ number_format($receiptDetails->vat_amount_exempt ?? 0, 2) }}</span>
+    </div>
+</div>
+@endif
 
                     <div class="flex justify-between items-center pt-2 border-t">
                         <span class="text-lg font-bold text-gray-900">Total Amount:</span>

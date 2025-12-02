@@ -235,26 +235,27 @@ class ReportSalesAndPerformance extends Component
                     END
                 ), 0) as total_item_discounts,
                 
-                COALESCE(SUM(ri.vat_amount), 0) as total_vat
+                COALESCE(SUM(ri.vat_amount), 0) as total_vat_inclusive
                 
             FROM receipt r
             LEFT JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
             LEFT JOIN products p ON ri.prod_code = p.prod_code
-            WHERE r.owner_id = ?
+            WHERE r.owner_id = ? 
             AND DATE(r.receipt_date) BETWEEN ? AND ?
             GROUP BY r.receipt_id, r.receipt_date, r.amount_paid, r.discount_type, r.discount_value
             ORDER BY r.receipt_date DESC
         ", [$owner_id, $this->dateFrom, $this->dateTo]));
     
         $this->transactions = $this->transactions->map(function($transaction) {
-            $subtotal = floatval($transaction->subtotal ?? 0);
-            $totalItemDiscounts = floatval($transaction->total_item_discounts ?? 0);
+            $subtotal = floatval($transaction->subtotal ??  0);
+            $totalItemDiscounts = floatval($transaction->total_item_discounts ??  0);
             $afterItemDiscounts = $subtotal - $totalItemDiscounts;
             
+            // Calculate receipt discount
             $receiptDiscountAmount = 0;
             if (isset($transaction->discount_value) && floatval($transaction->discount_value) > 0) {
                 $discValue = floatval($transaction->discount_value);
-                $discType = $transaction->discount_type ?? 'amount';
+                $discType = $transaction->discount_type ??  'amount';
                 
                 if ($discType === 'percent') {
                     $receiptDiscountAmount = $afterItemDiscounts * ($discValue / 100.0);
@@ -263,9 +264,12 @@ class ReportSalesAndPerformance extends Component
                 }
             }
             
-            $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
-            $totalVat = floatval($transaction->total_vat ?? 0);
-            $totalAmount = $afterReceiptDiscount + $totalVat;
+            // ✅ CRITICAL FIX: Total = after discounts (VAT already included)
+            $totalAmount = $afterItemDiscounts - $receiptDiscountAmount;
+            
+            // VAT is already in the price (extracted for display only)
+            $totalVatInclusive = floatval($transaction->total_vat_inclusive ?? 0);
+            
             $amountPaid = floatval($transaction->amount_paid ?? 0);
             $change = $amountPaid - $totalAmount;
             
@@ -274,7 +278,7 @@ class ReportSalesAndPerformance extends Component
             $transaction->subtotal_raw = $subtotal;
             $transaction->total_item_discounts_raw = $totalItemDiscounts;
             $transaction->receipt_discount_amount = $receiptDiscountAmount;
-            $transaction->total_vat_raw = $totalVat;
+            $transaction->total_vat_inclusive = $totalVatInclusive;
             
             return $transaction;
         });
@@ -314,7 +318,7 @@ class ReportSalesAndPerformance extends Component
         try {
             $owner_id = Auth::guard('owner')->user()->owner_id;
             
-            // Get receipt with raw data - FIXED: owner -> owners
+            // Get receipt with raw data
             $receipt = DB::selectOne("
                 SELECT 
                     r.*,
@@ -325,7 +329,7 @@ class ReportSalesAndPerformance extends Component
                 FROM receipt r
                 LEFT JOIN owners o ON r.owner_id = o.owner_id
                 LEFT JOIN staff s ON r.staff_id = s.staff_id
-                WHERE r.receipt_id = ?
+                WHERE r.receipt_id = ? 
                 AND r.owner_id = ?
             ", [$receiptId, $owner_id]);
     
@@ -334,24 +338,33 @@ class ReportSalesAndPerformance extends Component
                 return;
             }
     
-            // Get receipt items
+            // Get receipt items with HISTORICAL PRICES
             $items = DB::select("
                 SELECT 
                     ri.*,
                     p.name as product_name,
-                    p.selling_price as current_selling_price
+                    p.vat_category,
+                    COALESCE(
+                        (SELECT ph.old_selling_price
+                         FROM pricing_history ph
+                         WHERE ph.prod_code = ri.prod_code
+                         AND ? BETWEEN ph.effective_from AND ph.effective_to
+                         ORDER BY ph.effective_from DESC
+                         LIMIT 1),
+                        p.selling_price
+                    ) as selling_price_at_time
                 FROM receipt_item ri
                 JOIN products p ON ri.prod_code = p.prod_code
-                WHERE ri.receipt_id = ?
+                WHERE ri.receipt_id = ? 
                 ORDER BY ri.item_id
-            ", [$receiptId]);
+            ", [$receipt->receipt_date, $receiptId]);
     
             $subtotal = 0.0;
             $totalItemDiscounts = 0.0;
-            $totalVat = 0.0;
     
+            // Calculate subtotal and item discounts
             foreach ($items as $item) {
-                $lineTotal = floatval($item->current_selling_price) * intval($item->item_quantity);
+                $lineTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
                 $subtotal += $lineTotal;
     
                 $itemDiscountValue = floatval($item->item_discount_value ?? 0);
@@ -364,13 +377,12 @@ class ReportSalesAndPerformance extends Component
                         $totalItemDiscounts += $itemDiscountValue;
                     }
                 }
-    
-                $totalVat += floatval($item->vat_amount ?? 0);
             }
     
             $afterItemDiscounts = $subtotal - $totalItemDiscounts;
-            $receiptDiscountAmount = 0.0;
     
+            // Calculate receipt discount
+            $receiptDiscountAmount = 0.0;
             if (isset($receipt->discount_value) && floatval($receipt->discount_value) > 0) {
                 $discValue = floatval($receipt->discount_value);
                 $discType = $receipt->discount_type ?? 'amount';
@@ -383,7 +395,29 @@ class ReportSalesAndPerformance extends Component
             }
     
             $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
-            $finalTotal = $afterReceiptDiscount + $totalVat;
+    
+            // ✅ Calculate VAT breakdown: Inclusive vs Exempt (extract, don't add)
+            $vatAmountInclusive = 0.0;
+            $vatAmountExempt = 0.0;
+            $vatRate = 12; // Fixed 12% VAT rate
+            
+            $discountMultiplier = $subtotal > 0 ? ($afterReceiptDiscount / $subtotal) : 0;
+            
+            foreach ($items as $item) {
+                $itemTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
+                $itemAfterDiscounts = $itemTotal * $discountMultiplier;
+                
+                $vatCategory = $item->vat_category ?? 'vat_exempt';
+                
+                if ($vatCategory === 'vat_inclusive') {
+                    // Extract VAT from price: VAT = Price × (Rate / (100 + Rate))
+                    $vatAmountInclusive += $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
+                }
+                // vat_exempt items: VAT = ₱0.00
+            }
+    
+            // ✅ CRITICAL: Total = after discounts (VAT already included, NOT added)
+            $finalTotal = $afterReceiptDiscount;
             $amountPaid = floatval($receipt->amount_paid ?? 0);
             $change = $amountPaid - $finalTotal;
     
@@ -396,7 +430,7 @@ class ReportSalesAndPerformance extends Component
                 'owner' => (object)[
                     'firstname' => $receipt->owner_firstname,
                     'store_name' => $receipt->store_name ?? $this->store_info->store_name,
-                    'store_address' => $receipt->store_address ?? $this->store_info->store_address,
+                    'store_address' => $receipt->store_address ??  $this->store_info->store_address,
                 ],
                 'staff' => $receipt->staff_firstname ? (object)['firstname' => $receipt->staff_firstname] : null,
                 'receiptItems' => collect($items)->map(function($item) {
@@ -409,15 +443,18 @@ class ReportSalesAndPerformance extends Component
                         'prod_code' => $item->prod_code,
                         'product' => (object)[
                             'name' => $item->product_name,
-                            'selling_price' => $item->current_selling_price
+                            'selling_price' => $item->selling_price_at_time,
+                            'vat_category' => $item->vat_category
                         ]
                     ];
                 }),
                 'computed_subtotal' => $subtotal,
                 'total_item_discounts' => $totalItemDiscounts,
                 'receipt_discount_amount' => $receiptDiscountAmount,
-                'vat_amount' => $totalVat,
-                'vat_applied' => $totalVat > 0,
+                'vat_amount_inclusive' => $vatAmountInclusive,
+                'vat_amount_exempt' => $vatAmountExempt,
+                'vat_amount' => $vatAmountInclusive + $vatAmountExempt,
+                'vat_applied' => ($vatAmountInclusive + $vatAmountExempt) > 0,
                 'computed_total' => $finalTotal,
                 'computed_change' => $change,
             ];

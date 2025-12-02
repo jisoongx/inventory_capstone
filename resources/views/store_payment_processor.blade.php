@@ -139,7 +139,7 @@
                         <!-- ✅ VAT Breakdown - Always visible -->
                         <div class="border-t pt-2 mt-2">
                             <div class="flex justify-between text-sm">
-                                <span class="text-gray-700">VAT-Inclusive (12%):</span>
+                                <span class="text-gray-700">VAT-Inclusive:</span>
                                 <span id="calcVATInclusive" class="font-semibold text-blue-600">₱0.00</span>
                             </div>
                             <div class="flex justify-between text-sm">
@@ -257,7 +257,7 @@
                     </div>
                     <div class="border-t pt-2 mt-2 space-y-1">
                         <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">VAT-Inclusive (12%):</span>
+                            <span class="text-sm font-medium text-gray-700">VAT-Inclusive:</span>
                             <span id="receiptVatInclusive" class="text-sm text-blue-600">₱0.00</span>
                         </div>
                         <div class="flex justify-between items-center">

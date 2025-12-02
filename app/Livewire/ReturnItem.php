@@ -112,7 +112,7 @@ class ReturnItem extends Component
             SELECT 
                 r.*,
                 o.firstname as owner_firstname,
-                o. lastname as owner_lastname,
+                o.lastname as owner_lastname,
                 o.store_name,
                 s.firstname as staff_firstname,
                 s.lastname as staff_lastname
@@ -132,24 +132,24 @@ class ReturnItem extends Component
         
         $this->returnableItems = collect(DB::select("
             SELECT 
-                ri. item_id,
-                ri. item_quantity,
+                ri.item_id,
+                ri.item_quantity,
                 ri.item_discount_type,
                 ri.item_discount_value,
                 ri.vat_amount,
                 ri.inven_code,
-                ri. prod_code,
+                ri.prod_code,
                 p.name as product_name,
                 p.selling_price,
                 COALESCE(SUM(ret.return_quantity), 0) as already_returned,
                 (ri.item_quantity - COALESCE(SUM(ret.return_quantity), 0)) as returnable_quantity
             FROM receipt_item ri
-            JOIN products p ON ri. prod_code = p.prod_code
+            JOIN products p ON ri.prod_code = p.prod_code
             JOIN receipt r ON ri.receipt_id = r.receipt_id
             LEFT JOIN returned_items ret ON ret.item_id = ri.item_id
             WHERE r.receipt_id = ?
             AND r.owner_id = ? 
-            GROUP BY ri.item_id, ri.item_quantity, ri. item_discount_type, ri. item_discount_value, 
+            GROUP BY ri.item_id, ri.item_quantity, ri.item_discount_type, ri.item_discount_value, 
                      ri.vat_amount, ri.inven_code, ri.prod_code, p.name, p.selling_price
             HAVING returnable_quantity > 0
             ORDER BY ri.item_id
@@ -280,7 +280,7 @@ class ReturnItem extends Component
 
     public function goBackToReports()
     {
-        return redirect()->route('reports. sales_performance');
+        return redirect()->route('reports.sales_performance');
     }
 
     public function submitBulkReturn()
