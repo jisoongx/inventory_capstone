@@ -1118,9 +1118,9 @@ function printProductBarcode(barcode, productName) {
 
     if (numCopies < 1) return;
 
-    // Create iframe
+    // Create hidden iframe
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;';
+    iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;opacity:0;';
     document.body.appendChild(iframe);
 
     const doc = iframe.contentWindow.document;
@@ -1128,7 +1128,6 @@ function printProductBarcode(barcode, productName) {
     // Build HTML with exact copies
     let htmlContent = '';
     for (let i = 0; i < numCopies; i++) {
-        // Truncate product name if too long
         const displayName = productName.length > 25 ? productName.substring(0, 25) : productName;
         
         htmlContent += `
@@ -1183,10 +1182,9 @@ function printProductBarcode(barcode, productName) {
     <body>
         ${htmlContent}
         <script>
-            // Wait for JsBarcode to load
             function generateBarcodes() {
                 if (typeof JsBarcode === 'undefined') {
-                    setTimeout(generateBarcodes, 100);
+                    setTimeout(generateBarcodes, 50);
                     return;
                 }
                 
@@ -1195,25 +1193,33 @@ function printProductBarcode(barcode, productName) {
                     JsBarcode("#barcode-" + i, "${barcode}", {
                         format: "CODE128",
                         lineColor: "#000000",
-                        width: 1.1,
-                        height: 35,
+                        width: 1.5,
+                        height: 50,
                         displayValue: false,
-                        margin: 0
+                        margin: 2
                     });
                 }
                 
-                // Auto print after barcodes are rendered
+                // Trigger print immediately after barcodes are ready
                 setTimeout(function() {
                     window.print();
+                    
+                    // Clean up iframe after printing
+                    window.onafterprint = function() {
+                        if (window.frameElement) {
+                            window.frameElement.parentNode.removeChild(window.frameElement);
+                        }
+                    };
+                    
+                    // Fallback cleanup if onafterprint doesn't fire
                     setTimeout(function() {
                         if (window.frameElement) {
                             window.frameElement.parentNode.removeChild(window.frameElement);
                         }
-                    }, 500);
-                }, 300);
+                    }, 1000);
+                }, 100);
             }
             
-            // Start the process
             if (document.readyState === 'complete') {
                 generateBarcodes();
             } else {
@@ -1230,7 +1236,6 @@ function printProductBarcode(barcode, productName) {
 <!-- Initialize Barcode Display -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Generate barcode image for display
     const barcodeElement = document.getElementById('product-barcode-display');
     if (barcodeElement && typeof JsBarcode !== 'undefined') {
         try {
@@ -1244,7 +1249,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         } catch (error) {
             console.error('Error generating barcode:', error);
-            // Hide the SVG if barcode generation fails
             barcodeElement.style.display = 'none';
         }
     }
