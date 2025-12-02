@@ -17,20 +17,34 @@ class RestockController extends Controller
         $restockCreated = $request->input('restock_created');
         $items = json_decode($request->input('restock_items'), true);
 
+        // Rebuild items including the NEW columns
         $items = array_map(function ($item) {
             return [
-                'name'       => $item['name'],
-                'quantity'   => (int) $item['quantity'],
-                'cost_price' => (float) str_replace(',', '', $item['cost_price']),
-                'subtotal'   => (float) str_replace(',', '', $item['subtotal']),
+                'name'              => $item['name'],
+                'quantity'          => (int) ($item['quantity'] ?? 0),
+
+                // NEW FIELDS
+                'item_status'       => $item['item_status'] ?? '-',
+                'item_restock_date' => $item['item_restock_date'] ?? '-',
+
+                // If your table still sends these, keep them. If not, defaults are safe.
+                'cost_price'        => isset($item['cost_price'])
+                    ? (float) str_replace(',', '', $item['cost_price'])
+                    : 0,
+
+                'subtotal'          => isset($item['subtotal'])
+                    ? (float) str_replace(',', '', $item['subtotal'])
+                    : 0,
             ];
         }, $items);
 
+        // Load PDF view
         $pdf = PDF::loadView('dashboards.owner.restock_pdf', [
             'restock_created' => $restockCreated,
-            'items' => $items
+            'items'           => $items
         ]);
 
+        // Log activity
         $user = auth('owner')->user();
         $ip = $request->ip();
 
@@ -43,6 +57,7 @@ class RestockController extends Controller
 
         return $pdf->download('restock-' . $restockCreated . '.pdf');
     }
+
 
 
 

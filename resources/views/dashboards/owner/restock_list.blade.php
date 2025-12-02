@@ -78,16 +78,35 @@
                     </button>
                     <div class="flex items-center gap-2 mt-4 sm:mt-0">
                         @if($restocks->count())
+                        @php
+                        $latest = $restocks->first();
+                        $latestItems = $restockItems->where('restock_id', $latest->restock_id);
+                        $disableCancel = false;
+
+                        if($latest->status === 'resolved') {
+                        $disableCancel = true;
+                        } else {
+                        foreach($latestItems as $item){
+                        if(in_array($item->item_status, ['complete','in_progress'])){
+                        $disableCancel = true;
+                        break;
+                        }
+                        }
+                        }
+                        @endphp
+
                         <form id="statusForm" method="POST" action="{{ route('restock.updateStatus') }}">
                             @csrf
-                            <input type="hidden" name="restock_id" id="statusRestockId" value="{{ $restocks->first()->restock_id ?? '' }}">
+                            <input type="hidden" name="restock_id" id="statusRestockId" value="{{ $latest->restock_id ?? '' }}">
 
                             <button name="status" value="cancelled"
-                                class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-red-600 rounded-md hover:bg-red-600 transition">
+                                class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-red-600 rounded-md hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                @if($disableCancel) disabled @endif>
                                 <span class="material-symbols-rounded text-sm">cancel</span>
                                 Cancel
                             </button>
                         </form>
+
                         @endif
                     </div>
 
@@ -174,6 +193,12 @@
         <div class="w-full lg:w-96 bg-white shadow-md min-h-[560px] rounded p-6 sm:p-8 self-start border-t-4 border-green-300">
             <h2 class="text-md font-semibold text-green-800 mb-1">History</h2>
             <p class="text-sm text-slate-500 mb-6 text-sm">Select a past list to view its details.</p>
+            <div class="flex gap-2 mb-4">
+                <button class="filter-btn px-3 py-1 rounded text-xs font-medium border border-slate-300 hover:bg-green-50" data-status="all">All</button>
+                <button class="filter-btn px-3 py-1 rounded text-xs font-medium border border-yellow-400 hover:bg-yellow-50" data-status="pending">Pending</button>
+                <button class="filter-btn px-3 py-1 rounded text-xs font-medium border border-green-400 hover:bg-green-50" data-status="resolved">Resolved</button>
+                <button class="filter-btn px-3 py-1 rounded text-xs font-medium border border-red-400 hover:bg-red-50" data-status="cancelled">Cancelled</button>
+            </div>
 
             @if($restocks->count())
             <ul class="space-y-3 max-h-[60vh] no-scrollbar overflow-y-auto pr-2">
@@ -181,7 +206,7 @@
                 @php
                 $items = $restockItems->where('restock_id', $restock->restock_id);
                 @endphp
-                <li id="history-{{ $restock->restock_id }}"
+                <li id="history-{{ $restock->restock_id }}" data-status="{{ $restock->status }}"
                     class="p-4 rounded-lg cursor-pointer transition-all duration-200 @if($index === 0) bg-green-50 border-green-500 @else border border-slate-200 hover:border-green-400 hover:bg-green-50/50 @endif"
                     onclick="showRestock('{{ $restock->restock_id }}')">
 
@@ -309,7 +334,205 @@
 
         activeEl.classList.remove('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
         activeEl.classList.add('bg-green-50', 'border-green-500');
+
+        
     }
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-gray-100'));
+            this.classList.add('bg-gray-100');
+
+            const status = this.dataset.status;
+            document.querySelectorAll('[id^="history-"]').forEach(item => {
+                if (status === 'all' || item.dataset.status === status) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+
+
+    document.getElementById("exportBtn").addEventListener("click", function(e) {
+        e.preventDefault();
+
+        let items = [];
+
+        // Select all rows of the currently displayed restock table
+        document.querySelectorAll("#restockContent table tbody tr").forEach(row => {
+            let cols = row.querySelectorAll("td");
+
+            items.push({
+                name: cols[0].innerText.trim(),
+                quantity: cols[1].innerText.trim(),
+                cost_price: cols[2].innerText.trim(),
+                subtotal: cols[3].innerText.trim(),
+                item_status: cols[4].innerText.trim(),
+                item_restock_date: cols[5].innerText.trim(),
+            });
+        });
+
+        // Set hidden input values
+        document.getElementById("exportRestockItems").value = JSON.stringify(items);
+
+        // Also pass the restock created date
+        let dateChip = document.querySelector("#restockContent span.text-xs.bg-green-100");
+        if (dateChip) {
+            document.getElementById("exportRestockCreated").value = dateChip.innerText.trim();
+        }
+
+        // Submit the form
+        document.getElementById("exportForm").submit();
+    });
+
+
+
+    document.getElementById("printBtn").addEventListener("click", function() {
+        const dateEl = document.querySelector("#restockContent span.text-xs.bg-green-100");
+        const restockDate = dateEl ? dateEl.innerText.trim() : "";
+
+        let items = [];
+        document.querySelectorAll("#restockContent table tbody tr").forEach(row => {
+            let cols = row.querySelectorAll("td");
+            items.push({
+                name: cols[0].innerText.trim(),
+                quantity: cols[1].innerText.trim(),
+                status: cols[4].innerText.trim(),
+                restockDate: cols[5].innerText.trim(),
+                cost: cols[2].innerText.trim(),
+                subtotal: cols[3].innerText.trim(),
+            });
+        });
+
+        let itemsRows = "";
+        let grandTotal = 0;
+        items.forEach(item => {
+            grandTotal += parseFloat(item.subtotal.replace(/,/g, '')) || 0;
+            itemsRows += `
+        <div class="item-row">
+            <div class="item-name">${item.name}</div>
+            <div class="item-details">Qty: ${item.quantity}</div>
+            <div class="item-details">Cost: ${item.cost}</div>
+            <div class="item-details">Status: ${item.status}</div>
+            <div class="item-details">Restock Date: ${item.restockDate}</div>
+            <div class="item-price-row">
+                <span>Subtotal</span>
+                <span><strong>${item.subtotal}</strong></span>
+            </div>
+        </div>
+        `;
+        });
+
+        const content = `
+    <div class="header-info">
+        <p><strong>Date:</strong> ${restockDate}</p>
+    </div>
+
+    <div class="items-section">
+        ${itemsRows}
+    </div>
+
+    <div class="total-section">
+        <div class="total-row">
+            <span>GRAND TOTAL</span>
+            <span>${grandTotal.toFixed(2)}</span>
+        </div>
+    </div>
+    `;
+
+        // Create hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(`
+        <html>
+        <head>
+            <title>Print Restock</title>
+            <style>
+                @page {
+                    size: 58mm auto; /* Thermal printer width */
+                    margin: 0;
+                }
+                body {
+                    font-family: monospace;
+                    width: 58mm;
+                    margin: 0;
+                    padding: 5px;
+                    font-size: 10px;
+                    line-height: 1.3;
+                }
+                h2 {
+                    text-align: center;
+                    font-size: 12px;
+                    margin: 0 0 8px 0;
+                    text-transform: uppercase;
+                }
+                .header-info {
+                    margin-bottom: 8px;
+                    border-bottom: 1px dashed #000;
+                }
+                .header-info p {
+                    margin: 2px 0;
+                }
+                .item-row {
+                    border-bottom: 1px dotted #ccc;
+                    padding: 4px 0;
+                }
+                .item-name {
+                    font-weight: bold;
+                    font-size: 10px;
+                    margin-bottom: 2px;
+                }
+                .item-details {
+                    font-size: 9px;
+                    margin: 1px 0;
+                }
+                .item-price-row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 2px;
+                }
+                .total-section {
+                    margin-top: 6px;
+                    border-top: 2px solid #000;
+                    padding-top: 3px;
+                }
+                .total-row {
+                    display: flex;
+                    justify-content: space-between;
+                    font-weight: bold;
+                    font-size: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>Restock List</h2>
+            ${content}
+        </body>
+        </html>
+    `);
+        doc.close();
+
+        // Print the iframe content
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+
+        // Remove iframe after printing
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 500);
+    });
 </script>
+
+
+
 
 @endsection
