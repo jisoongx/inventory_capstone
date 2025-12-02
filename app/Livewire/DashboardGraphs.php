@@ -61,15 +61,15 @@ class DashboardGraphs extends Component
         $this->selectedYear = now()->year;
 
         $this->dailySales = collect(DB::select('
-            select IFNULL(SUM(
-                    p.selling_price * (
-                        ri.item_quantity - IFNULL(
-                            (SELECT SUM(ret.return_quantity) 
-                            FROM returned_items ret 
-                            WHERE ret.item_id = ri.item_id),
-                        0)
-                    )
-                ), 0) as dailySales
+            select IFNULL(SUM(ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
+                        )), 0) as dailySales
             from receipt r
             join receipt_item ri on r.receipt_id = ri.receipt_id
             join products p on ri.prod_code = p.prod_code
@@ -78,15 +78,15 @@ class DashboardGraphs extends Component
         ', [$this->day, $owner_id]))->first();
 
         $this->weeklySales = collect(DB::select('
-            SELECT IFNULL(SUM(
-                    p.selling_price * (
-                        ri.item_quantity - IFNULL(
-                            (SELECT SUM(ret.return_quantity) 
-                            FROM returned_items ret 
-                            WHERE ret.item_id = ri.item_id),
-                        0)
-                    )
-                ), 0) AS weeklySales
+            SELECT IFNULL(SUM(ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
+                        )), 0) AS weeklySales
             FROM receipt r
             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
             JOIN products p ON ri.prod_code = p.prod_code
@@ -96,15 +96,15 @@ class DashboardGraphs extends Component
 
         $this->monthSales = collect(DB::select('
             SELECT 
-                IFNULL(SUM(
-                    p.selling_price * (
-                        ri.item_quantity - IFNULL(
-                            (SELECT SUM(ret.return_quantity) 
-                            FROM returned_items ret 
-                            WHERE ret.item_id = ri.item_id),
-                        0)
-                    )
-                ), 0) AS monthSales
+                IFNULL(SUM(ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
+                        )), 0) AS monthSales
             FROM receipt r
             JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
             JOIN products p ON ri.prod_code = p.prod_code

@@ -209,12 +209,28 @@ class ReportSalesAndPerformance extends Component
                 COUNT(DISTINCT ri.item_id) as total_items,
                 SUM(ri.item_quantity) as total_quantity,
                 
-                COALESCE(SUM(p.selling_price * ri.item_quantity), 0) as subtotal,
+                COALESCE(SUM(ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
+                        )), 0) as subtotal,
                 
                 COALESCE(SUM(
                     CASE 
                         WHEN ri.item_discount_type = 'percent' 
-                        THEN (p.selling_price * ri.item_quantity) * (ri.item_discount_value / 100)
+                        THEN (ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
+                        )) * (ri.item_discount_value / 100)
                         ELSE ri.item_discount_value
                     END
                 ), 0) as total_item_discounts,
