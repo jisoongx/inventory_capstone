@@ -49,6 +49,9 @@ class ReportSalesAndPerformance extends Component
     // Global Return History properties
     public $showGlobalReturnHistory = false;
     public $globalReturnHistory = [];
+    public $returnDateFrom; // new
+    public $returnDateTo;
+    public $returnSelectedCategory = 'all';    
 
     // Listener for when return is processed
     protected $listeners = ['returnProcessed' => 'handleReturnProcessed'];
@@ -59,6 +62,8 @@ class ReportSalesAndPerformance extends Component
         $this->selectedYear = now()->year;
         $this->dateFrom = now()->startOfMonth()->format('Y-m-d');
         $this->dateTo = now()->format('Y-m-d');
+        $this->returnDateFrom = now()->startOfMonth()->format('Y-m-d');
+        $this->returnDateTo = now()->format('Y-m-d');
         $this->selectedYears = [now()->year];
         $this->selectedMonths = [now()->month];
         
@@ -204,15 +209,7 @@ class ReportSalesAndPerformance extends Component
                 COUNT(DISTINCT ri.item_id) as total_items,
                 SUM(ri.item_quantity) as total_quantity,
                 
-                COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) as subtotal,
+                COALESCE(SUM(p.selling_price * ri.item_quantity), 0) as subtotal,
                 
                 COALESCE(SUM(
                     CASE 
@@ -497,8 +494,7 @@ class ReportSalesAndPerformance extends Component
         try {
             $owner_id = Auth::guard('owner')->user()->owner_id;
             
-            // FIXED: Properly get owner or staff who processed the return
-            $this->globalReturnHistory = collect(DB::select("
+            $query = "
                 SELECT 
                     ret.return_id,
                     ret.return_date,
@@ -508,6 +504,8 @@ class ReportSalesAndPerformance extends Component
                     ret.staff_id as return_staff_id,
                     p.name as product_name,
                     p.selling_price,
+                    p.category_id,
+                    c.category,
                     r.receipt_id,
                     r.receipt_date,
                     CONCAT(COALESCE(o.firstname, ''), ' ', COALESCE(o.lastname, '')) as owner_fullname,
@@ -518,14 +516,26 @@ class ReportSalesAndPerformance extends Component
                 FROM returned_items ret
                 JOIN receipt_item ri ON ret.item_id = ri.item_id
                 JOIN products p ON ri.prod_code = p.prod_code
+                JOIN categories c ON p.category_id = c.category_id
                 JOIN receipt r ON ri.receipt_id = r.receipt_id
                 LEFT JOIN owners o ON ret.owner_id = o.owner_id AND ret.staff_id IS NULL
                 LEFT JOIN staff s ON ret.staff_id = s.staff_id AND s.owner_id = ?
                 LEFT JOIN damaged_items d ON d.return_id = ret.return_id
                 WHERE r.owner_id = ?
                 AND DATE(ret.return_date) BETWEEN ? AND ?
-                ORDER BY ret.return_date DESC
-            ", [$owner_id, $owner_id, $this->dateFrom, $this->dateTo]));
+            ";
+            
+            $bindings = [$owner_id, $owner_id, $this->returnDateFrom, $this->returnDateTo];
+            
+            // Add category filter if selected
+            if ($this->returnSelectedCategory !== 'all') {
+                $query .= " AND p.category_id = ?";
+                $bindings[] = $this->returnSelectedCategory;
+            }
+            
+            $query .= " ORDER BY ret.return_date DESC";
+            
+            $this->globalReturnHistory = collect(DB::select($query, $bindings));
     
             $this->showGlobalReturnHistory = true;
         } catch (\Exception $e) {
@@ -539,6 +549,29 @@ class ReportSalesAndPerformance extends Component
         $this->globalReturnHistory = [];
     }
 
+    public function updatedReturnDateFrom()
+    {
+        $this->viewGlobalReturnHistory();
+    }
+    
+    public function updatedReturnDateTo()
+    {
+        $this->viewGlobalReturnHistory();
+    }
+    
+    public function updatedReturnSelectedCategory()
+    {
+        $this->viewGlobalReturnHistory();
+    }
+    
+    public function resetReturnFilters()
+    {
+        $this->returnDateFrom = now()->startOfMonth()->format('Y-m-d');
+        $this->returnDateTo = now()->format('Y-m-d');
+        $this->returnSelectedCategory = 'all';
+        $this->viewGlobalReturnHistory();
+    }
+
     public function sortBy($field) {
         if ($this->sortField === $field) {
             $this->order = $this->order === 'asc' ? 'desc' : 'asc';
@@ -549,6 +582,9 @@ class ReportSalesAndPerformance extends Component
         $this->sortField = $field;
         $this->prodPerformance();
     }
+
+
+
 
 
 

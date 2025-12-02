@@ -14,36 +14,31 @@ class StockAlert extends Component
 
 
     public function stockAlert()
-{
-    $owner_id = Auth::guard('owner')->user()->owner_id;
+    {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
 
-    $results = DB::select("
-        SELECT 
-            v.name AS prod_name,
-            p.prod_image,
-            v.reorder_point,
-            v.total_stock,
-            v.warning_threshold,
-            v.danger_threshold,
-            v.stock_status,
-            v.days_of_supply_remaining
+        $results = DB::select("
+            SELECT 
+                v.prod_code,
+                v.name AS prod_name,
+                p.prod_image,
+                v.current_stock as total_stock,
+                v.safety_stock,
+                v.reorder_point,
+                v.inventory_status as stock_status
+            FROM vw_inventory_status v
+            JOIN products p ON p.prod_code = v.prod_code
+            WHERE p.owner_id = ?
+            AND p.prod_status = 1
+            AND v.inventory_status IN ('Critical', 'Warning', 'Out of Stock')
+            ORDER BY v.current_stock ASC
+        ", [$owner_id]);
 
-        FROM vw_adaptive_inventory_levels v
-        JOIN products p ON p.prod_code = v.prod_code
-
-        WHERE p.owner_id = ?
-          AND p.prod_status = 'active'
-          AND v.stock_status IN ('CRITICAL', 'REORDER_NOW', 'OUT_OF_STOCK')
-
-        ORDER BY v.total_stock ASC
-    ", [$owner_id]);
-
-    $this->prod = collect($results)->map(function ($item) {
-        $item->image_url = asset('storage/' . ltrim($item->prod_image, '/'));
-        return $item;
-    });
-}
-
+        $this->prod = collect($results)->map(function ($item) {
+            $item->image_url = asset('storage/' . ltrim($item->prod_image, '/'));
+            return $item;
+        });
+    }
 
 
     public function expirationNotice() {

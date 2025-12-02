@@ -204,7 +204,8 @@
 
                     <tbody class="divide-y divide-gray-200 bg-white text-xs">
                         @forelse($transactions as $transaction)
-                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                            <tr class="hover:bg-gray-50 transition-colors duration-150 cursor-pointer" 
+                                wire:click="viewReceipt({{ $transaction->receipt_id }})">                                
                                 <td class="px-4 py-3.5 font-bold text-gray-900">
                                     #{{ str_pad($transaction->receipt_id, 6, '0', STR_PAD_LEFT) }}
                                 </td>
@@ -695,7 +696,7 @@
         </div>
     </div>
 
-    <!-- Export Modal -->
+     <!-- Export Modal -->
     @if($showExportModal)
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg w-full max-w-md p-6">
@@ -881,154 +882,184 @@
 </div>
 @endif
 
-    <!-- Global Return History Modal -->
-    @if($showGlobalReturnHistory)
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg w-full max-w-6xl mx-auto h-full max-h-[90vh] flex flex-col">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg flex-shrink-0">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-xl font-bold">Global Return History</h3>
-                        <p class="text-sm text-purple-100">
-                            All returned items from {{ \Carbon\Carbon::parse($dateFrom)->format('M d, Y') }} 
-                            to {{ \Carbon\Carbon::parse($dateTo)->format('M d, Y') }}
-                        </p>
-                    </div>
-                    <button wire:click="closeGlobalReturnHistory" class="text-white hover:text-gray-200">
-                        <span class="material-symbols-rounded text-2xl">close</span>
-                    </button>
+<!-- Global Return History Modal -->
+@if($showGlobalReturnHistory)
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg w-full max-w-6xl mx-auto h-full max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold">Global Return History</h3>
+                    <p class="text-sm text-orange-100">
+                        All returned items from {{ \Carbon\Carbon::parse($returnDateFrom)->format('M d, Y') }} 
+                        to {{ \Carbon\Carbon::parse($returnDateTo)->format('M d, Y') }}
+                    </p>
                 </div>
+                <button wire:click="closeGlobalReturnHistory" class="text-white hover:text-gray-200">
+                    <span class="material-symbols-rounded text-2xl">close</span>
+                </button>
             </div>
-
-            <!-- Content -->
-            <div class="flex-1 overflow-y-auto min-h-0 p-6">
-                @if($globalReturnHistory->isEmpty())
-                    <div class="flex flex-col items-center justify-center py-16">
-                        <span class="material-symbols-rounded text-6xl text-gray-300 mb-4">history</span>
-                        <p class="text-gray-600 font-medium">No Returns Found</p>
-                        <p class="text-sm text-gray-400 mt-1">No items were returned during this period</p>
-                    </div>
-                @else
-                    <!-- Table View -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-100 sticky top-0">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
-                                        Return Date
-                                    </th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
-                                        Receipt #
-                                    </th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
-                                        Product
-                                    </th>
-                                    <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs">
-                                        Qty
-                                    </th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase text-xs">
-                                        Refund
-                                    </th>
-                                    <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs">
-                                        Status
-                                    </th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
-                                        Reason
-                                    </th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
-                                        Processed By
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 bg-white">
-                                @foreach($globalReturnHistory as $return)
-                                    <tr class="hover:bg-gray-50 transition-colors">
-                                        <td class="px-4 py-3 text-gray-700">
-                                            {{ \Carbon\Carbon::parse($return->return_date)->format('M d, Y') }}
-                                            <div class="text-xs text-gray-500">
-                                                {{ \Carbon\Carbon::parse($return->return_date)->format('h:i A') }}
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <button wire:click="viewReceipt({{ $return->receipt_id }})"
-                                                class="font-bold text-blue-600 hover:text-blue-700 hover:underline">
-                                                #{{ str_pad($return->receipt_id, 6, '0', STR_PAD_LEFT) }}
-                                            </button>
-                                            <div class="text-xs text-gray-500">
-                                                {{ \Carbon\Carbon::parse($return->receipt_date)->format('M d, Y') }}
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 font-medium text-gray-900">
-                                            {{ $return->product_name }}
-                                        </td>
-                                        <td class="px-4 py-3 text-center font-bold text-gray-900">
-                                            {{ $return->return_quantity }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right font-bold text-blue-600">
-                                            ₱{{ number_format($return->refund_amount, 2) }}
-                                        </td>
-                                        <td class="px-4 py-3 text-center">
-                                            @if($return->damaged_id)
-                                                <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-medium">
-                                                    {{ $return->damaged_type }}
-                                                </span>
-                                            @else
-                                                <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
-                                                    Restocked
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-600 text-xs max-w-xs truncate" title="{{ $return->return_reason }}">
-                                            {{ $return->return_reason }}
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-600 text-xs">
-                                            {{ $return->return_staff_id ? trim($return->staff_fullname) : trim($return->owner_fullname) }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                            <tfoot class="sticky bottom-0 bg-slate-100 border-t-2 border-gray-600">
-                                <tr>
-                                    <td colspan="3" class="px-4 py-3 text-left font-bold uppercase text-xs">
-                                        Total Summary
-                                    </td>
-                                    <td class="px-4 py-3 text-center font-bold text-sm">
-                                        {{ $globalReturnHistory->sum('return_quantity') }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-bold text-sm text-blue-600">
-                                        ₱{{ number_format($globalReturnHistory->sum('refund_amount'), 2) }}
-                                    </td>
-                                    <td colspan="3" class="px-4 py-3"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <!-- Summary Cards -->
-                    <div class="grid grid-cols-3 gap-4 mt-6">
-                        <div class="bg-gradient-to-br from-blue-50 to-white rounded-lg p-4 border border-blue-200">
-                            <p class="text-xs text-gray-600 font-medium mb-1">Total Returns</p>
-                            <p class="text-2xl font-bold text-blue-600">{{ $globalReturnHistory->count() }}</p>
-                        </div>
-                        <div class="bg-gradient-to-br from-green-50 to-white rounded-lg p-4 border border-green-200">
-                            <p class="text-xs text-gray-600 font-medium mb-1">Items Restocked</p>
-                            <p class="text-2xl font-bold text-green-600">
-                                {{ $globalReturnHistory->where('damaged_id', null)->sum('return_quantity') }}
-                            </p>
-                        </div>
-                        <div class="bg-gradient-to-br from-red-50 to-white rounded-lg p-4 border border-red-200">
-                            <p class="text-xs text-gray-600 font-medium mb-1">Damaged Items</p>
-                            <p class="text-2xl font-bold text-red-600">
-                                {{ $globalReturnHistory->whereNotNull('damaged_id')->count() }}
-                            </p>
-                        </div>
-                    </div>
-                @endif
+            
+            <!-- Filters -->
+            <div class="flex items-center gap-3 mt-4">
+                <label class="text-sm font-medium text-orange-100">Date Range:</label>
+                <input type="date" wire:model.live="returnDateFrom"
+                    class="text-xs border border-orange-300 rounded-lg px-3 py-2 bg-white text-gray-900 shadow-sm focus:ring-2 focus:ring-orange-300"/>
+                <input type="date" wire:model.live="returnDateTo"
+                    class="text-xs border border-orange-300 rounded-lg px-3 py-2 bg-white text-gray-900 shadow-sm focus:ring-2 focus:ring-orange-300"/>
+                
+                <label class="text-sm font-medium text-orange-100 ml-4">Category:</label>
+                <select wire:model.live="returnSelectedCategory"
+                    class="text-xs border border-orange-300 rounded-lg px-4 py-2 bg-white text-gray-900 shadow-sm focus:ring-2 focus:ring-orange-300">
+                    <option value="all">All Categories</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->category_id }}">{{ $cat->category }}</option>
+                    @endforeach
+                </select>
+                
+                <button wire:click="resetReturnFilters" 
+                    class="text-xs border border-orange-300 rounded-lg p-2 bg-white text-gray-900 shadow-sm hover:bg-orange-50 transition-colors"
+                    title="Reset filters">
+                    <span class="material-symbols-rounded text-lg">refresh</span>
+                </button>
             </div>
         </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto min-h-0 p-6">
+            @if($globalReturnHistory->isEmpty())
+                <div class="flex flex-col items-center justify-center py-16">
+                    <span class="material-symbols-rounded text-6xl text-gray-300 mb-4">history</span>
+                    <p class="text-gray-600 font-medium">No Returns Found</p>
+                    <p class="text-sm text-gray-400 mt-1">No items were returned during this period</p>
+                </div>
+            @else
+                <!-- Table View -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
+                                    Return Date
+                                </th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
+                                    Receipt #
+                                </th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
+                                    Product
+                                </th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
+                                    Category
+                                </th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs">
+                                    Qty
+                                </th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase text-xs">
+                                    Refund
+                                </th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs">
+                                    Status
+                                </th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
+                                    Reason
+                                </th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
+                                    Processed By
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            @foreach($globalReturnHistory as $return)
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-3 text-gray-700">
+                                        {{ \Carbon\Carbon::parse($return->return_date)->format('M d, Y') }}
+                                        <div class="text-xs text-gray-500">
+                                            {{ \Carbon\Carbon::parse($return->return_date)->format('h:i A') }}
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <button wire:click="viewReceipt({{ $return->receipt_id }})"
+                                            class="font-bold text-blue-600 hover:text-blue-700 hover:underline">
+                                            #{{ str_pad($return->receipt_id, 6, '0', STR_PAD_LEFT) }}
+                                        </button>
+                                        <div class="text-xs text-gray-500">
+                                            {{ \Carbon\Carbon::parse($return->receipt_date)->format('M d, Y') }}
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 font-medium text-gray-900">
+                                        {{ $return->product_name }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600">
+                                        {{ $return->category }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center font-bold text-gray-900">
+                                        {{ $return->return_quantity }}
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-bold text-blue-600">
+                                        ₱{{ number_format($return->refund_amount, 2) }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if($return->damaged_id)
+                                            <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-medium">
+                                                {{ $return->damaged_type }}
+                                            </span>
+                                        @else
+                                            <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
+                                                Restocked
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600 text-xs max-w-xs truncate" title="{{ $return->return_reason }}">
+                                        {{ $return->return_reason }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600 text-xs">
+                                        {{ $return->return_staff_id ? trim($return->staff_fullname) : trim($return->owner_fullname) }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="sticky bottom-0 bg-slate-100 border-t-2 border-gray-600">
+                            <tr>
+                                <td colspan="4" class="px-4 py-3 text-left font-bold uppercase text-xs">
+                                    Total Summary
+                                </td>
+                                <td class="px-4 py-3 text-center font-bold text-sm">
+                                    {{ $globalReturnHistory->sum('return_quantity') }}
+                                </td>
+                                <td class="px-4 py-3 text-right font-bold text-sm text-blue-600">
+                                    ₱{{ number_format($globalReturnHistory->sum('refund_amount'), 2) }}
+                                </td>
+                                <td colspan="3" class="px-4 py-3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-3 gap-4 mt-6">
+                    <div class="bg-gradient-to-br from-blue-50 to-white rounded-lg p-4 border border-blue-200">
+                        <p class="text-xs text-gray-600 font-medium mb-1">Total Returns</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ $globalReturnHistory->count() }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-white rounded-lg p-4 border border-green-200">
+                        <p class="text-xs text-gray-600 font-medium mb-1">Items Restocked</p>
+                        <p class="text-2xl font-bold text-green-600">
+                            {{ $globalReturnHistory->where('damaged_id', null)->sum('return_quantity') }}
+                        </p>
+                    </div>
+                    <div class="bg-gradient-to-br from-red-50 to-white rounded-lg p-4 border border-red-200">
+                        <p class="text-xs text-gray-600 font-medium mb-1">Damaged Items</p>
+                        <p class="text-2xl font-bold text-red-600">
+                            {{ $globalReturnHistory->whereNotNull('damaged_id')->count() }}
+                        </p>
+                    </div>
+                </div>
+            @endif
+        </div>
     </div>
-    @endif
+</div>
+@endif
 
 </div>
 

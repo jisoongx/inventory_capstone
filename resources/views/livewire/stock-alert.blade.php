@@ -1,6 +1,6 @@
 <div class="flex justtify-between gap-4 pt-5">
 
-    <div wire:poll.7s="pollAll" wire:keep-alive class="hidden"></div>
+    <div wire:poll.3s="pollAll" wire:keep-alive class="hidden"></div>
     <!-- STOCK ALERT -->
     <div class="w-full max-w-sm bg-white shadow-md relative border">
         <div class="relative">
@@ -16,9 +16,9 @@
             :class="open ? 'overflow-y-auto' : 'overflow-hidden'">
             @forelse ($prod as $p)
                 <div class="rounded-xl p-2 flex items-center gap-4 border
-                    {{ $p->stock_status === 'CRITICAL' ? 'border-red-500 text-red-600' : '' }}
-                    {{ $p->stock_status === 'REORDER_NOW' ? 'border-orange-500 text-orange-600' : '' }}
-                    {{ $p->stock_status === 'OUT_OF_STOCK' ? 'border-red-700 text-red-700' : '' }}">
+                    {{ $p->stock_status === 'Critical' ? 'border-red-500 text-red-600' : '' }}
+                    {{ $p->stock_status === 'Warning' ? 'border-orange-500 text-orange-600' : '' }}
+                    {{ $p->stock_status === 'Out of Stock' ? 'border-red-700 text-red-700' : '' }}">
                     
 
                     @if($p->prod_image)
@@ -40,9 +40,9 @@
 
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full
-                            {{ $p->stock_status === 'CRITICAL' ? 'bg-red-500' : '' }}
-                            {{ $p->stock_status === 'REORDER_NOW' ? 'bg-orange-500' : '' }}
-                            {{ $p->stock_status === 'OUT_OF_STOCK' ? 'bg-red-700' : '' }}"></span>
+                            {{ $p->stock_status === 'Critical' ? 'bg-red-500' : '' }}
+                            {{ $p->stock_status === 'Warning' ? 'bg-orange-500' : '' }}
+                            {{ $p->stock_status === 'Out of Stock' ? 'bg-red-700' : '' }}"></span>
                         <span class="font-semibold text-xs">{{ $p->stock_status }}</span>
                     </div>
                 </div>
