@@ -598,15 +598,6 @@ class ReportSalesAndPerformance extends Component
         $this->sortField = $field;
         $this->prodPerformance();
     }
-
-
-
-
-
-
-
-
-
     
     public function salesByCategory() {
 
