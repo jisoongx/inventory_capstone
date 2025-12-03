@@ -459,6 +459,7 @@ class RestockController extends Controller
             ->select(
                 'products.prod_code as inven_code',
                 'products.name',
+                'products.category_id',
                 'products.cost_price',
                 DB::raw('COALESCE(inventory.total_stock, 0) as stock')
             )
@@ -643,6 +644,7 @@ class RestockController extends Controller
     {
         $ownerId = auth()->guard('owner')->id();
 
+        
         // Fetch all restocks
         $restocks = DB::table('restock')
             ->where('owner_id', $ownerId)
@@ -691,7 +693,7 @@ class RestockController extends Controller
                 $status = 'pending';
                 $lastStockDate = null;
             } elseif ($totalAdded < $item->item_quantity) {
-                $status = 'in_progress';
+                $status = 'in progress';
                 $lastStockDate = $lastStock->last_updated ?? null;
             } else {
                 $status = 'complete';

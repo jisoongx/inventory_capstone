@@ -87,7 +87,7 @@
                         $disableCancel = true;
                         } else {
                         foreach($latestItems as $item){
-                        if(in_array($item->item_status, ['complete','in_progress'])){
+                        if(in_array($item->item_status, ['complete','in progress'])){
                         $disableCancel = true;
                         break;
                         }
@@ -145,9 +145,10 @@
                             <tr>
                                 <th class="px-4 py-3 text-left font-semibold">Product</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Quantity</th>
+                                <th class="px-4 py-3 text-center font-semibold w-32">Cost Price</th>
+                                <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Status</th>
                                 <th class="px-4 py-3 text-center font-semibold w-32">Restock Date</th>
-                                <th class="px-4 py-3 text-center font-semibold w-32">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -155,17 +156,18 @@
                             <tr>
                                 <td class="px-4 py-3">{{ $item->name }}</td>
                                 <td class="px-4 py-3 text-center">{{ $item->item_quantity }}</td>
+                                <td class="px-4 py-3 text-center">{{ number_format($item->cost_price, 2) }}</td>
+                                <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
                                 <td class="px-4 py-3 text-center">
                                     @if($item->item_status == 'complete')
                                     <span class="px-2 py-1 rounded bg-green-600 text-white text-xs">{{ ucfirst($item->item_status) }}</span>
-                                    @elseif($item->item_status == 'in_progress')
+                                    @elseif($item->item_status == 'in progress')
                                     <span class="px-2 py-1 rounded bg-yellow-400 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
                                     @else
                                     <span class="px-2 py-1 rounded bg-gray-300 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">{{ $item->item_restock_date ? \Carbon\Carbon::parse($item->item_restock_date)->format('M d, Y') : '-' }}</td>
-                                <td class="px-4 py-3 text-center">{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -271,7 +273,7 @@
                                         <td class="px-4 py-3 text-center">
                                             @if($item->item_status == 'complete')
                                             <span class="px-2 py-1 rounded bg-green-600 text-white text-xs">{{ ucfirst($item->item_status) }}</span>
-                                            @elseif($item->item_status == 'in_progress')
+                                            @elseif($item->item_status == 'in progress')
                                             <span class="px-2 py-1 rounded bg-yellow-400 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
                                             @else
                                             <span class="px-2 py-1 rounded bg-gray-300 text-black text-xs">{{ ucfirst($item->item_status) }}</span>
@@ -320,28 +322,50 @@
         const container = document.getElementById('restockContent');
         if (animate) container.style.opacity = 0;
 
+        // Delay to allow animation
         setTimeout(() => {
+            // Update content
             container.innerHTML = templateEl.innerHTML;
             if (animate) container.style.opacity = 1;
+
+            // Update the selected history styling
+            document.querySelectorAll('[id^="history-"]').forEach(el => {
+                el.classList.remove('bg-green-50', 'border-green-500');
+                el.classList.add('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
+            });
+            const activeEl = document.getElementById('history-' + id);
+            activeEl.classList.remove('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
+            activeEl.classList.add('bg-green-50', 'border-green-500');
+
+            // Set restock ID for the form
+            document.getElementById('statusRestockId').value = id;
+
+            // --- Disable Cancel Button Dynamically ---
+            const cancelBtn = document.querySelector('#statusForm button[name="status"]');
+            const restockStatus = activeEl.dataset.status;
+            let disableCancel = restockStatus === "resolved" || restockStatus === "cancelled";
+
+            // Check item_status in the currently displayed table
+            const rows = container.querySelectorAll("table tbody tr");
+            rows.forEach(row => {
+                const statusEl = row.querySelector("td:nth-child(5) span");
+                if (!statusEl) return;
+                const statusText = statusEl.innerText.trim().toLowerCase();
+                if (statusText === "in progress" || statusText === "complete") {
+                    disableCancel = true;
+                }
+            });
+
+            cancelBtn.disabled = disableCancel;
+
         }, animate ? 200 : 0);
-
-        document.querySelectorAll('[id^="history-"]').forEach(el => {
-            el.classList.remove('bg-green-50', 'border-green-500');
-            el.classList.add('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
-        });
-        const activeEl = document.getElementById('history-' + id);
-        document.getElementById('statusRestockId').value = id;
-
-        activeEl.classList.remove('border', 'border-slate-200', 'hover:border-green-400', 'hover:bg-green-50/50');
-        activeEl.classList.add('bg-green-50', 'border-green-500');
-
-        
     }
+
 
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-gray-100'));
-            this.classList.add('bg-gray-100');
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-slate-200'));
+            this.classList.add('bg-slate-200');
 
             const status = this.dataset.status;
             document.querySelectorAll('[id^="history-"]').forEach(item => {

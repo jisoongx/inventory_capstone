@@ -269,7 +269,7 @@
 
 <div id="summaryModal" class="fixed inset-0 hidden items-center justify-center z-50">
     <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
-    <div class="relative z-10 w-full max-w-2xl flex flex-col max-h-[80vh] bg-white rounded-2xl shadow-2xl">
+    <div class="relative z-10 w-full max-w-4xl flex flex-col max-h-[80vh] bg-white rounded-2xl shadow-2xl">
         <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-4">
             <h3 class="text-md font-semibold text-green-600">Confirm Restock List</h3>
             <div class="overflow-y-auto max-h-64 border border-slate-200 rounded-xl custom-scrollbar">
@@ -293,19 +293,33 @@
                     Add custom restock
                 </h4>
                 <div class="flex flex-col sm:flex-row gap-3">
+                    <select id="customCategorySelect" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                        <option value="">Select Category...</option>
+                        @foreach($categories as $category)
+                        <option value="{{ $category->category_id }}">{{ $category->category }}</option>
+                        @endforeach
+                    </select>
+
                     <select id="customProductSelect" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
                         <option value="">Select a product...</option>
                         @foreach($allProducts ?? [] as $inventoryProduct)
-                        <option value="{{ $inventoryProduct->inven_code }}" data-name="{{ $inventoryProduct->name }}" data-cost="{{ $inventoryProduct->cost_price }}">
+                        <option
+                            value="{{ $inventoryProduct->inven_code }}"
+                            data-name="{{ $inventoryProduct->name }}"
+                            data-cost="{{ $inventoryProduct->cost_price }}"
+                            data-category="{{ $inventoryProduct->category_id }}">
                             {{ $inventoryProduct->name }} (Stock: {{ $inventoryProduct->stock }})
                         </option>
                         @endforeach
                     </select>
+
                     <input type="number" id="customProductQty" placeholder="Qty" min="1" value="1" class="w-full sm:w-32 px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+
                     <button type="button" onclick="addCustomProduct()" class="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center gap-1 whitespace-nowrap">
                         <span class="material-symbols-rounded text-lg">add</span>
                     </button>
                 </div>
+
             </div>
         </div>
         <div class="bg-slate-100 p-4 rounded-b-2xl flex justify-between items-center border-t border-slate-200">
@@ -574,6 +588,22 @@
                 toast.classList.remove('flex');
             }, 4000);
         }
+    });
+
+    const customCategorySelect = document.getElementById('customCategorySelect');
+    const customProductSelect = document.getElementById('customProductSelect');
+
+    customCategorySelect.addEventListener('change', () => {
+        const selectedCategory = customCategorySelect.value;
+        Array.from(customProductSelect.options).forEach(option => {
+            if (!option.value) return; // Keep placeholder
+            if (selectedCategory === "" || option.dataset.category === selectedCategory) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        customProductSelect.selectedIndex = 0;
     });
 </script>
 

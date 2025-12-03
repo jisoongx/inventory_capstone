@@ -223,7 +223,7 @@
                     @method('PUT')
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                         <div>
-                            <label for="current_password" class="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                            <label for="current_password" class="block text-sm font-medium text-slate-700 mb-1">Current Password *</label>
                             <div class="relative">
                                 <input type="password" name="current_password" id="current_password" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
                                 <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
@@ -232,7 +232,7 @@
                             </div>
                         </div>
                         <div>
-                            <label for="password" class="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                            <label for="password" class="block text-sm font-medium text-slate-700 mb-1">New Password *</label>
                             <div class="relative">
                                 <input type="password" name="password" id="password" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
                                 <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
@@ -241,7 +241,7 @@
                             </div>
                         </div>
                         <div>
-                            <label for="password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                            <label for="password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm New Password *</label>
                             <div class="relative">
                                 <input type="password" name="password_confirmation" id="password_confirmation" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
                                 <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
@@ -266,7 +266,7 @@
                     <h3 class="text-lg font-semibold text-slate-800 mb-4">Create New Staff Account</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                         <div>
-                            <label for="staff_firstname" class="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                            <label for="staff_firstname" class="block text-sm font-medium text-slate-700 mb-1">First Name *</label>
                             <input type="text" name="firstname" id="staff_firstname" value="{{ old('firstname') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base">
                         </div>
                         <div>
@@ -274,19 +274,19 @@
                             <input type="text" name="middlename" id="staff_middlename" value="{{ old('middlename') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base">
                         </div>
                         <div>
-                            <label for="staff_lastname" class="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                            <label for="staff_lastname" class="block text-sm font-medium text-slate-700 mb-1">Last Name *</label>
                             <input type="text" name="lastname" id="staff_lastname" value="{{ old('lastname') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base">
                         </div>
                         <div>
-                            <label for="staff_email" class="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                            <label for="staff_email" class="block text-sm font-medium text-slate-700 mb-1">Email Address *</label>
                             <input type="email" name="email" id="staff_email" value="{{ old('email') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base">
                         </div>
                         <div>
-                            <label for="staff_contact" class="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+                            <label for="staff_contact" class="block text-sm font-medium text-slate-700 mb-1">Contact Number *</label>
                             <input type="text" name="contact" id="staff_contact" value="{{ old('contact') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base">
                         </div>
                         <div>
-                            <label for="staff_password" class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                            <label for="staff_password" class="block text-sm font-medium text-slate-700 mb-1">Password *</label>
                             <div class="relative">
                                 <input type="password" name="password" id="staff_password" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
                                 <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
@@ -295,7 +295,7 @@
                             </div>
                         </div>
                         <div class="md:col-span-2">
-                            <label for="staff_password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
+                            <label for="staff_password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm Password *</label>
                             <div class="relative">
                                 <input type="password" name="password_confirmation" id="staff_password_confirmation" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 pr-10 password-input-field text-base">
                                 <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 password-toggle-button">
