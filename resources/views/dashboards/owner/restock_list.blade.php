@@ -462,7 +462,7 @@
                     margin: 0;
                 }
                 body {
-                    font-family: monospace;
+                    font-family: Arial, sans-serif;
                     width: 58mm;
                     margin: 0;
                     padding: 5px;
@@ -471,7 +471,7 @@
                 }
                 h2 {
                     text-align: center;
-                    font-size: 14px;
+                    font-size: 16px;
                     margin: 0 0 8px 0;
                     text-transform: uppercase;
                 }
