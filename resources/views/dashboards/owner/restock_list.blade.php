@@ -466,7 +466,7 @@
                     width: 58mm;
                     margin: 0;
                     padding: 5px;
-                    font-size: 10px;
+                    font-size: 12px;
                     line-height: 1.3;
                 }
                 h2 {
@@ -488,11 +488,11 @@
                 }
                 .item-name {
                     font-weight: bold;
-                    font-size: 10px;
+                    font-size: 12px;
                     margin-bottom: 2px;
                 }
                 .item-details {
-                    font-size: 9px;
+                    font-size: 12px;
                     margin: 1px 0;
                 }
                 .item-price-row {
@@ -509,7 +509,7 @@
                     display: flex;
                     justify-content: space-between;
                     font-weight: bold;
-                    font-size: 10px;
+                    font-size: 12px;
                 }
             </style>
         </head>
