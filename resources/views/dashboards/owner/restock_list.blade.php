@@ -466,33 +466,33 @@
                     width: 58mm;
                     margin: 0;
                     padding: 5px;
-                    font-size: 12px;
+                    font-size: 14px;
                     line-height: 1.3;
                 }
                 h2 {
                     text-align: center;
-                    font-size: 12px;
+                    font-size: 14px;
                     margin: 0 0 8px 0;
                     text-transform: uppercase;
                 }
                 .header-info {
                     margin-bottom: 8px;
-                    border-bottom: 1px dashed #000;
+                    border-bottom: 2px solid #000;
                 }
                 .header-info p {
                     margin: 2px 0;
                 }
                 .item-row {
-                    border-bottom: 1px dotted #ccc;
+                    border-bottom: 2px solid #ccc;
                     padding: 4px 0;
                 }
                 .item-name {
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: 14px;
                     margin-bottom: 2px;
                 }
                 .item-details {
-                    font-size: 12px;
+                    font-size: 14px;
                     margin: 1px 0;
                 }
                 .item-price-row {
@@ -509,7 +509,7 @@
                     display: flex;
                     justify-content: space-between;
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: 14px;
                 }
             </style>
         </head>
