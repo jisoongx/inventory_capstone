@@ -261,75 +261,86 @@
                         <th class="px-4 py-3">Days Until Expiry</th>
                     </tr>
                 </thead>
-                <tbody id="stockInTableBody">
-                    @forelse ($batchGroups as $batchNumber => $batches)
-                        @php
-                            $firstBatch = $batches->first();
-                            $totalBatchQuantity = $firstBatch->original_quantity;
-                            
-                            if ($firstBatch->expiration_date) {
-                                $expirationDate = \Carbon\Carbon::parse($firstBatch->expiration_date)->startOfDay();
-                                $today = \Carbon\Carbon::today();
-                                $expiryDays = $today->diffInDays($expirationDate, false);
-                            } else {
-                                $expiryDays = null;
-                            }
-                        @endphp
-                        <tr class="hover:bg-gray-50 border-t data-row" data-batch="{{ $batchNumber }}" data-date="{{ \Carbon\Carbon::parse($firstBatch->date_added)->timestamp }}" data-quantity="{{ $totalBatchQuantity }}">
-                            <td class="px-4 py-3 text-center text-sm">
-                                <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-medium">
-                                    {{ $batchNumber }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-center text-sm">{{ $totalBatchQuantity }}</td>
-                            <td class="px-4 py-3 text-center text-sm">
-                                {{ \Carbon\Carbon::parse($firstBatch->date_added)->format('M j, Y') }}
-                            </td>
-                            <td class="px-4 py-3 text-center text-sm">
-                                @if($firstBatch->expiration_date)
-                                    {{ \Carbon\Carbon::parse($firstBatch->expiration_date)->format('M j, Y') }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-center text-sm">
-                                @if($expiryDays !== null)
-                                    <span class="{{ $expiryDays < 0 ? 'text-red-600 font-medium' : ($expiryDays == 0 ? 'text-orange-600 font-medium' : 'text-blue-600 font-medium') }}">
-                                        @if($expiryDays > 0)
-                                            {{ $expiryDays }} day{{ $expiryDays > 1 ? 's' : '' }} left
-                                        @elseif($expiryDays == 0)
-                                            Expires today
-                                        @else
-                                            @php $daysAgo = abs($expiryDays); @endphp
-                                            Expired {{ $daysAgo }} day{{ $daysAgo > 1 ? 's' : '' }} ago
-                                        @endif
-                                    </span>
-                                @else
-                                    —
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr class="no-data-row">
-                            <td colspan="5" class="text-center py-8 text-gray-500">
-                                <div class="flex flex-col items-center gap-2">
-                                    <span class="material-symbols-outlined text-4xl text-gray-300">inventory_2</span>
-                                    <span class="font-medium">No data available</span>
-                                    <span class="text-xs text-gray-400">Stock-in records will appear here once added</span>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                    <tr class="no-results-row hidden">
-                        <td colspan="5" class="text-center py-8 text-gray-500">
-                            <div class="flex flex-col items-center gap-2">
-                                <span class="material-symbols-outlined text-4xl text-gray-300">search_off</span>
-                                <span class="font-medium">No results found</span>
-                                <span class="text-xs text-gray-400">Try adjusting your filters or search criteria</span>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
+<tbody id="stockInTableBody">
+    @forelse ($batchGroups as $batchNumber => $batches)
+        @php
+            // Get the first record for display (they should all have same batch info)
+            $firstBatch = $batches->first();
+            
+            // For display: show the original quantity from the first/only record
+            // If you restock the same batch multiple times, sum them up
+            $totalBatchQuantity = $batches->sum('original_quantity');
+            
+            // Use the date_added from first batch record
+            $dateAdded = $firstBatch->date_added;
+            
+            // Calculate expiry days if expiration date exists
+            if ($firstBatch->expiration_date) {
+                $expirationDate = \Carbon\Carbon::parse($firstBatch->expiration_date)->startOfDay();
+                $today = \Carbon\Carbon::today();
+                $expiryDays = $today->diffInDays($expirationDate, false);
+            } else {
+                $expiryDays = null;
+            }
+        @endphp
+        <tr class="hover:bg-gray-50 border-t data-row" 
+            data-batch="{{ $batchNumber }}" 
+            data-date="{{ \Carbon\Carbon::parse($dateAdded)->timestamp }}" 
+            data-quantity="{{ $totalBatchQuantity }}">
+            <td class="px-4 py-3 text-center text-sm">
+                <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-medium">
+                    {{ $batchNumber }}
+                </span>
+            </td>
+            <td class="px-4 py-3 text-center text-sm">{{ $totalBatchQuantity }}</td>
+            <td class="px-4 py-3 text-center text-sm">
+                {{ \Carbon\Carbon::parse($dateAdded)->format('M j, Y') }}
+            </td>
+            <td class="px-4 py-3 text-center text-sm">
+                @if($firstBatch->expiration_date)
+                    {{ \Carbon\Carbon::parse($firstBatch->expiration_date)->format('M j, Y') }}
+                @else
+                    —
+                @endif
+            </td>
+            <td class="px-4 py-3 text-center text-sm">
+                @if($expiryDays !== null)
+                    <span class="{{ $expiryDays < 0 ? 'text-red-600 font-medium' : ($expiryDays == 0 ? 'text-orange-600 font-medium' : 'text-blue-600 font-medium') }}">
+                        @if($expiryDays > 0)
+                            {{ $expiryDays }} day{{ $expiryDays > 1 ? 's' : '' }} left
+                        @elseif($expiryDays == 0)
+                            Expires today
+                        @else
+                            @php $daysAgo = abs($expiryDays); @endphp
+                            Expired {{ $daysAgo }} day{{ $daysAgo > 1 ? 's' : '' }} ago
+                        @endif
+                    </span>
+                @else
+                    —
+                @endif
+            </td>
+        </tr>
+    @empty
+        <tr class="no-data-row">
+            <td colspan="5" class="text-center py-8 text-gray-500">
+                <div class="flex flex-col items-center gap-2">
+                    <span class="material-symbols-outlined text-4xl text-gray-300">inventory_2</span>
+                    <span class="font-medium">No data available</span>
+                    <span class="text-xs text-gray-400">Stock-in records will appear here once added</span>
+                </div>
+            </td>
+        </tr>
+    @endforelse
+    <tr class="no-results-row hidden">
+        <td colspan="5" class="text-center py-8 text-gray-500">
+            <div class="flex flex-col items-center gap-2">
+                <span class="material-symbols-outlined text-4xl text-gray-300">search_off</span>
+                <span class="font-medium">No results found</span>
+                <span class="text-xs text-gray-400">Try adjusting your filters or search criteria</span>
+            </div>
+        </td>
+    </tr>
+</tbody>
             </table>
         </div>
     </div>

@@ -43,8 +43,10 @@ class InventoryOwnerController extends Controller
                 MIN(u.unit)          AS unit,
                 MIN(c.category)      AS category,
                 p.prod_status,
-                -- Stock in Inventory (already reduced by sales)
+                
+                -- Total Stock In Inventory (including expired)
                 COALESCE(SUM(i.stock), 0) AS inventory_stock,
+                
                 -- Total Stock Out from Sales
                 COALESCE((
                     SELECT SUM(ri.item_quantity) 
@@ -52,33 +54,37 @@ class InventoryOwnerController extends Controller
                     JOIN receipt r ON ri.receipt_id = r.receipt_id 
                     WHERE ri.prod_code = p.prod_code
                 ), 0) AS total_stock_out_sales,
-                -- Total Damaged Items (prevent duplicates by grouping by inven_code)
+                
+                -- Total Damaged Items
                 COALESCE((
                     SELECT SUM(di.damaged_quantity)
                     FROM damaged_items di
-                    WHERE di.inven_code = i.inven_code
-                    AND di.damaged_id IN (
-                        SELECT MIN(damaged_id)
-                        FROM damaged_items di2
-                        INNER JOIN inventory i2 ON di2.inven_code = i2.inven_code
-                        INNER JOIN products p2 ON i2.prod_code = p2.prod_code
-                        WHERE i2.prod_code = i.prod_code  -- Connect to main query
-                        GROUP BY di2.inven_code
-                    )
+                    INNER JOIN inventory i2 ON di.inven_code = i2.inven_code
+                    WHERE i2.prod_code = p.prod_code
                 ), 0) AS total_stock_out_damaged,
-                -- Current Stock: Just the sum of stock from inventory table
+                
+                -- Current Stock: Sum of stock EXCLUDING expired items
+                -- (Expired items are automatically moved to damaged_items table)
                 COALESCE((
                     SELECT SUM(i.stock)
                     FROM inventory i
                     WHERE i.prod_code = p.prod_code
+                    AND (i.expiration_date IS NULL OR i.expiration_date >= CURDATE())
                 ), 0) AS current_stock,
-                -- Total Stock In (Original): Current Stock + Sales + Damaged
+                
+                -- Total Stock In (Original): Current Stock in Inventory + Sales + Damaged
                 (COALESCE(SUM(i.stock), 0) + 
                 COALESCE((
                     SELECT SUM(ri.item_quantity) 
                     FROM receipt_item ri 
                     JOIN receipt r ON ri.receipt_id = r.receipt_id 
                     WHERE ri.prod_code = p.prod_code
+                ), 0) +
+                COALESCE((
+                    SELECT SUM(di.damaged_quantity)
+                    FROM damaged_items di
+                    INNER JOIN inventory i2 ON di.inven_code = i2.inven_code
+                    WHERE i2.prod_code = p.prod_code
                 ), 0)) AS total_stock_in
             FROM products p
             JOIN units u       ON p.unit_id = u.unit_id
@@ -142,7 +148,6 @@ class InventoryOwnerController extends Controller
         return response()->json($results);
     }
 
-
 public function showProductDetails($prodCode)
 {
     // Get product info
@@ -164,20 +169,7 @@ public function showProductDetails($prodCode)
         ->orderBy('batch_number', 'desc')
         ->get();
 
-    // Get ORIGINAL stock-in quantities per batch (before any deductions)
-    // We need to get the initial stock value when the batch was first added
-    $originalStockPerBatch = DB::table('inventory')
-        ->where('prod_code', $prodCode)
-        ->whereNotNull('batch_number')
-        ->select(
-            'batch_number',
-            DB::raw('SUM(stock) as current_stock')
-        )
-        ->groupBy('batch_number')
-        ->get()
-        ->keyBy('batch_number');
-
-    // Get sales data per batch to calculate original quantities
+    // Get sales data per batch
     $salesPerBatch = DB::table('receipt_item as ri')
         ->join('inventory as i', 'ri.inven_code', '=', 'i.inven_code')
         ->where('ri.prod_code', $prodCode)
@@ -186,36 +178,41 @@ public function showProductDetails($prodCode)
         ->groupBy('i.batch_number')
         ->pluck('total_sold', 'batch_number');
 
-    // Get damaged items per batch
+    // Get damaged items per batch (EXCLUDING expired type to avoid double-counting)
     $damagedPerBatch = DB::table('damaged_items as di')
         ->join('inventory as i', 'di.inven_code', '=', 'i.inven_code')
         ->join('products as p', 'i.prod_code', '=', 'p.prod_code')
         ->where('p.prod_code', $prodCode)
         ->whereNotNull('i.batch_number')
+        ->where('di.damaged_type', '!=', 'Expired') // EXCLUDE expired to avoid double-counting
         ->select('i.batch_number', DB::raw('SUM(di.damaged_quantity) as total_damaged'))
         ->groupBy('i.batch_number')
         ->pluck('total_damaged', 'batch_number');
 
-    // Batch grouping for stock-in with CORRECT original quantities
-    $batchGroups = $stockInHistory->groupBy('batch_number')->map(function($batches, $batchNumber) use ($salesPerBatch, $damagedPerBatch, $originalStockPerBatch) {
-        // Get current stock in inventory (already reduced)
-        $currentStock = $batches->sum('stock');
+    // Batch grouping - calculate original quantity per inventory record
+    $batchGroups = collect();
+    
+    foreach ($stockInHistory as $record) {
+        // Get all sales that used this specific inventory record
+        $soldFromThisRecord = DB::table('receipt_item')
+            ->where('inven_code', $record->inven_code)
+            ->sum('item_quantity') ?? 0;
         
-        // Get total sold from this batch
-        $soldFromBatch = $salesPerBatch->get($batchNumber, 0);
+        // Get all damaged items from this specific inventory record (EXCLUDING expired type)
+        $damagedFromThisRecord = DB::table('damaged_items')
+            ->where('inven_code', $record->inven_code)
+            ->where('damaged_type', '!=', 'Expired') // EXCLUDE expired
+            ->sum('damaged_quantity') ?? 0;
         
-        // Get total damaged from this batch
-        $damagedFromBatch = $damagedPerBatch->get($batchNumber, 0);
+        // Calculate original quantity: current stock + what went out (sales + non-expired damages)
+        // We DON'T add expired items here because they're still in the inventory.stock count
+        $record->original_quantity = $record->stock + $soldFromThisRecord + $damagedFromThisRecord;
         
-        // Calculate ORIGINAL quantity: current stock + all items that went out
-        $originalQuantity = $currentStock + $soldFromBatch + $damagedFromBatch;
-        
-        // Add original_quantity to each batch in the group
-        return $batches->map(function($batch) use ($originalQuantity) {
-            $batch->original_quantity = $originalQuantity;
-            return $batch;
-        });
-    });
+        $batchGroups->push($record);
+    }
+    
+    // Group by batch number for display purposes
+    $batchGroups = $batchGroups->groupBy('batch_number');
 
     // Stock-out from Sales
     $stockOutSalesHistory = DB::table('receipt_item as ri')
@@ -231,8 +228,6 @@ public function showProductDetails($prodCode)
             'r.receipt_id',
             'r.receipt_date',
             'i.batch_number',
-
-            // Selling price used for this sale
             DB::raw('(
                 SELECT COALESCE(
                     (SELECT ph.old_selling_price 
@@ -245,8 +240,6 @@ public function showProductDetails($prodCode)
                     p.selling_price
                 )
             ) as selling_price_used'),
-
-            // Old cost price at the time of sale
             DB::raw('(
                 SELECT COALESCE(
                     (SELECT ph.old_cost_price 
@@ -259,8 +252,6 @@ public function showProductDetails($prodCode)
                     p.cost_price
                 )
             ) as cost_price_used'),
-
-            // Total amount
             DB::raw('ri.item_quantity * (
                 SELECT COALESCE(
                     (SELECT ph.old_selling_price 
@@ -273,14 +264,11 @@ public function showProductDetails($prodCode)
                     p.selling_price
                 )
             ) as total_amount'),
-
-            // Who sold it
             DB::raw('COALESCE(CONCAT(s.firstname, " ", s.lastname), CONCAT(o.firstname, " ", o.lastname), "System") as sold_by')
         )
         ->where('ri.prod_code', $prodCode)
         ->orderBy('r.receipt_date', 'desc')
         ->get();
-
 
     // Stock-out from Damaged/Expired Items
     $stockOutDamagedHistory = DB::table('damaged_items as di')
@@ -301,26 +289,44 @@ public function showProductDetails($prodCode)
         ->orderBy('di.damaged_date', 'desc')
         ->get();
 
-    // Calculate totals correctly
+    // Calculate CORRECT totals
+    $today = \Carbon\Carbon::today();
+    
+    // 1. Current Stock in Inventory (what's physically in the system, including expired)
     $currentStockInInventory = $stockInHistory->sum('stock');
+    
+    // 2. Calculate expired items based on expiration_date
+    $expiredStock = DB::table('inventory')
+        ->where('prod_code', $prodCode)
+        ->whereNotNull('expiration_date')
+        ->where('expiration_date', '<', $today)
+        ->sum('stock');
+    
+    // 3. Current Sellable Stock = Current Stock - Expired Stock
+    $currentStock = $currentStockInInventory - $expiredStock;
+    
+    // 4. Total Sold = Sum of all sold quantities
     $totalStockOutSold = $stockOutSalesHistory->sum('quantity_sold');
-    $totalStockOutDamaged = $stockOutDamagedHistory->sum('damaged_quantity');
+    
+    // 5. Total Damaged (reported in damaged_items table, EXCLUDING expired type)
+    $totalStockOutDamaged = $stockOutDamagedHistory->where('damaged_type', '!=', 'Expired')->sum('damaged_quantity');
+    
+    // 6. Total Stock Out = Sold + Damaged (excluding expired, since we count it separately)
     $totalStockOut = $totalStockOutSold + $totalStockOutDamaged;
     
-    // Total Stock In = Current Stock + All Stock Out (sold + damaged)
+    // 7. Total Stock In = Current Stock (including expired) + All Stock Out
     $totalStockIn = $currentStockInInventory + $totalStockOut;
-    
-    // Current Stock = What's remaining in inventory
-    $currentStock = $currentStockInInventory;
     
     $totalRevenue = $stockOutSalesHistory->sum('total_amount');
     $turnoverRate = $totalStockIn > 0 ? ($totalStockOutSold / $totalStockIn) * 100 : 0;
 
-    // Count expired and damaged items using damaged_type
-    $totalExpired = $stockOutDamagedHistory->where('damaged_type', 'Expired')->sum('damaged_quantity');
-    $totalDamaged = $stockOutDamagedHistory->where('damaged_type', '!=', 'Expired')->sum('damaged_quantity');
+    // Expired items: count from inventory table based on expiration_date
+    $totalExpired = $expiredStock;
+    
+    // Damaged items: count from damaged_items table (excluding expired type)
+    $totalDamaged = $totalStockOutDamaged;
 
-    // Batch Stock-out History
+    // Batch Stock-out History (keeping your existing logic)
     $manualBatchStockOut = collect();
 
     $inventoryChanges = DB::table('inventory')
@@ -397,7 +403,6 @@ public function showProductDetails($prodCode)
         'turnoverRate'
     ));
 }
-
 
 public function pricingHistory($prodCode)
 {
@@ -941,6 +946,22 @@ public function update(Request $request, $prodCode)
             ->where('owner_id', $ownerId)
             ->first();
 
+        // Check current stock (excluding expired items)
+        $currentStock = DB::table('inventory')
+            ->where('prod_code', $prodCode)
+            ->where(function($query) {
+                $query->whereNull('expiration_date')
+                    ->orWhere('expiration_date', '>=', DB::raw('CURDATE()'));
+            })
+            ->sum('stock');
+
+        // Prevent archiving if stock exists
+        if ($currentStock > 0) {
+            $stockLabel = $currentStock == 1 ? 'stock' : 'stocks';
+            return redirect()->route('inventory-owner')
+                ->with('error', "Cannot archive product '{$product->name}'. It still has {$currentStock} {$stockLabel} left. Please remove all stock before archiving.");
+        }
+
         DB::table('products')
             ->where('prod_code', $prodCode)
             ->where('owner_id', $ownerId)
@@ -971,7 +992,6 @@ public function update(Request $request, $prodCode)
             ->where('owner_id', $ownerId)
             ->update(['prod_status' => 'active']);
 
-
         ActivityLogController::log(
             'Unarchived product: ' . ($product->name ?? 'Unknown'),
             'owner',
@@ -981,7 +1001,6 @@ public function update(Request $request, $prodCode)
 
         return redirect()->route('inventory-owner')->with('success', 'Product unarchived successfully.');
     }
-
 
 
     public function checkBarcode(Request $request)

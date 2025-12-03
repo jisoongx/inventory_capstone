@@ -382,14 +382,14 @@
                                 title="Edit" class="text-green-500 hover:text-green-700 {{ $editDisabled }}">
                                 <span class="material-symbols-outlined">edit</span>
                             </a>
-                            
+
                             <!-- Archive / Unarchive Button -->
                             @if ($product->prod_status === 'active')
                                 <button type="button"
                                     class="text-red-500 hover:text-red-700 {{ $expired ? 'cursor-not-allowed' : '' }}"
                                     title="Archive"
                                     @if(!$expired)
-                                        onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                        onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ addslashes($product->name) }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}', {{ $product->current_stock }})"
                                     @else
                                         disabled
                                     @endif>
@@ -400,7 +400,7 @@
                                     class="text-orange-400 hover:text-orange-600 {{ $expired ? 'cursor-not-allowed' : '' }}"
                                     title="Unarchive"
                                     @if(!$expired)
-                                        onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ $product->name }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}')"
+                                        onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ addslashes($product->name) }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}', {{ $product->current_stock }})"
                                     @else
                                         disabled
                                     @endif>
@@ -429,14 +429,23 @@
             <!-- Title -->
             <h2 id="statusModalTitle" class="text-xl font-semibold text-gray-800 mb-2"></h2>
             <p id="statusModalMessage" class="text-sm text-gray-600 mb-4"></p>
-
+            
+            <!-- Stock Warning Alert (Initially Hidden) -->
+            <div id="stockWarningAlert" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded">
+                <div class="flex items-start">
+                    <span class="material-symbols-outlined text-red-500 mr-2">warning</span>
+                    <div>
+                        <p class="text-sm font-semibold text-red-800">Cannot Archive Product</p>
+                        <p id="stockWarningText" class="text-sm text-red-700 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Product Preview Card -->
             <div class="flex items-center gap-4 border rounded-lg p-4 bg-gray-50 mb-5">
                 <!-- Product Image -->
                 <img id="statusProductImage" src="" alt="Product Image" class="h-20 w-20 rounded object-cover border"
                     onerror="this.src='/assets/no-product-image.png'">
-
-
                 <!-- Product Details -->
                 <div class="text-left flex-1 min-w-0">
                     <p class="text-sm text-gray-700">
@@ -453,10 +462,14 @@
                             title="">
                         </span>
                     </p>
+                    <!-- Current Stock Display -->
+                    <p class="text-sm text-gray-700 mt-1">
+                        <strong>Current Stock:</strong>
+                        <span id="statusProductStock" class="font-semibold"></span>
+                    </p>
                 </div>
-
             </div>
-
+            
             <!-- Form -->
             <form id="statusForm" method="POST">
                 @csrf
@@ -473,7 +486,6 @@
             </form>
         </div>
     </div>
-
 
 
     <!-- Add Product Modal -->
@@ -4313,35 +4325,60 @@ document.addEventListener("DOMContentLoaded", () => {
 
     <!-- Archive, Unarchive JavaScript -->
     <script>
-        function openStatusModal(action, prodCode, name, barcode, imageUrl) {
+        function openStatusModal(action, prodCode, name, barcode, imageUrl, currentStock) {
             const modal = document.getElementById('statusModal');
             const form = document.getElementById('statusForm');
             const title = document.getElementById('statusModalTitle');
             const message = document.getElementById('statusModalMessage');
             const submitBtn = document.getElementById('statusSubmitBtn');
+            const stockWarningAlert = document.getElementById('stockWarningAlert');
+            const stockWarningText = document.getElementById('stockWarningText');
 
             // Product details
             document.getElementById('statusProductName').textContent = name;
-            document.getElementById('statusProductName').title = name; // tooltip
+            document.getElementById('statusProductName').title = name;
 
             document.getElementById('statusProductBarcode').textContent = barcode;
-            document.getElementById('statusProductBarcode').title = barcode; // tooltip
+            document.getElementById('statusProductBarcode').title = barcode;
 
             document.getElementById('statusProductImage').src = imageUrl ?
                 `/storage/${imageUrl}` :
                 "{{ asset('assets/no-product-image.png') }}";
 
+            // Display current stock
+            const stockLabel = currentStock == 1 ? 'stock' : 'stocks';
+            document.getElementById('statusProductStock').textContent = `${currentStock} ${stockLabel} left`;
+
             // Action-specific UI
             if (action === 'archive') {
                 title.textContent = 'Archive Product';
-                message.textContent = 'Are you sure you want to archive this product?';
+                
+                // Check if product has stock
+                if (currentStock > 0) {
+                    // Show warning and disable submit
+                    stockWarningAlert.classList.remove('hidden');
+                    stockWarningText.textContent = `This product still has ${currentStock} ${stockLabel} left. Please remove all stock before archiving.`;
+                    message.textContent = 'This product cannot be archived at this time.';
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Cannot Archive';
+                    submitBtn.className = "px-4 py-2 bg-gray-400 text-white text-sm rounded cursor-not-allowed";
+                } else {
+                    // Hide warning and enable submit
+                    stockWarningAlert.classList.add('hidden');
+                    message.textContent = 'Are you sure you want to archive this product?';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Yes, Archive';
+                    submitBtn.className = "px-4 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600";
+                }
+                
                 form.action = `/inventory/archive/${prodCode}`;
-                submitBtn.textContent = 'Yes, Archive';
-                submitBtn.className = "px-4 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600";
             } else {
+                // Unarchive action
+                stockWarningAlert.classList.add('hidden');
                 title.textContent = 'Unarchive Product';
                 message.textContent = 'Do you want to unarchive this product?';
                 form.action = `/inventory/unarchive/${prodCode}`;
+                submitBtn.disabled = false;
                 submitBtn.textContent = 'Yes, Unarchive';
                 submitBtn.className = "px-4 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600";
             }
@@ -4353,6 +4390,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('statusModal').classList.add('hidden');
         }
     </script>
+
 
 
     <!-- Toggle Option for Active and Archived Products JavaScript -->
