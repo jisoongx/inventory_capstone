@@ -758,7 +758,7 @@ class StoreController extends Controller
             $owner_id = $this->getCurrentOwnerId();
             $staff_id = null;
             
-            if (! $owner_id) {
+            if (!  $owner_id) {
                 throw new \Exception('Unauthorized access');
             }
             
@@ -776,6 +776,21 @@ class StoreController extends Controller
             $vatRate = $request->input('vat_rate', 0);
             $itemDiscounts = $request->input('item_discounts', []);
     
+            // ✅ Validate mutual exclusivity
+            $hasItemDiscounts = false;
+            foreach ($itemDiscounts as $discount) {
+                if ($discount['value'] > 0) {
+                    $hasItemDiscounts = true;
+                    break;
+                }
+            }
+    
+            $hasReceiptDiscount = $receiptDiscountValue > 0;
+    
+            if ($hasItemDiscounts && $hasReceiptDiscount) {
+                throw new \Exception('Cannot apply both item discounts and receipt discount at the same time.');
+            }
+    
             $lowStockProducts = [];
             $receiptItems = [];
             $subtotal = 0;
@@ -786,7 +801,7 @@ class StoreController extends Controller
                                 ->where('owner_id', $owner_id)
                                 ->first();
                 
-                if (!$product) {
+                if (! $product) {
                     throw new \Exception("Product not found or access denied: " . $item['prod_code']);
                 }
     
@@ -812,32 +827,45 @@ class StoreController extends Controller
                 ];
             }
     
-            // ✅ Step 2: Calculate item-level discounts
+            // ✅ Step 2: Calculate item-level discounts (CALCULATED AMOUNTS)
             $totalItemDiscounts = 0;
+            $itemDiscountAmounts = []; // Store calculated amounts per item
+            
             foreach ($items as $item) {
                 $product = Product::where('prod_code', $item['prod_code'])->first();
                 $itemTotal = $product->selling_price * $item['quantity'];
+                
+                $calculatedDiscountAmount = 0;
                 
                 if (isset($itemDiscounts[$item['prod_code']])) {
                     $discount = $itemDiscounts[$item['prod_code']];
                     $discountType = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
                     
                     if ($discountType === 'percent') {
-                        $totalItemDiscounts += $itemTotal * ($discount['value'] / 100);
+                        // ✅ Calculate the actual discount amount from percentage
+                        $calculatedDiscountAmount = $itemTotal * ($discount['value'] / 100);
                     } else {
-                        $totalItemDiscounts += $discount['value'];
+                        // ✅ Use the fixed amount directly
+                        $calculatedDiscountAmount = min($discount['value'], $itemTotal); // Can't exceed item total
                     }
                 }
+                
+                $itemDiscountAmounts[$item['prod_code']] = $calculatedDiscountAmount;
+                $totalItemDiscounts += $calculatedDiscountAmount;
             }
     
             $afterItemDiscounts = $subtotal - $totalItemDiscounts;
     
-            // ✅ Step 3: Calculate receipt-level discount
+            // ✅ Step 3: Calculate receipt-level discount (ONLY if no item discounts)
             $receiptDiscountAmount = 0;
-            if ($receiptDiscountType === 'percent') {
-                $receiptDiscountAmount = $afterItemDiscounts * ($receiptDiscountValue / 100);
-            } else {
-                $receiptDiscountAmount = $receiptDiscountValue;
+            if (! $hasItemDiscounts && $hasReceiptDiscount) {
+                if ($receiptDiscountType === 'percent') {
+                    // ✅ Calculate the actual discount amount from percentage
+                    $receiptDiscountAmount = $afterItemDiscounts * ($receiptDiscountValue / 100);
+                } else {
+                    // ✅ Use the fixed amount directly
+                    $receiptDiscountAmount = min($receiptDiscountValue, $afterItemDiscounts);
+                }
             }
     
             $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
@@ -847,7 +875,6 @@ class StoreController extends Controller
             $vatAmountExempt = 0;
             
             if ($vatEnabled && $vatRate > 0) {
-                // Calculate proportion after discounts
                 $discountMultiplier = $subtotal > 0 ? ($afterReceiptDiscount / $subtotal) : 0;
                 
                 foreach ($items as $item) {
@@ -856,30 +883,31 @@ class StoreController extends Controller
                     $itemAfterDiscounts = $itemTotal * $discountMultiplier;
                     
                     if ($product->vat_category === 'vat_inclusive') {
-                        // Extract VAT: VAT = Price × (Rate / (100 + Rate))
                         $vatAmountInclusive += $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
+                    } else {
+                        $vatAmountExempt += $itemAfterDiscounts;
                     }
-                    // vat_exempt items contribute ₱0.00 to VAT
                 }
             }
             
-            $totalVatAmount = $vatAmountInclusive + $vatAmountExempt; // $vatAmountExempt is always 0
+            $totalVatAmount = $vatAmountInclusive;
     
-            // ✅ Step 5: Total amount (price already includes VAT)
+            // ✅ Step 5: Total amount
             $totalAmount = $afterReceiptDiscount;
     
             if ($request->amount_paid < $totalAmount) {
-                throw new \Exception("Amount paid (₱" . number_format($request->amount_paid, 2) . ") is less than total amount (₱" . number_format($totalAmount, 2) . ")");
+                throw new \Exception("Amount paid (₱" .number_format($request->amount_paid, 2) . ") is less than total amount (₱" .number_format($totalAmount, 2) . ")");
             }
     
-            // ✅ Step 6: Create receipt
+            // ✅ Step 6: Create receipt (store CALCULATED discount_amount)
             $receipt = Receipt::create([
                 'receipt_date' => now(),
                 'owner_id' => $owner_id,
                 'staff_id' => $staff_id,
                 'amount_paid' => $request->amount_paid,
                 'discount_type' => $receiptDiscountType,
-                'discount_value' => $receiptDiscountValue
+                'discount_value' => $receiptDiscountValue,
+                'discount_amount' => $receiptDiscountAmount // ✅ Store calculated amount
             ]);
     
             // ✅ Step 7: Create receipt items and update inventory
@@ -890,6 +918,7 @@ class StoreController extends Controller
     
                 $itemDiscountType = 'percent';
                 $itemDiscountValue = 0;
+                $calculatedItemDiscountAmount = $itemDiscountAmounts[$item['prod_code']] ?? 0;
                 
                 if (isset($itemDiscounts[$item['prod_code']])) {
                     $itemDiscountType = $itemDiscounts[$item['prod_code']]['type'];
@@ -916,17 +945,18 @@ class StoreController extends Controller
                             ->where('owner_id', $owner_id)
                             ->decrement('stock', $batch['quantity']);
     
-                    // Split VAT proportionally across batches
                     $batchProportion = $batch['quantity'] / $item['quantity'];
                     $batchVatAmount = $itemVatAmount * $batchProportion;
+                    $batchDiscountAmount = $calculatedItemDiscountAmount * $batchProportion;
     
-                    // Create receipt item
+                    // ✅ Create receipt item (store CALCULATED item_discount_amount)
                     ReceiptItem::create([
                         'item_quantity' => $batch['quantity'],
                         'prod_code' => $item['prod_code'],
                         'receipt_id' => $receipt->receipt_id,
                         'item_discount_type' => $itemDiscountType,
                         'item_discount_value' => $itemDiscountValue * $batchProportion,
+                        'item_discount_amount' => $batchDiscountAmount, // ✅ Store calculated amount
                         'vat_amount' => $batchVatAmount,
                         'inven_code' => $batch['inven_code']
                     ]);
@@ -955,7 +985,7 @@ class StoreController extends Controller
             DB::commit();
     
             // Activity log
-            $user = Auth::guard('owner')->user() ?? Auth::guard('staff')->user();
+            $user = Auth::guard('owner')->user() ??  Auth::guard('staff')->user();
             $ip = $request->ip();
             
             ActivityLogController::log(

@@ -16,13 +16,15 @@ class Receipt extends Model
         'staff_id',
         'amount_paid',
         'discount_type',
-        'discount_value'
+        'discount_value',
+        'discount_amount' // ✅ Added - stores calculated discount amount
     ];
     
     protected $casts = [
         'receipt_date' => 'datetime',
         'amount_paid' => 'decimal:2',
-        'discount_value' => 'decimal:2'
+        'discount_value' => 'decimal:2',
+        'discount_amount' => 'decimal:2' // ✅ Added
     ];
 
     // Relationships
@@ -43,32 +45,30 @@ class Receipt extends Model
 
     /**
      * Calculate total amount after all discounts
-     * This matches the calculation logic in your views
+     * Now uses the stored discount_amount instead of recalculating
      */
     public function getTotalAmountAttribute()
     {
-        // Calculate subtotal after item-level discounts
+        // Calculate subtotal (sum of all items after item-level discounts)
         $subtotal = $this->receiptItems()->with('product')->get()->sum(function ($item) {
             $lineTotal = $item->item_quantity * $item->product->selling_price;
             
-            // Apply item-level discount
-            $itemDiscount = 0;
-            if ($item->item_discount_type == 'percent') {
-                $itemDiscount = $lineTotal * ($item->item_discount_value / 100);
-            } else {
-                $itemDiscount = $item->item_discount_value;
+            // ✅ Use stored item_discount_amount if available, otherwise calculate
+            $itemDiscount = $item->item_discount_amount ??  0;
+            if ($itemDiscount == 0 && $item->item_discount_value > 0) {
+                // Fallback calculation if discount_amount not stored
+                if ($item->item_discount_type == 'percent') {
+                    $itemDiscount = $lineTotal * ($item->item_discount_value / 100);
+                } else {
+                    $itemDiscount = $item->item_discount_value;
+                }
             }
             
             return $lineTotal - $itemDiscount;
         });
 
-        // Apply receipt-level discount
-        $receiptDiscount = 0;
-        if ($this->discount_type == 'percent') {
-            $receiptDiscount = $subtotal * ($this->discount_value / 100);
-        } else {
-            $receiptDiscount = $this->discount_value;
-        }
+        // ✅ Use stored discount_amount instead of recalculating
+        $receiptDiscount = $this->discount_amount ?? 0;
 
         return $subtotal - $receiptDiscount;
     }
@@ -81,12 +81,14 @@ class Receipt extends Model
         return $this->receiptItems()->with('product')->get()->sum(function ($item) {
             $lineTotal = $item->item_quantity * $item->product->selling_price;
             
-            // Apply item-level discount
-            $itemDiscount = 0;
-            if ($item->item_discount_type == 'percent') {
-                $itemDiscount = $lineTotal * ($item->item_discount_value / 100);
-            } else {
-                $itemDiscount = $item->item_discount_value;
+            // ✅ Use stored item_discount_amount if available
+            $itemDiscount = $item->item_discount_amount ?? 0;
+            if ($itemDiscount == 0 && $item->item_discount_value > 0) {
+                if ($item->item_discount_type == 'percent') {
+                    $itemDiscount = $lineTotal * ($item->item_discount_value / 100);
+                } else {
+                    $itemDiscount = $item->item_discount_value;
+                }
             }
             
             return $lineTotal - $itemDiscount;
@@ -95,9 +97,16 @@ class Receipt extends Model
 
     /**
      * Get receipt-level discount amount
+     * ✅ Now returns the stored calculated amount
      */
     public function getReceiptDiscountAmountAttribute()
     {
+        // Return stored amount if available
+        if (isset($this->attributes['discount_amount'])) {
+            return $this->attributes['discount_amount'];
+        }
+        
+        // Fallback calculation for old records
         $subtotal = $this->subtotal;
         
         if ($this->discount_type == 'percent') {
@@ -129,5 +138,31 @@ class Receipt extends Model
     public function getTotalItemsAttribute()
     {
         return $this->receiptItems()->count();
+    }
+
+    /**
+     * ✅ Get total item discounts (sum of all item-level discounts)
+     */
+    public function getTotalItemDiscountsAttribute()
+    {
+        return $this->receiptItems()->get()->sum(function ($item) {
+            return $item->item_discount_amount ?? 0;
+        });
+    }
+
+    /**
+     * ✅ Check if receipt has item-level discounts
+     */
+    public function hasItemDiscounts()
+    {
+        return $this->total_item_discounts > 0;
+    }
+
+    /**
+     * ✅ Check if receipt has receipt-level discount
+     */
+    public function hasReceiptDiscount()
+    {
+        return ($this->discount_amount ??  0) > 0;
     }
 }

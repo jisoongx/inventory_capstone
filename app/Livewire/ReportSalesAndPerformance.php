@@ -49,7 +49,7 @@ class ReportSalesAndPerformance extends Component
     // Global Return History properties
     public $showGlobalReturnHistory = false;
     public $globalReturnHistory = [];
-    public $returnDateFrom; // new
+    public $returnDateFrom;
     public $returnDateTo;
     public $returnSelectedCategory = 'all';    
 
@@ -71,8 +71,8 @@ class ReportSalesAndPerformance extends Component
         if (Auth::guard('owner')->check()) {
             $owner = Auth::guard('owner')->user();
             $this->store_info = (object)[
-                'store_name' => $owner->store_name ?? 'Store Name',
-                'store_address' => $owner->store_address ?? '',
+                'store_name' => $owner->store_name ??  'Store Name',
+                'store_address' => $owner->store_address ??  '',
                 'contact' => $owner->contact ?? ''
             ];
         } elseif (Auth::guard('staff')->check()) {
@@ -90,11 +90,9 @@ class ReportSalesAndPerformance extends Component
 
     public function handleReturnProcessed($receiptId)
     {
-        // Refresh data when a return is processed
         $this->getTransactions();
         $this->getSalesAnalytics();
         
-        // If the receipt modal is open, refresh it
         if ($this->showReceiptModal && $this->selectedReceipt == $receiptId) {
             $this->viewReceipt($receiptId);
         }
@@ -195,10 +193,10 @@ class ReportSalesAndPerformance extends Component
         }
     }
 
-
     public function getTransactions() {
         $owner_id = Auth::guard('owner')->user()->owner_id;
         
+        // ✅ Updated to use stored discount_amount
         $this->transactions = collect(DB::select("
             SELECT 
                 r.receipt_id,
@@ -206,6 +204,7 @@ class ReportSalesAndPerformance extends Component
                 r.amount_paid,
                 r.discount_type,
                 r.discount_value,
+                r.discount_amount, 
                 COUNT(DISTINCT ri.item_id) as total_items,
                 SUM(ri.item_quantity) as total_quantity,
                 
@@ -219,30 +218,16 @@ class ReportSalesAndPerformance extends Component
                             p.selling_price
                         )), 0) as subtotal,
                 
-                COALESCE(SUM(
-                    CASE 
-                        WHEN ri.item_discount_type = 'percent' 
-                        THEN (ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )) * (ri.item_discount_value / 100)
-                        ELSE ri.item_discount_value
-                    END
-                ), 0) as total_item_discounts,
+                COALESCE(SUM(ri.item_discount_amount), 0) as total_item_discounts,
                 
                 COALESCE(SUM(ri.vat_amount), 0) as total_vat_inclusive
                 
             FROM receipt r
             LEFT JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
             LEFT JOIN products p ON ri.prod_code = p.prod_code
-            WHERE r.owner_id = ? 
+            WHERE r.owner_id = ?  
             AND DATE(r.receipt_date) BETWEEN ? AND ?
-            GROUP BY r.receipt_id, r.receipt_date, r.amount_paid, r.discount_type, r.discount_value
+            GROUP BY r.receipt_id, r.receipt_date, r.amount_paid, r.discount_type, r.discount_value, r.discount_amount
             ORDER BY r.receipt_date DESC
         ", [$owner_id, $this->dateFrom, $this->dateTo]));
     
@@ -251,27 +236,18 @@ class ReportSalesAndPerformance extends Component
             $totalItemDiscounts = floatval($transaction->total_item_discounts ??  0);
             $afterItemDiscounts = $subtotal - $totalItemDiscounts;
             
-            // Calculate receipt discount
-            $receiptDiscountAmount = 0;
-            if (isset($transaction->discount_value) && floatval($transaction->discount_value) > 0) {
-                $discValue = floatval($transaction->discount_value);
-                $discType = $transaction->discount_type ??  'amount';
-                
-                if ($discType === 'percent') {
-                    $receiptDiscountAmount = $afterItemDiscounts * ($discValue / 100.0);
-                } else {
-                    $receiptDiscountAmount = $discValue;
-                }
-            }
+            // ✅ Use stored discount_amount directly
+            $receiptDiscountAmount = floatval($transaction->discount_amount ?? 0);
             
-            // ✅ CRITICAL FIX: Total = after discounts (VAT already included)
             $totalAmount = $afterItemDiscounts - $receiptDiscountAmount;
-            
-            // VAT is already in the price (extracted for display only)
             $totalVatInclusive = floatval($transaction->total_vat_inclusive ?? 0);
             
             $amountPaid = floatval($transaction->amount_paid ?? 0);
             $change = $amountPaid - $totalAmount;
+            
+            // ✅ Add flag for receipt discount
+            $transaction->has_receipt_discount = $receiptDiscountAmount > 0;
+            $transaction->has_item_discounts = $totalItemDiscounts > 0;
             
             $transaction->total_amount = $totalAmount;
             $transaction->change = $change;
@@ -295,7 +271,7 @@ class ReportSalesAndPerformance extends Component
             FROM receipt r
             LEFT JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
             LEFT JOIN products p ON ri.prod_code = p.prod_code
-            WHERE r.owner_id = ?
+            WHERE r.owner_id = ? 
             AND DATE(r.receipt_date) BETWEEN ? AND ?
         ", [$owner_id, $this->dateFrom, $this->dateTo]);
 
@@ -305,7 +281,7 @@ class ReportSalesAndPerformance extends Component
             : 0;
 
         $this->salesAnalytics = (object) [
-            'total_transactions' => $analytics->total_transactions ?? 0,
+            'total_transactions' => $analytics->total_transactions ??  0,
             'total_items_sold' => $analytics->total_items_sold ?? 0,
             'gross_sales' => $grossSales,
             'total_cogs' => $analytics->total_cogs ?? 0,
@@ -318,7 +294,7 @@ class ReportSalesAndPerformance extends Component
         try {
             $owner_id = Auth::guard('owner')->user()->owner_id;
             
-            // Get receipt with raw data
+            // ✅ Get receipt with stored discount_amount
             $receipt = DB::selectOne("
                 SELECT 
                     r.*,
@@ -329,8 +305,8 @@ class ReportSalesAndPerformance extends Component
                 FROM receipt r
                 LEFT JOIN owners o ON r.owner_id = o.owner_id
                 LEFT JOIN staff s ON r.staff_id = s.staff_id
-                WHERE r.receipt_id = ? 
-                AND r.owner_id = ?
+                WHERE r.receipt_id = ?  
+                AND r.owner_id = ? 
             ", [$receiptId, $owner_id]);
     
             if (!$receipt) {
@@ -338,7 +314,7 @@ class ReportSalesAndPerformance extends Component
                 return;
             }
     
-            // Get receipt items with HISTORICAL PRICES
+            // ✅ Get receipt items with stored item_discount_amount
             $items = DB::select("
                 SELECT 
                     ri.*,
@@ -348,58 +324,40 @@ class ReportSalesAndPerformance extends Component
                         (SELECT ph.old_selling_price
                          FROM pricing_history ph
                          WHERE ph.prod_code = ri.prod_code
-                         AND ? BETWEEN ph.effective_from AND ph.effective_to
+                         AND ?  BETWEEN ph.effective_from AND ph.effective_to
                          ORDER BY ph.effective_from DESC
                          LIMIT 1),
                         p.selling_price
                     ) as selling_price_at_time
                 FROM receipt_item ri
                 JOIN products p ON ri.prod_code = p.prod_code
-                WHERE ri.receipt_id = ? 
+                WHERE ri.receipt_id = ?  
                 ORDER BY ri.item_id
             ", [$receipt->receipt_date, $receiptId]);
     
             $subtotal = 0.0;
             $totalItemDiscounts = 0.0;
     
-            // Calculate subtotal and item discounts
+            // ✅ Use stored item_discount_amount
             foreach ($items as $item) {
                 $lineTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
                 $subtotal += $lineTotal;
-    
-                $itemDiscountValue = floatval($item->item_discount_value ?? 0);
-                $itemDiscountType = $item->item_discount_type ?? 'percent';
-    
-                if ($itemDiscountValue > 0) {
-                    if ($itemDiscountType === 'percent') {
-                        $totalItemDiscounts += $lineTotal * ($itemDiscountValue / 100.0);
-                    } else {
-                        $totalItemDiscounts += $itemDiscountValue;
-                    }
-                }
+                
+                // ✅ Use stored item_discount_amount directly
+                $itemDiscountAmount = floatval($item->item_discount_amount ?? 0);
+                $totalItemDiscounts += $itemDiscountAmount;
             }
     
             $afterItemDiscounts = $subtotal - $totalItemDiscounts;
     
-            // Calculate receipt discount
-            $receiptDiscountAmount = 0.0;
-            if (isset($receipt->discount_value) && floatval($receipt->discount_value) > 0) {
-                $discValue = floatval($receipt->discount_value);
-                $discType = $receipt->discount_type ?? 'amount';
-                
-                if ($discType === 'percent') {
-                    $receiptDiscountAmount = $afterItemDiscounts * ($discValue / 100.0);
-                } else {
-                    $receiptDiscountAmount = $discValue;
-                }
-            }
-    
+            // ✅ Use stored discount_amount directly
+            $receiptDiscountAmount = floatval($receipt->discount_amount ?? 0);
             $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
     
-            // ✅ Calculate VAT breakdown: Inclusive vs Exempt (extract, don't add)
+            // Calculate VAT breakdown
             $vatAmountInclusive = 0.0;
             $vatAmountExempt = 0.0;
-            $vatRate = 12; // Fixed 12% VAT rate
+            $vatRate = 12;
             
             $discountMultiplier = $subtotal > 0 ? ($afterReceiptDiscount / $subtotal) : 0;
             
@@ -410,13 +368,12 @@ class ReportSalesAndPerformance extends Component
                 $vatCategory = $item->vat_category ?? 'vat_exempt';
                 
                 if ($vatCategory === 'vat_inclusive') {
-                    // Extract VAT from price: VAT = Price × (Rate / (100 + Rate))
                     $vatAmountInclusive += $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
+                } else {
+                    $vatAmountExempt += $itemAfterDiscounts;
                 }
-                // vat_exempt items: VAT = ₱0.00
             }
     
-            // ✅ CRITICAL: Total = after discounts (VAT already included, NOT added)
             $finalTotal = $afterReceiptDiscount;
             $amountPaid = floatval($receipt->amount_paid ?? 0);
             $change = $amountPaid - $finalTotal;
@@ -427,18 +384,20 @@ class ReportSalesAndPerformance extends Component
                 'amount_paid' => $receipt->amount_paid,
                 'discount_type' => $receipt->discount_type,
                 'discount_value' => $receipt->discount_value,
+                'discount_amount' => $receipt->discount_amount, // ✅ Include stored amount
                 'owner' => (object)[
                     'firstname' => $receipt->owner_firstname,
-                    'store_name' => $receipt->store_name ?? $this->store_info->store_name,
-                    'store_address' => $receipt->store_address ??  $this->store_info->store_address,
+                    'store_name' => $receipt->store_name ??  $this->store_info->store_name,
+                    'store_address' => $receipt->store_address ?? $this->store_info->store_address,
                 ],
-                'staff' => $receipt->staff_firstname ? (object)['firstname' => $receipt->staff_firstname] : null,
+                'staff' => $receipt->staff_firstname ?  (object)['firstname' => $receipt->staff_firstname] : null,
                 'receiptItems' => collect($items)->map(function($item) {
                     return (object)[
                         'item_id' => $item->item_id,
                         'item_quantity' => $item->item_quantity,
                         'item_discount_type' => $item->item_discount_type,
                         'item_discount_value' => $item->item_discount_value,
+                        'item_discount_amount' => $item->item_discount_amount, // ✅ Include stored amount
                         'vat_amount' => $item->vat_amount,
                         'prod_code' => $item->prod_code,
                         'product' => (object)[
@@ -457,6 +416,8 @@ class ReportSalesAndPerformance extends Component
                 'vat_applied' => ($vatAmountInclusive + $vatAmountExempt) > 0,
                 'computed_total' => $finalTotal,
                 'computed_change' => $change,
+                'has_receipt_discount' => $receiptDiscountAmount > 0, // ✅ Add flag
+                'has_item_discounts' => $totalItemDiscounts > 0, // ✅ Add flag
             ];
     
             $this->showReceiptModal = true;
@@ -529,7 +490,7 @@ class ReportSalesAndPerformance extends Component
                     number_format($transaction->total_item_discounts_raw, 2),
                     number_format($transaction->receipt_discount_amount, 2),
                     number_format($totalDiscounts, 2),
-                    number_format($transaction->total_vat_raw, 2),
+                    number_format($transaction->total_vat_inclusive, 2),
                     number_format($transaction->total_amount, 2),
                     number_format($transaction->amount_paid, 2),
                     number_format($transaction->change, 2)
@@ -574,15 +535,14 @@ class ReportSalesAndPerformance extends Component
                 LEFT JOIN owners o ON ret.owner_id = o.owner_id AND ret.staff_id IS NULL
                 LEFT JOIN staff s ON ret.staff_id = s.staff_id AND s.owner_id = ?
                 LEFT JOIN damaged_items d ON d.return_id = ret.return_id
-                WHERE r.owner_id = ?
-                AND DATE(ret.return_date) BETWEEN ? AND ?
+                WHERE r.owner_id = ? 
+                AND DATE(ret.return_date) BETWEEN ?  AND ?
             ";
             
             $bindings = [$owner_id, $owner_id, $this->returnDateFrom, $this->returnDateTo];
             
-            // Add category filter if selected
             if ($this->returnSelectedCategory !== 'all') {
-                $query .= " AND p.category_id = ?";
+                $query .= " AND p.category_id = ? ";
                 $bindings[] = $this->returnSelectedCategory;
             }
             
@@ -726,7 +686,7 @@ class ReportSalesAndPerformance extends Component
                 FROM inventory inv
                 JOIN products p2 ON inv.prod_code = p2.prod_code
                 JOIN categories c2 ON p2.category_id = c2.category_id
-                WHERE p2.owner_id = ?
+                WHERE p2.owner_id = ? 
                     and p2.prod_status = 'active'
                 GROUP BY c2.category_id
             ) i ON i.category_id = p.category_id
@@ -738,7 +698,7 @@ class ReportSalesAndPerformance extends Component
                 AND YEAR(r.receipt_date) IN ($yearPlaceholders)
                 AND MONTH(r.receipt_date) IN ($monthPlaceholders)
             ) AS ri ON p.prod_code = ri.prod_code
-            WHERE c.owner_id = ?
+            WHERE c.owner_id = ? 
                 and p.prod_status = 'active'
             GROUP BY c.category, c.category_id, i.stock
             ORDER BY c.category ASC
@@ -753,7 +713,7 @@ class ReportSalesAndPerformance extends Component
 
         $this->sbc = collect(DB::select($sql, $bindings));
 
-        if (!empty($this->searchWord)) {
+        if (! empty($this->searchWord)) {
             $search = strtolower($this->searchWord);
             $this->sbc = $this->sbc->filter(function($item) use ($search) {
                 return str_contains(strtolower($item->category), $search);
@@ -767,7 +727,7 @@ class ReportSalesAndPerformance extends Component
         DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')"); 
 
         $owner_id = Auth::guard('owner')->user()->owner_id;
-        $latestYear = $this->selectedYear ?? now()->year;
+        $latestYear = $this->selectedYear ??  now()->year;
         $month = $this->selectedMonth ?? now()->month;
 
         $perf = collect(DB::select("
@@ -830,7 +790,7 @@ class ReportSalesAndPerformance extends Component
                 CASE 
                     WHEN COALESCE(inv.total_stock, 0) = 0 
                         AND COALESCE(SUM(ri.item_quantity), 0) > 0
-                        THEN 'Out of stock. Reorder needed.'
+                        THEN 'Out of stock.  Reorder needed.'
                     
                     WHEN COALESCE(inv.total_stock, 0) = 0
                         THEN 'Out of stock with no recent sales.'
@@ -861,7 +821,7 @@ class ReportSalesAndPerformance extends Component
                             LIMIT 1),
                             p.selling_price
                         )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0)) <= 0 
-                        THEN 'Unprofitable. Losing money.'
+                        THEN 'Unprofitable.  Losing money.'
                     
                     WHEN ((COALESCE(SUM(ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
@@ -952,7 +912,7 @@ class ReportSalesAndPerformance extends Component
                 SELECT i.prod_code, SUM(i.stock) AS total_stock
                 FROM inventory i
                 JOIN products p2 ON i.prod_code = p2.prod_code
-                WHERE p2.owner_id = ?
+                WHERE p2.owner_id = ? 
                     AND (i.expiration_date IS NULL OR i.expiration_date > CURDATE())
                     and p2.prod_status = 'active'
                 GROUP BY i.prod_code
@@ -961,8 +921,8 @@ class ReportSalesAndPerformance extends Component
                 ON p.category_id = c.category_id
             LEFT JOIN receipt AS r 
                 ON r.owner_id = p.owner_id
-                AND MONTH(r.receipt_date) = ? 
-                AND YEAR(r.receipt_date) = ?
+                AND MONTH(r.receipt_date) = ?  
+                AND YEAR(r.receipt_date) = ? 
             LEFT JOIN receipt_item AS ri 
                 ON ri.prod_code = p.prod_code
                 AND ri.receipt_id = r.receipt_id
@@ -977,7 +937,7 @@ class ReportSalesAndPerformance extends Component
                     and p2.prod_status = 'active'
                 GROUP BY p2.owner_id
             ) total ON total.owner_id = p.owner_id
-            WHERE p.owner_id = ?
+            WHERE p.owner_id = ? 
                 and p.prod_status = 'active'
             GROUP BY p.prod_code, p.name, c.category, p.owner_id, c.category_id, total.total_sales_all, inv.total_stock
         ", [$owner_id, $month, $latestYear, $month, $latestYear, $owner_id]));

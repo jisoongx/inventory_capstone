@@ -130,11 +130,11 @@
                         </div>
                         <div id="calcItemDiscountsRow" class="flex justify-between text-sm hidden">
                             <span class="text-gray-700">Item Discounts:</span>
-                            <span id="calcItemDiscounts" class="font-semibold text-orange-600">-₱0.00</span>
+                            <span id="calcItemDiscounts" class="font-semibold text-orange-600">₱0.00</span>
                         </div>
                         <div id="calcReceiptDiscountRow" class="flex justify-between text-sm hidden">
                             <span class="text-gray-700">Receipt Discount:</span>
-                            <span id="calcReceiptDiscount" class="font-semibold text-orange-600">-₱0.00</span>
+                            <span id="calcReceiptDiscount" class="font-semibold text-orange-600">₱0.00</span>
                         </div>
                         <!-- ✅ VAT Breakdown - Always visible -->
                         <div class="border-t pt-2 mt-2">
@@ -249,11 +249,11 @@
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-sm font-medium text-gray-700">Item Discounts:</span>
-                        <span id="receiptItemDiscounts" class="text-sm text-orange-600">-₱0.00</span>
+                        <span id="receiptItemDiscounts" class="text-sm text-orange-600">₱0.00</span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-sm font-medium text-gray-700">Receipt Discount:</span>
-                        <span id="receiptReceiptDiscount" class="text-sm text-orange-600">-₱0.00</span>
+                        <span id="receiptReceiptDiscount" class="text-sm text-orange-600">₱0.00</span>
                     </div>
                     <div class="border-t pt-2 mt-2 space-y-1">
                         <div class="flex justify-between items-center">
@@ -393,7 +393,7 @@ class PaymentProcessor {
         this.cartItems = [];
         this.itemDiscounts = {};
         this.receiptDiscount = { type: 'percent', value: 0 };
-        this.vatRate = 12; // ✅ Fixed VAT rate - always applied
+        this.vatRate = 12;
         this.amountPaid = 0;
         this.totalAmount = 0;
         this.discountsExpanded = false;
@@ -516,6 +516,7 @@ class PaymentProcessor {
 
         document.getElementById('receiptDiscountValue')?.addEventListener('input', (e) => {
             this.receiptDiscount.value = parseFloat(e.target.value) || 0;
+            this.updateDiscountFieldStates();
             this.calculateTotals();
             this.saveState();
         });
@@ -546,6 +547,108 @@ class PaymentProcessor {
         }
     }
 
+    // ✅ Helper: Check if any item has a discount
+    hasAnyItemDiscounts() {
+        return Object.values(this.itemDiscounts).some(discount => discount.value > 0);
+    }
+
+    // ✅ NEW: Update field states based on mutual exclusivity
+    updateDiscountFieldStates() {
+        const hasItemDiscounts = this.hasAnyItemDiscounts();
+        const hasReceiptDiscount = this.receiptDiscount.value > 0;
+        
+        const receiptDiscountType = document.getElementById('receiptDiscountType');
+        const receiptDiscountValue = document.getElementById('receiptDiscountValue');
+        const receiptDiscountContainer = receiptDiscountType?.closest('.space-y-2');
+        
+        // Disable/enable receipt discount fields
+        if (hasItemDiscounts) {
+            if (receiptDiscountType) {
+                receiptDiscountType.disabled = true;
+                receiptDiscountType.classList.add('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+            }
+            if (receiptDiscountValue) {
+                receiptDiscountValue.disabled = true;
+                receiptDiscountValue.classList.add('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+                receiptDiscountValue.value = 0;
+                this.receiptDiscount.value = 0;
+            }
+            
+            // Show info message
+            if (receiptDiscountContainer && ! document.getElementById('receiptDiscountWarning')) {
+                const warning = document.createElement('div');
+                warning.id = 'receiptDiscountWarning';
+                warning.className = 'text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-1.5 flex items-start gap-2';
+                warning.innerHTML = `
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Receipt discount disabled. Clear item discounts to enable.</span>
+                `;
+                receiptDiscountContainer.appendChild(warning);
+            }
+        } else {
+            if (receiptDiscountType) {
+                receiptDiscountType.disabled = false;
+                receiptDiscountType.classList.remove('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+            }
+            if (receiptDiscountValue) {
+                receiptDiscountValue.disabled = false;
+                receiptDiscountValue.classList.remove('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+            }
+            
+            // Remove info message
+            const warning = document.getElementById('receiptDiscountWarning');
+            if (warning) warning.remove();
+        }
+        
+        // Disable/enable item discount fields
+        document.querySelectorAll('.item-discount-type').forEach(select => {
+            if (hasReceiptDiscount) {
+                select.disabled = true;
+                select.classList.add('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+            } else {
+                select.disabled = false;
+                select.classList.remove('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+            }
+        });
+        
+        document.querySelectorAll('.item-discount-value').forEach(input => {
+            if (hasReceiptDiscount) {
+                input.disabled = true;
+                input.classList.add('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+                input.value = 0;
+                const productCode = input.dataset.productCode;
+                if (this.itemDiscounts[productCode]) {
+                    this.itemDiscounts[productCode].value = 0;
+                }
+            } else {
+                input.disabled = false;
+                input.classList.remove('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
+            }
+        });
+        
+        // Show/hide item discounts warning
+        const itemDiscountsList = document.getElementById('itemDiscountsList');
+        if (itemDiscountsList) {
+            const existingWarning = document.getElementById('itemDiscountsWarning');
+            if (existingWarning) existingWarning.remove();
+            
+            if (hasReceiptDiscount) {
+                const warning = document.createElement('div');
+                warning.id = 'itemDiscountsWarning';
+                warning.className = 'text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1.5 mb-2 flex items-start gap-2';
+                warning.innerHTML = `
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Item discounts disabled. Clear receipt discount to enable.</span>
+                `;
+                itemDiscountsList.parentElement.insertBefore(warning, itemDiscountsList);
+            }
+        }
+    }
+
     updateDateTime() {
         const now = new Date();
         const options = {
@@ -569,8 +672,6 @@ class PaymentProcessor {
             
             if (data.success) {
                 this.cartItems = data.cart_items;
-                
-                console.log('Cart Items:', this.cartItems);
                 
                 if (this.cartItems.length === 0) {
                     this.showToast('Cart is empty.  Redirecting... ', 'error');
@@ -599,6 +700,7 @@ class PaymentProcessor {
                 }
                 
                 this.calculateTotals();
+                this.updateDiscountFieldStates(); // ✅ Initial state check
             }
         } catch (error) {
             console.error('Error loading cart:', error);
@@ -702,10 +804,14 @@ class PaymentProcessor {
             input.addEventListener('input', (e) => {
                 const productCode = e.target.dataset.productCode;
                 this.itemDiscounts[productCode].value = parseFloat(e.target.value) || 0;
+                this.updateDiscountFieldStates(); // ✅ Update states when item discount changes
                 this.calculateTotals();
                 this.saveState();
             });
         });
+        
+        // ✅ Apply initial states after rendering
+        this.updateDiscountFieldStates();
     }
 
     highlightItemDiscount(productCode) {
@@ -763,7 +869,7 @@ class PaymentProcessor {
             if (discount.type === 'percent') {
                 discountAmount = itemTotal * (discount.value / 100);
             } else {
-                discountAmount = discount.value;
+                discountAmount = Math.min(discount.value, itemTotal);
             }
 
             totalItemDiscounts += discountAmount;
@@ -773,15 +879,18 @@ class PaymentProcessor {
         const afterItemDiscounts = subtotal - totalItemDiscounts;
 
         let receiptDiscountAmount = 0;
-        if (this.receiptDiscount.type === 'percent') {
-            receiptDiscountAmount = afterItemDiscounts * (this.receiptDiscount.value / 100);
-        } else {
-            receiptDiscountAmount = this.receiptDiscount.value;
+        const hasItemDiscounts = totalItemDiscounts > 0;
+        
+        if (! hasItemDiscounts && this.receiptDiscount.value > 0) {
+            if (this.receiptDiscount.type === 'percent') {
+                receiptDiscountAmount = afterItemDiscounts * (this.receiptDiscount.value / 100);
+            } else {
+                receiptDiscountAmount = Math.min(this.receiptDiscount.value, afterItemDiscounts);
+            }
         }
 
         const afterReceiptDiscount = afterItemDiscounts - receiptDiscountAmount;
 
-        // ✅ Calculate VAT breakdown: Inclusive vs Exempt (always calculated)
         let vatAmountInclusive = 0;
         let vatAmountExempt = 0;
         
@@ -794,34 +903,30 @@ class PaymentProcessor {
             const vatCategory = item.product?.vat_category || 'vat_exempt';
             
             if (vatCategory === 'vat_inclusive') {
-                // Extract VAT: VAT = Price × (Rate / (100 + Rate))
                 vatAmountInclusive += itemAfterDiscounts * (this.vatRate / (100 + this.vatRate));
             } else {
-                // vat_exempt items: VAT = ₱0.00
-                vatAmountExempt += 0;
+                vatAmountExempt += itemAfterDiscounts;
             }
         });
 
         const totalAmount = afterReceiptDiscount;
 
-        // Update calculation breakdown
         document.getElementById('calcSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
         
         if (totalItemDiscounts > 0) {
             document.getElementById('calcItemDiscountsRow').classList.remove('hidden');
-            document.getElementById('calcItemDiscounts').textContent = `-₱${totalItemDiscounts.toFixed(2)}`;
+            document.getElementById('calcItemDiscounts').textContent = `₱${totalItemDiscounts.toFixed(2)}`;
         } else {
             document.getElementById('calcItemDiscountsRow').classList.add('hidden');
         }
         
         if (receiptDiscountAmount > 0) {
             document.getElementById('calcReceiptDiscountRow').classList.remove('hidden');
-            document.getElementById('calcReceiptDiscount').textContent = `-₱${receiptDiscountAmount.toFixed(2)}`;
+            document.getElementById('calcReceiptDiscount').textContent = `₱${receiptDiscountAmount.toFixed(2)}`;
         } else {
             document.getElementById('calcReceiptDiscountRow').classList.add('hidden');
         }
         
-        // ✅ Always show VAT breakdown
         document.getElementById('calcVATInclusive').textContent = `₱${vatAmountInclusive.toFixed(2)}`;
         document.getElementById('calcVATExempt').textContent = `₱${vatAmountExempt.toFixed(2)}`;
         
@@ -867,6 +972,14 @@ class PaymentProcessor {
             return;
         }
 
+        const hasItemDiscounts = Object.values(this.itemDiscounts).some(d => d.value > 0);
+        const hasReceiptDiscount = this.receiptDiscount.value > 0;
+        
+        if (hasItemDiscounts && hasReceiptDiscount) {
+            this.showToast('❌ Cannot apply both item and receipt discounts simultaneously', 'error');
+            return;
+        }
+
         const completeBtn = document.getElementById('completePayment');
         completeBtn.disabled = true;
         completeBtn.textContent = 'Processing...';
@@ -877,8 +990,8 @@ class PaymentProcessor {
                 amount_paid: this.amountPaid,
                 receipt_discount_type: this.receiptDiscount.type,
                 receipt_discount_value: this.receiptDiscount.value,
-                vat_enabled: true, // ✅ Always enabled
-                vat_rate: this.vatRate, // ✅ Always 12%
+                vat_enabled: true,
+                vat_rate: this.vatRate,
                 item_discounts: this.itemDiscounts
             };
 
@@ -925,13 +1038,12 @@ class PaymentProcessor {
 
         const itemDiscountsAmount = paymentData.total_item_discounts ??  0;
         const receiptDiscountAmount = paymentData.receipt_discount_amount ?? 0;
-        const vatAmountInclusive = paymentData.vat_amount_inclusive ??  0;
-        const vatAmountExempt = paymentData.vat_amount_exempt ??  0;
+        const vatAmountInclusive = paymentData.vat_amount_inclusive ?? 0;
+        const vatAmountExempt = paymentData.vat_amount_exempt ?? 0;
 
-        document.getElementById('receiptItemDiscounts').textContent = `-₱${parseFloat(itemDiscountsAmount).toFixed(2)}`;
-        document.getElementById('receiptReceiptDiscount').textContent = `-₱${parseFloat(receiptDiscountAmount).toFixed(2)}`;
+        document.getElementById('receiptItemDiscounts').textContent = `₱${parseFloat(itemDiscountsAmount).toFixed(2)}`;
+        document.getElementById('receiptReceiptDiscount').textContent = `₱${parseFloat(receiptDiscountAmount).toFixed(2)}`;
         
-        // ✅ Show separate VAT breakdown in receipt
         document.getElementById('receiptVatInclusive').textContent = `₱${parseFloat(vatAmountInclusive).toFixed(2)}`;
         document.getElementById('receiptVatExempt').textContent = `₱${parseFloat(vatAmountExempt).toFixed(2)}`;
 
@@ -966,171 +1078,172 @@ class PaymentProcessor {
     }
 
     printReceipt() {
-    const receiptContent = document.querySelector('#receiptModal .overflow-y-auto').innerHTML;
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <title>Receipt - {{ $receipt_no ?? '0' }}</title>
-                <style>
-                    @page {
-                        size: 48mm auto;
-                        margin: 0;
-                    }
-                    body {
-                        font-family: Arial, sans-serif;
-                        width: 48mm;
-                        margin: 0 auto;
-                        padding: 3px;
-                        font-size: 10.5px;
-                        color: #000;
-                        background: #fff;
-                        line-height: 1.05;
-                    }
-
-                    .text-center { text-align: center; }
-                    .text-right { text-align: right; }
-                    .text-left { text-align: left; }
-                    .font-bold { font-weight: bold; }
-                    .font-semibold { font-weight: 600; }
-                    .font-medium { font-weight: 500; }
-
-                    .text-xl { font-size: 1rem; }
-                    .text-lg { font-size: 0.95rem; }
-                    .text-sm { font-size: 0.8rem; }
-                    .text-xs { font-size: 0.7rem; }
-
-                    .mb-1 { margin-bottom: 1px; }
-                    .mb-2 { margin-bottom: 2px; }
-                    .mb-3 { margin-bottom: 3px; }
-                    .mb-4 { margin-bottom: 4px; }
-                    .mb-6 { margin-bottom: 6px; }
-                    .mt-1 { margin-top: 1px; }
-                    .mt-2 { margin-top: 2px; }
-                    .mt-6 { margin-top: 6px; }
-                    .pb-2 { padding-bottom: 2px; }
-                    .pb-4 { padding-bottom: 4px; }
-                    .pt-2 { padding-top: 2px; }
-                    .pt-4 { padding-top: 4px; }
-                    .py-2 { padding-top: 2px; padding-bottom: 2px; }
-                    .pr-2 { padding-right: 2px; }
-
-                    .border-b { border-bottom: none; }
-                    .border-t { border-top: 1px solid #000; }
-                    .border-b-2 { border-bottom: 2px solid #000; }
-                    .border-t-2 { border-top: 2px solid #000; }
-                    .border-gray-100 { border-color: transparent; }
-                    .border-gray-200 { border-color: #000; }
-                    .border-gray-300 { border-color: #000; }
-
-                    /* All colors converted to black for printing */
-                    .text-gray-500,
-                    .text-gray-600,
-                    .text-gray-700,
-                    .text-gray-800,
-                    .text-gray-900,
-                    .text-red-600,
-                    .text-orange-600,
-                    .text-green-600,
-                    .text-blue-600 {
-                        color: #000;
-                    }
-
-                    .flex { display: flex; }
-                    .justify-between { justify-content: space-between; }
-                    .items-center { align-items: center; }
-                    .items-start { align-items: flex-start; }
-                    .flex-1 { flex: 1; }
-
-                    .space-y-1 > * + * { margin-top: 1px; }
-                    .space-y-2 > * + * { margin-top: 2px; }
-
-                    /* Header alignment - Receipt details right-aligned */
-                    .mb-4 .flex {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-
-                    .mb-4 .flex span:first-child {
-                        text-align: left;
-                    }
-
-                    .mb-4 .flex span:last-child {
-                        text-align: right;
-                    }
-
-                    /* Items list - proper two-column layout */
-                    #receiptItemsList .flex {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: flex-start;
-                        width: 100%;
-                    }
-
-                    #receiptItemsList .flex-1 {
-                        flex: 1;
-                        text-align: left;
-                        padding-right: 4px;
-                    }
-
-                    #receiptItemsList .text-right {
-                        text-align: right;
-                        white-space: nowrap;
-                    }
-
-                    /* Ensure product names stay on left, prices on right */
-                    #receiptItemsList .text-sm.font-medium {
-                        text-align: left;
-                    }
-
-                    #receiptItemsList .text-sm.font-bold {
-                        text-align: right;
-                    }
-
-                    /* ✅ Add border-top to Items Purchased heading */
-                    h4.font-semibold {
-                        border-bottom: 2px solid #000;
-                        padding-bottom: 2px;
-                        margin-bottom: 3px;
-                    }
-
-                    /* ✅ Remove border from last receipt summary item (Change) */
-                    .border-t-2.border-gray-300.pt-4.space-y-2 > div:last-child {
-                        border-bottom: none ! important;
-                    }
-
-                    @media print {
-                        body {
-                            padding: 0;
+        const receiptContent = document.querySelector('#receiptModal .overflow-y-auto'). innerHTML;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>Receipt - {{ $receipt_no ??  '0' }}</title>
+                    <style>
+                        @page {
+                            size: 48mm auto;
                             margin: 0;
-                            width: 48mm;
-                            font-size: 10px;
                         }
-                    }
-                </style>
-            </head>
-            <body>
-                ${receiptContent}
-            </body>
-        </html>
-    `);
-    
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 250);
-}
+                        body {
+                            font-family: Arial, sans-serif;
+                            width: 48mm;
+                            margin: 0 auto;
+                            padding: 3px;
+                            font-size: 10.5px;
+                            color: #000;
+                            background: #fff;
+                            line-height: 1.05;
+                        }
+
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        .text-left { text-align: left; }
+                        .font-bold { font-weight: bold; }
+                        .font-semibold { font-weight: 600; }
+                        .font-medium { font-weight: 500; }
+
+                        .text-xl { font-size: 1rem; }
+                        .text-lg { font-size: 0.95rem; }
+                        .text-sm { font-size: 0.8rem; }
+                        .text-xs { font-size: 0.7rem; }
+
+                        .mb-1 { margin-bottom: 1px; }
+                        .mb-2 { margin-bottom: 2px; }
+                        .mb-3 { margin-bottom: 3px; }
+                        .mb-4 { margin-bottom: 4px; }
+                        .mb-6 { margin-bottom: 6px; }
+                        .mt-1 { margin-top: 1px; }
+                        .mt-2 { margin-top: 2px; }
+                        .mt-6 { margin-top: 6px; }
+                        .pb-2 { padding-bottom: 2px; }
+                        .pb-4 { padding-bottom: 4px; }
+                        .pt-2 { padding-top: 2px; }
+                        .pt-4 { padding-top: 4px; }
+                        .py-2 { padding-top: 2px; padding-bottom: 2px; }
+                        .pr-2 { padding-right: 2px; }
+
+                        .border-b { border-bottom: none; }
+                        .border-t { border-top: 1px solid #000; }
+                        .border-b-2 { border-bottom: 2px solid #000; }
+                        .border-t-2 { border-top: 2px solid #000; }
+                        .border-gray-100 { border-color: transparent; }
+                        .border-gray-200 { border-color: #000; }
+                        .border-gray-300 { border-color: #000; }
+
+                        .text-gray-500,
+                        .text-gray-600,
+                        .text-gray-700,
+                        .text-gray-800,
+                        .text-gray-900,
+                        .text-red-600,
+                        .text-orange-600,
+                        .text-green-600,
+                        .text-blue-600 {
+                            color: #000;
+                        }
+
+                        .flex { display: flex; }
+                        .justify-between { justify-content: space-between; }
+                        .items-center { align-items: center; }
+                        .items-start { align-items: flex-start; }
+                        .flex-1 { flex: 1; }
+
+                        .space-y-1 > * + * { margin-top: 1px; }
+                        .space-y-2 > * + * { margin-top: 2px; }
+
+                        .mb-4 .flex {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+
+                        .mb-4 .flex span:first-child {
+                            text-align: left;
+                        }
+
+                        .mb-4 .flex span:last-child {
+                            text-align: right;
+                        }
+
+                        #receiptItemsList .flex {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-start;
+                            width: 100%;
+                        }
+
+                        #receiptItemsList .flex-1 {
+                            flex: 1;
+                            text-align: left;
+                            padding-right: 4px;
+                        }
+
+                        #receiptItemsList .text-right {
+                            text-align: right;
+                            white-space: nowrap;
+                        }
+
+                        #receiptItemsList .text-sm.font-medium {
+                            text-align: left;
+                        }
+
+                        #receiptItemsList .text-sm.font-bold {
+                            text-align: right;
+                        }
+
+                        h4.font-semibold {
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 2px;
+                            margin-bottom: 3px;
+                        }
+
+                        .border-t-2.border-gray-300.pt-4.space-y-2 > div:last-child {
+                            border-bottom: none ! important;
+                        }
+
+                        @media print {
+                            body {
+                                padding: 0;
+                                margin: 0;
+                                width: 48mm;
+                                font-size: 10px;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${receiptContent}
+                </body>
+            </html>
+        `);
+        
+        printWindow.document.close();
+        printWindow.focus();
+        
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
+    }
 
     showToast(message, type = 'info') {
+        const colors = {
+            'success': '#10b981',
+            'error': '#ef4444',
+            'warning': '#f59e0b',
+            'info': '#3b82f6'
+        };
+        
         const toast = document.createElement('div');
         toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-[9999] transform translate-x-full transition-transform duration-300`;
-        toast.style.backgroundColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+        toast.style.backgroundColor = colors[type] || colors['info'];
         toast.textContent = message;
         
         document.body.appendChild(toast);

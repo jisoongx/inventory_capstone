@@ -220,16 +220,40 @@
                                 </td>
                                 
                                 <!-- Transaction Details -->
-                                <td class="px-4 py-3.5 text-right font-bold text-green-600 bg-gray-50">
-                                    ₱{{ number_format($transaction->total_amount, 2) }}
-                                </td>
+<td class="px-4 py-3.5 text-right bg-gray-50">
+    <div class="flex flex-col items-end gap-1">
+        <!-- Total Amount (main display) -->
+        <span class="font-bold text-green-600">
+            ₱{{ number_format($transaction->total_amount, 2) }}
+        </span>
+        
+        <!-- Discount Badges (below, to the right) -->
+        <div class="flex items-center gap-1. 5">
+            <!-- ✅ Receipt Discount Badge -->
+            @if($transaction->has_receipt_discount)
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[11px] font-bold border border-orange-300"
+                    title="Receipt discount applied">
+                    RD: ₱{{ number_format($transaction->receipt_discount_amount, 2) }}
+                </span>
+            @endif
+            
+            <!-- ✅ Item Discounts Badge -->
+            @if($transaction->has_item_discounts && ! $transaction->has_receipt_discount)
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[11px] font-bold border border-blue-300"
+                    title="Item discounts applied">
+                    ID: ₱{{ number_format($transaction->total_item_discounts_raw, 2) }}
+                </span>
+            @endif
+        </div>
+    </div>
+</td>
                                 <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
                                     ₱{{ number_format($transaction->amount_paid, 2) }}
                                 </td>
                                 <td class="px-4 py-3.5 text-right font-bold text-blue-600 bg-gray-50">
                                     ₱{{ number_format($transaction->change, 2) }}
                                 </td>
-                                
+
                                 <!-- Actions: View Receipt + Return Item Button -->
                                 <td class="px-4 py-3.5 text-center bg-blue-50">
                                     <div class="flex items-center justify-center gap-2">
@@ -779,13 +803,12 @@
                                         <div class="text-xs text-gray-500">
                                             Quantity: {{ $item->item_quantity }} × ₱{{ number_format($item->product->selling_price, 2) }}
                                         </div>
-                                        @if(($item->item_discount_value ?? 0) > 0)
-                                            <div class="text-xs text-orange-600 mt-1">
+                                        @if(($item->item_discount_amount ??  0) > 0)
+                                            <div class="text-xs text-orange-600 mt-1 flex items-center gap-1">
                                                 Item Discount: 
-                                                @if(($item->item_discount_type ?? 'percent') == 'percent')
-                                                    {{ $item->item_discount_value }}%
-                                                @else
-                                                    ₱{{ number_format($item->item_discount_value, 2) }}
+                                                <span class="font-bold">₱{{ number_format($item->item_discount_amount, 2) }}</span>
+                                                @if(($item->item_discount_type ?? 'percent') == 'percent' && ($item->item_discount_value ?? 0) > 0)
+                                                    <span class="text-gray-500">({{ $item->item_discount_value }}%)</span>
                                                 @endif
                                             </div>
                                         @endif
@@ -818,41 +841,44 @@
                         </span>
                     </div>
 
-                    @if(($receiptDetails->total_item_discounts ?? 0) > 0)
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-orange-600">Item Discounts:</span>
-                        <span class="text-sm font-bold text-orange-600">
-                            -₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
-                        </span>
-                    </div>
+                    @if(($receiptDetails->total_item_discounts ??  0) > 0)
+                        <div class="flex justify-between items-center bg-blue-50 -mx-2 px-4 py-2 rounded-lg">
+                            <span class="text-sm font-medium text-blue-700 flex items-center gap-1">
+                                Item Discounts:
+                            </span>
+                            <span class="text-sm font-bold text-blue-700">
+                                ₱{{ number_format($receiptDetails->total_item_discounts, 2) }}
+                            </span>
+                        </div>
                     @endif
 
                     @if(($receiptDetails->receipt_discount_amount ?? 0) > 0)
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-orange-600">Receipt Discount:</span>
-                        <span class="text-sm font-bold text-orange-600">
-                            @if(($receiptDetails->discount_type ?? '') == 'percent')
-                                -{{ $receiptDetails->discount_value ?? 0 }}% (₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }})
-                            @else
-                                -₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
-                            @endif
-                        </span>
-                    </div>
+                        <div class="flex justify-between items-center bg-orange-50 -mx-2 px-4 py-2 rounded-lg">
+                            <span class="text-sm font-medium text-orange-700 flex items-center gap-1">
+                                Receipt Discount:
+                            </span>
+                            <span class="text-sm font-bold text-orange-700">
+                                ₱{{ number_format($receiptDetails->receipt_discount_amount, 2) }}
+                                @if(($receiptDetails->discount_type ?? '') == 'percent' && ($receiptDetails->discount_value ?? 0) > 0)
+                                    <span class="text-xs text-gray-600">({{ $receiptDetails->discount_value }}%)</span>
+                                @endif
+                            </span>
+                        </div>
                     @endif
 
-<!-- Display VAT Breakdown (always show if any VAT exists) -->
-@if(($receiptDetails->vat_amount_inclusive ?? 0) > 0 || ($receiptDetails->vat_amount_exempt ?? 0) > 0)
-<div class="border-t pt-2 mt-2 space-y-1">
-    <div class="flex justify-between items-center">
-        <span class="text-sm font-medium text-gray-700">VAT-Inclusive:</span>
-        <span class="text-sm text-blue-600">₱{{ number_format($receiptDetails->vat_amount_inclusive ?? 0, 2) }}</span>
-    </div>
-    <div class="flex justify-between items-center">
-        <span class="text-sm font-medium text-gray-700">VAT-Exempt:</span>
-        <span class="text-sm text-gray-600">₱{{ number_format($receiptDetails->vat_amount_exempt ?? 0, 2) }}</span>
-    </div>
-</div>
-@endif
+                    <!-- Display VAT Breakdown (always show if any VAT exists) -->
+                    @if(($receiptDetails->vat_amount_inclusive ?? 0) > 0 || ($receiptDetails->vat_amount_exempt ?? 0) > 0)
+                        <div class="border-t pt-2 mt-2 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">VAT-Inclusive:</span>
+                                <span class="text-sm text-blue-600">₱{{ number_format($receiptDetails->vat_amount_inclusive ?? 0, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">VAT-Exempt:</span>
+                                <span class="text-sm text-gray-600">₱{{ number_format($receiptDetails->vat_amount_exempt ?? 0, 2) }}</span>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="flex justify-between items-center pt-2 border-t">
                         <span class="text-lg font-bold text-gray-900">Total Amount:</span>

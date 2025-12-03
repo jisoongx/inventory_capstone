@@ -16,15 +16,17 @@ class ReceiptItem extends Model
         'receipt_id',
         'item_discount_type',
         'item_discount_value',
+        'item_discount_amount', // ✅ Added - stores calculated item discount amount
         'vat_amount',
-        'inven_code', // Added this
+        'inven_code',
     ];
     
     protected $casts = [
         'item_quantity' => 'integer',
         'item_discount_value' => 'decimal:2',
+        'item_discount_amount' => 'decimal:2', // ✅ Added
         'vat_amount' => 'decimal:2',
-        'selling_price' => 'decimal:2' // Added this
+        'selling_price' => 'decimal:2'
     ];
 
     // Relationships
@@ -55,16 +57,23 @@ class ReceiptItem extends Model
 
     /**
      * Get item discount amount
+     * ✅ Now returns the stored calculated amount
      */
     public function getItemDiscountAmountAttribute()
     {
+        // Return stored amount if available
+        if (isset($this->attributes['item_discount_amount'])) {
+            return $this->attributes['item_discount_amount'];
+        }
+        
+        // Fallback calculation for old records
         $lineTotal = $this->line_total;
         
         if ($this->item_discount_type == 'percent') {
             return $lineTotal * ($this->item_discount_value / 100);
         }
         
-        return $this->item_discount_value;
+        return $this->item_discount_value ??  0;
     }
 
     /**
@@ -101,5 +110,44 @@ class ReceiptItem extends Model
         }
         
         return null;
+    }
+
+    /**
+     * ✅ Check if this item has a discount applied
+     */
+    public function hasDiscount()
+    {
+        return ($this->item_discount_amount ??  0) > 0;
+    }
+
+    /**
+     * ✅ Get discount percentage (calculated from stored amount)
+     */
+    public function getDiscountPercentageAttribute()
+    {
+        if ($this->line_total == 0) {
+            return 0;
+        }
+        
+        return ($this->item_discount_amount / $this->line_total) * 100;
+    }
+
+    /**
+     * ✅ Get formatted discount display
+     * Example: "₱5.00 (5%)" or "₱10.00"
+     */
+    public function getFormattedDiscountAttribute()
+    {
+        if (! $this->hasDiscount()) {
+            return null;
+        }
+        
+        $amount = '₱' . number_format($this->item_discount_amount, 2);
+        
+        if ($this->item_discount_type == 'percent' && $this->item_discount_value > 0) {
+            return $amount . ' (' . number_format($this->item_discount_value, 2) . '%)';
+        }
+        
+        return $amount;
     }
 }
