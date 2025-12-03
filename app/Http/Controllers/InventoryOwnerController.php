@@ -1196,7 +1196,6 @@ public function registerProduct(Request $request)
                 
                 DB::table('inventory')->insert([
                     'prod_code' => $prodCode,
-                    'category_id' => $categoryId,
                     'stock' => $batch['quantity'],
                     'batch_number' => $batchNumberFormatted,
                     'expiration_date' => $batch['expiration_date'] ?? null,
