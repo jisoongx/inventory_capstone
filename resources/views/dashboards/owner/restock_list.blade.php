@@ -483,7 +483,7 @@
                     margin: 2px 0;
                 }
                 .item-row {
-                    border-bottom: 2px solid #ccc;
+                    border-bottom: 2px solid #000;
                     padding: 4px 0;
                 }
                 .item-name {
