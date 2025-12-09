@@ -18,7 +18,7 @@
                 </a>
                 <div>
                     <h2 class="text-xl font-bold">Process Payment</h2>
-                    <p class="text-sm text-red-100">Receipt No.:  <span id="headerReceiptNo">{{ $receipt_no ?? '0' }}</span></p>
+                    <p class="text-sm text-red-100">Receipt No.: <span id="headerReceiptNo">{{ $receipt_no ??  '0' }}</span></p>
                 </div>
             </div>
             <div class="text-right">
@@ -30,7 +30,7 @@
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
             
-            <!-- LEFT SECTION:  Cart Items -->
+            <!-- LEFT SECTION: Cart Items -->
             <div class="flex flex-col bg-gray-50 rounded-lg shadow-md overflow-hidden h-fit">
                 <div class="bg-white p-4 border-b">
                     <h3 class="text-lg font-bold text-gray-800">Order Summary</h3>
@@ -71,7 +71,7 @@
                     <!-- Quick Summary -->
                     <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl border-2 border-gray-200">
                         <div class="flex justify-between items-center">
-                            <span class="text-2xl font-bold text-gray-900">Total Amount: </span>
+                            <span class="text-2xl font-bold text-gray-900">Total Amount:</span>
                             <span id="quickTotal" class="text-3xl font-bold text-red-600">₱0.00</span>
                         </div>
                     </div>
@@ -104,7 +104,7 @@
                     <!-- Change Display - Inline -->
                     <div id="changeDisplay" class="hidden">
                         <div class="bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 rounded-lg shadow-md flex items-center justify-between">
-                            <p class="text-green-100 text-xs font-medium">CHANGE TO RETURN: </p>
+                            <p class="text-green-100 text-xs font-medium">CHANGE TO RETURN:</p>
                             <p id="changeAmount" class="text-white text-2xl font-bold ml-3">₱0.00</p>
                         </div>
                     </div>
@@ -139,7 +139,7 @@
                         <!-- ✅ VAT Breakdown - Always visible -->
                         <div class="border-t pt-2 mt-2">
                             <div class="flex justify-between text-sm">
-                                <span class="text-gray-700">VAT-Inclusive: </span>
+                                <span class="text-gray-700">VAT-Inclusive:</span>
                                 <span id="calcVATInclusive" class="font-semibold text-blue-600">₱0.00</span>
                             </div>
                             <div class="flex justify-between text-sm">
@@ -153,10 +153,10 @@
                         </div>
                     </div>
 
-                    <!-- Receipt Discount Only (Collapsible) -->
+                    <!-- Discounts Toggle (Collapsible) -->
                     <div class="border-t pt-4">
                         <button id="toggleDiscounts" class="w-full flex items-center justify-between p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
-                            <span class="font-semibold text-gray-700">Add Receipt Discount</span>
+                            <span class="font-semibold text-gray-700">Add Discounts</span>
                             <svg id="discountChevron" class="w-5 h-5 text-gray-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
@@ -173,6 +173,14 @@
                                     </select>
                                     <input type="number" id="receiptDiscountValue" min="0" step="0.01" value="0" 
                                         class="px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="0.00">
+                                </div>
+                            </div>
+
+                            <!-- Item Discounts -->
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Item Discounts</label>
+                                <div id="itemDiscountsList" class="space-y-2 max-h-[200px] overflow-y-auto scrollbar-custom">
+                                    <!-- Item discounts will be populated here -->
                                 </div>
                             </div>
                         </div>
@@ -198,7 +206,7 @@
     <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col">
         <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg flex-shrink-0">
             <div class="text-center">
-                <h3 class="text-xl font-bold mb-2">Payment Successful!</h3>
+                <h3 class="text-xl font-bold mb-2">Payment Successful! </h3>
                 <p class="text-sm text-red-100">Transaction completed successfully</p>
             </div>
         </div>
@@ -220,7 +228,7 @@
                         <span id="receiptTransactionDate" class="text-sm text-gray-900"></span>
                     </div>
                     <div class="flex justify-between items-center mb-4">
-                        <span class="text-sm font-medium text-gray-700">Cashier: </span>
+                        <span class="text-sm font-medium text-gray-700">Cashier:</span>
                         <span class="text-sm text-gray-900">{{ $user_firstname ??  'User' }}</span>
                     </div>
                 </div>
@@ -272,7 +280,7 @@
                 </div>
 
                 <div class="text-center mt-6 pt-4 border-t border-gray-200">
-                    <p class="text-xs text-gray-500">Thank you for your purchase! </p>
+                    <p class="text-xs text-gray-500">Thank you for your purchase!</p>
                     <p class="text-xs text-gray-500">Please keep this receipt for your records.</p>
                 </div>
             </div>
@@ -316,14 +324,48 @@
 
 .payment-cart-item {
     background: white;
-    border:  1px solid #e5e7eb;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 16px;
     transition: all 0.2s;
+    cursor: pointer;
 }
 
 .payment-cart-item:hover {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.payment-cart-item.active {
+    border: 2px solid #3b82f6;
+    background: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.item-discount-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px;
+    transition: all 0.2s;
+}
+
+.item-discount-card.highlighted {
+    border: 2px solid #3b82f6;
+    background: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    animation: highlight-pulse 0.5s ease-out;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .quick-amount-btn {
@@ -337,62 +379,11 @@
 }
 
 .quick-amount-btn:hover {
-    background:  linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border-color: #2563eb;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-/* Inline discount input styling */
-.item-discount-inline {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    margin-top:  6px;
-}
-
-.item-discount-label {
-    font-size: 0.65rem;
-    color: #6b7280;
-    font-weight: 500;
-    white-space: nowrap;
-    margin-right: 4px;
-}
-
-.item-discount-inline select,
-.item-discount-inline input {
-    font-size: 0.65rem;
-    padding: 4px 6px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    transition: all 0.2s;
-    height: 26px;
-}
-
-.item-discount-inline select {
-    flex:  0 0 70px;
-    min-width: 70px;
-}
-
-.item-discount-inline input {
-    flex: 0 0 80px;
-    min-width: 80px;
-}
-
-.item-discount-inline select:focus,
-.item-discount-inline input:focus {
-    outline: none;
-    border-color: #f97316;
-    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
-}
-
-.item-discount-inline select:disabled,
-.item-discount-inline input:disabled {
-    background-color: #f3f4f6;
-    cursor: not-allowed;
-    opacity: 0.6;
 }
 </style>
 
@@ -422,7 +413,7 @@ class PaymentProcessor {
         const state = {
             amountPaid: document.getElementById('amountPaidInput')?.value || '0',
             receiptDiscountType: this.receiptDiscount.type,
-            receiptDiscountValue:  this.receiptDiscount.value,
+            receiptDiscountValue: this.receiptDiscount.value,
             itemDiscounts: this.itemDiscounts,
             discountsExpanded: this.discountsExpanded,
             timestamp: Date.now()
@@ -433,7 +424,7 @@ class PaymentProcessor {
     loadState() {
         try {
             const savedState = localStorage.getItem(this.storageKey);
-            if (!savedState) return false;
+            if (! savedState) return false;
 
             const state = JSON.parse(savedState);
             
@@ -556,12 +547,12 @@ class PaymentProcessor {
         }
     }
 
-    // ✅ Helper:  Check if any item has a discount
+    // ✅ Helper: Check if any item has a discount
     hasAnyItemDiscounts() {
         return Object.values(this.itemDiscounts).some(discount => discount.value > 0);
     }
 
-    // ✅ Update field states based on mutual exclusivity
+    // ✅ NEW: Update field states based on mutual exclusivity
     updateDiscountFieldStates() {
         const hasItemDiscounts = this.hasAnyItemDiscounts();
         const hasReceiptDiscount = this.receiptDiscount.value > 0;
@@ -636,13 +627,33 @@ class PaymentProcessor {
                 input.classList.remove('bg-gray-200', 'cursor-not-allowed', 'opacity-50');
             }
         });
+        
+        // Show/hide item discounts warning
+        const itemDiscountsList = document.getElementById('itemDiscountsList');
+        if (itemDiscountsList) {
+            const existingWarning = document.getElementById('itemDiscountsWarning');
+            if (existingWarning) existingWarning.remove();
+            
+            if (hasReceiptDiscount) {
+                const warning = document.createElement('div');
+                warning.id = 'itemDiscountsWarning';
+                warning.className = 'text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1.5 mb-2 flex items-start gap-2';
+                warning.innerHTML = `
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Item discounts disabled. Clear receipt discount to enable.</span>
+                `;
+                itemDiscountsList.parentElement.insertBefore(warning, itemDiscountsList);
+            }
+        }
     }
 
     updateDateTime() {
         const now = new Date();
         const options = {
             month: '2-digit',
-            day:  '2-digit',
+            day: '2-digit',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
@@ -689,7 +700,7 @@ class PaymentProcessor {
                 }
                 
                 this.calculateTotals();
-                this.updateDiscountFieldStates();
+                this.updateDiscountFieldStates(); // ✅ Initial state check
             }
         } catch (error) {
             console.error('Error loading cart:', error);
@@ -720,40 +731,28 @@ class PaymentProcessor {
                 : '<span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium">VAT-Ex</span>';
             
             return `
-        <div class="payment-cart-item" data-product-code="${item.product.prod_code}">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                        <h4 class="font-semibold text-gray-900">${item.product.name}</h4>
-                        ${vatBadge}
+            <div class="payment-cart-item" data-product-code="${item.product.prod_code}">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-semibold text-gray-900">${item.product.name}</h4>
+                            ${vatBadge}
+                        </div>
+                        <p class="text-sm text-gray-600">₱${parseFloat(item.product.selling_price).toFixed(2)} × ${item.quantity}</p>
                     </div>
-                    <p class="text-sm text-gray-600">₱${parseFloat(item.product.selling_price).toFixed(2)} × ${item.quantity}</p>
-                </div>
-                <div class="text-right">
-                    <p class="font-bold text-gray-900 mb-2">₱${item.amount.toFixed(2)}</p>
-                    
-                    <!-- ✅ RIGHT ALIGNED Discount Controls -->
-                    <div class="item-discount-inline">
-                        <span class="item-discount-label">Discount:</span>
-                        <select class="item-discount-type" data-product-code="${item.product.prod_code}">
-                            <option value="percent">% Off</option>
-                            <option value="amount">₱ Off</option>
-                        </select>
-                        <input type="number" 
-                            class="item-discount-value" 
-                            data-product-code="${item.product.prod_code}"
-                            min="0" 
-                            step="0.01" 
-                            value="0" 
-                            placeholder="0.00">
+                    <div class="text-right">
+                        <p class="font-bold text-gray-900">₱${item.amount.toFixed(2)}</p>
                     </div>
                 </div>
             </div>
-        </div>
         `}).join('');
 
-        // Bind events for inline discount controls
-        this.bindInlineDiscountEvents();
+        document.querySelectorAll('.payment-cart-item').forEach(itemEl => {
+            itemEl.addEventListener('click', () => {
+                const productCode = itemEl.dataset.productCode;
+                this.highlightItemDiscount(productCode);
+            });
+        });
 
         const totalItems = this.cartItems.length;
         const totalQuantity = this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -762,9 +761,36 @@ class PaymentProcessor {
         document.getElementById('cartTotalItems').textContent = totalItems;
         document.getElementById('cartTotalQuantity').textContent = totalQuantity;
         document.getElementById('cartSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
+        
+        this.renderItemDiscounts();
     }
 
-    bindInlineDiscountEvents() {
+    renderItemDiscounts() {
+        const container = document.getElementById('itemDiscountsList');
+        if (!container) return;
+
+        container.innerHTML = this.cartItems.map(item => `
+            <div class="item-discount-card" data-product-code="${item.product.prod_code}">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-800">${item.product.name}</span>
+                    <span class="text-xs text-gray-600">₱${item.amount.toFixed(2)}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select class="item-discount-type px-2 py-1.5 border border-gray-300 rounded text-xs" data-product-code="${item.product.prod_code}">
+                        <option value="percent">% Off</option>
+                        <option value="amount">₱ Off</option>
+                    </select>
+                    <input type="number" 
+                        class="item-discount-value px-2 py-1.5 border border-gray-300 rounded text-xs" 
+                        data-product-code="${item.product.prod_code}"
+                        min="0" 
+                        step="0.01" 
+                        value="0" 
+                        placeholder="0.00">
+                </div>
+            </div>
+        `).join('');
+
         document.querySelectorAll('.item-discount-type').forEach(select => {
             select.addEventListener('change', (e) => {
                 const productCode = e.target.dataset.productCode;
@@ -778,11 +804,49 @@ class PaymentProcessor {
             input.addEventListener('input', (e) => {
                 const productCode = e.target.dataset.productCode;
                 this.itemDiscounts[productCode].value = parseFloat(e.target.value) || 0;
-                this.updateDiscountFieldStates();
+                this.updateDiscountFieldStates(); // ✅ Update states when item discount changes
                 this.calculateTotals();
                 this.saveState();
             });
         });
+        
+        // ✅ Apply initial states after rendering
+        this.updateDiscountFieldStates();
+    }
+
+    highlightItemDiscount(productCode) {
+        if (!this.discountsExpanded) {
+            document.getElementById('toggleDiscounts').click();
+        }
+
+        document.querySelectorAll('.payment-cart-item').forEach(el => {
+            el.classList.remove('active');
+        });
+
+        document.querySelectorAll('.item-discount-card').forEach(el => {
+            el.classList.remove('highlighted');
+        });
+
+        const cartItem = document.querySelector(`.payment-cart-item[data-product-code="${productCode}"]`);
+        if (cartItem) {
+            cartItem.classList.add('active');
+        }
+
+        const discountCard = document.querySelector(`.item-discount-card[data-product-code="${productCode}"]`);
+        if (discountCard) {
+            discountCard.classList.add('highlighted');
+            
+            setTimeout(() => {
+                discountCard.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }, 300);
+
+            setTimeout(() => {
+                discountCard.classList.remove('highlighted');
+            }, 2000);
+        }
     }
 
     calculateTotals() {
@@ -874,39 +938,33 @@ class PaymentProcessor {
     }
 
     calculateChange() {
-    const amountPaidInput = document.getElementById('amountPaidInput');
-    if (!amountPaidInput) return;
+        const amountPaidInput = document.getElementById('amountPaidInput');
+        if (!amountPaidInput) return;
 
-    this.amountPaid = parseFloat(amountPaidInput.value) || 0;
-    const change = this.amountPaid - this.totalAmount;
+        this.amountPaid = parseFloat(amountPaidInput.value) || 0;
+        const change = this.amountPaid - this.totalAmount;
 
-    const insufficientWarning = document.getElementById('insufficientWarning');
-    const changeDisplay = document.getElementById('changeDisplay');
-    const completeBtn = document.getElementById('completePayment');
+        const insufficientWarning = document.getElementById('insufficientWarning');
+        const changeDisplay = document.getElementById('changeDisplay');
+        const completeBtn = document.getElementById('completePayment');
 
-    // ✅ FIX: Use a small threshold to handle floating-point precision issues
-    const threshold = 0.01; // 1 cent tolerance
-    
-    if (this.amountPaid > threshold && this.amountPaid < (this.totalAmount - threshold)) {
-        // Truly insufficient - more than 1 cent short
-        const shortage = this.totalAmount - this.amountPaid;
-        document.getElementById('amountShortage').textContent = `₱${shortage.toFixed(2)}`;
-        insufficientWarning.classList.remove('hidden');
-        changeDisplay.classList.add('hidden');
-        completeBtn.disabled = true;
-    } else if (this.amountPaid >= (this.totalAmount - threshold) && this.amountPaid > 0) {
-        // Sufficient amount (including exact amount with rounding differences)
-        document.getElementById('changeAmount').textContent = `₱${Math.max(0, change).toFixed(2)}`;
-        changeDisplay.classList.remove('hidden');
-        insufficientWarning.classList.add('hidden');
-        completeBtn.disabled = false;
-    } else {
-        // No amount entered yet
-        changeDisplay.classList.add('hidden');
-        insufficientWarning.classList.add('hidden');
-        completeBtn.disabled = true;
+        if (this.amountPaid > 0 && this.amountPaid < this.totalAmount) {
+            const shortage = this.totalAmount - this.amountPaid;
+            document.getElementById('amountShortage').textContent = `₱${shortage.toFixed(2)}`;
+            insufficientWarning.classList.remove('hidden');
+            changeDisplay.classList.add('hidden');
+            completeBtn.disabled = true;
+        } else if (this.amountPaid >= this.totalAmount && this.amountPaid > 0) {
+            document.getElementById('changeAmount').textContent = `₱${change.toFixed(2)}`;
+            changeDisplay.classList.remove('hidden');
+            insufficientWarning.classList.add('hidden');
+            completeBtn.disabled = false;
+        } else {
+            changeDisplay.classList.add('hidden');
+            insufficientWarning.classList.add('hidden');
+            completeBtn.disabled = true;
+        }
     }
-}
 
     async processPayment() {
         if (this.amountPaid < this.totalAmount) {
@@ -933,13 +991,13 @@ class PaymentProcessor {
                 receipt_discount_type: this.receiptDiscount.type,
                 receipt_discount_value: this.receiptDiscount.value,
                 vat_enabled: true,
-                vat_rate:  this.vatRate,
+                vat_rate: this.vatRate,
                 item_discounts: this.itemDiscounts
             };
 
             const response = await fetch('{{ route("process_payment") }}', {
-                method:  'POST',
-                headers:  {
+                method: 'POST',
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
@@ -959,7 +1017,7 @@ class PaymentProcessor {
             }
         } catch (error) {
             console.error('Error processing payment:', error);
-            this.showToast('Error processing payment:  ' + error.message, 'error');
+            this.showToast('Error processing payment: ' + error.message, 'error');
             completeBtn.disabled = false;
             completeBtn.textContent = 'Complete Payment';
         }
@@ -980,8 +1038,8 @@ class PaymentProcessor {
 
         const itemDiscountsAmount = paymentData.total_item_discounts ??  0;
         const receiptDiscountAmount = paymentData.receipt_discount_amount ?? 0;
-        const vatAmountInclusive = paymentData.vat_amount_inclusive ??  0;
-        const vatAmountExempt = paymentData.vat_amount_exempt ??  0;
+        const vatAmountInclusive = paymentData.vat_amount_inclusive ?? 0;
+        const vatAmountExempt = paymentData.vat_amount_exempt ?? 0;
 
         document.getElementById('receiptItemDiscounts').textContent = `₱${parseFloat(itemDiscountsAmount).toFixed(2)}`;
         document.getElementById('receiptReceiptDiscount').textContent = `₱${parseFloat(receiptDiscountAmount).toFixed(2)}`;
@@ -993,7 +1051,7 @@ class PaymentProcessor {
         const options = {
             year: 'numeric',
             month: '2-digit',
-            day:  '2-digit',
+            day: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
@@ -1020,7 +1078,7 @@ class PaymentProcessor {
     }
 
     printReceipt() {
-        const receiptContent = document.querySelector('#receiptModal .overflow-y-auto').innerHTML;
+        const receiptContent = document.querySelector('#receiptModal .overflow-y-auto'). innerHTML;
         
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -1040,7 +1098,7 @@ class PaymentProcessor {
                             padding: 3px;
                             font-size: 10.5px;
                             color: #000;
-                            background:  #fff;
+                            background: #fff;
                             line-height: 1.05;
                         }
 
@@ -1054,29 +1112,29 @@ class PaymentProcessor {
                         .text-xl { font-size: 1rem; }
                         .text-lg { font-size: 0.95rem; }
                         .text-sm { font-size: 0.8rem; }
-                        .text-xs { font-size:  0.7rem; }
+                        .text-xs { font-size: 0.7rem; }
 
                         .mb-1 { margin-bottom: 1px; }
-                        .mb-2 { margin-bottom:  2px; }
+                        .mb-2 { margin-bottom: 2px; }
                         .mb-3 { margin-bottom: 3px; }
                         .mb-4 { margin-bottom: 4px; }
                         .mb-6 { margin-bottom: 6px; }
-                        .mt-1 { margin-top:  1px; }
+                        .mt-1 { margin-top: 1px; }
                         .mt-2 { margin-top: 2px; }
                         .mt-6 { margin-top: 6px; }
                         .pb-2 { padding-bottom: 2px; }
                         .pb-4 { padding-bottom: 4px; }
-                        .pt-2 { padding-top:  2px; }
+                        .pt-2 { padding-top: 2px; }
                         .pt-4 { padding-top: 4px; }
-                        .py-2 { padding-top:  2px; padding-bottom: 2px; }
-                        .pr-2 { padding-right:  2px; }
+                        .py-2 { padding-top: 2px; padding-bottom: 2px; }
+                        .pr-2 { padding-right: 2px; }
 
                         .border-b { border-bottom: none; }
                         .border-t { border-top: 1px solid #000; }
-                        .border-b-2 { border-bottom:  2px solid #000; }
-                        .border-t-2 { border-top:  2px solid #000; }
+                        .border-b-2 { border-bottom: 2px solid #000; }
+                        .border-t-2 { border-top: 2px solid #000; }
                         .border-gray-100 { border-color: transparent; }
-                        .border-gray-200 { border-color:  #000; }
+                        .border-gray-200 { border-color: #000; }
                         .border-gray-300 { border-color: #000; }
 
                         .text-gray-500,
@@ -1106,12 +1164,12 @@ class PaymentProcessor {
                             align-items: center;
                         }
 
-                        .mb-4 .flex span: first-child {
+                        .mb-4 .flex span:first-child {
                             text-align: left;
                         }
 
                         .mb-4 .flex span:last-child {
-                            text-align:  right;
+                            text-align: right;
                         }
 
                         #receiptItemsList .flex {
@@ -1122,13 +1180,13 @@ class PaymentProcessor {
                         }
 
                         #receiptItemsList .flex-1 {
-                            flex:  1;
+                            flex: 1;
                             text-align: left;
                             padding-right: 4px;
                         }
 
                         #receiptItemsList .text-right {
-                            text-align:  right;
+                            text-align: right;
                             white-space: nowrap;
                         }
 
@@ -1146,7 +1204,7 @@ class PaymentProcessor {
                             margin-bottom: 3px;
                         }
 
-                        .border-t-2.border-gray-300.pt-4.space-y-2 > div: last-child {
+                        .border-t-2.border-gray-300.pt-4.space-y-2 > div:last-child {
                             border-bottom: none ! important;
                         }
 
