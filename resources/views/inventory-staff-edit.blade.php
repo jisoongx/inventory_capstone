@@ -1,4 +1,4 @@
-@extends('dashboards.owner.owner')
+@extends('dashboards.staff.staff')
 <head>
     <title>Edit Product Details</title>
 </head>
@@ -18,7 +18,7 @@
             <h1 class="text-lg font-semibold text-gray-800">Edit Product Details</h1>
             
             <!-- Back Button -->
-            <a href="{{ route('inventory-owner') }}" 
+            <a href="{{ route('inventory-staff') }}" 
                class="inline-flex items-center text-xs text-gray-500 hover:text-red-600 transition">
                 <span class="material-symbols-outlined text-sm mr-1">cancel</span>
                 Cancel
@@ -26,7 +26,7 @@
         </div>
 
         <!-- Form Start -->
-        <form action="{{ route('inventory-owner-update', $product->prod_code) }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('inventory-staff-update', $product->prod_code) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
@@ -412,7 +412,7 @@
         nameValidation.innerHTML = '<span class="text-gray-500">Checking...</span>';
 
         validationTimeout = setTimeout(() => {
-            fetch('{{ route("inventory-owner-check-name") }}', {
+            fetch('{{ route("inventory-staff-check-name") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -471,7 +471,7 @@
         barcodeValidation.innerHTML = '<span class="text-gray-500">Checking...</span>';
 
         validationTimeout = setTimeout(() => {
-            fetch('{{ route("inventory-owner-check-barcode-edit") }}', {
+            fetch('{{ route("inventory-staff-check-barcode-edit") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

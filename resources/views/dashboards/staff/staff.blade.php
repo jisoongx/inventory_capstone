@@ -36,7 +36,7 @@
                     <span class="nav-label">Dashboard</span>
                 </a>
 
-                <a href="{{ route('restock.list') }}"
+                <a href="{{ route('inventory-staff') }}{{ route('restock.list') }}"
                     class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                     <span class="material-symbols-rounded">inventory</span>
                     <span class="nav-label">Restock List</span>

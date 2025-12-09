@@ -1,4 +1,4 @@
-@extends('dashboards.owner.owner')
+@extends('dashboards.staff.staff')
 
 <head>
     <title>Inventory</title>
@@ -16,6 +16,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            white-space: pre-line;
         }
 
         .toast-success {
@@ -55,7 +56,6 @@
             }
         }
     </style>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 @section('content')
 
@@ -98,7 +98,7 @@
 
 
             {{-- Search Bar --}}
-            <form method="GET" action="{{ url('inventory-owner') }}" class="relative w-72">
+            <form method="GET" action="{{ url('inventory-staff') }}" class="relative w-72">
                 <input
                     type="text"
                     id="search"
@@ -126,7 +126,7 @@
 
             <!-- Status Toggle + Settings -->
             <div class="flex items-center gap-2">
-                <form action="{{ route('inventory-owner') }}" method="GET" id="statusToggleForm" class="flex items-center gap-2">
+                <form action="{{ route('inventory-staff') }}" method="GET" id="statusToggleForm" class="flex items-center gap-2">
                     <div class="relative flex bg-[#f09d39] rounded-full p-1 w-44">
                         <input type="hidden" name="status" id="statusInput" value="{{ $status ?? 'active' }}">
 
@@ -153,7 +153,7 @@
                 </form>
 
                 <!-- Settings Icon -->
-                <a href="{{ route('inventory-owner-settings') }}"
+                <a href="{{ route('inventory-staff-settings') }}"
                     class="flex items-center justify-center w-10 h-10 mb-4 rounded-full bg-white shadow-lg transition" title="Category and Unit Settings">
                     <span class="material-symbols-outlined text-[#f09d39]">category</span>
                 </a>
@@ -369,7 +369,7 @@
                     <td class="px-4 py-2 border text-center" onclick="event.stopPropagation()">
                         <div class="flex items-center justify-center gap-2">
                             <!-- Info -->
-                            <a href="{{ route('inventory-product-info', $product->prod_code) }}"
+                            <a href="{{ route('inventory-staff-product-info', $product->prod_code) }}"
                                 class="text-blue-500 hover:text-blue-700">
                                 <span class="material-symbols-outlined">info</span>
                             </a>
@@ -378,36 +378,11 @@
                             @php
                                 $editDisabled = $expired ? 'cursor-not-allowed' : '';
                             @endphp
-                            <a href="{{ $expired ? '' : route('inventory-owner-edit', $product->prod_code) }}"
+                            <a href="{{ $expired ? '' : route('inventory-staff-edit', $product->prod_code) }}"
                                 onclick="{{ $expired ? 'event.preventDefault();' : '' }}"
                                 title="Edit" class="text-green-500 hover:text-green-700 {{ $editDisabled }}">
                                 <span class="material-symbols-outlined">edit</span>
                             </a>
-
-                            <!-- Archive / Unarchive Button -->
-                            @if ($product->prod_status === 'active')
-                                <button type="button"
-                                    class="text-red-500 hover:text-red-700 {{ $expired ? 'cursor-not-allowed' : '' }}"
-                                    title="Archive"
-                                    @if(!$expired)
-                                        onclick="openStatusModal('archive', '{{ $product->prod_code }}', '{{ addslashes($product->name) }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}', {{ $product->current_stock }})"
-                                    @else
-                                        disabled
-                                    @endif>
-                                    <span class="material-symbols-outlined">archive</span>
-                                </button>
-                            @else
-                                <button type="button"
-                                    class="text-orange-400 hover:text-orange-600 {{ $expired ? 'cursor-not-allowed' : '' }}"
-                                    title="Unarchive"
-                                    @if(!$expired)
-                                        onclick="openStatusModal('unarchive', '{{ $product->prod_code }}', '{{ addslashes($product->name) }}', '{{ $product->barcode }}', '{{ $product->prod_image ?? '' }}', {{ $product->current_stock }})"
-                                    @else
-                                        disabled
-                                    @endif>
-                                    <span class="material-symbols-outlined">unarchive</span>
-                                </button>
-                            @endif
                         </div>
                     </td>
                 </tr>
@@ -423,70 +398,6 @@
 </div>
 
 
-
-    <!-- Archive / Unarchive Confirmation Modal -->
-    <div id="statusModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
-            <!-- Title -->
-            <h2 id="statusModalTitle" class="text-xl font-semibold text-gray-800 mb-2"></h2>
-            <p id="statusModalMessage" class="text-sm text-gray-600 mb-4"></p>
-            
-            <!-- Stock Warning Alert (Initially Hidden) -->
-            <div id="stockWarningAlert" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded">
-                <div class="flex items-start">
-                    <span class="material-symbols-outlined text-red-500 mr-2">warning</span>
-                    <div>
-                        <p class="text-sm font-semibold text-red-800">Cannot Archive Product</p>
-                        <p id="stockWarningText" class="text-sm text-red-700 mt-1"></p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Product Preview Card -->
-            <div class="flex items-center gap-4 border rounded-lg p-4 bg-gray-50 mb-5">
-                <!-- Product Image -->
-                <img id="statusProductImage" src="" alt="Product Image" class="h-20 w-20 rounded object-cover border"
-                    onerror="this.src='/assets/no-product-image.png'">
-                <!-- Product Details -->
-                <div class="text-left flex-1 min-w-0">
-                    <p class="text-sm text-gray-700">
-                        <strong>Name:</strong>
-                        <span id="statusProductName"
-                            class="inline-block max-w-[200px] truncate align-middle"
-                            title="">
-                        </span>
-                    </p>
-                    <p class="text-sm text-gray-700">
-                        <strong>Barcode:</strong>
-                        <span id="statusProductBarcode"
-                            class="inline-block max-w-[200px] truncate align-middle"
-                            title="">
-                        </span>
-                    </p>
-                    <!-- Current Stock Display -->
-                    <p class="text-sm text-gray-700 mt-1">
-                        <strong>Current Stock:</strong>
-                        <span id="statusProductStock" class="font-semibold"></span>
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Form -->
-            <form id="statusForm" method="POST">
-                @csrf
-                @method('PATCH')
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeStatusModal()"
-                        class="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">
-                        Cancel
-                    </button>
-                    <button id="statusSubmitBtn" type="submit"
-                        class="px-4 py-2 text-sm rounded text-white">
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 
 
     <!-- Add Product Modal -->
@@ -1596,9 +1507,9 @@
         function filterByCategory(categoryId) {
             const status = document.getElementById('statusInput')?.value || 'active';
             if (categoryId === 'all') {
-                window.location.href = `{{ url('inventory-owner') }}?status=${status}`;
+                window.location.href = `{{ url('inventory-staff') }}?status=${status}`;
             } else {
-                window.location.href = `{{ url('inventory-owner') }}?category=${categoryId}&status=${status}`;
+                window.location.href = `{{ url('inventory-staff') }}?category=${categoryId}&status=${status}`;
             }
         }
 
@@ -1611,7 +1522,7 @@
                 return;
             }
 
-            fetch(`/inventory-owner/suggest?term=${encodeURIComponent(term)}`)
+            fetch(`/inventory-staff/suggest?term=${encodeURIComponent(term)}`)
                 .then(response => response.json())
                 .then(data => {
                     suggestionsBox.innerHTML = '';
@@ -1957,7 +1868,7 @@
             }
 
             try {
-                const submitResponse = await fetch('/inventory/add-category', {
+                const submitResponse = await fetch('/inventory-staff/add-category', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -2018,7 +1929,7 @@
             const list = document.getElementById('categoryProductsList');
             list.innerHTML = '<tr><td colspan="3" class="p-3 text-center">Loading…</td></tr>';
 
-            fetch(`/inventory/category-products/${categoryId}`)
+            fetch(`/inventory-staff/category-products/${categoryId}`)
                 .then(r => r.json())
                 .then(data => {
                     list.innerHTML = '';
@@ -2074,7 +1985,7 @@
                 const prodName = cb.dataset.name;
                 const currentStock = cb.dataset.stock ?? 0;
 
-                return fetch(`/inventory/get-latest-batch/${prodCode}`)
+                return fetch(`/inventory-staff/get-latest-batch/${prodCode}`)
                     .then(r => r.json())
                     .then(batchResp => {
                         const nextBatch = batchResp.next_batch || `P${prodCode}-BATCH-1`;
@@ -2254,7 +2165,7 @@
             document.getElementById("newTaxAmount").textContent = '₱0.00';
             document.getElementById("newTotalPrice").textContent = '₱0.00';
         }
-
+        
         // === Duplicate Row for the Same Product (increments batch) ===
         window.duplicateBatchRow = function(button, prodCode, prodName, categoryId, currentStock) {
             const container = document.getElementById('restockRowsContainer');
@@ -2459,7 +2370,7 @@
                     formData.append('pricing_prod_code', pricingProdCode);
                 }
 
-                fetch('/inventory/bulk-restock', {
+                fetch('/inventory-staff/bulk-restock', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -2471,7 +2382,7 @@
                         if (data.success) {
                             showToast(data.message, 'success');
                             setTimeout(() => {
-                                window.location.href = '/inventory-owner';
+                                window.location.href = '/inventory-staff';
                             }, 1000);
                         } else {
                             showToast(data.message, 'error');
@@ -2495,7 +2406,7 @@
 
         closeAllModals();
         
-        fetch(`/inventory/get-latest-batch/${prodCode}`)
+        fetch(`/inventory-staff/get-latest-batch/${prodCode}`)
             .then(r => r.json())
             .then(batchResp => {
                 const nextBatch = batchResp.next_batch || 'BATCH-1';
@@ -2758,7 +2669,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function goToInventory() {
             // Redirect to inventory page
-            window.location.href = "{{ route('inventory-owner') }}";
+            window.location.href = "{{ route('inventory-staff') }}";
         }
 
     //  Close all modals complete version
@@ -2797,19 +2708,7 @@ document.addEventListener("DOMContentLoaded", () => {
             openTypeModal();
         }
 
-        // Your existing function - keep this exactly as is
-        // function openRegisterModal(barcode) {
-        //     closeAllModals();
-        //     const modal = document.getElementById('registerProductModal');
-        //     if (modal) {
-        //         modal.classList.remove('hidden');
-        //         modal.classList.add('flex'); 
-        //     }
 
-        //     // Auto-fill barcode in the register modal
-        //     const barcodeElement = document.getElementById('autoFilledBarcode');
-        //     if (barcodeElement) barcodeElement.textContent = barcode || '';
-        // }
 
         // Function to detect if we're in registration context - IMPROVED
         function isRegistrationContext() {
@@ -2840,7 +2739,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log('Checking barcode:', barcode);
             console.log('Registration context:', isRegistrationContext());
 
-            fetch('/check-barcode', {
+            fetch('/inventory-staff/check-barcode', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2965,7 +2864,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openScanModal() {
         document.getElementById('scanBarcodeModal').classList.remove('hidden');
-        document.getElementById('scanBarcodeModal').classList.add('flex');
         setTimeout(() => {
             document.getElementById('scannedBarcodeInput').focus();
         }, 300);
@@ -2986,131 +2884,145 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         function processScannedBarcode() {
-            const barcode = document.getElementById('scannedBarcodeInput').value.trim();
-            if (!barcode) {
-                alert("Please scan a barcode first.");
-                return;
-            }
+        const barcode = document.getElementById('scannedBarcodeInput').value.trim();
+        if (!barcode) {
+            alert("Please scan a barcode first.");
+            return;
+        }
 
-            console.log("🔍 DEBUG: Starting barcode scan process");
-            console.log("🔍 DEBUG: Scanned barcode:", barcode);
+        console.log("=== BARCODE SCAN DEBUG START ===");
+        console.log("1. Scanned barcode:", barcode);
 
-            // ✅ FIX: Add proper headers and error handling
-            fetch('/check-barcode', {
+        fetch('/check-barcode', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
-                    'Accept': 'application/json'  // ✅ Important for proper JSON response
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({
                     barcode: barcode
                 })
             })
             .then(response => {
-                console.log("🔍 DEBUG: Response status:", response.status);
-                console.log("🔍 DEBUG: Response headers:", response.headers);
-                
-                // ✅ Check if response is OK before parsing
+                console.log("2. Response received, status:", response.status);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error('Network response was not ok');
                 }
-                
                 return response.json();
             })
             .then(data => {
-                console.log('🔍 DEBUG: Full response from /check-barcode:', data);
-                console.log('🔍 DEBUG: data.exists:', data.exists);
-                console.log('🔍 DEBUG: data.product:', data.product);
+                console.log("3. Raw response data:", JSON.stringify(data, null, 2));
+                console.log("4. data.exists:", data.exists);
+                console.log("5. data.product:", data.product);
                 
                 if (data.product) {
-                    console.log('🔍 DEBUG: Product details:');
-                    console.log('   - prod_code:', data.product.prod_code);
-                    console.log('   - name:', data.product.name);
-                    console.log('   - category_id:', data.product.category_id);
-                    console.log('   - current_stock:', data.product.current_stock);
-                    console.log('   - stock:', data.product.stock);
+                    console.log("6. Product details breakdown:");
+                    console.log("   - prod_code:", data.product.prod_code);
+                    console.log("   - name:", data.product.name);
+                    console.log("   - category_id:", data.product.category_id);
+                    console.log("   - current_stock:", data.product.current_stock);
+                    console.log("   - stock:", data.product.stock);
                 }
                 
                 if (data.exists && data.product) {
-                    console.log('✅ Product exists, calling openRestockModalForScannedProduct');
+                    console.log("7. ✅ Product exists, calling openRestockModalForScannedProduct");
+                    console.log("8. Passing product with stock:", data.product.current_stock || data.product.stock);
                     closeScanModal();
                     openRestockModalForScannedProduct(data.product);
                 } else {
-                    console.log('❌ Product not found, opening register modal');
+                    console.log("7. ❌ Product not found, opening register modal");
                     closeScanModal();
                     openRegisterModal(barcode);
                 }
+                console.log("=== BARCODE SCAN DEBUG END ===");
             })
             .catch(error => {
-                console.error('❌ Error checking barcode:', error);
-                console.error('❌ Error stack:', error.stack);
-                alert('Error checking barcode: ' + error.message + '. Please check console for details.');
+                console.error('❌ Error in processScannedBarcode:', error);
+                alert('Error checking barcode. Please try again.');
             });
-        }
+    }
+
 
     // New function to open restock modal for a scanned product
     function openRestockModalForScannedProduct(product) {
-        console.log('🔍 DEBUG: openRestockModalForScannedProduct called');
-        console.log('🔍 DEBUG: Product parameter received:', product);
+        console.log("=== OPEN RESTOCK MODAL DEBUG START ===");
+        console.log("1. Function called with product:", product);
+        console.log("2. Product structure check:");
+        console.log("   - Has prod_code:", !!product.prod_code);
+        console.log("   - Has name:", !!product.name);
+        console.log("   - Has category_id:", !!product.category_id);
+        console.log("   - Has current_stock:", !!product.current_stock);
+        console.log("   - Has stock:", !!product.stock);
+        console.log("3. Stock values:");
+        console.log("   - product.current_stock:", product.current_stock);
+        console.log("   - product.stock:", product.stock);
         
         closeAllModals();
         
-        // ✅ FIX: Extract current stock from the product object passed from checkBarcode response
-        // The backend sends both 'current_stock' and 'stock', so we check both
-        const currentStock = product.current_stock ?? product.stock ?? 0;
-        
-        console.log('🔍 DEBUG: Extracted currentStock:', currentStock);
+        // Determine which stock value to use
+        const currentStock = product.current_stock !== undefined ? product.current_stock : (product.stock !== undefined ? product.stock : 0);
+        console.log("4. Final stock value to use:", currentStock);
         
         // Fetch the latest batch number
         fetch(`/inventory/get-latest-batch/${product.prod_code}`)
-            .then(r => r.json())
+            .then(r => {
+                console.log("5. Batch fetch response received");
+                return r.json();
+            })
             .then(batchResp => {
-                console.log('🔍 DEBUG: Batch response:', batchResp);
+                console.log("6. Batch response:", batchResp);
                 const nextBatch = batchResp.next_batch || 'BATCH-1';
+                console.log("7. Next batch number:", nextBatch);
                 
                 // Open restock details modal directly
                 const restockDetailsModal = document.getElementById('restockDetailsModal');
                 const container = document.getElementById('restockRowsContainer');
                 
                 if (restockDetailsModal && container) {
+                    console.log("8. Modal elements found");
                     container.innerHTML = '';
                     
                     // Set category ID
                     document.getElementById('restockCategoryId').value = product.category_id;
+                    console.log("9. Category ID set:", product.category_id);
                     
-                    console.log('🔍 DEBUG: About to call addRestockRow with:', {
-                        prod_code: product.prod_code,
-                        name: product.name,
-                        category_id: product.category_id,
-                        currentStock: currentStock,  // ✅ Using the extracted value
-                        nextBatch: nextBatch,
-                        index: 0
-                    });
+                    console.log("10. Calling addRestockRow with:");
+                    console.log("    - prod_code:", product.prod_code);
+                    console.log("    - name:", product.name);
+                    console.log("    - category_id:", product.category_id);
+                    console.log("    - currentStock:", currentStock);
+                    console.log("    - nextBatch:", nextBatch);
                     
-                    // ✅ FIX: Pass the extracted currentStock value
+                    // Call addRestockRow with the stock value
                     addRestockRow(
                         product.prod_code,
                         product.name,
                         product.category_id,
-                        currentStock,  // ✅ Pass the correctly extracted value
+                        currentStock,  // This is the critical parameter
                         nextBatch,
                         0
                     );
                     
+                    console.log("11. addRestockRow called successfully");
+                    
                     restockDetailsModal.classList.remove('hidden');
                     restockDetailsModal.classList.add('flex');
+                    console.log("12. Modal displayed");
                     
                     setTimeout(() => {
                         const qtyInput = container.querySelector('input[name*="[qty]"]');
                         if (qtyInput) {
                             qtyInput.focus();
                             qtyInput.select();
+                            console.log("13. Quantity input focused");
                         }
                     }, 300);
                 } else {
-                    console.error('❌ Modal or container not found');
+                    console.error("❌ Modal or container not found");
+                    console.log("    - restockDetailsModal:", restockDetailsModal);
+                    console.log("    - container:", container);
                 }
+                console.log("=== OPEN RESTOCK MODAL DEBUG END ===");
             })
             .catch(err => {
                 console.error('❌ Error fetching batch info:', err);
@@ -3134,7 +3046,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
         function goToInventory() {
-            window.location.href = '/inventory-owner';
+            window.location.href = '/inventory-staff';
         }
     </script>
 
@@ -3227,7 +3139,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             try {
-                const submitResponse = await fetch('/inventory/add-category', {
+                const submitResponse = await fetch('/inventory-staff/add-category', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
@@ -3295,7 +3207,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         
                         if (proceed) {
                             formData.append('confirmed_similar', '1');
-                            const retryResponse = await fetch('/inventory/add-category', {
+                            const retryResponse = await fetch('/inventory-staff/add-category', {
                                 method: 'POST',
                                 headers: {
                                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
@@ -3687,7 +3599,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             // Send AJAX request to add category
-            const submitResponse = await fetch('/inventory/add-category', {
+            const submitResponse = await fetch('/inventory-staff/add-category', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
@@ -3727,7 +3639,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (proceed) {
                         // Retry with confirmation flag
                         formData.append('confirmed_similar', '1');
-                        const retryResponse = await fetch('/inventory/add-category', {
+                        const retryResponse = await fetch('/inventory-staff/add-category', {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
@@ -4374,7 +4286,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     formData.append("confirmed_unit", "1");
                 }
 
-                fetch("/register-product", {
+                fetch("/inventory-staff/register-product", {
                         method: "POST",
                         headers: {
                             "X-CSRF-TOKEN": "{{ csrf_token() }}"
@@ -4409,76 +4321,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 </script>
-
-
-    <!-- Archive, Unarchive JavaScript -->
-    <script>
-        function openStatusModal(action, prodCode, name, barcode, imageUrl, currentStock) {
-            const modal = document.getElementById('statusModal');
-            const form = document.getElementById('statusForm');
-            const title = document.getElementById('statusModalTitle');
-            const message = document.getElementById('statusModalMessage');
-            const submitBtn = document.getElementById('statusSubmitBtn');
-            const stockWarningAlert = document.getElementById('stockWarningAlert');
-            const stockWarningText = document.getElementById('stockWarningText');
-
-            // Product details
-            document.getElementById('statusProductName').textContent = name;
-            document.getElementById('statusProductName').title = name;
-
-            document.getElementById('statusProductBarcode').textContent = barcode;
-            document.getElementById('statusProductBarcode').title = barcode;
-
-            document.getElementById('statusProductImage').src = imageUrl ?
-                `/storage/${imageUrl}` :
-                "{{ asset('assets/no-product-image.png') }}";
-
-            // Display current stock
-            const stockLabel = currentStock == 1 ? 'stock' : 'stocks';
-            document.getElementById('statusProductStock').textContent = `${currentStock} ${stockLabel} left`;
-
-            // Action-specific UI
-            if (action === 'archive') {
-                title.textContent = 'Archive Product';
-                
-                // Check if product has stock
-                if (currentStock > 0) {
-                    // Show warning and disable submit
-                    stockWarningAlert.classList.remove('hidden');
-                    stockWarningText.textContent = `This product still has ${currentStock} ${stockLabel} left. Please remove all stock before archiving.`;
-                    message.textContent = 'This product cannot be archived at this time.';
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Cannot Archive';
-                    submitBtn.className = "px-4 py-2 bg-gray-400 text-white text-sm rounded cursor-not-allowed";
-                } else {
-                    // Hide warning and enable submit
-                    stockWarningAlert.classList.add('hidden');
-                    message.textContent = 'Are you sure you want to archive this product?';
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Yes, Archive';
-                    submitBtn.className = "px-4 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600";
-                }
-                
-                form.action = `/inventory/archive/${prodCode}`;
-            } else {
-                // Unarchive action
-                stockWarningAlert.classList.add('hidden');
-                title.textContent = 'Unarchive Product';
-                message.textContent = 'Do you want to unarchive this product?';
-                form.action = `/inventory/unarchive/${prodCode}`;
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Yes, Unarchive';
-                submitBtn.className = "px-4 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600";
-            }
-
-            modal.classList.remove('hidden');
-        }
-
-        function closeStatusModal() {
-            document.getElementById('statusModal').classList.add('hidden');
-        }
-    </script>
-
 
 
     <!-- Toggle Option for Active and Archived Products JavaScript -->
@@ -4859,6 +4701,4 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-
-
-    @endsection
+@endsection

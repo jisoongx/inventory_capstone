@@ -11,6 +11,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OwnerStaffController;
 use App\Http\Controllers\InventoryOwnerController;
+use App\Http\Controllers\InventoryStaffController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\NotificationController;
@@ -19,13 +20,9 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\PaypalWebhookController;
 use App\Livewire\ExpenseRecord;
 use App\Livewire\ReportSalesAndPerformance;
-
-
-
-
 use App\Livewire\TechnicalRequest;
 use App\Http\Controllers\InventoryOwnerSettingsController;
-
+use App\Http\Controllers\InventoryStaffSettingsController;
 
 
 
@@ -183,15 +180,11 @@ Route::patch('/inventory/archive/{prod_code}', [InventoryOwnerController::class,
 Route::patch('/inventory/unarchive/{prod_code}', [InventoryOwnerController::class, 'unarchive'])->name('inventory-owner-unarchive');
 // Inventory Owner Category & Unit Settings
 Route::get('/inventory-owner-settings', [InventoryOwnerSettingsController::class, 'index'])->name('inventory-owner-settings');
-// Categories
 Route::post('/inventory-owner-settings/category', [InventoryOwnerSettingsController::class, 'storeCategory'])->name('owner.category.store');
 Route::patch('/inventory-owner-settings/category/{id}', [InventoryOwnerSettingsController::class, 'updateCategory'])->name('owner.category.update');
-// Units
 Route::post('/inventory-owner-settings/unit', [InventoryOwnerSettingsController::class, 'storeUnit'])->name('owner.unit.store');
 Route::patch('/inventory-owner-settings/unit/{id}', [InventoryOwnerSettingsController::class, 'updateUnit'])->name('owner.unit.update');
 
-Route::get('/inventory-owner/edit/{prodCode}', [InventoryOwnerController::class, 'edit'])->name('inventory-owner-edit');
-Route::put('/inventory-owner/update/{prodCode}', [InventoryOwnerController::class, 'update'])->name('inventory-owner-update');
 
 // Category -> product listing (AJAX)
 Route::get('/inventory/category-products/{categoryId}', [InventoryOwnerController::class, 'getCategoryProducts'])->name('inventory.categoryProducts');
@@ -214,6 +207,56 @@ Route::post('/owner/check-existing-name', [InventoryOwnerSettingsController::cla
 Route::post('/inventory/check-name', [InventoryOwnerController::class, 'checkProductName'])->name('inventory-owner-check-name');
 Route::post('/inventory/check-barcode-edit', [InventoryOwnerController::class, 'checkBarcodeEdit'])->name('inventory-owner-check-barcode-edit');
 Route::get('/inventory/get-product-pricing/{prodCode}', [InventoryOwnerController::class, 'getProductPricing'])->name('inventory.get-product-pricing');
+
+
+//Inventory for Staff
+Route::middleware(['auth:staff'])->group(function () {
+    Route::get('/inventory-staff', [InventoryStaffController::class, 'index'])->name('inventory-staff');   
+    Route::get('/inventory-staff/search', [InventoryStaffController::class, 'index'])->name('inventory.search');
+    Route::get('/inventory-staff/suggest', [InventoryOwnerController::class, 'suggest']);
+    Route::post('/inventory-staff/check-barcode', [InventoryStaffController::class, 'inventory-staff-checkBarcode']);
+    Route::post('/inventory-staff/register-product', [InventoryStaffController::class, 'registerProduct']);
+    Route::post('/inventory-staff/restock', [InventoryStaffController::class, 'restockProduct'])->name('inventory.restock');
+    Route::get('/inventory-staff/latest-batch/{prodCode}', [InventoryStaffController::class, 'getLatestBatch'])->name('inventory.latestBatch');
+    Route::get('/inventory-staff/product/{prodCode}', [InventoryStaffController::class, 'showProductDetails'])->name('inventory-staff-product-info');
+    Route::get('/inventory-staff/edit/{prodCode}', [InventoryStaffController::class, 'edit'])->name('inventory-staff-edit');
+    Route::put('/inventory-staff/update/{prodCode}', [InventoryStaffController::class, 'update'])->name('inventory-staff-update');
+
+    // Inventory Category & Unit Settings
+    Route::get('/inventory-staff-settings', [InventoryStaffSettingsController::class, 'index'])->name('inventory-staff-settings');
+    // Categories
+    Route::post('/inventory-staff-settings/category', [InventoryStaffSettingsController::class, 'storeCategory'])->name('staff.category.store');
+    Route::patch('/inventory-staff-settings/category/{id}', [InventoryStaffSettingsController::class, 'updateCategory'])->name('staff.category.update');
+    // Units
+    Route::post('/inventory-staff-settings/unit', [InventoryStaffSettingsController::class, 'storeUnit'])->name('staff.unit.store');
+    Route::patch('/inventory-staff-settings/unit/{id}', [InventoryStaffSettingsController::class, 'updateUnit'])->name('staff.unit.update');
+
+    // Category -> product listing (AJAX)
+    Route::get('/inventory-staff/category-products/{categoryId}', [InventoryStaffController::class, 'getCategoryProducts'])->name('inventory.categoryProducts');
+    // Get latest batch for a product (AJAX)
+    Route::get('/inventory-staff/get-latest-batch/{prod_code}', [InventoryStaffController::class, 'getLatestBatch'])->name('inventory.getLatestBatch');
+    // Bulk restock submit
+    Route::post('/inventory-staff/bulk-restock', [InventoryStaffController::class, 'bulkRestock'])->name('inventory.bulkRestock');
+    // Add New Category in Choose Category Modal
+    Route::post('/inventory-staff/add-category', [InventoryStaffController::class, 'addCategory']);
+    Route::get('/inventory-staff/pricing-history/{prodCode}', [InventoryOwnerController::class, 'pricingHistory'])->name('inventory-staff-pricing-history');
+    // Route to display damage items form and history
+    Route::get('/inventory-staff/damage-items', [InventoryStaffController::class, 'showDamageItemsForm'])->name('damage-items.form');
+
+    // Route to store the damage item
+    Route::post('/inventory-staff/damage', [InventoryStaffController::class, 'store'])->name('damaged.store');
+    Route::post('/check-existing-name', [InventoryOwnerController::class, 'checkExistingName']);
+    //Route for category and unit settings duplicate or similar input trapping
+    Route::post('/inventory-staff/check-existing-name', [InventoryStaffSettingsController::class, 'checkExistingName'])->name('staff.check-existing-name');
+    //Route for edit product details name and barcode error trap
+    Route::post('/inventory-staff/check-name', [InventoryStaffController::class, 'checkProductName'])->name('inventory-staff-check-name');
+    Route::post('/inventory-staff/check-barcode-edit', [InventoryStaffController::class, 'checkBarcodeEdit'])->name('inventory-staff-check-barcode-edit');
+    Route::get('/inventory-staff/get-product-pricing/{prodCode}', [InventoryStaffController::class, 'getProductPricing'])->name('inventory-staff.get-product-pricing');
+
+});
+
+
+
 
 
 
