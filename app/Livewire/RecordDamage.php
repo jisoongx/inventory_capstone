@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\ActivityLogController;
 
 class RecordDamage extends Component
 {
@@ -90,11 +91,20 @@ class RecordDamage extends Component
     public function saveDamageRecords()
     {
         $owner_id = Auth::guard('owner')->user()->owner_id;
+        $user = Auth::guard('owner')->check() ? Auth::guard('owner')->user() : Auth::guard('staff')->user();
+        $userType = Auth::guard('owner')->check() ? 'owner' : 'staff';
+        $userIdField = $userType === 'owner' ? 'owner_id' : 'staff_id';
+        $userId = $user->{$userIdField};
 
         foreach ($this->damageRecords as $record) {
 
             if (!empty($record['prod_code']) && !empty($record['inven_code']) &&!empty($record['damaged_quantity'])) 
             {
+                $productName = DB::table('products')
+                    ->where('prod_code', $record['prod_code'])
+                    ->value('name') ?? 'Unknown Product';
+
+
                 DB::insert("
                     INSERT INTO damaged_items (
                         damaged_quantity, 
@@ -121,7 +131,14 @@ class RecordDamage extends Component
                     update inventory
                     set stock = stock - ?
                     where inven_code = ?
-                ", [$record['damaged_quantity'], $record['inven_code']]); 
+                ", [$record['damaged_quantity'], $record['inven_code']]);
+
+                ActivityLogController::log(
+                    "Recorded {$record['damaged_quantity']} damaged item(s) for product \"{$productName}\"",
+                    $userType,
+                    $user,
+                    request()->ip()
+                );
             }
         }
 

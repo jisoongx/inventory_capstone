@@ -110,7 +110,9 @@
 
 
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
         <div>
+
             <h1 class="text-lg font-semibold text-green-800 flex items-center gap-2">
 
                 Restock Suggestions
@@ -120,6 +122,12 @@
             </p>
         </div>
         <div class="flex items-center gap-2">
+            <a href="{{ route('reports') }}"
+                class="inline-flex items-center shadow-md justify-center px-4 py-2 border border-slate-300 
+              text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition">
+                <span class="material-symbols-rounded mr-2 text-lg">arrow_back</span>
+                Back
+            </a>
             <a href="{{ route('restock.list') }}" class="inline-flex items-center shadow-md justify-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition ">
                 <span class="material-symbols-rounded mr-2 text-lg">list_alt</span>
                 View Lists
@@ -166,15 +174,15 @@
                             <th class="p-4 text-left font-semibold">Product</th>
                             <th class="p-4 text-center font-semibold">Cost Price</th>
                             <th class="p-4 text-center font-semibold">
-                                Alert Level
-                                <span class="material-symbols-rounded text-slate-400 text-sm align-middle cursor-pointer"
+                                MIN. STOCK
+                                <!-- <span class="material-symbols-rounded text-slate-400 text-sm align-middle cursor-pointer"
                                     title="When the current stock is equal or below this level, the system suggests restocking.">
                                     info
-                                </span>
+                                </span> -->
                             </th>
 
                             <th class="p-4 text-center font-semibold">Current Stock</th>
-                            <th class="p-4 text-center font-semibold">Suggested Restock</th>
+                            <th class="p-4 text-center font-semibold">Restock QTY</th>
 
 
                             <th class="p-4 text-center font-semibold">Reason</th>
@@ -212,9 +220,9 @@
                             <td class="p-4 text-center">
                                 <span class="font-semibold text-slate-700">{{ $product->stock }}</span>
                                 @if($product->stock <= $product->stock_limit)
-                                    <span class="material-symbols-rounded text-red-500 text-sm ml-1 align-middle" title="Low Stock">
+                                    <!-- <span class="material-symbols-rounded text-red-500 text-sm ml-1 align-middle" title="Low Stock">
                                         warning
-                                    </span>
+                                    </span> -->
                                     @endif
                             </td>
 

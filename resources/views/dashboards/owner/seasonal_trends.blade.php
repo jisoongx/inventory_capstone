@@ -1,18 +1,34 @@
-@extends('dashboards.owner.owner')
+@extends($isStaff ? 'dashboards.staff.staff' : 'dashboards.owner.owner')
 
 @section('content')
 <div class="px-3 sm:px-4 lg:px-6 py-4 space-y-6 animate-slide-down">
 
-
-    <!-- Page Header with Season Indicator -->
+    <!-- Page Header with Season Indicator + Back Button -->
     <div class="mb-6">
-        <div class="flex items-center gap-3 mb-2">
-            <h1 class="text-lg font-semibold text-slate-800">Seasonal Trends</h1>
-            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                {{ date('F Y') }}
-            </span>
+        <div class="flex items-center justify-between mb-2">
+
+            <!-- LEFT SIDE: Title + Month -->
+            <div class="flex items-center gap-3">
+                <h1 class="text-lg font-semibold text-slate-800">Seasonal Trends</h1>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                    {{ date('F Y') }}
+                </span>
+            </div>
+
+            <!-- RIGHT SIDE: Back Button -->
+            @if(!$isStaff)
+            <a href="{{ route('reports') }}"
+                class="inline-flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 
+            text-gray-700 rounded-lg text-sm font-medium transition">
+                <span class="material-symbols-rounded mr-1">arrow_back</span>
+                Back
+            </a>
+            @endif
+
+
         </div>
-        <p class=" text-gray-600 text-sm">
+
+        <p class="text-gray-600 text-sm">
             Top trending products this season based on historical sales patterns, growth velocity, and demand forecasting.
         </p>
     </div>
@@ -66,6 +82,7 @@
 
     <!-- Results Container -->
     <div id="trendsContent">
+
         <!-- Grid View -->
         <div id="gridView" class="hidden grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             @forelse($topProducts as $index => $product)
@@ -88,8 +105,6 @@
                         class="h-full w-auto object-contain p-2">
                     @endif
                 </div>
-
-
 
                 <!-- Product Info -->
                 <div class="p-4">
@@ -117,17 +132,18 @@
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold {{ $growthClass }}">
                             {{ $product->growth_rate > 0 ? '↑' : ($product->growth_rate < 0 ? '↓' : '→') }} {{ abs($product->growth_rate) }}%
                             </span>
-
                     </div>
                     <div class="border-t pt-3 mt-3">
                         <div class="flex items-center justify-between">
                             <span class="text-xs text-gray-600">Expected Demand</span>
                             <span class="text-lg font-bold text-blue-600">{{ $product->forecasted_demand }}</span>
                         </div>
+                        @php
+                        $maxForecast = max($topProducts->max('forecasted_demand'), 1);
+                        $percent = min(($product->forecasted_demand / $maxForecast) * 100, 100);
+                        @endphp
                         <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                            <div class="bg-blue-400 h-2 rounded-full"
-                                style="width: {{ min(($product->forecasted_demand / max($topProducts->max('forecasted_demand'), 1)) * 100, 100) }}%">
-                            </div>
+                            <div class="bg-blue-400 h-2 rounded-full" style="width: {{ $percent }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -170,7 +186,6 @@
                                         @else
                                         <img src="{{ asset('assets/box.png') }}" alt="Default image" class="w-full h-full object-contain p-2">
                                         @endif
-
                                     </div>
                                     <span class="font-medium text-gray-900">{{ $product->name }}</span>
                                 </div>
@@ -192,7 +207,6 @@
                                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold {{ $growthClass }}">
                                         {{ $growthSymbol }} {{ abs($product->growth_rate) }}%
                                         </span>
-
                             </td>
                             <td class="px-6 py-4 text-center text-lg font-bold text-blue-600">
                                 {{ $product->forecasted_demand }}
@@ -210,6 +224,51 @@
                 </table>
             </div>
         </div>
+
+        {{-- NEW TRENDING ITEMS SECTION --}}
+        @if(isset($newTrending) && $newTrending->count() > 0)
+        <div class="mt-12">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                New Trending Items
+                <span class="text-sm text-gray-500">(Selling for the first time this month)</span>
+            </h2>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                @foreach($newTrending as $product)
+                <div class="relative bg-white rounded shadow-md hover:shadow-xl transition p-4 border border-gray-200">
+
+                    <!-- Product Image -->
+                    <div class="h-40 flex items-center justify-center bg-gray-50 mb-3 rounded">
+                        @if($product->prod_image)
+                        <img src="{{ asset('storage/'.$product->prod_image) }}"
+                            class="h-full object-contain">
+                        @else
+                        <img src="{{ asset('assets/box.png') }}" class="h-full object-contain p-4">
+                        @endif
+                    </div>
+
+                    <!-- Product Name -->
+                    <h3 class="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 h-10">
+                        {{ $product->name }}
+                    </h3>
+
+                    <!-- This Month Sales -->
+                    <p class="text-xs text-gray-600">This Month Sales</p>
+                    <p class="text-xl font-bold text-green-600 mb-2">{{ $product->current_month_sold }}</p>
+
+                    <!-- Expected Demand -->
+                    <!-- <div class="flex justify-between items-center mt-3 border-t pt-3">
+                        <span class="text-xs text-gray-600">Expected Demand</span>
+                        <span class="text-lg font-bold text-blue-600">
+                            {{ $product->forecasted_demand }}
+                        </span>
+                    </div> -->
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
     </div>
 </div>
 
@@ -229,7 +288,6 @@
             })
             .then(res => res.text())
             .then(html => {
-                // Replace only the #trendsContent innerHTML
                 const parser = new DOMParser();
                 const newDoc = parser.parseFromString(html, 'text/html');
                 const newContent = newDoc.querySelector('#trendsContent');

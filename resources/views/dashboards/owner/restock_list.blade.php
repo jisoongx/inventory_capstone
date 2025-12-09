@@ -1,4 +1,5 @@
-@extends('dashboards.owner.owner')
+@extends($isStaff ? 'dashboards.staff.staff' : 'dashboards.owner.owner')
+
 
 @section('content')
 <style>
@@ -50,11 +51,14 @@
         <div class="flex-1 bg-white shadow-md rounded p-6 sm:p-8 border-t-4 border-green-300">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between pb-6 border-b border-slate-200">
                 <div>
+                    @if(!$isStaff)
                     <a href="{{ route('restock_suggestion') }}"
                         class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-green-600 transition-colors mb-3">
                         <span class="material-symbols-rounded text-xl">arrow_back</span>
                         Back
                     </a>
+                    @endif
+
                     <h1 class="text-lg font-semibold text-green-800">Restock Details</h1>
                     <p class="text-slate-500 mt-1 text-sm">Review the items from a finalized restock list.</p>
                 </div>
@@ -65,17 +69,22 @@
                         <input type="hidden" name="restock_id" id="exportRestockId">
                         <input type="hidden" name="restock_created" id="exportRestockCreated">
                         <input type="hidden" name="restock_items" id="exportRestockItems">
+                        @if(!$isStaff)
                         <button type="submit" id="exportBtn"
                             class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
                             <span class="material-symbols-rounded text-sm">download</span>
                             Export
                         </button>
+                        @endif
                     </form>
 
+                    @if(!$isStaff)
                     <button id="printBtn" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition">
                         <span class="material-symbols-rounded text-sm">print</span>
                         Print
                     </button>
+                    @endif
+
                     <div class="flex items-center gap-2 mt-4 sm:mt-0">
                         @if($restocks->count())
                         @php
@@ -99,12 +108,16 @@
                             @csrf
                             <input type="hidden" name="restock_id" id="statusRestockId" value="{{ $latest->restock_id ?? '' }}">
 
+                            @if(!$isStaff)
                             <button name="status" value="cancelled"
                                 class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-red-600 rounded-md hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 @if($disableCancel) disabled @endif>
                                 <span class="material-symbols-rounded text-sm">cancel</span>
                                 Cancel
                             </button>
+                            @endif
+
+
                         </form>
 
                         @endif
@@ -412,7 +425,7 @@
     });
 
 
-
+    @if(!$isStaff)
     document.getElementById("printBtn").addEventListener("click", function() {
         const dateEl = document.querySelector("#restockContent span.text-xs.bg-green-100");
         const restockDate = dateEl ? dateEl.innerText.trim() : "";
@@ -554,6 +567,7 @@
             document.body.removeChild(iframe);
         }, 500);
     });
+    @endif
 </script>
 
 
