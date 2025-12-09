@@ -94,13 +94,13 @@
                                                     <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> 
                                                 @enderror
                                             </div>
-                                        <div class="flex items-center space-x-2">
-                                            <input type="checkbox" id="returnToSupplier" class="form-checkbox"
-                                                wire:model.live="damageRecords.{{ $index }}.damaged_set_to_return" >
-                                            <label for="returnToSupplier" class="text-[11px] font-medium text-blue-600">
-                                                Mark check to set this item to be returned to the supplier
-                                            </label>
-                                        </div>
+                                            <div class="flex items-center space-x-2">
+                                                <input type="checkbox" id="returnToSupplier" class="form-checkbox"
+                                                    wire:model.live="damageRecords.{{ $index }}.damaged_set_to_return" >
+                                                <label for="returnToSupplier-{{ $index }}" class="text-[11px] font-medium text-blue-600">
+                                                    Mark check to set this item to be returned to the supplier
+                                                </label>
+                                            </div>
                                         </div>
                                         <!-- Column 2: Inventory & Type -->
                                         <div class="space-y-4">

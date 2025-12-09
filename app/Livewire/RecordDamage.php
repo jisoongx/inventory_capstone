@@ -46,6 +46,7 @@ class RecordDamage extends Component
     public function closeModal()
     {
         $this->showModal = false;
+        return redirect()->route('inventory-owner');
     }
 
     public function cancelModal()
@@ -147,8 +148,12 @@ class RecordDamage extends Component
                     $user,
                     request()->ip()
                 );
+
             }
         }
+
+        
+        return redirect()->route('inventory-owner');
 
     }
 

@@ -72,6 +72,9 @@ class ExpenseRecord extends Component
 
 
     public function render() {
+
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
         }
@@ -96,38 +99,51 @@ class ExpenseRecord extends Component
 
         $totals = collect(DB::select("
             SELECT
-                (SELECT IFNULL(SUM(e.expense_amount), 0)
-                FROM expenses e
-                WHERE e.owner_id = ?
-                AND e.expense_created BETWEEN ? AND ?) AS expenseTotal,
+                -- total expenses for the month
+                IFNULL((SELECT SUM(e.expense_amount)
+                        FROM expenses e
+                        WHERE e.owner_id = ?
+                        AND e.expense_created BETWEEN ? AND ?), 0) AS expenseTotal,
 
-                (SELECT IFNULL(SUM(ri.item_quantity * COALESCE(
+                -- total sales for the month
+                IFNULL((
+                    SELECT SUM(x.item_sales - x.discount_amount)
+                    FROM (
+                        SELECT r.receipt_id, r.discount_amount,
+                            SUM(ri.item_quantity * 
+                                COALESCE(
                                     (SELECT ph.old_selling_price
-                                    FROM pricing_history ph
-                                    WHERE ph.prod_code = ri.prod_code
-                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                                    ORDER BY ph.effective_from DESC
-                                    LIMIT 1),
+                                        FROM pricing_history ph
+                                        WHERE ph.prod_code = ri.prod_code
+                                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                        ORDER BY ph.effective_from DESC LIMIT 1),
                                     p.selling_price
-                                )), 0)
-                FROM receipt r
-                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
-                JOIN products p ON p.prod_code = ri.prod_code
-                WHERE r.owner_id = ?
-                AND p.owner_id = r.owner_id
-                AND r.receipt_date BETWEEN ? AND ?) AS salesTotal,
+                                ) - ri.item_discount_amount
+                            ) AS item_sales
+                        FROM receipt r
+                        JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                        JOIN products p ON p.prod_code = ri.prod_code
+                        WHERE r.owner_id = ? AND r.receipt_date BETWEEN ? AND ?
+                        GROUP BY r.receipt_id
+                    ) x
+                ), 0) AS salesTotal,
 
-                (SELECT IFNULL(SUM(p.selling_price * d.damaged_quantity), 0)
-                FROM damaged_items d
-                Join inventory i on i.inven_code = d.inven_code
-                JOIN products p ON i.prod_code = p.prod_code
-                WHERE d.owner_id = ?
-                AND d.damaged_date BETWEEN ? AND ?) AS lossTotal
+                -- total damaged items loss for the month
+                IFNULL((SELECT SUM(d.damaged_quantity * p.selling_price)
+                        FROM damaged_items d
+                        JOIN inventory i ON i.inven_code = d.inven_code
+                        JOIN products p ON i.prod_code = p.prod_code
+                        WHERE d.owner_id = ?
+                        AND d.damaged_date BETWEEN ? AND ?
+                        AND (d.set_to_return_to_supplier IS NULL OR d.set_to_return_to_supplier = 'Damaged')
+                ), 0) AS lossTotal
         ", [
-            $owner_id, $startOfMonth, $endOfMonth, 
-            $owner_id, $startOfMonth, $endOfMonth, 
-            $owner_id, $startOfMonth, $endOfMonth,
+            $owner_id, $startOfMonth, $endOfMonth,  // expenses
+            $owner_id, $startOfMonth, $endOfMonth,  // sales
+            $owner_id, $startOfMonth, $endOfMonth,  // losses
         ]))->first();
+
+
 
         $topCategory = collect(DB::select(
             "SELECT 
@@ -252,9 +268,16 @@ class ExpenseRecord extends Component
 
             if ($value <= 0) {
                 $this->amountError = 'Invalid amount. Must be a positive number.';
-            } else {
-                $this->amountError = '';
+                return;
             }
+
+            $decimalPlaces = strlen(substr(strrchr((string)$value, "."), 1) ?? '');
+            if ($decimalPlaces > 2) {
+                $this->amountError = 'Invalid amount. Only up to 2 decimal places allowed.';
+                return;
+            }
+
+            $this->amountError = '';
         }
 
         if ($propertyName === 'add_expense_file') {
@@ -265,7 +288,8 @@ class ExpenseRecord extends Component
                 
                 if ($fileSize > $maxSize) {
                     $this->fileError = 'File exceeds 300KB.';
-                    $this->add_expense_file = null; 
+                    return;
+                    // $this->add_expense_file = null; 
                 } else {
                     $this->fileError = '';
                 }
@@ -306,13 +330,24 @@ class ExpenseRecord extends Component
 
         if ($propertyName === 'editingAmount') {
 
+
             $value = floatval($value);
 
             if ($value <= 0) {
                 $this->editingAmountError = 'Invalid amount. Must be a positive number.';
-            } else {
-                $this->editingAmountError = '';
+                return;
             }
+
+            $decimalPlaces = strlen(substr(strrchr((string)$value, "."), 1) ?? '');
+            if ($decimalPlaces > 2) {
+                $this->editingAmountError = 'Invalid amount. Only up to 2 decimal places allowed.';
+                return;
+            }
+
+            $this->editingAmountError = '';
+
+            $value = floatval($value);
+
         }
 
     }
@@ -336,7 +371,6 @@ class ExpenseRecord extends Component
         $this->add_expense_amount = '';
         $this->add_expense_file = '';
 
-        $this->reset();
 
     }
 
@@ -446,7 +480,6 @@ class ExpenseRecord extends Component
 
 
     public function saveExpense() {
-
         if($this->editingDescriptionError === '' || $this->editingAmountError === '') { 
 
             $this->validate([
@@ -454,6 +487,45 @@ class ExpenseRecord extends Component
                 'editingAmount' => 'required|numeric|min:0.01',
             ]);
 
+            $ownerId = Auth::guard('owner')->id();
+
+            // $oldExpense = DB::selectOne("
+            //     SELECT * FROM expenses
+            //     WHERE expense_id = :expense_id
+            //     AND owner_id = :owner_id
+            // ", [
+            //     'expense_id' => $this->editingId,
+            //     'owner_id' => $ownerId
+            // ]);
+
+            // if (!$oldExpense) {
+            //     session()->flash('error', 'Expense not found.');
+            //     return;
+            // }
+
+            // // Determine hist_type_of_edit
+            // $histType = '';
+            // if ($oldExpense->expense_descri !== $this->editingDescri && $oldExpense->expense_amount != $this->editingAmount) {
+            //     $histType = 'edited both';
+            // } elseif ($oldExpense->expense_descri !== $this->editingDescri) {
+            //     $histType = 'edited the purpose';
+            // } elseif ($oldExpense->expense_amount != $this->editingAmount) {
+            //     $histType = 'edited the amount';
+            // }
+
+            // Insert into expense_record_history using DB::insert
+            // DB::insert("
+            //     INSERT INTO expense_record_history
+            //         (expense_id, hist_type_of_edit, hist_old_info, hist_date_edited)
+            //     VALUES
+            //         (:expense_id, :hist_type, :hist_old_info, NOW())
+            // ", [
+            //     'expense_id' => $this->editingId,
+            //     'hist_type' => $histType,
+            //     'hist_old_info' => 'expense_descri: '.$oldExpense->expense_descri.', expense_amount: '.$oldExpense->expense_amount
+            // ]);
+
+            // Update the expense
             DB::update("
                 UPDATE expenses 
                 SET expense_descri = :descri, 
@@ -464,7 +536,7 @@ class ExpenseRecord extends Component
                 'descri' => $this->editingDescri,
                 'amount' => $this->editingAmount,
                 'expense_id' => $this->editingId,
-                'owner_id' => Auth::guard('owner')->id()
+                'owner_id' => $ownerId
             ]);
 
             $this->reset(['editingId', 'editingDescri', 'editingAmount', 'editingDescriptionError', 'editingAmountError']);
@@ -472,6 +544,7 @@ class ExpenseRecord extends Component
             session()->flash('success', 'Expense updated successfully!');
         }
     }
+
 
 }
 

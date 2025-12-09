@@ -1193,7 +1193,7 @@ public function closeAllReceiptModals()
             // ------------------------------------
             if ($row->profit <= 0) {
 
-                $insights[] = "Unprofitable. Losing money.";
+                $insights[] = "Losing money. You have to promote it more.";
 
             } elseif ($row->profit_margin_percent < 10) {
 

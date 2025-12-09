@@ -155,7 +155,7 @@ public function generateReport()
                 'confidenceText' => round($avgConfidence * 100) . '%',
                 'lift' => "{$avgLift}x",
                 'summary' => "Pattern: " . round($avgConfidence * 100) . "% of customers who buy <b>{$pair['productA']}</b> also buy <b>{$pair['productB']}</b>.<br>
-                            Strength: {$this->getConfidenceInsight(round($avgConfidence * 100))} {$this->getLiftInsight($avgLift)}",
+                            {$this->getConfidenceInsight(round($avgConfidence * 100))} {$this->getLiftInsight($avgLift)}",
             ];
         }
         
@@ -403,33 +403,35 @@ private function calculateItemsetSupport($itemset, $dataset)
             ->toArray();
     }
 
+    
     private function getConfidenceInsight($confidencePercent)
     {
         if ($confidencePercent >= 80) {
-            return "This is a <b>very strong</b> buying pattern.";
+            return "Top 25% most frequent: very strong buying pattern.";
         } elseif ($confidencePercent >= 65) {
-            return "This is a <b>strong</b> buying pattern.";
+            return "Top 50% most frequent: strong buying pattern.";
         } elseif ($confidencePercent >= 50) {
-            return "This is a <b>moderate</b> buying pattern.";
+            return "Moderately frequent: moderate buying pattern.";
         } else {
-            return "This is a <b>weak</b> buying pattern.";
+            return "Low frequency: weak buying pattern.";
         }
     }
 
     private function getLiftInsight($lift)
     {
         if ($lift >= 3.0) {
-            return "Customers are <b>3 times more likely</b> to buy these together than separately.";
+            return "Highly significant: customers are 3x more likely to buy these together than by chance.";
         } elseif ($lift >= 2.0) {
-            return "Customers are <b>twice as likely</b> to buy these together than separately.";
+            return "Significant: customers are 2x more likely to buy these together than by chance.";
         } elseif ($lift >= 1.5) {
-            return "Customers are <b>50% more likely</b> to buy these together than by chance.";
+            return "Noticeable: customers are 50% more likely to buy these together than by chance.";
         } elseif ($lift >= 1.2) {
-            return "There is a <b>slight tendency</b> to buy these together.";
+            return "Slight tendency: customers are slightly more likely to buy these together.";
         } else {
-            return "These products show <b>no special connection</b>.";
+            return "No significant connection: co-purchase is almost random.";
         }
     }
+
 
 
 
