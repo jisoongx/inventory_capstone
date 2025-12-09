@@ -53,11 +53,27 @@
                     <p class="text-sm text-slate-500 mb-4">Please review your plan details before continuing.</p>
 
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+
+
+                        <div id="overviewPriceBreakdown" class="mt-4 space-y-2 text-sm hidden">
+
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">Monthly subscription</span>
+                                <span id="overviewTotalAfterVat" class="text-slate-900"></span>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">VAT (12%)</span>
+                                <span id="overviewVatAmount" class="text-slate-900"></span>
+                            </div>
+
+                        </div>
                         <div class="flex justify-between items-center mb-2">
                             <p class="font-semibold text-slate-800" id="overviewPlanName"></p>
                             <p class="font-bold text-lg text-slate-900" id="overviewPlanPrice"></p>
                         </div>
-                        <p class="text-xs text-slate-500" id="overviewPlanDuration"></p>
+                        <!-- <p class="text-xs text-slate-500" id="overviewPlanDuration"></p> -->
+
                     </div>
 
                     <ul id="overviewFeatures" class="space-y-3 text-sm text-slate-700 mb-6"></ul>
@@ -309,8 +325,26 @@
             // Fill plan overview
             const plan = plans[planId];
             document.getElementById('overviewPlanName').textContent = plan.name;
-            document.getElementById('overviewPlanPrice').textContent = plan.price === 0 ? "₱0" : `₱${plan.price}`;
-            document.getElementById('overviewPlanDuration').textContent = plan.duration;
+            document.getElementById('overviewPlanPrice').textContent =
+                plan.price === 0 ? "₱0.00" : `₱${plan.price.toFixed(2)}`;
+
+            // document.getElementById('overviewPlanDuration').textContent = plan.duration;
+            // VAT calculation for overview step
+            // Correct VAT breakdown: price already includes 12% VAT
+            const net = plan.price / 1.12; // Monthly subscription (no VAT)
+            const vat = plan.price - net; // VAT amount
+
+            // Update UI
+            const breakdown = document.getElementById("overviewPriceBreakdown");
+
+            if (plan.price > 0) {
+                document.getElementById("overviewTotalAfterVat").textContent = `₱${net.toFixed(2)}`;
+                document.getElementById("overviewVatAmount").textContent = `₱${vat.toFixed(2)}`;
+                breakdown.classList.remove("hidden");
+            } else {
+                breakdown.classList.add("hidden");
+            }
+
 
             const featuresList = document.getElementById('overviewFeatures');
             featuresList.innerHTML = plan.features.map(f => `
@@ -347,7 +381,9 @@
             paymentFormView.classList.remove('hidden');
             successView.classList.add('hidden');
             selectedPlanName.textContent = plan.name;
-            selectedPlanPrice.textContent = plan.price === 0 ? "₱0" : `₱${plan.price}`;
+            selectedPlanPrice.textContent =
+                plan.price === 0 ? "₱0.00" : `₱${plan.price.toFixed(2)}`;
+
             paypalContainer.innerHTML = "";
 
             // Handle Basic plan → no PayPal, just direct activation

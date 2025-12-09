@@ -118,8 +118,10 @@
 
                 <!-- Password Requirements -->
                 <p class="text-gray-500 text-xs mt-1 text-center md:text-left">
-                    Note: Password must be minimum of 8 characters with uppercase, lowercase, number & special character
+                    Note: Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.
+
                 </p>
+
 
                 <!-- Terms Checkbox -->
                 <label class="flex items-center gap-2 mt-2 text-gray-700 text-xs cursor-pointer">

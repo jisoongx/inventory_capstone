@@ -739,6 +739,7 @@ class RestockController extends Controller
             // F. Low Stock
             // ------------------------------------
             $isLowStock = $product->stock < $safetyStock;
+            $isOutOfStock = $product->stock == 0;
 
             // ------------------------------------
             // G. Multipliers
@@ -782,14 +783,28 @@ class RestockController extends Controller
             // ------------------------------------
             $reason = null;
 
-            if ($isLowStock) $reason = "Low Stock";
-            if ($isHighDemand) $reason = $reason ? "$reason + High Demand" : "High Demand";
-
-            if ($reason === "Low Stock") {
-                $badge = 'background-color:#fef3c7;color:#92400e;';
-            } elseif ($reason === "High Demand" || str_contains($reason, "High Demand")) {
-                $badge = 'background-color:#dcfce7;color:#166534;';
-            } else {
+            // Out of Stock → highest priority
+            if ($product->stock == 0) {
+                $reason = "Out of Stock";
+                $badge = 'background-color:#fee2e2;color:#b91c1c;'; // red
+            }
+            // Low Stock only
+            elseif ($isLowStock && !$isHighDemand) {
+                $reason = "Low Stock";
+                $badge = 'background-color:#fef3c7;color:#92400e;'; // yellow
+            }
+            // High Demand only
+            elseif ($isHighDemand && !$isLowStock) {
+                $reason = "High Demand";
+                $badge = 'background-color:#dcfce7;color:#166534;'; // green
+            }
+            // Low Stock + High Demand
+            elseif ($isLowStock && $isHighDemand) {
+                $reason = "Low Stock + High Demand";
+                $badge = 'background-color:#dcfce7;color:#166534;'; // green badge but mixed text
+            }
+            // Default
+            else {
                 $badge = null;
             }
 
@@ -802,7 +817,7 @@ class RestockController extends Controller
             $product->suggested_quantity = $suggestedQty;
             $product->reason = $reason;
             $product->reason_badge = $badge;
-
+            $product->isOutOfStock = $isOutOfStock;
             $product->isLowStock = $isLowStock;
             $product->isHighDemand = $isHighDemand;
 
@@ -810,7 +825,7 @@ class RestockController extends Controller
         })
 
             ->filter(fn($p) => $p->suggested_quantity > 0
-                && ($p->isLowStock || $p->isHighDemand)
+            && ($p->isLowStock || $p->isHighDemand || $p->isOutOfStock)
                 && $p->stock < $p->reorder_point)
 
             ->values();
