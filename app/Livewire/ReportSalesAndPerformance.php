@@ -27,13 +27,11 @@ class ReportSalesAndPerformance extends Component
     // Sales tab properties
     public $transactions;
     public $selectedReceipt;
-    public $receiptDetails;
     public $dateFrom;
     public $dateTo;
     public $salesAnalytics;
     
     // Receipt modal properties
-    public $showReceiptModal = false;
     public $store_info = null;
     public $showExportModal = false;
 
@@ -45,6 +43,13 @@ class ReportSalesAndPerformance extends Component
     public $sortField = 'total_sales';
     public $order = 'desc';
     public $categories;
+
+    // Add these properties
+    public $showOriginalReceiptModal = false;
+    public $showReturnReceiptModal = false;
+    public $originalReceiptDetails = null;
+    public $returnReceiptDetails = null;
+    public $hasReturns = [];
 
     // Global Return History properties
     public $showGlobalReturnHistory = false;
@@ -92,8 +97,10 @@ class ReportSalesAndPerformance extends Component
     {
         $this->getTransactions();
         $this->getSalesAnalytics();
+        $this->checkReceiptReturns(); // Add this to refresh the return indicators
         
-        if ($this->showReceiptModal && $this->selectedReceipt == $receiptId) {
+        // Update to use new modal properties
+        if (($this->showOriginalReceiptModal || $this->showReturnReceiptModal) && $this->selectedReceipt == $receiptId) {
             $this->viewReceipt($receiptId);
         }
     }
@@ -290,149 +297,335 @@ class ReportSalesAndPerformance extends Component
         ];
     }
 
-    public function viewReceipt($receiptId) {
-        try {
-            $owner_id = Auth::guard('owner')->user()->owner_id;
-            
-            // ✅ Get receipt with stored discount_amount
-            $receipt = DB::selectOne("
-                SELECT 
-                    r.*,
-                    o.firstname as owner_firstname,
-                    o.store_name,
-                    o.store_address,
-                    s.firstname as staff_firstname
-                FROM receipt r
-                LEFT JOIN owners o ON r.owner_id = o.owner_id
-                LEFT JOIN staff s ON r.staff_id = s.staff_id
-                WHERE r.receipt_id = ?  
-                AND r.owner_id = ? 
-            ", [$receiptId, $owner_id]);
+// Add this method to check if receipt has returns
+public function checkReceiptReturns()
+{
+    $owner_id = Auth::guard('owner')->user()->owner_id;
     
-            if (!$receipt) {
-                session()->flash('error', 'Receipt not found.');
-                return;
-            }
+    $receiptsWithReturns = DB::select("
+        SELECT DISTINCT r.receipt_id
+        FROM receipt r
+        JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+        JOIN returned_items ret ON ret.item_id = ri.item_id
+        WHERE r.owner_id = ? 
+        AND DATE(r.receipt_date) BETWEEN ? AND ?
+    ", [$owner_id, $this->dateFrom, $this->dateTo]);
     
-            // ✅ Get receipt items with stored item_discount_amount
-            $items = DB::select("
-                SELECT 
-                    ri.*,
-                    p.name as product_name,
-                    p.vat_category,
-                    COALESCE(
-                        (SELECT ph.old_selling_price
-                         FROM pricing_history ph
-                         WHERE ph.prod_code = ri.prod_code
-                         AND ?  BETWEEN ph.effective_from AND ph.effective_to
-                         ORDER BY ph.effective_from DESC
-                         LIMIT 1),
-                        p.selling_price
-                    ) as selling_price_at_time
-                FROM receipt_item ri
-                JOIN products p ON ri.prod_code = p.prod_code
-                WHERE ri.receipt_id = ?  
-                ORDER BY ri.item_id
-            ", [$receipt->receipt_date, $receiptId]);
+    $this->hasReturns = collect($receiptsWithReturns)->pluck('receipt_id')->toArray();
+}
+
+// Modified viewReceipt method
+public function viewReceipt($receiptId) {
+    try {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+        
+        // Check if receipt has returns
+        $hasReturns = DB::selectOne("
+            SELECT COUNT(DISTINCT ret.return_id) as return_count
+            FROM receipt r
+            JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
+            LEFT JOIN returned_items ret ON ret.item_id = ri.item_id
+            WHERE r.receipt_id = ? 
+            AND r.owner_id = ?
+        ", [$receiptId, $owner_id]);
+        
+        if ($hasReturns->return_count > 0) {
+            // Show both original and return receipt
+            $this->viewOriginalReceipt($receiptId);
+            $this->viewReturnReceipt($receiptId);
+        } else {
+            // Show only original receipt
+            $this->viewOriginalReceipt($receiptId);
+        }
+        
+    } catch (\Exception $e) {
+        session()->flash('error', 'Error loading receipt: ' . $e->getMessage());
+    }
+}
+
+public function viewOriginalReceipt($receiptId)
+{
+    $owner_id = Auth::guard('owner')->user()->owner_id;
     
-            $subtotal = 0.0;
-            $totalItemDiscounts = 0.0;
+    $receipt = DB::selectOne("
+        SELECT 
+            r.*,
+            o.firstname as owner_firstname,
+            o.store_name,
+            o.store_address,
+            s.firstname as staff_firstname
+        FROM receipt r
+        LEFT JOIN owners o ON r.owner_id = o.owner_id
+        LEFT JOIN staff s ON r.staff_id = s.staff_id
+        WHERE r.receipt_id = ?
+        AND r.owner_id = ?
+    ", [$receiptId, $owner_id]);
+
+    if (!  $receipt) {
+        session()->flash('error', 'Receipt not found.');
+        return;
+    }
+
+    $items = DB::select("
+        SELECT 
+            ri.*,
+            p.name as product_name,
+            p.vat_category,
+            COALESCE(
+                (SELECT ph.old_selling_price
+                 FROM pricing_history ph
+                 WHERE ph.prod_code = ri.prod_code
+                 AND ?  BETWEEN ph.effective_from AND ph.effective_to
+                 ORDER BY ph.effective_from DESC
+                 LIMIT 1),
+                p.selling_price
+            ) as selling_price_at_time
+        FROM receipt_item ri
+        JOIN products p ON ri.prod_code = p.prod_code
+        WHERE ri.receipt_id = ?  
+        ORDER BY ri.item_id
+    ", [$receipt->receipt_date, $receiptId]);
+
+    $subtotal = 0.0;
+    $totalItemDiscounts = 0.0;
+
+    foreach ($items as $item) {
+        $lineTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
+        $subtotal += $lineTotal;
+        $itemDiscountAmount = floatval($item->item_discount_amount ??   0);
+        $totalItemDiscounts += $itemDiscountAmount;
+    }
+
+    $afterItemDiscounts = $subtotal - $totalItemDiscounts;
+    $receiptDiscountAmount = floatval($receipt->discount_amount ??  0);
+    $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
+
+    $vatAmountInclusive = 0.0;
+    $vatAmountExempt = 0.0;
+    $vatRate = 12;
     
-            // ✅ Use stored item_discount_amount
-            foreach ($items as $item) {
-                $lineTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
-                $subtotal += $lineTotal;
-                
-                // ✅ Use stored item_discount_amount directly
-                $itemDiscountAmount = floatval($item->item_discount_amount ?? 0);
-                $totalItemDiscounts += $itemDiscountAmount;
-            }
+    $discountMultiplier = $subtotal > 0 ? ($afterReceiptDiscount / $subtotal) :  0;
     
-            $afterItemDiscounts = $subtotal - $totalItemDiscounts;
-    
-            // ✅ Use stored discount_amount directly
-            $receiptDiscountAmount = floatval($receipt->discount_amount ?? 0);
-            $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
-    
-            // Calculate VAT breakdown
-            $vatAmountInclusive = 0.0;
-            $vatAmountExempt = 0.0;
-            $vatRate = 12;
-            
-            $discountMultiplier = $subtotal > 0 ? ($afterReceiptDiscount / $subtotal) : 0;
-            
-            foreach ($items as $item) {
-                $itemTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
-                $itemAfterDiscounts = $itemTotal * $discountMultiplier;
-                
-                $vatCategory = $item->vat_category ?? 'vat_exempt';
-                
-                if ($vatCategory === 'vat_inclusive') {
-                    $vatAmountInclusive += $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
-                } else {
-                    $vatAmountExempt += $itemAfterDiscounts;
-                }
-            }
-    
-            $finalTotal = $afterReceiptDiscount;
-            $amountPaid = floatval($receipt->amount_paid ?? 0);
-            $change = $amountPaid - $finalTotal;
-    
-            $this->receiptDetails = (object)[
-                'receipt_id' => $receipt->receipt_id,
-                'receipt_date' => \Carbon\Carbon::parse($receipt->receipt_date),
-                'amount_paid' => $receipt->amount_paid,
-                'discount_type' => $receipt->discount_type,
-                'discount_value' => $receipt->discount_value,
-                'discount_amount' => $receipt->discount_amount, // ✅ Include stored amount
-                'owner' => (object)[
-                    'firstname' => $receipt->owner_firstname,
-                    'store_name' => $receipt->store_name ??  $this->store_info->store_name,
-                    'store_address' => $receipt->store_address ?? $this->store_info->store_address,
-                ],
-                'staff' => $receipt->staff_firstname ?  (object)['firstname' => $receipt->staff_firstname] : null,
-                'receiptItems' => collect($items)->map(function($item) {
-                    return (object)[
-                        'item_id' => $item->item_id,
-                        'item_quantity' => $item->item_quantity,
-                        'item_discount_type' => $item->item_discount_type,
-                        'item_discount_value' => $item->item_discount_value,
-                        'item_discount_amount' => $item->item_discount_amount, // ✅ Include stored amount
-                        'vat_amount' => $item->vat_amount,
-                        'prod_code' => $item->prod_code,
-                        'product' => (object)[
-                            'name' => $item->product_name,
-                            'selling_price' => $item->selling_price_at_time,
-                            'vat_category' => $item->vat_category
-                        ]
-                    ];
-                }),
-                'computed_subtotal' => $subtotal,
-                'total_item_discounts' => $totalItemDiscounts,
-                'receipt_discount_amount' => $receiptDiscountAmount,
-                'vat_amount_inclusive' => $vatAmountInclusive,
-                'vat_amount_exempt' => $vatAmountExempt,
-                'vat_amount' => $vatAmountInclusive + $vatAmountExempt,
-                'vat_applied' => ($vatAmountInclusive + $vatAmountExempt) > 0,
-                'computed_total' => $finalTotal,
-                'computed_change' => $change,
-                'has_receipt_discount' => $receiptDiscountAmount > 0, // ✅ Add flag
-                'has_item_discounts' => $totalItemDiscounts > 0, // ✅ Add flag
-            ];
-    
-            $this->showReceiptModal = true;
-            $this->selectedReceipt = $receiptId;
-            
-        } catch (\Exception $e) {
-            session()->flash('error', 'Error loading receipt: ' . $e->getMessage());
+    foreach ($items as $item) {
+        $itemTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
+        $itemAfterDiscounts = $itemTotal * $discountMultiplier;
+        
+        $vatCategory = $item->vat_category ??  'vat_exempt';
+        
+        if ($vatCategory === 'vat_inclusive') {
+            $vatAmountInclusive += $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
+        } else {
+            $vatAmountExempt += $itemAfterDiscounts;
         }
     }
 
-    public function closeReceiptModal() {
-        $this->showReceiptModal = false;
-        $this->selectedReceipt = null;
-        $this->receiptDetails = null;
+    $finalTotal = $afterReceiptDiscount;
+    $amountPaid = floatval($receipt->amount_paid ?? 0);
+    $change = $amountPaid - $finalTotal;
+
+    $this->originalReceiptDetails = (object)[
+        'receipt_id' => $receipt->receipt_id,
+        'receipt_date' => \Carbon\Carbon::parse($receipt->receipt_date),
+        'amount_paid' => $receipt->amount_paid,
+        'discount_type' => $receipt->discount_type,
+        'discount_value' => $receipt->discount_value,
+        'discount_amount' => $receipt->discount_amount,
+        'owner' => (object)[
+            'firstname' => $receipt->owner_firstname,
+            'store_name' => $receipt->store_name ??  $this->store_info->store_name,
+            'store_address' => $receipt->store_address ??  $this->store_info->store_address,
+        ],
+        'staff' => $receipt->staff_firstname ?  (object)['firstname' => $receipt->staff_firstname] : null,
+        'receiptItems' => collect($items)->map(function($item) {
+            return (object)[
+                'item_id' => $item->item_id,
+                'item_quantity' => $item->item_quantity,
+                'item_discount_type' => $item->item_discount_type,
+                'item_discount_value' => $item->item_discount_value,
+                'item_discount_amount' => $item->item_discount_amount,
+                'vat_amount' => $item->vat_amount,
+                'prod_code' => $item->prod_code,
+                'product' => (object)[
+                    'name' => $item->product_name,
+                    'selling_price' => $item->selling_price_at_time,
+                    'vat_category' => $item->vat_category
+                ]
+            ];
+        }),
+        'computed_subtotal' => $subtotal,
+        'total_item_discounts' => $totalItemDiscounts,
+        'receipt_discount_amount' => $receiptDiscountAmount,
+        'vat_amount_inclusive' => $vatAmountInclusive,
+        'vat_amount_exempt' => $vatAmountExempt,
+        'vat_amount' => $vatAmountInclusive + $vatAmountExempt,
+        'vat_applied' => ($vatAmountInclusive + $vatAmountExempt) > 0,
+        'computed_total' => $finalTotal,
+        'computed_change' => $change,
+        'has_receipt_discount' => $receiptDiscountAmount > 0,
+        'has_item_discounts' => $totalItemDiscounts > 0,
+    ];
+
+    $this->showOriginalReceiptModal = true;
+    $this->selectedReceipt = $receiptId;
+}
+
+public function viewReturnReceipt($receiptId)
+{
+    $owner_id = Auth::guard('owner')->user()->owner_id;
+    
+    $receipt = DB::selectOne("
+        SELECT 
+            r.*,
+            o.firstname as owner_firstname,
+            o.store_name,
+            o.store_address,
+            s.firstname as staff_firstname
+        FROM receipt r
+        LEFT JOIN owners o ON r.owner_id = o.owner_id
+        LEFT JOIN staff s ON r.staff_id = s.staff_id
+        WHERE r.receipt_id = ?
+        AND r.owner_id = ?
+    ", [$receiptId, $owner_id]);
+
+    if (!$receipt) {
+        return;
     }
+
+    // Get items with return information
+    $items = DB::select("
+        SELECT 
+            ri.*,
+            p.name as product_name,
+            p.vat_category,
+            COALESCE(
+                (SELECT ph.old_selling_price
+                 FROM pricing_history ph
+                 WHERE ph.prod_code = ri.prod_code
+                 AND ? BETWEEN ph.effective_from AND ph.effective_to
+                 ORDER BY ph.effective_from DESC
+                 LIMIT 1),
+                p.selling_price
+            ) as selling_price_at_time,
+            COALESCE(SUM(ret.return_quantity), 0) as returned_quantity,
+            (SELECT GROUP_CONCAT(p2.name SEPARATOR ', ')
+             FROM returned_items ret2
+             JOIN receipt r2 ON ret2.receipt_id = r2.receipt_id
+             JOIN receipt_item ri2 ON r2.receipt_id = ri2.receipt_id
+             JOIN products p2 ON ri2.prod_code = p2.prod_code
+             WHERE ret2.item_id = ri.item_id
+             AND ret2.receipt_id IS NOT NULL
+            ) as replacement_products
+        FROM receipt_item ri
+        JOIN products p ON ri.prod_code = p.prod_code
+        LEFT JOIN returned_items ret ON ret.item_id = ri.item_id
+        WHERE ri.receipt_id = ?  
+        GROUP BY ri.item_id, ri.item_quantity, ri.item_discount_type, ri.item_discount_value,
+                 ri.item_discount_amount, ri.vat_amount, ri.prod_code, ri.receipt_id, ri.inven_code,
+                 p.name, p.vat_category, p.selling_price
+        ORDER BY ri.item_id
+    ", [$receipt->receipt_date, $receiptId]);
+
+    $subtotal = 0.0;
+    $totalItemDiscounts = 0.0;
+    $totalReturned = 0.0;
+
+    foreach ($items as $item) {
+        $remainingQty = intval($item->item_quantity) - intval($item->returned_quantity);
+        $lineTotal = floatval($item->selling_price_at_time) * $remainingQty;
+        $subtotal += $lineTotal;
+        
+        // Calculate proportional discount for remaining items
+        $originalLineTotal = floatval($item->selling_price_at_time) * intval($item->item_quantity);
+        $discountRatio = $originalLineTotal > 0 ? ($remainingQty / intval($item->item_quantity)) : 0;
+        $itemDiscountAmount = floatval($item->item_discount_amount ??  0) * $discountRatio;
+        $totalItemDiscounts += $itemDiscountAmount;
+        
+        $returnedAmount = floatval($item->selling_price_at_time) * intval($item->returned_quantity);
+        $totalReturned += $returnedAmount;
+    }
+
+    $afterItemDiscounts = $subtotal - $totalItemDiscounts;
+    $receiptDiscountAmount = floatval($receipt->discount_amount ?? 0);
+    
+    // Adjust receipt discount proportionally
+    $originalTotal = $subtotal + $totalReturned;
+    $adjustedReceiptDiscount = $originalTotal > 0 ? ($receiptDiscountAmount * ($subtotal / $originalTotal)) : 0;
+    
+    $afterReceiptDiscount = $afterItemDiscounts - $adjustedReceiptDiscount;
+
+    $finalTotal = $afterReceiptDiscount;
+    $amountPaid = floatval($receipt->amount_paid ?? 0);
+    $adjustedAmountPaid = $amountPaid - $totalReturned;
+    $change = $adjustedAmountPaid - $finalTotal;
+
+    $this->returnReceiptDetails = (object)[
+        'receipt_id' => $receipt->receipt_id,
+        'receipt_date' => \Carbon\Carbon::parse($receipt->receipt_date),
+        'amount_paid' => $adjustedAmountPaid,
+        'original_amount_paid' => $amountPaid,
+        'discount_type' => $receipt->discount_type,
+        'discount_value' => $receipt->discount_value,
+        'discount_amount' => $adjustedReceiptDiscount,
+        'original_discount_amount' => $receiptDiscountAmount,
+        'owner' => (object)[
+            'firstname' => $receipt->owner_firstname,
+            'store_name' => $receipt->store_name ??  $this->store_info->store_name,
+            'store_address' => $receipt->store_address ?? $this->store_info->store_address,
+        ],
+        'staff' => $receipt->staff_firstname ? (object)['firstname' => $receipt->staff_firstname] : null,
+        'receiptItems' => collect($items)->map(function($item) {
+            return (object)[
+                'item_id' => $item->item_id,
+                'item_quantity' => intval($item->item_quantity) - intval($item->returned_quantity),
+                'original_quantity' => $item->item_quantity,
+                'returned_quantity' => $item->returned_quantity,
+                'replacement_products' => $item->replacement_products,
+                'item_discount_type' => $item->item_discount_type,
+                'item_discount_value' => $item->item_discount_value,
+                'item_discount_amount' => $item->item_discount_amount,
+                'vat_amount' => $item->vat_amount,
+                'prod_code' => $item->prod_code,
+                'product' => (object)[
+                    'name' => $item->product_name,
+                    'selling_price' => $item->selling_price_at_time,
+                    'vat_category' => $item->vat_category
+                ]
+            ];
+        }),
+        'computed_subtotal' => $subtotal,
+        'original_subtotal' => $subtotal + $totalReturned,
+        'total_item_discounts' => $totalItemDiscounts,
+        'receipt_discount_amount' => $adjustedReceiptDiscount,
+        'total_returned' => $totalReturned,
+        'computed_total' => $finalTotal,
+        'computed_change' => $change,
+        'has_receipt_discount' => $adjustedReceiptDiscount > 0,
+        'has_item_discounts' => $totalItemDiscounts > 0,
+    ];
+
+    $this->showReturnReceiptModal = true;
+}
+
+public function closeOriginalReceiptModal()
+{
+    $this->showOriginalReceiptModal = false;
+    $this->originalReceiptDetails = null;
+}
+
+public function closeReturnReceiptModal()
+{
+    $this->showReturnReceiptModal = false;
+    $this->returnReceiptDetails = null;
+}
+
+public function closeAllReceiptModals()
+{
+    $this->showOriginalReceiptModal = false;
+    $this->showReturnReceiptModal = false;
+    $this->originalReceiptDetails = null;
+    $this->returnReceiptDetails = null;
+    $this->selectedReceipt = null;
+}
 
     public function toggleExportModal() {
         $this->showExportModal = !$this->showExportModal;
@@ -965,6 +1158,7 @@ class ReportSalesAndPerformance extends Component
         $this->getTransactions();
         $this->getSalesAnalytics();
         $this->prodPerformance();
+        $this->checkReceiptReturns(); // Add this line
         
         return view('livewire.report-sales-and-performance');
     }

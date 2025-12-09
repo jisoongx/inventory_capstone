@@ -42,7 +42,7 @@
                 <div class="border-b border-gray-200 px-6 pt-4">
                     <nav class="-mb-px flex space-x-4">
                         <button @click="activeTab = 'returnable'"
-                            :class="activeTab === 'returnable' ?  'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            : class="activeTab === 'returnable' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                             class="whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">
                             Returnable Items
                             <span class="ml-2 bg-orange-100 text-orange-600 py-0.5 px-2 rounded-full text-xs font-bold">
@@ -78,7 +78,7 @@
                                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs w-12">
                                                 <input type="checkbox" 
                                                     wire:model.live="selectAll"
-                                                    class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
+                                                    class="w-4 h-4 text-orange-600 border-gray-300 rounded focus: ring-orange-500">
                                             </th>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">
                                                 Product
@@ -113,15 +113,10 @@
                                                 </td>
                                                 <td class="px-4 py-3 font-medium text-gray-900">
                                                     {{ $item->product_name }}
-                                                    @if($item->item_discount_value > 0)
+                                                    @if(($item->item_discount_amount ??  0) > 0)
                                                         <div class="text-xs text-orange-600 mt-1">
                                                             <span class="material-symbols-rounded text-xs align-middle">local_offer</span>
-                                                            Discount: 
-                                                            @if($item->item_discount_type === 'percent')
-                                                                {{ $item->item_discount_value }}%
-                                                            @else
-                                                                ₱{{ number_format($item->item_discount_value, 2) }}
-                                                            @endif
+                                                            Discount: ₱{{ number_format($item->item_discount_amount, 2) }}
                                                         </div>
                                                     @endif
                                                 </td>
@@ -148,7 +143,7 @@
 
                             <!-- Bulk Actions Bar -->
                             @if(! empty($selectedItems))
-                            <div class="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between">
+                            <div class="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <span class="font-semibold text-orange-900">{{ count($selectedItems) }} item(s) selected</span>
                                 </div>
@@ -184,11 +179,12 @@
                                     <thead class="bg-gray-100 sticky top-0">
                                         <tr>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">Return Date</th>
-                                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">Product</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">Product Returned</th>
                                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs">Quantity</th>
                                             <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase text-xs">Refund</th>
                                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs">Status</th>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">Reason</th>
+                                            <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs">Replacement</th>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs">Processed By</th>
                                         </tr>
                                     </thead>
@@ -216,6 +212,23 @@
                                                 <td class="px-4 py-3 text-gray-600 text-xs max-w-xs truncate" title="{{ $return->return_reason }}">
                                                     {{ $return->return_reason }}
                                                 </td>
+                                                <td class="px-4 py-3 text-center">
+                                                    @if($return->replacement_receipt_id)
+                                                        <div class="flex flex-col items-center gap-1">
+                                                            <span class="text-blue-600 font-semibold flex items-center gap-1">
+                                                                <span class="material-symbols-rounded text-sm">swap_horiz</span>
+                                                                #{{ str_pad($return->replacement_receipt_id, 6, '0', STR_PAD_LEFT) }}
+                                                            </span>
+                                                            @if($return->replacement_products)
+                                                                <span class="text-xs text-gray-600 max-w-[150px] truncate" title="{{ $return->replacement_products }}">
+                                                                    {{ $return->replacement_products }}
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    @else
+                                                        <span class="text-gray-400">—</span>
+                                                    @endif
+                                                </td>
                                                 <td class="px-4 py-3 text-gray-600 text-xs">
                                                     {{ $return->return_staff_id ? trim($return->staff_fullname) : trim($return->owner_fullname) }}
                                                 </td>
@@ -227,7 +240,9 @@
                                             <td colspan="2" class="px-4 py-3 text-left font-bold uppercase text-xs">Total Summary</td>
                                             <td class="px-4 py-3 text-center font-bold text-sm">{{ $returnHistoryData->sum('return_quantity') }}</td>
                                             <td class="px-4 py-3 text-right font-bold text-sm text-blue-600">₱{{ number_format($returnHistoryData->sum('refund_amount'), 2) }}</td>
-                                            <td colspan="3" class="px-4 py-3"></td>
+                                            <td colspan="4" class="px-4 py-3 text-center text-xs text-gray-600">
+                                                <span class="font-semibold">Replacements:  {{ $returnHistoryData->whereNotNull('replacement_receipt_id')->count() }}</span>
+                                            </td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -248,8 +263,8 @@
                                     <p class="text-2xl font-bold text-red-600">{{ $returnHistoryData->whereNotNull('damaged_id')->count() }}</p>
                                 </div>
                                 <div class="bg-gradient-to-br from-purple-50 to-white rounded-lg p-4 border border-purple-200">
-                                    <p class="text-xs text-gray-600 font-medium mb-1">Total Refunded</p>
-                                    <p class="text-xl font-bold text-purple-600">₱{{ number_format($returnHistoryData->sum('refund_amount'), 2) }}</p>
+                                    <p class="text-xs text-gray-600 font-medium mb-1">Replacements</p>
+                                    <p class="text-2xl font-bold text-purple-600">{{ $returnHistoryData->whereNotNull('replacement_receipt_id')->count() }}</p>
                                 </div>
                             </div>
                         @endif
@@ -260,164 +275,258 @@
     </div>
 
     {{-- Single Item Return Modal --}}
-@if($showReturnModal && !$isBulkReturn && $selectedItemForReturn)
-<div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4"
-     x-data
-     x-init="$el.focus()"
-     tabindex="-1">
-    <div class="bg-white rounded-lg w-full max-w-3xl mx-auto max-h-[90vh] overflow-y-auto shadow-2xl"
-         @click.stop>
-        <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg sticky top-0 z-10">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xl font-bold">Process Return</h3>
-                <button wire:click="closeReturnModal" type="button" class="text-white hover:text-gray-200 transition">
-                    <span class="material-symbols-rounded text-2xl">close</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="p-6">
-            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                <div class="flex items-center gap-3">
-                    <span class="material-symbols-rounded text-orange-600 text-3xl">inventory_2</span>
-                    <div>
-                        <h4 class="font-bold text-gray-900">{{ $selectedItemForReturn->product_name }}</h4>
-                        <p class="text-sm text-gray-600">
-                            Original Quantity: {{ $selectedItemForReturn->item_quantity }}
-                            @if($selectedItemForReturn->already_returned > 0)
-                                <span class="text-orange-600 ml-2">({{ $selectedItemForReturn->already_returned }} already returned)</span>
-                            @endif
-                        </p>
-                        <p class="text-sm text-gray-600">Unit Price: ₱{{ number_format($selectedItemForReturn->selling_price, 2) }}</p>
-                    </div>
+    @if($showReturnModal && ! $isBulkReturn && $selectedItemForReturn)
+    <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4"
+         x-data="{ 
+            canSubmit: @entangle('returnQuantity').live && @entangle('returnReason').live && @entangle('customReturnReason').live,
+            isValid() {
+                const qty = parseInt(this.canSubmit) || 0;
+                const reason = '{{ $returnReason }}';
+                const customReason = '{{ $customReturnReason }}';
+                return qty > 0 && (reason || customReason);
+            }
+         }"
+         x-init="$el.focus()"
+         tabindex="-1">
+        <div class="bg-white rounded-lg w-full max-w-3xl mx-auto max-h-[90vh] overflow-y-auto shadow-2xl"
+             @click.stop>
+            <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-t-lg sticky top-0 z-10">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Process Return</h3>
+                    <button wire:click="closeReturnModal" type="button" class="text-white hover:text-gray-200 transition">
+                        <span class="material-symbols-rounded text-2xl">close</span>
+                    </button>
                 </div>
             </div>
 
-            <form wire:submit.prevent="submitReturn" class="space-y-5">
-                {{-- Return Quantity --}}
-                <div x-data="{ 
-                    quantity: @entangle('returnQuantity').live, 
-                    maxQty: {{ $maxReturnQuantity }},
-                    showWarning: false,
-                    checkQuantity() {
-                        this.showWarning = parseInt(this.quantity) > this.maxQty;
-                    }
-                }">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Return Quantity <span class="text-red-500">*</span>
-                    </label>
-                    <input type="number" 
-                        x-model="quantity"
-                        @input="checkQuantity()"
-                        min="1" 
-                        max="{{ $maxReturnQuantity }}"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        placeholder="Enter quantity to return">
-                    
-                    <div x-show="showWarning" x-transition class="mt-2 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
-                        <span class="material-symbols-rounded text-red-600 text-lg">warning</span>
-                        <div class="flex-1">
-                            <p class="text-red-800 text-xs font-semibold">Quantity Exceeds Limit</p>
-                            <p class="text-red-700 text-xs mt-1">
-                                You can only return up to <span class="font-bold">{{ $maxReturnQuantity }}</span> 
-                                {{ $maxReturnQuantity == 1 ? 'item' : 'items' }}.
+            <div class="p-6">
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-rounded text-orange-600 text-3xl">inventory_2</span>
+                        <div>
+                            <h4 class="font-bold text-gray-900">{{ $selectedItemForReturn->product_name }}</h4>
+                            <p class="text-sm text-gray-600">
+                                Original Quantity: {{ $selectedItemForReturn->item_quantity }}
+                                @if($selectedItemForReturn->already_returned > 0)
+                                    <span class="text-orange-600 ml-2">({{ $selectedItemForReturn->already_returned }} already returned)</span>
+                                @endif
                             </p>
+                            <p class="text-sm text-gray-600">Unit Price: ₱{{ number_format($selectedItemForReturn->selling_price, 2) }}</p>
                         </div>
                     </div>
-                    
-                    @error('returnQuantity')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-xs text-gray-500 mt-1">Maximum returnable: <span class="font-bold">{{ $maxReturnQuantity }}</span></p>
                 </div>
 
-                {{-- Return Action Radio Buttons --}}
-                <div x-data="{ action: @entangle('returnAction').live }">
-                    <label class="block text-sm font-semibold text-gray-700 mb-3">
-                        Return Action <span class="text-red-500">*</span>
-                    </label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
-                               :class="action === 'restock' ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'">
-                            <input type="radio" 
-                                   wire:model.live="returnAction" 
-                                   value="restock"
-                                   class="w-5 h-5 text-green-600 border-gray-300 focus:ring-green-500">
-                            <div class="ml-3 flex-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="material-symbols-rounded text-green-600">inventory</span>
-                                    <span class="font-semibold text-gray-900">Restock</span>
-                                </div>
-                                <p class="text-xs text-gray-600 mt-1">Return to inventory</p>
-                            </div>
+                <form wire:submit.prevent="submitReturn" class="space-y-5">
+                    {{-- Return Quantity --}}
+                    <div x-data="{ 
+                        quantity: @entangle('returnQuantity').live, 
+                        maxQty: {{ $maxReturnQuantity }},
+                        showWarning: false,
+                        checkQuantity() {
+                            this.showWarning = parseInt(this.quantity) > this.maxQty;
+                        }
+                    }">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Return Quantity <span class="text-red-500">*</span>
                         </label>
-
-                        <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
-                               :class="action === 'damage' ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'">
-                            <input type="radio" 
-                                   wire:model.live="returnAction" 
-                                   value="damage"
-                                   class="w-5 h-5 text-red-600 border-gray-300 focus:ring-red-500">
-                            <div class="ml-3 flex-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="material-symbols-rounded text-red-600">warning</span>
-                                    <span class="font-semibold text-gray-900">Damaged</span>
-                                </div>
-                                <p class="text-xs text-gray-600 mt-1">Mark as damaged</p>
+                        <input type="number" 
+                            x-model="quantity"
+                            @input="checkQuantity()"
+                            min="1" 
+                            max="{{ $maxReturnQuantity }}"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            placeholder="Enter quantity to return">
+                        
+                        <div x-show="showWarning" x-transition class="mt-2 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
+                            <span class="material-symbols-rounded text-red-600 text-lg">warning</span>
+                            <div class="flex-1">
+                                <p class="text-red-800 text-xs font-semibold">Quantity Exceeds Limit</p>
+                                <p class="text-red-700 text-xs mt-1">
+                                    You can only return up to <span class="font-bold">{{ $maxReturnQuantity }}</span> 
+                                    {{ $maxReturnQuantity == 1 ? 'item' : 'items' }}.
+                                </p>
                             </div>
-                        </label>
+                        </div>
+                        
+                        @error('returnQuantity')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                        <p class="text-xs text-gray-500 mt-1">Maximum returnable:  <span class="font-bold">{{ $maxReturnQuantity }}</span></p>
                     </div>
-                    @error('returnAction')
-                        <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
-                    @enderror>
-                </div>
 
-                {{-- Return Reason Dropdown --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Return Reason (Select from list)
-                    </label>
-                    <select wire:model.live="returnReason" 
-                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                        <option value="">-- Select a reason --</option>
-                        @foreach($this->allReturnReasons as $reason)
-                            <option value="{{ $reason }}">{{ $reason }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                    {{-- Return Action Radio Buttons --}}
+                    <div x-data="{ action: @entangle('returnAction').live }">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">
+                            Return Action <span class="text-red-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+                                   : class="action === 'restock' ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'">
+                                <input type="radio" 
+                                       wire:model.live="returnAction" 
+                                       value="restock"
+                                       class="w-5 h-5 text-green-600 border-gray-300 focus:ring-green-500">
+                                <div class="ml-3 flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-rounded text-green-600">inventory</span>
+                                        <span class="font-semibold text-gray-900">Restock</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1">Return to inventory</p>
+                                </div>
+                            </label>
 
-                {{-- Custom Return Reason --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Or Type Custom Reason
-                    </label>
-                    <textarea wire:model.live="customReturnReason" 
-                              rows="2"
-                              class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                              placeholder="Type your custom return reason here..."></textarea>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Note: Custom reason will be used if provided, otherwise the dropdown selection will be used.
-                    </p>
-                </div>
+                            <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+                                   :class="action === 'damage' ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'">
+                                <input type="radio" 
+                                       wire:model.live="returnAction" 
+                                       value="damage"
+                                       class="w-5 h-5 text-red-600 border-gray-300 focus:ring-red-500">
+                                <div class="ml-3 flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-rounded text-red-600">warning</span>
+                                        <span class="font-semibold text-gray-900">Damaged</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1">Mark as damaged</p>
+                                </div>
+                            </label>
+                        </div>
+                        @error('returnAction')
+                            <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
+                        @enderror>
+                    </div>
 
-                {{-- Refund Amount --}}
+                    {{-- Return Reason Dropdown --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Return Reason (Select from list)
+                        </label>
+                        <select wire:model.live="returnReason" 
+                                class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                            <option value="">-- Select a reason --</option>
+                            @foreach($this->allReturnReasons as $reason)
+                                <option value="{{ $reason }}">{{ $reason }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Custom Return Reason --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Or Type Custom Reason
+                        </label>
+                        <textarea wire:model.live="customReturnReason" 
+                                  rows="2"
+                                  class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                  placeholder="Type your custom return reason here..."></textarea>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Note: Custom reason will be used if provided, otherwise the dropdown selection will be used.
+                        </p>
+                    </div>
+
+                    {{-- Replacement Section Toggle --}}
+                    <div class="border-t pt-4">
+                        <button type="button" 
+                                wire:click="toggleReplacement"
+                                class="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                            <span class="material-symbols-rounded text-lg">
+                                {{ $showReplacementSection ? 'remove_circle' : 'add_circle' }}
+                            </span>
+                            {{ $showReplacementSection ? 'Cancel Replacement' : 'Add Replacement Item' }}
+                        </button>
+                    </div>
+
+                    {{-- Replacement Section --}}
+                    @if($showReplacementSection)
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                        <h4 class="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                            <span class="material-symbols-rounded text-blue-600">swap_horiz</span>
+                            Replacement Product
+                        </h4>
+                        
+                        <div class="flex gap-2">
+                            <input type="text" 
+                                   wire:model="replacementBarcode"
+                                   wire:keydown.enter.prevent="searchReplacementProduct"
+                                   placeholder="Scan or enter barcode"
+                                   class="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                            <button type="button"
+                                    wire:click="searchReplacementProduct"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm">
+                                Search
+                            </button>
+                        </div>
+
+                        @if($replacementProduct)
+                        <div class="bg-white border border-gray-300 rounded-lg p-3">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">{{ $replacementProduct->name }}</p>
+                                    <p class="text-xs text-gray-600">Barcode:  {{ $replacementProduct->barcode }}</p>
+                                    <p class="text-xs text-gray-600">Available: {{ $replacementProduct->available_stock }} units</p>
+                                </div>
+                                <button type="button" 
+                                        wire:click="clearReplacement"
+                                        class="text-red-600 hover:text-red-700">
+                                    <span class="material-symbols-rounded text-sm">close</span>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex-1">
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                                    <input type="number" 
+                                           wire:model.live="replacementQuantity"
+                                           min="1"
+                                           max="{{ $replacementProduct->available_stock }}"
+                                           class="w-full border border-gray-300 rounded px-3 py-1 text-sm">
+                                    @error('replacementQuantity')
+                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-600">Price</p>
+                                    <p class="font-bold text-blue-600">₱{{ number_format($replacementProduct->selling_price, 2) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+
+                    {{-- Refund Amount --}}
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Return Subtotal:</span>
+                        <span class="text-sm font-medium text-gray-700">Return Subtotal: </span>
                         <span class="text-lg font-bold text-blue-600">
                             ₱{{ number_format(floatval($selectedItemForReturn->selling_price) * intval($returnQuantity), 2) }}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-600">
+                    @if($showReplacementSection && $replacementProduct)
+                    <div class="flex justify-between items-center mb-2 text-sm">
+                        <span class="text-gray-700">Replacement Cost:</span>
+                        <span class="font-semibold text-gray-900">
+                            ₱{{ number_format($replacementProduct->selling_price * $replacementQuantity, 2) }}
+                        </span>
+                    </div>
+                    <div class="border-t border-blue-300 pt-2 flex justify-between items-center">
+                        <span class="text-sm font-bold text-gray-700">Net Refund:</span>
+                        <span class="text-lg font-bold text-green-600">
+                            ₱{{ number_format((floatval($selectedItemForReturn->selling_price) * intval($returnQuantity)) - ($replacementProduct->selling_price * $replacementQuantity), 2) }}
+                        </span>
+                    </div>
+                    @endif
+                    <p class="text-xs text-gray-600 mt-2">
                         <span class="material-symbols-rounded text-sm align-middle">info</span>
-                        This amount should be refunded to the customer
+                        {{ $showReplacementSection && $replacementProduct ? 'Net amount to be refunded/charged' : 'This amount should be refunded to the customer' }}
                     </p>
                 </div>
 
                 {{-- Action Buttons --}}
                 <div class="flex gap-3 pt-4 border-t">
                     <button type="button" wire:click="closeReturnModal" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">Cancel</button>
-                    <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+                    <button type="submit" 
+                            class="flex-1 py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                            :  class="! canSubmit ?  'bg-gray-400 cursor-not-allowed' :  'bg-orange-600 hover:bg-orange-700 text-white'"
+                            : disabled="!canSubmit">
                         <span class="material-symbols-rounded text-sm">check_circle</span>
                         Process Return
                     </button>
@@ -426,12 +535,20 @@
         </div>
     </div>
 </div>
-@endif  
+@endif
 
 {{-- Bulk Return Modal --}}
-@if($showReturnModal && $isBulkReturn && !empty($bulkReturnItems))
+@if($showReturnModal && $isBulkReturn && !  empty($bulkReturnItems))
 <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4"
-     x-data
+     x-data="{ 
+        quantities: @entangle('bulkReturnQuantities').live,
+        reason: @entangle('returnReason').live,
+        customReason: @entangle('customReturnReason').live,
+        isValid() {
+            const hasReason = this.reason || this.customReason;
+            return hasReason && Object.keys(this.quantities).length > 0;
+        }
+     }"
      x-init="$el.focus()"
      tabindex="-1">
     <div class="bg-white rounded-lg w-full max-w-4xl mx-auto max-h-[90vh] overflow-y-auto shadow-2xl" @click.stop>
@@ -490,21 +607,21 @@
                 </div>
 
                 {{-- Total Refund --}}
-<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-    <div class="flex justify-between items-center">
-        <span class="text-sm font-semibold text-gray-700">Total Refund Amount:</span>
-        <span class="text-2xl font-bold text-blue-600">
-            @php
-                $totalRefund = 0;
-                foreach($bulkReturnItems as $itemId => $item) {
-                    $quantity = $bulkReturnQuantities[$itemId] ?? 1;
-                    $totalRefund += $item['selling_price'] * $quantity;
-                }
-            @endphp
-            ₱{{ number_format($totalRefund, 2) }}
-        </span>
-    </div>
-</div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-semibold text-gray-700">Total Refund Amount:</span>
+                        <span class="text-2xl font-bold text-blue-600">
+                            @php
+                                $totalRefund = 0;
+                                foreach($bulkReturnItems as $itemId => $item) {
+                                    $quantity = $bulkReturnQuantities[$itemId] ?? 1;
+                                    $totalRefund += $item['selling_price'] * $quantity;
+                                }
+                            @endphp
+                            ₱{{ number_format($totalRefund, 2) }}
+                        </span>
+                    </div>
+                </div>
 
                 {{-- Return Action Radio Buttons --}}
                 <div x-data="{ action: @entangle('returnAction').live }">
@@ -513,7 +630,7 @@
                     </label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
-                               :class="action === 'restock' ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'">
+                               :  class="action === 'restock' ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'">
                             <input type="radio" 
                                    wire:model.live="returnAction" 
                                    value="restock"
@@ -528,7 +645,7 @@
                         </label>
 
                         <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
-                               :class="action === 'damage' ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'">
+                               : class="action === 'damage' ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'">
                             <input type="radio" 
                                    wire:model.live="returnAction" 
                                    value="damage"
@@ -553,7 +670,7 @@
                         Return Reason (Select from list)
                     </label>
                     <select wire:model.live="returnReason" 
-                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:  ring-orange-500 focus:border-transparent">
                         <option value="">-- Select a reason --</option>
                         @foreach($this->allReturnReasons as $reason)
                             <option value="{{ $reason }}">{{ $reason }}</option>
@@ -571,14 +688,86 @@
                               class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                               placeholder="Type your custom return reason here..."></textarea>
                     <p class="text-xs text-gray-500 mt-1">
-                        Note: This reason will apply to all selected items. Custom reason will be used if provided, otherwise the dropdown selection will be used.
+                        Note: This reason will apply to all selected items.   Custom reason will be used if provided, otherwise the dropdown selection will be used.
                     </p>
                 </div>
 
+                {{-- Replacement Section Toggle --}}
+                <div class="border-t pt-4">
+                    <button type="button" 
+                            wire:click="toggleReplacement"
+                            class="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                        <span class="material-symbols-rounded text-lg">
+                            {{ $showReplacementSection ? 'remove_circle' : 'add_circle' }}
+                        </span>
+                        {{ $showReplacementSection ? 'Cancel Replacement' : 'Add Replacement Item' }}
+                    </button>
+                </div>
+
+                {{-- Replacement Section --}}
+                @if($showReplacementSection)
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                    <h4 class="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                        <span class="material-symbols-rounded text-blue-600">swap_horiz</span>
+                        Replacement Product
+                    </h4>
+                    
+                    <div class="flex gap-2">
+                        <input type="text" 
+                               wire:model="replacementBarcode"
+                               wire:keydown.enter.prevent="searchReplacementProduct"
+                               placeholder="Scan or enter barcode"
+                               class="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:  ring-blue-500">
+                        <button type="button"
+                                wire:click="searchReplacementProduct"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm">
+                            Search
+                        </button>
+                    </div>
+
+                    @if($replacementProduct)
+                    <div class="bg-white border border-gray-300 rounded-lg p-3">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">{{ $replacementProduct->name }}</p>
+                                <p class="text-xs text-gray-600">Barcode: {{ $replacementProduct->barcode }}</p>
+                                <p class="text-xs text-gray-600">Available: {{ $replacementProduct->available_stock }} units</p>
+                            </div>
+                            <button type="button" 
+                                    wire:click="clearReplacement"
+                                    class="text-red-600 hover:text-red-700">
+                                <span class="material-symbols-rounded text-sm">close</span>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                                <input type="number" 
+                                       wire:model.live="replacementQuantity"
+                                       min="1"
+                                       max="{{ $replacementProduct->available_stock }}"
+                                       class="w-full border border-gray-300 rounded px-3 py-1 text-sm">
+                                @error('replacementQuantity')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-600">Price</p>
+                                <p class="font-bold text-blue-600">₱{{ number_format($replacementProduct->selling_price, 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+                @endif
+
                 {{-- Action Buttons --}}
                 <div class="flex gap-3 pt-4 border-t">
-                    <button type="button" wire:click="closeReturnModal" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">Cancel</button>
-                    <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+                    <button type="button" wire:click="closeReturnModal" class="flex-1 bg-gray-200 hover:  bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition">Cancel</button>
+                    <button type="submit" 
+                            class="flex-1 py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                            : class="!  isValid() ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white'"
+                            :disabled="! isValid()">
                         <span class="material-symbols-rounded text-sm">check_circle</span>
                         Process All Returns
                     </button>
