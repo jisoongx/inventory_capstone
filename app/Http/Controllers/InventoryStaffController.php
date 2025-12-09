@@ -3,26 +3,26 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class InventoryOwnerController extends Controller
+class InventoryStaffController extends Controller
 {
     public function index(Request $request)
     {
-        if (!Auth::guard('owner')->check()) {
+        if (!Auth::guard('staff')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
         }
 
-        $owner = Auth::guard('owner')->user();
-        $owner_id = $owner->owner_id;
-        $owner_name = $owner->firstname;
+        $staff = Auth::guard('staff')->user();
+        $staff_id = $staff->staff_id;
+        $owner_id = $staff->owner_id;
+        $staff_name = $staff->firstname;
 
-        session(['owner_id' => $owner_id]);
+        session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
 
         $search   = $request->input('search');
         $category = $request->input('category');
@@ -116,16 +116,19 @@ class InventoryOwnerController extends Controller
         $categories = DB::select("SELECT category_id, category FROM categories WHERE owner_id = :owner_id ORDER BY category ASC", ['owner_id' => $owner_id]);
         $units = DB::select("SELECT unit_id, unit FROM units WHERE owner_id = :owner_id ORDER BY unit ASC", ['owner_id' => $owner_id]);
         
-        return view('inventory-owner', compact('owner_name', 'products', 'categories', 'units', 'search', 'category', 'status'));
+        return view('inventory-staff', compact('staff_name', 'products', 'categories', 'units', 'search', 'category', 'status'));
     }
-
-
 
     public function suggest(Request $request)
     {
-        $term = $request->query('term');
-        $ownerId = session('owner_id');
+        
+        $staff = Auth::guard('staff')->user();
+        $staff_id = $staff->staff_id;
+        $owner_id = $staff->owner_id;
 
+        session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
+
+        $term = $request->query('term');
         if (!$term) {
             return response()->json([]);
         }
@@ -135,12 +138,12 @@ class InventoryOwnerController extends Controller
 
         if ($isBarcodeSearch) {
             $results = DB::table('products')
-                ->where('owner_id', $ownerId)
+                ->where('owner_id', $owner_id)
                 ->where('barcode', 'LIKE', $term . '%')
                 ->pluck('barcode');
         } else {
             $results = DB::table('products')
-                ->where('owner_id', $ownerId)
+                ->where('owner_id', $owner_id)
                 ->where('name', 'LIKE', $term . '%')
                 ->pluck('name');
         }
@@ -150,6 +153,12 @@ class InventoryOwnerController extends Controller
 
 public function showProductDetails($prodCode)
 {
+    $staff = Auth::guard('staff')->user();
+        $staff_id = $staff->staff_id;
+        $owner_id = $staff->owner_id;
+        $staff_name = $staff->firstname;
+
+        session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
     // Get product info
     $product = DB::table('products')
         ->join('units', 'products.unit_id', '=', 'units.unit_id')
@@ -385,7 +394,7 @@ public function showProductDetails($prodCode)
 
     $manualBatchStockOut = $manualBatchStockOut->sortByDesc('date')->values();
 
-    return view('inventory-owner-product-info', compact(
+    return view('inventory-staff-product-info', compact(
         'product',
         'stockInHistory',
         'stockOutSalesHistory',
@@ -406,14 +415,19 @@ public function showProductDetails($prodCode)
 
 public function pricingHistory($prodCode)
 {
-    $ownerId = session('owner_id');
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+    $staff_name = $staff->firstname;
+
+    session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
 
     // Get product name
     $product = DB::selectOne("
         SELECT name 
         FROM products 
         WHERE prod_code = ? AND owner_id = ?
-    ", [$prodCode, $ownerId]);
+    ", [$prodCode, $owner_id]);
 
     // Get all price periods (historical and current)
     $allPricePeriods = DB::select("
@@ -446,7 +460,7 @@ public function pricingHistory($prodCode)
         AND p.owner_id = ?
         
         ORDER BY effective_from DESC
-    ", [$prodCode, $ownerId, $prodCode, $ownerId, $prodCode, $ownerId, $prodCode, $ownerId]);
+    ", [$prodCode, $owner_id, $prodCode, $owner_id, $prodCode, $owner_id, $prodCode, $owner_id]);
 
     // Get all batches with their date_added
     $allBatches = DB::select("
@@ -460,7 +474,7 @@ public function pricingHistory($prodCode)
         AND i.owner_id = ?
         AND (i.is_expired = 0 OR i.is_expired IS NULL)
         ORDER BY i.batch_number
-    ", [$prodCode, $ownerId]);
+    ", [$prodCode, $owner_id]);
 
     $priceHistory = [];
     $currentPrice = [];
@@ -670,7 +684,7 @@ public function pricingHistory($prodCode)
                 'batch_damaged' => $batchData->batch_damaged ?? 0,
                 'is_sold_out' => $is_sold_out ? 1 : 0, // NEW: Shows red if sold out now or later
                 'is_sold_out_in_period' => $sold_out_in_this_period ? 1 : 0, // Shows "sold out" label only in the actual period
-                'owner_id' => $ownerId
+                'owner_id' => $owner_id
             ];
 
             if ($isCurrent) {
@@ -683,12 +697,22 @@ public function pricingHistory($prodCode)
 
     $productName = $product ? $product->name : 'Unknown Product';
 
-    return view('inventory-owner-pricing-history', compact('priceHistory', 'currentPrice', 'prodCode', 'productName'));
+    return view('inventory-staff-pricing-history', compact('priceHistory', 'currentPrice', 'prodCode', 'productName'));
 }
 
 
 public function edit($prodCode)
 {
+    // if (!Auth::guard('staff')->check()) {
+    //     return redirect()->route('login')->with('error', 'Please login first.');
+    // }
+
+    // $staff = Auth::guard('staff')->user();
+    // $staff_id = $staff->staff_id;
+    // $owner_id = $staff->owner_id;
+
+    // session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
+
     $product = DB::table('products')
         ->join('units', 'products.unit_id', '=', 'units.unit_id')
         ->select('products.*', 'units.unit as unit')
@@ -714,7 +738,7 @@ public function edit($prodCode)
         ->limit(5)
         ->get();
 
-    return view('inventory-owner-edit', compact('product', 'units', 'statuses', 'priceHistory'));
+    return view('inventory-staff-edit', compact('product', 'units', 'statuses', 'priceHistory'));
 }
 
 /**
@@ -722,12 +746,18 @@ public function edit($prodCode)
  */
 public function checkProductName(Request $request)
 {
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+
+    session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
+
     $name = $request->input('name');
     $prodCode = $request->input('prod_code');
-    $ownerId = session('owner_id');
+
 
     $exactMatch = DB::table('products')
-        ->where('owner_id', $ownerId)
+        ->where('owner_id', $owner_id)
         ->where('prod_code', '!=', $prodCode)
         ->whereRaw('LOWER(name) = ?', [strtolower($name)])
         ->exists();
@@ -735,7 +765,7 @@ public function checkProductName(Request $request)
     $similarMatches = [];
     if (!$exactMatch) {
         $similar = DB::table('products')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->where('prod_code', '!=', $prodCode)
             ->where(function($query) use ($name) {
                 $query->where('name', 'LIKE', '%' . $name . '%')
@@ -762,9 +792,16 @@ public function checkProductName(Request $request)
  */
 public function checkBarcodeEdit(Request $request)
 {
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+
+
+    session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
+
     $barcode = $request->input('barcode');
     $prodCode = $request->input('prod_code');
-    $ownerId = session('owner_id');
+
 
     if (empty($barcode)) {
         return response()->json([
@@ -774,7 +811,7 @@ public function checkBarcodeEdit(Request $request)
     }
 
     $exactMatch = DB::table('products')
-        ->where('owner_id', $ownerId)
+        ->where('owner_id', $owner_id)
         ->where('prod_code', '!=', $prodCode)
         ->whereRaw('LOWER(barcode) = ?', [strtolower($barcode)])
         ->exists();
@@ -782,7 +819,7 @@ public function checkBarcodeEdit(Request $request)
     $similarMatches = [];
     if (!$exactMatch) {
         $similar = DB::table('products')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->where('prod_code', '!=', $prodCode)
             ->whereNotNull('barcode')
             ->where('barcode', '!=', '')
@@ -808,7 +845,27 @@ public function checkBarcodeEdit(Request $request)
 
 public function update(Request $request, $prodCode)
 {
-    $ownerId = session('owner_id');
+    if (!Auth::guard('staff')->check()) {
+        \Log::error('Staff not authenticated in registerProduct');
+        return response()->json([
+            'success' => false, 
+            'message' => 'You must be logged in as staff to update product details.'
+        ], 401);
+    }
+
+    $staff = Auth::guard('staff')->user();
+    
+    // Add null check as safety
+    if (!$staff) {
+        \Log::error('Staff user is null despite passing auth check');
+        return response()->json([
+            'success' => false, 
+            'message' => 'Authentication error. Please log out and log back in.'
+        ], 401);
+    }
+    
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
 
     // Validation
     $validated = $request->validate([
@@ -832,12 +889,12 @@ public function update(Request $request, $prodCode)
         ->first();
 
     if (!$product) {
-        return redirect()->route('inventory-owner')->with('error', 'Product not found.');
+        return redirect()->route('inventory-staff')->with('error', 'Product not found.');
     }
 
     // Server-side check for duplicate name
     $duplicateName = DB::table('products')
-        ->where('owner_id', $ownerId)
+        ->where('owner_id', $owner_id)
         ->where('prod_code', '!=', $prodCode)
         ->whereRaw('LOWER(name) = ?', [strtolower($validated['name'])])
         ->exists();
@@ -849,7 +906,7 @@ public function update(Request $request, $prodCode)
     // Server-side check for duplicate barcode
     if (!empty($validated['barcode'])) {
         $duplicateBarcode = DB::table('products')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->where('prod_code', '!=', $prodCode)
             ->whereRaw('LOWER(barcode) = ?', [strtolower($validated['barcode'])])
             ->exists();
@@ -896,7 +953,7 @@ public function update(Request $request, $prodCode)
         // Close current active pricing record
         DB::table('pricing_history')
             ->where('prod_code', $prodCode)
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->whereNull('effective_to')
             ->update(['effective_to' => now()]);
 
@@ -906,7 +963,7 @@ public function update(Request $request, $prodCode)
             'old_cost_price'    => $finalCostPrice,
             'old_selling_price' => $finalSellingPrice,
             'vat_category'      => $finalVatCategory,
-            'owner_id'          => $ownerId,
+            'owner_id'          => $owner_id,
             'updated_by'        => session('staff_id') ?? null,
             'effective_from'    => now(),
             'effective_to'      => null,
@@ -921,142 +978,78 @@ public function update(Request $request, $prodCode)
     // Log activity
     ActivityLogController::log(
         'Updated product "' . $validated['name'] . '".',
-        'owner',
-        Auth::guard('owner')->user(),
+        'staff',
+        Auth::guard('staff')->user(),
         request()->ip()
     );
 
-    return redirect()->route('inventory-owner')
+    return redirect()->route('inventory-staff')
         ->with('success', 'Product updated successfully.');
 }
 
 
-    public function archive($prodCode)
+   
+
+    public function checkBarcode(Request $request)
     {
-        $ownerId = session('owner_id');
+        $staff = Auth::guard('staff')->user();
+        $staff_id = $staff->staff_id;
+        $owner_id = $staff->owner_id;
+
+        session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
+
+        $barcode = $request->input('barcode');
 
         $product = DB::table('products')
-            ->select('name')
-            ->where('prod_code', $prodCode)
-            ->where('owner_id', $ownerId)
+            ->where('barcode', $barcode)
+            ->where('owner_id', $owner_id)
             ->first();
 
-        // Check current stock (excluding expired items)
-        $currentStock = DB::table('inventory')
-            ->where('prod_code', $prodCode)
-            ->where(function($query) {
-                $query->whereNull('expiration_date')
-                    ->orWhere('expiration_date', '>=', DB::raw('CURDATE()'));
-            })
-            ->sum('stock');
-
-        // Prevent archiving if stock exists
-        if ($currentStock > 0) {
-            $stockLabel = $currentStock == 1 ? 'stock' : 'stocks';
-            return redirect()->route('inventory-owner')
-                ->with('error', "Cannot archive product '{$product->name}'. It still has {$currentStock} {$stockLabel} left. Please remove all stock before archiving.");
+        if ($product) {
+            return response()->json([
+                'exists' => true,
+                'product' => [
+                    'prod_code'   => $product->prod_code,
+                    'name'        => $product->name,
+                    'prod_image'  => $product->prod_image,
+                    'category_id' => $product->category_id,
+                    'barcode'     => $product->barcode,
+                ]
+            ]);
+        } else {
+            return response()->json(['exists' => false]);
         }
-
-        DB::table('products')
-            ->where('prod_code', $prodCode)
-            ->where('owner_id', $ownerId)
-            ->update(['prod_status' => 'archived']);
-
-        ActivityLogController::log(
-            'Archived product: ' . ($product->name ?? 'Unknown'),
-            'owner',
-            Auth::guard('owner')->user(),
-            request()->ip()
-        );
-
-        return redirect()->route('inventory-owner')->with('success', 'Product archived successfully.');
     }
 
-    public function unarchive($prodCode)
-    {
-        $ownerId = session('owner_id');
-
-        $product = DB::table('products')
-            ->select('name')
-            ->where('prod_code', $prodCode)
-            ->where('owner_id', $ownerId)
-            ->first();
-
-        DB::table('products')
-            ->where('prod_code', $prodCode)
-            ->where('owner_id', $ownerId)
-            ->update(['prod_status' => 'active']);
-
-        ActivityLogController::log(
-            'Unarchived product: ' . ($product->name ?? 'Unknown'),
-            'owner',
-            Auth::guard('owner')->user(),
-            request()->ip()
-        );
-
-        return redirect()->route('inventory-owner')->with('success', 'Product unarchived successfully.');
-    }
-
-
-public function checkBarcode(Request $request)
-{
-    $barcode = $request->input('barcode');
-    $ownerId = session('owner_id');
-    
-    \Log::info('🔍 Barcode check started', [
-        'barcode' => $barcode,
-        'owner_id' => $ownerId,
-        'session_data' => session()->all()
-    ]);
-    
-    $product = DB::table('products')
-        ->where('barcode', $barcode)
-        ->where('owner_id', $ownerId)
-        ->first();
-    
-    if ($product) {
-        // Calculate current stock EXCLUDING expired items
-        $currentStock = DB::table('inventory')
-            ->where('prod_code', $product->prod_code)
-            ->where('owner_id', $ownerId)
-            ->where(function($query) {
-                $query->whereNull('expiration_date')
-                    ->orWhereRaw('expiration_date >= CURDATE()');
-            })
-            ->sum('stock');
-        
-        $currentStock = $currentStock ?? 0;
-        
-        $responseData = [
-            'exists' => true,
-            'product' => [
-                'prod_code'     => $product->prod_code,
-                'name'          => $product->name,
-                'prod_image'    => $product->prod_image,
-                'category_id'   => $product->category_id,
-                'barcode'       => $product->barcode,
-                'current_stock' => (int)$currentStock,
-                'stock'         => (int)$currentStock,
-            ]
-        ];
-        
-        \Log::info('✅ Barcode check - sending response', $responseData);
-        
-        return response()->json($responseData);
-    } else {
-        \Log::info('❌ Barcode not found', ['barcode' => $barcode]);
-        return response()->json(['exists' => false]);
-    }
-}
 
 
 public function registerProduct(Request $request)
 {
-    $ownerId = session('owner_id');
+    if (!Auth::guard('staff')->check()) {
+        \Log::error('Staff not authenticated in registerProduct');
+        return response()->json([
+            'success' => false, 
+            'message' => 'You must be logged in as staff to register products.'
+        ], 401);
+    }
+
+    $staff = Auth::guard('staff')->user();
+    
+    // Add null check as safety
+    if (!$staff) {
+        \Log::error('Staff user is null despite passing auth check');
+        return response()->json([
+            'success' => false, 
+            'message' => 'Authentication error. Please log out and log back in.'
+        ], 401);
+    }
+    
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
 
     // Check product limits
-    $ownerPlan = DB::selectOne("SELECT plan_id FROM subscriptions WHERE owner_id = ? AND status = 'active'", [$ownerId]);
-    $productCount = DB::selectOne("SELECT COUNT(prod_code) as count FROM products WHERE owner_id = ?", [$ownerId])->count;
+    $ownerPlan = DB::selectOne("SELECT plan_id FROM subscriptions WHERE owner_id = ? AND status = 'active'", [$owner_id]);
+    $productCount = DB::selectOne("SELECT COUNT(prod_code) as count FROM products WHERE owner_id = ?", [$owner_id])->count;
 
     if ($ownerPlan && $ownerPlan->plan_id == 3 && $productCount >= 50) {
         return response()->json(['success' => false, 'message' => 'Your current Basic plan allows up to 50 products only. Upgrade to add more.'], 422);
@@ -1122,7 +1115,7 @@ public function registerProduct(Request $request)
     
     if (!$confirmedSimilar) {
         $existingProducts = DB::table('products')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->get();
         
         $productMatch = $this->findProductNameMatch($validated['name'], $existingProducts);
@@ -1141,7 +1134,7 @@ public function registerProduct(Request $request)
         
         if (!$confirmedCategory) {
             $exactMatch = DB::table('categories')
-                ->where('owner_id', $ownerId)
+                ->where('owner_id', $owner_id)
                 ->whereRaw('LOWER(category) = ?', [strtolower($validated['custom_category'])])
                 ->first();
             
@@ -1155,7 +1148,7 @@ public function registerProduct(Request $request)
 
         $categoryId = DB::table('categories')->insertGetId([
             'category' => $validated['custom_category'],
-            'owner_id' => $ownerId,
+            'owner_id' => $owner_id,
         ]);
     } else {
         $categoryId = $validated['category_id'];
@@ -1167,7 +1160,7 @@ public function registerProduct(Request $request)
         
         if (!$confirmedUnit) {
             $existingUnits = DB::table('units')
-                ->where('owner_id', $ownerId)
+                ->where('owner_id', $owner_id)
                 ->get();
             
             $unitMatchResult = $this->findUnitMatch($validated['custom_unit'], $existingUnits);
@@ -1182,7 +1175,7 @@ public function registerProduct(Request $request)
 
         $unitId = DB::table('units')->insertGetId([
             'unit' => $validated['custom_unit'],
-            'owner_id' => $ownerId,
+            'owner_id' => $owner_id,
         ]);
     } else {
         $unitId = $validated['unit_id'];
@@ -1205,8 +1198,8 @@ public function registerProduct(Request $request)
             'selling_price' => $validated['selling_price'],
             'vat_category' => $validated['vat_category'],
             'description' => $validated['description'] ?? null,
-            'owner_id' => $ownerId,
-            'staff_id' => null,
+            'owner_id' => $owner_id,
+            'staff_id' => $staff_id,
             'category_id' => $categoryId,
             'unit_id' => $unitId,
             'prod_image' => $photoPath,
@@ -1218,8 +1211,8 @@ public function registerProduct(Request $request)
             'prod_code' => $prodCode,
             'old_cost_price' => $validated['cost_price'],
             'old_selling_price' => $validated['selling_price'],
-            'owner_id' => $ownerId,
-            'updated_by' => session('staff_id') ?? null,
+            'owner_id' => $owner_id,
+            'updated_by' => $staff_id ?? null,
             'effective_from' => now(),
             'effective_to' => null,
         ]);
@@ -1237,7 +1230,7 @@ public function registerProduct(Request $request)
                     'stock' => $batch['quantity'],
                     'batch_number' => $batchNumberFormatted,
                     'expiration_date' => $batch['expiration_date'] ?? null,
-                    'owner_id' => $ownerId,
+                    'owner_id' => $owner_id,
                     'date_added' => now(),
                     'last_updated' => now(),
                 ]);
@@ -1250,8 +1243,8 @@ public function registerProduct(Request $request)
 
         // Log activity
         $ip = $request->ip();
-        $guard = 'owner';
-        $user = Auth::guard('owner')->user();
+        $guard = 'staff';
+        $user = Auth::guard('staff')->user();
         
         $stockInfo = !empty($validated['batches']) 
             ? ' with ' . count($validated['batches']) . ' initial batch(es)' 
@@ -1279,11 +1272,16 @@ public function registerProduct(Request $request)
 
 public function checkExistingName(Request $request)
 {
-    $ownerId = session('owner_id');
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+
+    session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
+
     $type = $request->type; // 'category', 'unit', or 'product'
     $name = $request->name;
     
-    if (!$ownerId || !$type || !$name) {
+    if (!$owner_id || !$type || !$name) {
         return response()->json(['exists' => false]);
     }
     
@@ -1293,7 +1291,7 @@ public function checkExistingName(Request $request)
     if ($type === 'category') {
         // ✅ STEP 1: Check for exact case-insensitive match FIRST
         $exactMatch = DB::table('categories')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->whereRaw('LOWER(category) = ?', [strtolower($name)])
             ->first();
         
@@ -1307,7 +1305,7 @@ public function checkExistingName(Request $request)
         
         // ✅ STEP 2: Check for semantic/similar matches
         $existingCategories = DB::table('categories')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->get();
         
         $normalizedInput = $this->normalizeName($name);
@@ -1328,7 +1326,7 @@ public function checkExistingName(Request $request)
     else if ($type === 'unit') {
         // ✅ STEP 1: Check for exact match first
         $exactMatch = DB::table('units')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->whereRaw('LOWER(unit) = ?', [strtolower($name)])
             ->first();
         
@@ -1342,7 +1340,7 @@ public function checkExistingName(Request $request)
         
         // ✅ STEP 2: Check for similar matches
         $existingUnits = DB::table('units')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->get();
         
         $unitMatchResult = $this->findUnitMatch($name, $existingUnits);
@@ -1361,7 +1359,7 @@ public function checkExistingName(Request $request)
     else if ($type === 'product') {
         // ✅ NEW: Check for existing product names
         $existingProducts = DB::table('products')
-            ->where('owner_id', $ownerId)
+            ->where('owner_id', $owner_id)
             ->get();
         
         $productMatch = $this->findProductNameMatch($name, $existingProducts);
@@ -1755,7 +1753,12 @@ private function isSimilarString($str1, $str2)
 
 public function addCategory(Request $request)
 {
-    $ownerId = session('owner_id');
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+
+    session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
+
     $categoryName = trim($request->input('category'));
     $confirmedSimilar = $request->input('confirmed_similar') === '1';
 
@@ -1765,12 +1768,12 @@ public function addCategory(Request $request)
 
     // Get all existing categories for semantic comparison
     $existingCategories = DB::table('categories')
-        ->where('owner_id', $ownerId)
+        ->where('owner_id', $owner_id)
         ->get();
     
     // Check 1: Exact case-insensitive match (ALWAYS BLOCK)
     $exactMatch = DB::table('categories')
-        ->where('owner_id', $ownerId)
+        ->where('owner_id', $owner_id)
         ->whereRaw('LOWER(category) = ?', [strtolower($categoryName)])
         ->first();
     
@@ -1799,7 +1802,7 @@ public function addCategory(Request $request)
     // ✅ FIX: Use insertGetId() instead of insert() to get the new category ID
     $categoryId = DB::table('categories')->insertGetId([
         'category' => $categoryName,
-        'owner_id' => $ownerId,
+        'owner_id' => $owner_id,
     ]);
 
     // ✅ FIX: Return the category_id in the response
@@ -1815,11 +1818,19 @@ public function addCategory(Request $request)
 public function getCategoryProducts($categoryId)
 {
     try {
-        $ownerId = session('owner_id');
+        $staffId = session('staff_id');
 
-        if (!$ownerId) {
+        if (!$staffId) {
             return response()->json(['error' => 'Unauthorized. Please log in again.'], 403);
         }
+
+        $staff = DB::selectOne("SELECT owner_id FROM staff WHERE staff_id = ?", [$staffId]);
+
+        if (!$staff) {
+            return response()->json(['error' => 'Invalid staff account. Please log in again.'], 403);
+        }
+
+        $ownerId = $staff->owner_id;
 
         $products = DB::select("
             SELECT 
@@ -1841,21 +1852,24 @@ public function getCategoryProducts($categoryId)
         return response()->json($products);
 
     } catch (\Exception $e) {
-        \Log::error('Error fetching products by category: ' . $e->getMessage());
+        \Log::error('Error fetching products by category (Staff): ' . $e->getMessage());
         return response()->json(['error' => 'Server error. Please check logs.'], 500);
     }
 }
 
 
-
 public function getLatestBatch($prod_code)
 {
-    $ownerId = session('owner_id');
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+
+    session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
     
     // MODIFIED: Get latest batch for specific product
     $latestBatch = DB::table('inventory')
         ->where('prod_code', $prod_code)
-        ->where('owner_id', $ownerId)
+        ->where('owner_id', $owner_id)
         ->orderBy('inven_code', 'desc')
         ->value('batch_number');
     
@@ -1875,7 +1889,28 @@ public function getLatestBatch($prod_code)
 
 public function bulkRestock(Request $request)
 {
-    $ownerId = session('owner_id');
+    if (!Auth::guard('staff')->check()) {
+        \Log::error('Staff not authenticated in restock product');
+        return response()->json([
+            'success' => false, 
+            'message' => 'You must be logged in as staff to restock products.'
+        ], 401);
+    }
+
+    $staff = Auth::guard('staff')->user();
+    
+    // Add null check as safety
+    if (!$staff) {
+        \Log::error('Staff user is null despite passing auth check');
+        return response()->json([
+            'success' => false, 
+            'message' => 'Authentication error. Please log out and log back in.'
+        ], 401);
+    }
+    
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+
     $items = $request->input('items', []);
     
     if (empty($items)) {
@@ -1898,7 +1933,7 @@ public function bulkRestock(Request $request)
                 $prodCode = $it['prod_code'] ?? 'Unknown';
                 $product = DB::table('products')
                     ->where('prod_code', $prodCode)
-                    ->where('owner_id', $ownerId)
+                    ->where('owner_id', $owner_id)
                     ->first();
                 
                 $productName = $product ? $product->name : "Product #{$prodCode}";
@@ -1935,7 +1970,7 @@ public function bulkRestock(Request $request)
             // Get latest batch for this specific product
             $latestBatch = DB::table('inventory')
                 ->where('prod_code', $prodCode)
-                ->where('owner_id', $ownerId)
+                ->where('owner_id', $owner_id)
                 ->orderBy('inven_code', 'desc')
                 ->value('batch_number');
             
@@ -1955,7 +1990,7 @@ public function bulkRestock(Request $request)
                 'stock' => $qty,
                 'batch_number' => $nextBatchNumber,
                 'expiration_date' => $expiration,
-                'owner_id' => $ownerId,
+                'owner_id' => $owner_id,
                 'date_added' => now(),
                 'last_updated' => now(),
             ]);
@@ -1973,7 +2008,7 @@ public function bulkRestock(Request $request)
             // Get current product data
             $currentProduct = DB::table('products')
                 ->where('prod_code', $pricingProdCode)
-                ->where('owner_id', $ownerId)
+                ->where('owner_id', $owner_id)
                 ->first(['cost_price', 'selling_price', 'vat_category']);
             
             if (!$currentProduct) {
@@ -1994,7 +2029,7 @@ public function bulkRestock(Request $request)
                 // Close current active price record in pricing history
                 DB::table('pricing_history')
                     ->where('prod_code', $pricingProdCode)
-                    ->where('owner_id', $ownerId)
+                    ->where('owner_id', $owner_id)
                     ->whereNull('effective_to')
                     ->update(['effective_to' => now()]);
                 
@@ -2003,7 +2038,8 @@ public function bulkRestock(Request $request)
                     'prod_code' => $pricingProdCode,
                     'old_cost_price' => $finalCostPrice,
                     'old_selling_price' => $finalSellingPrice,
-                    'owner_id' => $ownerId,
+                    'vat_category' => $finalVatCategory,
+                    'owner_id' => $owner_id,
                     'updated_by' => session('staff_id') ?? null,
                     'effective_from' => now(),
                     'effective_to' => null,
@@ -2012,7 +2048,7 @@ public function bulkRestock(Request $request)
                 // Update product table with new pricing
                 DB::table('products')
                     ->where('prod_code', $pricingProdCode)
-                    ->where('owner_id', $ownerId)
+                    ->where('owner_id', $owner_id)
                     ->update([
                         'cost_price' => $finalCostPrice,
                         'selling_price' => $finalSellingPrice,
@@ -2025,8 +2061,8 @@ public function bulkRestock(Request $request)
         
         // Log activity
         $ip = $request->ip();
-        $guard = 'owner';
-        $user = Auth::guard('owner')->user();
+        $guard = 'staff';
+        $user = Auth::guard('staff')->user();
         
         $activityMessage = 'Bulk Restock Products';
         if ($updatePricing && $pricingProdCode && isset($priceChanged) && $priceChanged) {
@@ -2052,11 +2088,15 @@ public function bulkRestock(Request $request)
 
 public function getProductPricing($prodCode)
 {
-    $ownerId = session('owner_id');
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+
+    session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
     
     $product = DB::table('products')
         ->where('prod_code', $prodCode)
-        ->where('owner_id', $ownerId)
+        ->where('owner_id', $owner_id)
         ->first(['cost_price', 'selling_price', 'vat_category']);
     
     if (!$product) {
@@ -2074,7 +2114,11 @@ public function getProductPricing($prodCode)
 
     public function store(Request $request)
     {
-        $ownerId = Auth::guard('owner')->id();
+        $staff = Auth::guard('staff')->user();
+        $staff_id = $staff->staff_id;
+        $owner_id = $staff->owner_id;
+
+        session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
 
         try {
             $validated = $request->validate([
@@ -2087,7 +2131,7 @@ public function getProductPricing($prodCode)
             // Fetch all inventory records for the selected product
             $inventoryRecords = DB::table('inventory')
                 ->where('prod_code', $validated['prod_code'])
-                ->where('owner_id', $ownerId)
+                ->where('owner_id', $owner_id)
                 ->get();
 
             // Filter out inventory records with zero stock and sort by the first added inventory (oldest)
@@ -2125,7 +2169,7 @@ public function getProductPricing($prodCode)
                 'damaged_quantity' => $validated['damaged_quantity'],
                 'damaged_type' => $validated['damaged_type'],
                 'damaged_reason' => $validated['damaged_reason'],
-                'owner_id' => $ownerId,
+                'owner_id' => $owner_id,
                 'damaged_date' => now(),
                 'inven_code' => $availableInventory->inven_code, // Store the inven_code from the first added inventory
             ]);
@@ -2149,12 +2193,4 @@ public function getProductPricing($prodCode)
 
 
 
-
-
 }
-
-    
-
-
-
-

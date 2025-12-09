@@ -1,4 +1,4 @@
-@extends('dashboards.owner.owner')
+@extends('dashboards.staff.staff')
 
 <head>
     <title>Category and Unit Settings</title>
@@ -68,7 +68,7 @@
     <!-- Title + Back Button in one row -->
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-semibold text-gray-800">Category and Unit Settings</h2>
-        <a href="{{ route('inventory-owner') }}" 
+        <a href="{{ route('inventory-staff') }}" 
            class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
             <span class="material-symbols-outlined text-sm mr-1">assignment_return</span>
             Back
@@ -98,7 +98,7 @@
                     <li class="category-item flex justify-between items-center bg-gray-50 text-sm p-3 rounded shadow-sm" data-name="{{ $category->category }}">
                         <span>{{ $category->category }}</span>
                         <!-- Edit Form -->
-                        <form action="{{ route('owner.category.update', $category->category_id) }}" 
+                        <form action="{{ route('staff.category.update', $category->category_id) }}" 
                               method="POST" 
                               class="category-edit-form flex space-x-2"
                               data-category-id="{{ $category->category_id }}"
@@ -127,7 +127,7 @@
 
             <!-- Add New Category pinned at bottom -->
             <div class="mt-auto">
-                <form action="{{ route('owner.category.store') }}" 
+                <form action="{{ route('staff.category.store') }}" 
                       method="POST" 
                       id="add-category-form"
                       class="flex justify-center items-start space-x-2">
@@ -174,7 +174,7 @@
                     <li class="unit-item flex justify-between items-center bg-gray-50 p-3 rounded text-sm shadow-sm" data-name="{{ $unit->unit }}">
                         <span>{{ $unit->unit }}</span>
                         <!-- Edit Form -->
-                        <form action="{{ route('owner.unit.update', $unit->unit_id) }}" 
+                        <form action="{{ route('staff.unit.update', $unit->unit_id) }}" 
                               method="POST" 
                               class="unit-edit-form flex space-x-2"
                               data-unit-id="{{ $unit->unit_id }}"
@@ -203,7 +203,7 @@
 
             <!-- Add New Unit pinned at bottom -->
             <div class="mt-auto">
-                <form action="{{ route('owner.unit.store') }}" 
+                <form action="{{ route('staff.unit.store') }}" 
                       method="POST" 
                       id="add-unit-form"
                       class="flex justify-center items-start space-x-2">
@@ -561,7 +561,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================== HELPER FUNCTIONS ===========================
     
     function checkExistence(name, type, errorDiv, submitBtn, inputElement, excludeValue = null) {
-        fetch('{{ route("owner.check-existing-name") }}', {
+        fetch('{{ route("staff.check-existing-name") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function checkExistenceForSubmit(name, type, excludeValue = null) {
         try {
-            const response = await fetch('{{ route("owner.check-existing-name") }}', {
+            const response = await fetch('{{ route("staff.check-existing-name") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

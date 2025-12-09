@@ -16,12 +16,11 @@ class ExpirationContainer extends Component
     }
 
     private function expirationTracker() {
-        
-        if (!Auth::guard('owner')->check()) {
-            abort(403, 'Unauthorized access.');
+        $owner_id = session('owner_id');
+    
+        if (!$owner_id) {
+            return $this->isExpired = false;
         }
-
-        $owner_id = Auth::guard('owner')->user()->owner_id;
 
         $owner = collect(DB::select("
             select o.owner_id, s.subscription_end 

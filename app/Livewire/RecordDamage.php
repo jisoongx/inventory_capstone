@@ -57,12 +57,15 @@ class RecordDamage extends Component
         $this->addRecord();
     }
 
-
-
-
     public function getProducts()
     {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
+        // ✅ FIXED: Use session instead of Auth guard
+        $owner_id = session('owner_id');
+
+        if (!$owner_id) {
+            $this->products = collect([]);
+            return;
+        }
 
         $this->products = collect(DB::select("
             SELECT p.name, p.prod_code, sum(i.stock) as stocks 
@@ -73,7 +76,6 @@ class RecordDamage extends Component
             having sum(i.stock) > 0
         ", [$owner_id]));
     }
-
 
     public function getInventory($index, $prod_code)
     {
@@ -87,19 +89,20 @@ class RecordDamage extends Component
         $this->inventories[$index] = $inventories;
     }
 
-
-
     public function saveDamageRecords()
     {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
-        $user = Auth::guard('owner')->check() ? Auth::guard('owner')->user() : Auth::guard('staff')->user();
-        $userType = Auth::guard('owner')->check() ? 'owner' : 'staff';
-        $userIdField = $userType === 'owner' ? 'owner_id' : 'staff_id';
-        $userId = $user->{$userIdField};
+        // ✅ FIXED: Use session for both owner_id and staff_id
+        $owner_id = session('owner_id');
+        $staff_id = session('staff_id');
+
+        if (!$owner_id) {
+            session()->flash('error', 'Unable to save. Please log in again.');
+            return;
+        }
 
         foreach ($this->damageRecords as $record) {
 
-            if (!empty($record['prod_code']) && !empty($record['inven_code']) &&!empty($record['damaged_quantity'])) 
+            if (!empty($record['prod_code']) && !empty($record['inven_code']) && !empty($record['damaged_quantity'])) 
             {
                 $productName = DB::table('products')
                     ->where('prod_code', $record['prod_code'])
@@ -125,10 +128,8 @@ class RecordDamage extends Component
                     $record['damaged_reason'] ?? 'N/A',
                     null,
                     $owner_id,
-                    null,
-                    $record['inven_code'],
-                    !empty($record['damaged_set_to_return']) ? 'To be returned' : null,
-
+                    $staff_id, // ✅ Now properly saves staff_id when logged in as staff
+                    $record['inven_code']
                 ]);
 
                 DB::update("
@@ -176,8 +177,6 @@ class RecordDamage extends Component
             $this->resetErrorBag("damageRecords.$index.damaged_quantity");
         }
     }
-
-
 
     public function render()
     {
