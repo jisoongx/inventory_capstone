@@ -30,7 +30,10 @@ class OwnerStaffController extends Controller
         $query = $request->get('search', '');
         $status = $request->get('status', '');
 
+        $ownerId = Auth::guard('owner')->id(); // ← get the logged-in owner
+
         $staffMembers = \App\Models\Staff::query()
+            ->where('owner_id', $ownerId) // ← filter staff only under this owner
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {
                     $sub->where('firstname', 'like', "%{$query}%")
@@ -47,6 +50,7 @@ class OwnerStaffController extends Controller
 
         return response()->json(['staffMembers' => $staffMembers]);
     }
+
 
 
     public function updateStatus(Request $request, Staff $staff)

@@ -1,7 +1,7 @@
 @extends('dashboards.owner.owner')
 
 @section('content')
-<div class="max-w-7xl mx-auto px-1 sm:px-5 py-10">
+<div class="mx-8 py-10">
 
     <div class="mb-6 flex justify-between items-center">
         <h2 class="text-xl font-bold text-gray-800">Billing History</h2>

@@ -28,9 +28,9 @@
 
             <!-- New Password -->
             <div class="relative">
-                <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl">lock</span>
+                <!-- <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl">lock</span> -->
                 <input type="password" id="password" name="password" placeholder="New Password" required
-                    class="w-full pl-11 pr-12 py-3 bg-white border border-gray-400 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 placeholder-gray-500" />
+                    class="w-full pl-4 pr-12 py-3 bg-white border border-gray-400 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 placeholder-gray-500" />
                 <span id="togglePasswordIcon"
                     class="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer opacity-0 transition-opacity duration-200 text-xl"></span>
                 @error('password')
@@ -40,9 +40,9 @@
 
             <!-- Confirm Password -->
             <div class="relative">
-                <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl">lock</span>
+
                 <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirm Password" required
-                    class="w-full pl-11 pr-12 py-3 bg-white border border-gray-400 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 placeholder-gray-500" />
+                    class="w-full pl-4 pr-12 py-3 bg-white border border-gray-400 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 placeholder-gray-500" />
                 <span id="toggleConfirmIcon"
                     class="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer opacity-0 transition-opacity duration-200 text-xl"></span>
             </div>
@@ -54,7 +54,7 @@
             </button>
         </form>
 
-       
+
     </div>
 
     <!-- JS for Toggle Visibility -->
