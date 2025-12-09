@@ -1231,7 +1231,7 @@
                             <!-- Stock Limit -->
                             <div>
                                 <label class="block text-xs font-semibold text-gray-700 mb-1.5">Minimum Stock Alert *</label>
-                                <input type="number" name="stock_limit" placeholder="e.g., 5" min="0" step="1" required
+                                <input type="number" name="stock_limit" placeholder="e.g., 5" min="1" step="1" required
                                     oninput="this.value = this.value.replace(/[^0-9]/g, '');"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B50612] focus:border-transparent text-sm placeholder-gray-400 transition">
                                 <p class="text-xs text-gray-500 mt-1">Warn when stock is at or below this number</p>
@@ -2165,7 +2165,7 @@
             document.getElementById("newTaxAmount").textContent = '₱0.00';
             document.getElementById("newTotalPrice").textContent = '₱0.00';
         }
-        
+
         // === Duplicate Row for the Same Product (increments batch) ===
         window.duplicateBatchRow = function(button, prodCode, prodName, categoryId, currentStock) {
             const container = document.getElementById('restockRowsContainer');

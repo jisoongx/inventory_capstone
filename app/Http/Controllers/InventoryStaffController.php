@@ -11,6 +11,25 @@ use Illuminate\Support\Str;
 
 class InventoryStaffController extends Controller
 {
+//  /**
+//      * Helper method to ensure staff session is set
+//      */
+//     private function ensureStaffSession()
+//     {
+//         if (!session()->has('staff_id') || !session()->has('owner_id')) {
+//             if (Auth::guard('staff')->check()) {
+//                 $staff = Auth::guard('staff')->user();
+//                 session([
+//                     'staff_id' => $staff->staff_id, 
+//                     'owner_id' => $staff->owner_id
+//                 ]);
+//                 return true;
+//             }
+//             return false;
+//         }
+//         return true;
+//     }
+
     public function index(Request $request)
     {
         if (!Auth::guard('staff')->check()) {
@@ -22,11 +41,12 @@ class InventoryStaffController extends Controller
         $owner_id = $staff->owner_id;
         $staff_name = $staff->firstname;
 
+        // Set session for consistent use throughout the app
         session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
 
         $search   = $request->input('search');
         $category = $request->input('category');
-        $status   = $request->input('status', 'active'); // default to active
+        $status   = $request->input('status', 'active');
 
         DB::statement("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
 
@@ -44,10 +64,8 @@ class InventoryStaffController extends Controller
                 MIN(c.category)      AS category,
                 p.prod_status,
                 
-                -- Total Stock In Inventory (including expired)
                 COALESCE(SUM(i.stock), 0) AS inventory_stock,
                 
-                -- Total Stock Out from Sales
                 COALESCE((
                     SELECT SUM(ri.item_quantity) 
                     FROM receipt_item ri 
@@ -55,7 +73,6 @@ class InventoryStaffController extends Controller
                     WHERE ri.prod_code = p.prod_code
                 ), 0) AS total_stock_out_sales,
                 
-                -- Total Damaged Items
                 COALESCE((
                     SELECT SUM(di.damaged_quantity)
                     FROM damaged_items di
@@ -63,8 +80,6 @@ class InventoryStaffController extends Controller
                     WHERE i2.prod_code = p.prod_code
                 ), 0) AS total_stock_out_damaged,
                 
-                -- Current Stock: Sum of stock EXCLUDING expired items
-                -- (Expired items are automatically moved to damaged_items table)
                 COALESCE((
                     SELECT SUM(i.stock)
                     FROM inventory i
@@ -72,7 +87,6 @@ class InventoryStaffController extends Controller
                     AND (i.expiration_date IS NULL OR i.expiration_date >= CURDATE())
                 ), 0) AS current_stock,
                 
-                -- Total Stock In (Original): Current Stock in Inventory + Sales + Damaged
                 (COALESCE(SUM(i.stock), 0) + 
                 COALESCE((
                     SELECT SUM(ri.item_quantity) 
@@ -118,6 +132,8 @@ class InventoryStaffController extends Controller
         
         return view('inventory-staff', compact('staff_name', 'products', 'categories', 'units', 'search', 'category', 'status'));
     }
+
+
 
     public function suggest(Request $request)
     {

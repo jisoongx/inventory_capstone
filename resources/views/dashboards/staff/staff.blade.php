@@ -36,18 +36,7 @@
                     <span class="nav-label">Dashboard</span>
                 </a>
 
-                <a href="{{ route('inventory-staff') }}{{ route('restock.list') }}"
-                    class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
-                    <span class="material-symbols-rounded">inventory</span>
-                    <span class="nav-label">Restock List</span>
-                </a>
-                <a href="{{ route('seasonal_trends') }}"
-                    class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
-                    <span class="material-symbols-rounded">trending_up</span>
-                    <span class="nav-label">Seasonal Trends</span>
-                </a>
-
-                <a href=""
+                <a href="{{ route('inventory-staff') }}"
                     class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
                     <span class="material-symbols-rounded">shopping_cart</span>
                     <span class="nav-label">Inventory</span>
@@ -58,6 +47,19 @@
                     <span class="material-symbols-rounded">local_mall</span>
                     <span class="nav-label">Store</span>
                 </a>
+
+                <a href="{{ route('restock.list') }}"
+                    class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                    <span class="material-symbols-rounded">inventory</span>
+                    <span class="nav-label">Restock List</span>
+                </a>
+                <a href="{{ route('seasonal_trends') }}"
+                    class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                    <span class="material-symbols-rounded">trending_up</span>
+                    <span class="nav-label">Seasonal Trends</span>
+                </a>
+
+                
 
                 <!-- Technical Request -->
                 <a href="{{ route('dashboards.staff.technical_request') }}">
