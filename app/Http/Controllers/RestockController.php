@@ -650,7 +650,9 @@ class RestockController extends Controller
             // ------------------------------------
             // B. Forecasting Logic
             // ------------------------------------
-            
+            $forecast = 0;
+            $algoUsed = null;
+
             if (count($monthlySales) > 0) {
 
                 $result = $forecastService->forecast($monthlySales);
@@ -670,6 +672,9 @@ class RestockController extends Controller
                 } elseif (!empty($result['ses'])) {
                     $forecast = $result['ses'];
                     $algoUsed = "ses";
+                } else {
+                    $forecast = null;
+                    $algoUsed = null;
                 }
             }
 
