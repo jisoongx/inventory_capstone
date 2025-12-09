@@ -5,7 +5,6 @@ namespace App\Livewire;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\ActivityLogController;
 
 class RecordDamage extends Component
 {
@@ -46,7 +45,6 @@ class RecordDamage extends Component
     public function closeModal()
     {
         $this->showModal = false;
-        return redirect()->route('inventory-owner');
     }
 
     public function cancelModal()
@@ -58,15 +56,12 @@ class RecordDamage extends Component
         $this->addRecord();
     }
 
+
+
+
     public function getProducts()
     {
-        // ✅ FIXED: Use session instead of Auth guard
-        $owner_id = session('owner_id');
-
-        if (!$owner_id) {
-            $this->products = collect([]);
-            return;
-        }
+        $owner_id = Auth::guard('owner')->user()->owner_id;
 
         $this->products = collect(DB::select("
             SELECT p.name, p.prod_code, sum(i.stock) as stocks 
@@ -77,6 +72,7 @@ class RecordDamage extends Component
             having sum(i.stock) > 0
         ", [$owner_id]));
     }
+
 
     public function getInventory($index, $prod_code)
     {
@@ -90,26 +86,16 @@ class RecordDamage extends Component
         $this->inventories[$index] = $inventories;
     }
 
+
+
     public function saveDamageRecords()
     {
-        // ✅ FIXED: Use session for both owner_id and staff_id
-        $owner_id = session('owner_id');
-        $staff_id = session('staff_id');
-
-        if (!$owner_id) {
-            session()->flash('error', 'Unable to save. Please log in again.');
-            return;
-        }
+        $owner_id = Auth::guard('owner')->user()->owner_id;
 
         foreach ($this->damageRecords as $record) {
 
-            if (!empty($record['prod_code']) && !empty($record['inven_code']) && !empty($record['damaged_quantity'])) 
+            if (!empty($record['prod_code']) && !empty($record['inven_code']) &&!empty($record['damaged_quantity'])) 
             {
-                $productName = DB::table('products')
-                    ->where('prod_code', $record['prod_code'])
-                    ->value('name') ?? 'Unknown Product';
-
-
                 DB::insert("
                     INSERT INTO damaged_items (
                         damaged_quantity, 
@@ -129,32 +115,23 @@ class RecordDamage extends Component
                     $record['damaged_reason'] ?? 'N/A',
                     null,
                     $owner_id,
-                    $staff_id, // ✅ Now properly saves staff_id when logged in as staff
-                    $record['inven_code']
+                    null,
+                    $record['inven_code'],
+                    !empty($record['damaged_set_to_return']) ? 'To be returned' : null,
+
                 ]);
 
                 DB::update("
                     update inventory
                     set stock = stock - ?
                     where inven_code = ?
-                ", [$record['damaged_quantity'], $record['inven_code']]);
+                ", [$record['damaged_quantity'], $record['inven_code']]); 
 
                 session()->flash('success', 'Damaged records successfully saved!');
                 $this->damageRecords = []; 
                 $this->addRecord(); 
-
-                ActivityLogController::log(
-                    "Recorded {$record['damaged_quantity']} damaged item(s) for product \"{$productName}\"",
-                    $userType,
-                    $user,
-                    request()->ip()
-                );
-
             }
         }
-
-        
-        return redirect()->route('inventory-owner');
 
     }
 
@@ -182,6 +159,8 @@ class RecordDamage extends Component
             $this->resetErrorBag("damageRecords.$index.damaged_quantity");
         }
     }
+
+
 
     public function render()
     {
