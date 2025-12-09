@@ -125,7 +125,7 @@ return $base . ' bg-gradient-to-r from-gray-400 to-gray-500';
                             </select>
                             <select name="plan" class="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-all shadow-sm">
                                 <option value="">All Plans</option>
-                                <option value="basic" {{ request('plan') == 'basic' ? 'selected' : '' }}>Basic</option>
+                             
                                 <option value="standard" {{ request('plan') == 'standard' ? 'selected' : '' }}>Standard</option>
                                 <option value="premium" {{ request('plan') == 'premium' ? 'selected' : '' }}>Premium</option>
                             </select>

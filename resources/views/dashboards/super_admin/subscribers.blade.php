@@ -107,8 +107,10 @@ if ($value < 0) return $base . ' bg-gradient-to-r from-red-600 to-red-700' ; // 
     $activeTab = request('status', 'active');
     @endphp
 
-    <div class="min-h-screen">
-        <div class="container mx-auto px-2 py-5 max-w-7xl">
+    <div class="min-h-screen flex flex-col px-2 py-5">
+        <div class="container mx-auto max-w-7xl space-y-6">
+
+
             {{-- Stat Cards --}}
             <div id="stat-cards-container" class="flex flex-col sm:flex-row gap-5 mb-5 w-full">
                 @foreach ($statCards as $type => $card)
