@@ -12,6 +12,11 @@ use App\Http\Controllers\ActivityLogController;
 class NotificationController extends Controller
 { 
     public function index(Request $request) {
+        
+        if (!Auth::guard('super_admin')->check()) {
+            abort(403, 'Access not available');
+        } 
+
         $filter = $request->query('filter', 'all'); 
 
         $query = 'SELECT notif_title, notif_message, notif_created_on, notif_target, notif_type

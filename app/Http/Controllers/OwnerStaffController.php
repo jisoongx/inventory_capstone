@@ -15,6 +15,10 @@ class OwnerStaffController extends Controller
 
     public function showStaff()
     {
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
+
         $ownerId = Auth::guard('owner')->id();
         $staffMembers = Staff::where('owner_id', $ownerId)->get(); 
         return view('dashboards.owner.staff_list', compact('staffMembers'));

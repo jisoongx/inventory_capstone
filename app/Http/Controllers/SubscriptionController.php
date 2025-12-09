@@ -20,6 +20,9 @@ class SubscriptionController extends Controller
 {
     public function subscribers(Request $request)
     {
+        if (!Auth::guard('super_admin')->check()) {
+            abort(403, 'Access not available');
+        } 
 
         
         Subscription::where('status', 'active')

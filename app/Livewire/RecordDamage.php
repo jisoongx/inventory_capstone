@@ -28,7 +28,8 @@ class RecordDamage extends Component
             'inven_code' => '',
             'damaged_quantity' => '',
             'damaged_type' => '',
-            'damaged_reason' => ''
+            'damaged_reason' => '',
+            'damaged_set_to_return' => ''
         ];
     }
     
@@ -114,8 +115,9 @@ class RecordDamage extends Component
                         return_id, 
                         owner_id, 
                         staff_id, 
-                        inven_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        inven_code,
+                        set_to_return_to_supplier
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ", [
                     $record['damaged_quantity'],
                     now(),
@@ -124,7 +126,9 @@ class RecordDamage extends Component
                     null,
                     $owner_id,
                     null,
-                    $record['inven_code']
+                    $record['inven_code'],
+                    !empty($record['damaged_set_to_return']) ? 'To be returned' : null,
+
                 ]);
 
                 DB::update("
@@ -132,6 +136,10 @@ class RecordDamage extends Component
                     set stock = stock - ?
                     where inven_code = ?
                 ", [$record['damaged_quantity'], $record['inven_code']]);
+
+                session()->flash('success', 'Damaged records successfully saved!');
+                $this->damageRecords = []; 
+                $this->addRecord(); 
 
                 ActivityLogController::log(
                     "Recorded {$record['damaged_quantity']} damaged item(s) for product \"{$productName}\"",
@@ -142,9 +150,6 @@ class RecordDamage extends Component
             }
         }
 
-        session()->flash('success', 'Damaged records successfully saved!');
-        $this->damageRecords = []; 
-        $this->addRecord(); 
     }
 
 

@@ -24,8 +24,9 @@ class StaffDashboard extends Component
     
 
     public function dashboard() {
+
         if (!Auth::guard('staff')->check()) {
-            return redirect()->route('login')->with('error', 'Please login first.');
+            abort(403, 'Unauthorized access.');
         }
 
         $staff = Auth::guard('staff')->user();

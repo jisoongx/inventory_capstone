@@ -56,6 +56,7 @@
         </div>
 
         <!-- Table Section -->
+        <div wire:poll.live="pollList" class="hidden"></div>
         <div class="bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl shadow-lg border border-gray-300 h-[43rem] ">
             <!-- Header Section -->
         
@@ -81,138 +82,148 @@
                 </div>
             </div>
 
-<div class="overflow-x-auto scrollbar-custom h-[38rem]">
-    <table class="w-full">
-        <thead>
-            <tr class="bg-gray-100 sticky top-0 z-10">
-                <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Batch #</th>
-                <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Stock In</th>
-                <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Sold</th>
-                <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Damaged</th>
-                <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Cost Price</th>
-                <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Selling Price</th>
-                <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Effective Period</th>
-            </tr>
-        </thead>
-
-        <tbody class="bg-white">
-            @forelse($history->groupBy('prod_name') as $productName => $productRows)
-                <!-- Product Name Row - FIXED: colspan should be 7 not 8 -->
-                <tr class="bg-gradient-to-r from-slate-100 to-gray-100 border-t-2 border-slate-300">
-                    <td colspan="7" class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-1 h-3 bg-gradient-to-b from-slate-600 to-slate-700 rounded-full"></div>
-                            <span class="font-bold text-xs text-slate-800">{{ $productName }}</span>
-                        </div>
-                    </td>
-                </tr>
-
-                @foreach($productRows->groupBy('batch_number') as $batchNumber => $batchRows)
-                    @php
-                        $totalReceived = $batchRows->first()->batch_received;
-                        $totalSold = $batchRows->sum('batch_sold_in_period');
-                        $totalDamaged = $batchRows->sum('batch_damaged_in_period');
-                        $isDepleted = $totalReceived <= ($totalSold + $totalDamaged);
-                        
-                        // Use all rows for display, not filtering
-                        $displayRows = $batchRows;
-                        $rowspan = $displayRows->count();
-                    @endphp
-
-                    @foreach($displayRows as $index => $h)
-                        @php
-                            $from = \Carbon\Carbon::parse($h->effective_from)->format('M d, Y');
-                            $to = $h->effective_to ? \Carbon\Carbon::parse($h->effective_to)->format('M d, Y') : 'Present';
-                            $isActive = $to === 'Present';
-                        @endphp
-
-                        <tr class="hover:bg-slate-50 border-b border-gray-200 {{ $isActive && !$isDepleted ? 'bg-emerald-100/70 hover:bg-emerald-100' : '' }} {{ $isDepleted ? 'bg-yellow-100 hover:bg-yellow-200' : '' }}">
-                            
-                            {{-- Batch Number + Stock In (first row only) --}}
-                            @if($loop->first)
-                                <td class="px-4 py-3 text-center align-middle border-r bg-slate-50" rowspan="{{ $rowspan }}">
-                                    <div class="flex flex-col items-center gap-1">
-                                        <!-- Batch Number -->
-                                        <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-mono font-semibold rounded">
-                                            {{ $h->batch_number }}
-                                        </span>
-
-                                        <!-- Depleted Label -->
-                                        @if($isDepleted)
-                                            <span class="text-[9px] font-bold text-yellow-700 uppercase tracking-wider bg-yellow-100 px-1 py-0.5 rounded">
-                                                No Stock Remaining
-                                            </span>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-center align-middle font-semibold text-[10px] text-slate-700 border-r bg-slate-50" rowspan="{{ $rowspan }}">
-                                    {{ $totalReceived }}
-                                </td>
-                            @endif
-
-                            {{-- Sold --}}
-                            <td class="px-4 py-3 text-center border-r border-gray-200">
-                                <span class="inline-block px-2 py-0.5 rounded font-bold text-[10px] {{ $h->batch_sold_in_period > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400' }}">
-                                    {{ $h->batch_sold_in_period }}
-                                </span>
-                            </td>
-
-                            {{-- Damaged --}}
-                            <td class="px-4 py-3 text-center border-r border-gray-200">
-                                <span class="inline-block px-2 py-0.5 rounded font-bold text-[10px] {{ $h->batch_damaged_in_period > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-400' }}">
-                                    {{ $h->batch_damaged_in_period }}
-                                </span>
-                            </td>
-
-                            {{-- Cost Price --}}
-                            <td class="px-4 py-3 text-center font-semibold text-[10px] text-gray-700 border-r border-gray-200">
-                                <span class="font-mono">₱{{ number_format($h->old_cost_price, 2) }}</span>
-                            </td>
-
-                            {{-- Selling Price --}}
-                            <td class="px-4 py-3 text-center border-r border-gray-200">
-                                <span class="inline-block px-2 py-0.5 bg-green-50 text-green-700 font-mono font-bold text-[10px] rounded">
-                                    ₱{{ number_format($h->old_selling_price, 2) }}
-                                </span>
-                            </td>
-
-                            {{-- Effective Period --}}
-                            <td class="px-4 py-3 text-center">
-                                <div class="flex flex-col items-center gap-1">
-                                    <div class="text-[10px] font-semibold text-slate-700">
-                                        <span class="font-mono">{{ $from }}</span>
-                                        <span class="text-gray-400 mx-1">→</span>
-                                        <span class="font-mono {{ $isActive ? 'text-emerald-700' : '' }}">{{ $to }}</span>
-                                    </div>
-
-                                    {{-- Only show active badge if batch is NOT depleted --}}
-                                    @if($isActive && !$isDepleted)
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white text-[9px] font-bold rounded-full uppercase shadow-sm">
-                                            <span class="w-1 h-1 bg-white rounded-full animate-pulse"></span>
-                                            Active
-                                        </span>
-                                    @endif
-                                </div>
-                            </td>
+            <div class="overflow-x-auto scrollbar-custom h-[38rem]">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-100 sticky top-0 z-10">
+                            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Batch #</th>
+                            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Stock In</th>
+                            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Sold</th>
+                            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Damaged</th>
+                            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Cost Price</th>
+                            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Selling Price</th>
+                            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-gray-700">Effective Period</th>
                         </tr>
-                    @endforeach
-                @endforeach
-            @empty
-                <tr>
-                    <td colspan="7" class="px-4 py-12 text-center bg-gradient-to-b from-gray-50 to-white">
-                        <div class="flex flex-col items-center justify-center">
-                            <div class="">
-                                <span class="material-symbols-rounded-semibig text-gray-500">taunt</span>
-                            </div>
-                            <p class="text-gray-600 text-sm font-medium mb-1">No data available</p>
-                            <p class="text-gray-500 text-xs">There are no records to display at this time</p>
-                        </div>
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
+                    </thead>
+
+                    <tbody class="bg-white">
+                        @forelse($history->groupBy('prod_name') as $productName => $productRows)
+                            <!-- Product Name Row -->
+                            <tr class="bg-gradient-to-r from-slate-100 to-gray-100 border-t-2 border-slate-300">
+                                <td colspan="7" class="px-4 py-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-1 h-3 bg-gradient-to-b from-slate-600 to-slate-700 rounded-full"></div>
+                                        <span class="font-bold text-xs text-slate-800">{{ $productName }}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            @foreach($productRows->groupBy('inven_code') as $invenCode => $batchRows)
+                                @php
+                                    // Get batch details from first row
+                                    $firstRow = $batchRows->first();
+                                    $totalReceived = $firstRow->batch_received;
+                                    $batchRemaining = $firstRow->batch_remaining;
+                                    $isDepleted = $batchRemaining <= 0;
+                                    
+                                    // Sort by effective_from DESC (most recent first)
+                                    $sortedBatchRows = $batchRows->sortByDesc(function($row) {
+                                        return \Carbon\Carbon::parse($row->effective_from)->timestamp;
+                                    });
+                                    
+                                    $rowspan = $sortedBatchRows->count();
+                                @endphp
+                                
+                                @foreach($sortedBatchRows as $index => $h)
+                                    @php
+                                        $from = \Carbon\Carbon::parse($h->effective_from)->format('M d, Y');
+                                        $to = $h->effective_to ? \Carbon\Carbon::parse($h->effective_to)->format('M d, Y') : 'Present';
+                                        $isActive = $to === 'Present' && !$isDepleted;
+                                    @endphp
+                                    
+                                    <tr class="hover:bg-slate-50 border-b border-gray-200 {{ $isActive ? 'bg-emerald-100/60' : '' }} {{ $isDepleted ? 'bg-red-100/50' : '' }}">
+                                        
+                                        {{-- Batch Number + Stock In (first row only) --}}
+                                        @if($loop->first)
+                                            <td class="px-4 py-3 text-center align-middle border-r bg-slate-50" rowspan="{{ $rowspan }}">
+                                                <div class="flex flex-col items-center gap-1">
+                                                    <!-- Batch Number -->
+                                                    <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-mono font-semibold rounded">
+                                                        {{ $h->batch_number }}
+                                                    </span>
+                                                    <!-- Date Added -->
+                                                    <span class="text-[9px] text-gray-500">
+                                                        {{ \Carbon\Carbon::parse($h->date_added)->format('M d, Y') }}
+                                                    </span>
+                                                    <!-- Depleted Label -->
+                                                    @if($isDepleted)
+                                                        <span class="text-[9px] font-bold text-red-700 uppercase tracking-wider bg-red-100 px-1 py-0.5 rounded mt-1">
+                                                            Depleted
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-center align-middle font-semibold text-[10px] text-slate-700 border-r bg-slate-50" rowspan="{{ $rowspan }}">
+                                                {{ number_format($totalReceived) }}
+                                            </td>
+                                        @endif
+                                        
+                                        {{-- Sold --}}
+                                        <td class="px-4 py-3 text-center border-r border-gray-200">
+                                            <span class="inline-block px-2 py-0.5 rounded font-bold text-[10px] {{ $h->batch_sold_in_period > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400' }}">
+                                                {{ number_format($h->batch_sold_in_period) }}
+                                            </span>
+                                        </td>
+                                        
+                                        {{-- Damaged --}}
+                                        <td class="px-4 py-3 text-center border-r border-gray-200">
+                                            <span class="inline-block px-2 py-0.5 rounded font-bold text-[10px] {{ $h->batch_damaged_in_period > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-400' }}">
+                                                {{ number_format($h->batch_damaged_in_period) }}
+                                            </span>
+                                        </td>
+                                        
+                                        {{-- Cost Price (Original batch cost) --}}
+                                        <td class="px-4 py-3 text-center font-semibold text-[10px] text-gray-700 border-r border-gray-200">
+                                            <span class="font-mono">₱{{ number_format($h->batch_original_cost_price, 2) }}</span>
+                                        </td>
+                                        
+                                        {{-- Selling Price (for this period) --}}
+                                        <td class="px-4 py-3 text-center border-r border-gray-200">
+                                            <span class="inline-block px-2 py-0.5 bg-green-50 text-green-700 font-mono font-bold text-[10px] rounded">
+                                                ₱{{ number_format($h->old_selling_price, 2) }}
+                                            </span>
+                                        </td>
+                                        
+                                        {{-- Effective Period --}}
+                                        <td class="px-4 py-3 text-center">
+                                            <div class="flex flex-col items-center gap-1">
+                                                <div class="text-[10px] font-semibold text-slate-700">
+                                                    <span class="font-mono">{{ $from }}</span>
+                                                    <span class="text-gray-400 mx-1">→</span>
+                                                    <span class="font-mono {{ $isActive ? 'text-emerald-700' : '' }}">
+                                                        {{ $to }}
+                                                    </span>
+                                                </div>
+                                                
+                                                {{-- Show active badge only for non-depleted batches with current period --}}
+                                                @if($isActive)
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white text-[9px] font-bold rounded-full uppercase shadow-sm">
+                                                        <span class="w-1 h-1 bg-white rounded-full animate-pulse"></span>
+                                                        Active
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @endforeach
+                            
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-4 py-12 text-center bg-gradient-to-b from-gray-50 to-white">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="">
+                                            <span class="material-symbols-rounded-semibig text-gray-500">inventory_2</span>
+                                        </div>
+                                        <p class="text-gray-600 text-sm font-medium mb-1">No data available</p>
+                                        <p class="text-gray-500 text-xs">There are no records to display at this time</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

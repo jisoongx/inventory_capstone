@@ -34,6 +34,8 @@ class MonthlyNetProfitGraph extends Component
 
     public function monthlyNetProfit() {
 
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+
         $owner = Auth::guard('owner')->user();
         $owner_id = $owner->owner_id;
 
@@ -101,7 +103,8 @@ class MonthlyNetProfitGraph extends Component
                 FROM damaged_items d
                 Join inventory i on i.inven_code = d.inven_code
                 JOIN products p ON i.prod_code = p.prod_code
-                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ? and
+                    (d.set_to_return_to_supplier is null or d.set_to_return_to_supplier = 'Damaged')
                 GROUP BY MONTH(d.damaged_date)
             ) l ON m.month = l.month
             ORDER BY m.month
@@ -110,7 +113,7 @@ class MonthlyNetProfitGraph extends Component
         $GraphSales = collect(DB::select("
             SELECT 
                 m.month,
-                IFNULL(s.monthly_sales, 0) AS monthly_sales
+                IFNULL(s.monthSales, 0) AS monthly_sales
             FROM (
                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
@@ -118,26 +121,37 @@ class MonthlyNetProfitGraph extends Component
             ) m
             LEFT JOIN (
                 SELECT 
-                    MONTH(r.receipt_date) AS month,
-                    SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )) AS monthly_sales
-                FROM receipt r
-                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
-                JOIN products p ON p.prod_code = ri.prod_code
-                WHERE r.owner_id = ? 
-                AND p.owner_id = r.owner_id
-                AND YEAR(r.receipt_date) = ?
-                GROUP BY MONTH(r.receipt_date)
+                    MONTH(x.receipt_date) AS month,
+                    SUM(x.item_sales - x.discount_amount) AS monthSales
+                FROM (
+                    SELECT 
+                        r.receipt_id,
+                        r.receipt_date,
+                        r.discount_amount,
+                        SUM(
+                            ri.item_quantity * (
+                                COALESCE(
+                                    (SELECT ph.old_selling_price
+                                    FROM pricing_history ph
+                                    WHERE ph.prod_code = ri.prod_code
+                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                    ORDER BY ph.effective_from DESC
+                                    LIMIT 1),
+                                    p.selling_price
+                                )
+                            ) - ri.item_discount_amount
+                        ) AS item_sales
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE r.owner_id = ?
+                    AND YEAR(r.receipt_date) = ?
+                    GROUP BY r.receipt_id
+                ) AS x
+                GROUP BY MONTH(x.receipt_date)
             ) s ON m.month = s.month
             ORDER BY m.month
-        ", [$owner_id, $yearToUse]))->pluck('monthly_sales')->toArray();
+        ", [$owner_id, $latestYear]))->pluck('monthly_sales')->toArray();
 
         foreach ($allMonths as $month) {
             $Gsale     = $GraphSales[$month]    ?? null;
@@ -156,6 +170,8 @@ class MonthlyNetProfitGraph extends Component
     }
 
     public function fixMonthlyProfit() {
+
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
 
         $owner = Auth::guard('owner')->user();
         $owner_id = $owner->owner_id;
@@ -213,7 +229,8 @@ class MonthlyNetProfitGraph extends Component
                 FROM damaged_items d
                 Join inventory i on i.inven_code = d.inven_code
                 JOIN products p ON i.prod_code = p.prod_code
-                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ? and
+                    (d.set_to_return_to_supplier is null or d.set_to_return_to_supplier = 'Damaged')
                 GROUP BY MONTH(d.damaged_date)
             ) l ON m.month = l.month
             ORDER BY m.month
@@ -222,7 +239,7 @@ class MonthlyNetProfitGraph extends Component
         $GraphSales = collect(DB::select("
             SELECT 
                 m.month,
-                IFNULL(s.monthly_sales, 0) AS monthly_sales
+                IFNULL(s.monthSales, 0) AS monthly_sales
             FROM (
                 SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
                 SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
@@ -230,28 +247,38 @@ class MonthlyNetProfitGraph extends Component
             ) m
             LEFT JOIN (
                 SELECT 
-                    MONTH(r.receipt_date) AS month,
-                    SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )) AS monthly_sales
-                FROM 
-                    receipt r
-                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
-                JOIN products p ON p.prod_code = ri.prod_code
-                WHERE 
-                    r.owner_id = ? AND
-                    p.owner_id = r.owner_id AND
-                    YEAR(r.receipt_date) = ?
-                GROUP BY MONTH(r.receipt_date)
+                    MONTH(x.receipt_date) AS month,
+                    SUM(x.item_sales - x.discount_amount) AS monthSales
+                FROM (
+                    SELECT 
+                        r.receipt_id,
+                        r.receipt_date,
+                        r.discount_amount,
+                        SUM(
+                            ri.item_quantity * (
+                                COALESCE(
+                                    (SELECT ph.old_selling_price
+                                    FROM pricing_history ph
+                                    WHERE ph.prod_code = ri.prod_code
+                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                    ORDER BY ph.effective_from DESC
+                                    LIMIT 1),
+                                    p.selling_price
+                                )
+                            ) - ri.item_discount_amount
+                        ) AS item_sales
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE r.owner_id = ?
+                    AND YEAR(r.receipt_date) = ?
+                    GROUP BY r.receipt_id
+                ) AS x
+                GROUP BY MONTH(x.receipt_date)
             ) s ON m.month = s.month
             ORDER BY m.month
         ", [$owner_id, $latestYear]))->pluck('monthly_sales')->toArray();
+
 
         foreach ($allMonths as $month) {
             $Gsale     = $GraphSales[$month]    ?? null;

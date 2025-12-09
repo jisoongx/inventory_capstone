@@ -21,10 +21,10 @@ class ExpenseRecord extends Component
     public $amountError;
     public $fileError;
 
-    public $add_expense_descri; 
-    public $add_expense_category; 
-    public $add_expense_amount; 
-    public $add_expense_file;
+    public $add_expense_descri = ''; 
+    public $add_expense_category = ''; 
+    public $add_expense_amount = ''; 
+    public $add_expense_file = null;
 
     public $addModal = false;
 
@@ -42,7 +42,7 @@ class ExpenseRecord extends Component
 
     public function mount() {
         if (!Auth::guard('owner')->check()) {
-            return redirect()->route('login')->with('error', 'Please login first.');
+            abort(403, 'Unauthorized access.');
         }
 
         // $this->expirationTracker();
@@ -323,8 +323,21 @@ class ExpenseRecord extends Component
         $this->addModal = true;
     }
 
-    public function closeModal() {
+     public function closeModal() {
         $this->addModal = false;
+    }
+
+    public function cancelModal() {
+        
+        $this->addModal = false;
+
+        $this->add_expense_descri = '';
+        $this->add_expense_category = '';
+        $this->add_expense_amount = '';
+        $this->add_expense_file = '';
+
+        $this->reset();
+
     }
 
 
@@ -383,6 +396,10 @@ class ExpenseRecord extends Component
 
     }
 
+
+
+
+
     public function viewAttachment($expense_id) {
 
         $fileView = collect(DB::select(
@@ -407,12 +424,6 @@ class ExpenseRecord extends Component
             'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
         ]);
     }
-
-
-
-
-
-
 
     public function editExpense($expense_id) {
         if (!Auth::guard('owner')->check()) {

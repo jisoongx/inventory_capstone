@@ -60,63 +60,106 @@ class DashboardGraphs extends Component
         $latestYear = now()->year;
         $this->selectedYear = now()->year;
 
-        $this->dailySales = collect(DB::select('
-            select IFNULL(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) as dailySales
-            from receipt r
-            join receipt_item ri on r.receipt_id = ri.receipt_id
-            join products p on ri.prod_code = p.prod_code
-            where date(receipt_date) = ?
-            and r.owner_id = ?
-        ', [$this->day, $owner_id]))->first();
+        $this->dailySales = collect(DB::select("
+            SELECT 
+                MONTH(x.receipt_date) AS month,
+                COALESCE(SUM(x.item_sales) - SUM(x.discount_amount), 0) AS dailySales
+            FROM (
+                SELECT 
+                    r.receipt_id,
+                    r.receipt_date,
+                    r.discount_amount,
+                    COALESCE(SUM(
+                        ri.item_quantity * (
+                            COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            ) 
+                        ) - ri.item_discount_amount
+                    ), 0) AS item_sales
+
+                FROM receipt r
+                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                JOIN products p ON p.prod_code = ri.prod_code
+                WHERE 
+                    DATE(r.receipt_date) = ?
+                    and r.owner_id = ? 
+                    AND p.owner_id = r.owner_id
+                GROUP BY r.receipt_id
+            ) AS x
+            GROUP BY DATE(x.receipt_date)
+        ", [$this->day, $owner_id]))->first() ?? (object)['dailySales' => 0, 'month' => null];
 
         $this->weeklySales = collect(DB::select('
-            SELECT IFNULL(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) AS weeklySales
-            FROM receipt r
-            JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
-            JOIN products p ON ri.prod_code = p.prod_code
-            WHERE r.receipt_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
-            AND r.owner_id = ?
-        ', [$owner_id]))->first();
+            SELECT 
+                MONTH(x.receipt_date) AS month,
+                COALESCE(SUM(x.item_sales) - SUM(x.discount_amount), 0) AS weeklySales
+            FROM (
+                SELECT 
+                    r.receipt_id,
+                    r.receipt_date,
+                    r.discount_amount,
+                    COALESCE(SUM(
+                        ri.item_quantity * (
+                            COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            ) 
+                        ) - ri.item_discount_amount
+                    ), 0) AS item_sales
 
+                FROM receipt r
+                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                JOIN products p ON p.prod_code = ri.prod_code
+                WHERE r.receipt_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
+                AND r.owner_id = ?
+            ) AS x
+        ', [$owner_id]))->first() ?? (object)['weeklySales' => 0, 'month' => null];
+        
         $this->monthSales = collect(DB::select('
             SELECT 
-                IFNULL(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) AS monthSales
-            FROM receipt r
-            JOIN receipt_item ri ON r.receipt_id = ri.receipt_id
-            JOIN products p ON ri.prod_code = p.prod_code
-            WHERE MONTH(receipt_date) = ?
-            AND r.owner_id = ?
-            AND YEAR(receipt_date) = ?
+                MONTH(x.receipt_date) AS month,
+                SUM(x.item_sales) - SUM(x.discount_amount) AS monthSales
+            FROM (
+                SELECT 
+                    r.receipt_id,
+                    r.receipt_date,
+                    r.discount_amount,
+                    SUM(
+                        ri.item_quantity * (
+                            COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            ) 
+                        ) - ri.item_discount_amount
+                    ) AS item_sales
+
+                FROM receipt r
+                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                JOIN products p ON p.prod_code = ri.prod_code
+                WHERE MONTH(receipt_date) = ?
+                    AND r.owner_id = ?
+                    AND YEAR(receipt_date) = ?
+                GROUP BY r.receipt_id
+            ) AS x
         ', [$currentMonth, $owner_id, $latestYear]))->first();
 
     }
-
-
-
 
     public function salesByCategory() {
 
@@ -136,12 +179,25 @@ class DashboardGraphs extends Component
         $productCategory = collect(DB::select("
             SELECT 
                 c.category,
-            COALESCE(
-                SUM(
-                    CASE 
-                        WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
-                        THEN 
-                            ri.item_quantity * COALESCE(
+                SUM(x.category_sales) - SUM(x.discount_amount) AS total_amount, 
+                c.category_id
+            FROM categories c
+            LEFT JOIN (
+                SELECT 
+                    p.category_id,
+                    x.receipt_id,
+                    x.discount_amount,
+                    SUM(x.item_sales) AS category_sales
+                FROM (
+                    SELECT 
+                        r.receipt_id,
+                        r.discount_amount,
+                        ri.prod_code,
+                        ri.item_quantity,
+                        ri.item_discount_amount,
+                        r.receipt_date,
+                        ri.item_quantity * (
+                            COALESCE(
                                 (SELECT ph.old_selling_price
                                 FROM pricing_history ph
                                 WHERE ph.prod_code = ri.prod_code
@@ -149,34 +205,51 @@ class DashboardGraphs extends Component
                                 ORDER BY ph.effective_from DESC
                                 LIMIT 1),
                                 p.selling_price
-                            )
-                        ELSE 0
-                    END
-                ), 0
-            ) AS total_amount,
-            c.category_id
-            FROM categories c
-            LEFT JOIN products p ON c.category_id = p.category_id
-            LEFT JOIN receipt_item ri ON p.prod_code = ri.prod_code
-            LEFT JOIN receipt r ON ri.receipt_id = r.receipt_id
+                            ) 
+                        ) - COALESCE(ri.item_discount_amount, 0) AS item_sales
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE 
+                        r.owner_id = ? 
+                        AND p.owner_id = r.owner_id
+                        AND YEAR(r.receipt_date) = ?
+                ) AS x
+                JOIN products p ON p.prod_code = x.prod_code
+                GROUP BY p.category_id, x.receipt_id
+            ) AS x ON c.category_id = x.category_id
             WHERE c.owner_id = ?
             GROUP BY c.category_id, c.category
             ORDER BY c.category_id;
         ", [
-            $latestYear, $owner_id, $owner_id
+            $owner_id, $latestYear,
+            $owner_id
         ]))->toArray();
         $this->categories = array_map(fn($row) => $row->category, $productCategory);
         $this->products = array_map(fn($row) => (float) $row->total_amount , $productCategory);
 
         $productCategoryPrev = collect(DB::select("
-            SELECT
-            c.category,
-            COALESCE(
-                SUM(
-                    CASE 
-                        WHEN YEAR(r.receipt_date) = ? AND r.owner_id = ?
-                        THEN 
-                            ri.item_quantity * COALESCE(
+            SELECT 
+                c.category,
+                SUM(x.category_sales) - SUM(x.discount_amount) AS total_amount, 
+                c.category_id
+            FROM categories c
+            LEFT JOIN (
+                SELECT 
+                    p.category_id,
+                    x.discount_amount,
+                    x.receipt_id,
+                    SUM(x.item_sales) AS category_sales
+                FROM (
+                    SELECT 
+                        r.receipt_id,
+                        r.discount_amount,
+                        ri.prod_code,
+                        ri.item_quantity,
+                        ri.item_discount_amount,
+                        r.receipt_date,
+                        ri.item_quantity * (
+                            COALESCE(
                                 (SELECT ph.old_selling_price
                                 FROM pricing_history ph
                                 WHERE ph.prod_code = ri.prod_code
@@ -184,16 +257,19 @@ class DashboardGraphs extends Component
                                 ORDER BY ph.effective_from DESC
                                 LIMIT 1),
                                 p.selling_price
-                            )
-                        ELSE 0
-                    END
-                ), 0
-            ) AS total_amount,
-            c.category_id
-            FROM categories c
-            LEFT JOIN products p ON c.category_id = p.category_id
-            LEFT JOIN receipt_item ri ON p.prod_code = ri.prod_code
-            LEFT JOIN receipt r ON ri.receipt_id = r.receipt_id
+                            ) 
+                        ) - COALESCE(ri.item_discount_amount, 0) AS item_sales
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE 
+                        r.owner_id = ? 
+                        AND p.owner_id = r.owner_id
+                        AND YEAR(r.receipt_date) = ?
+                ) AS x
+                JOIN products p ON p.prod_code = x.prod_code
+                GROUP BY p.category_id, x.receipt_id
+            ) AS x ON c.category_id = x.category_id
             WHERE c.owner_id = ?
             GROUP BY c.category_id, c.category
             ORDER BY c.category_id;
@@ -205,30 +281,47 @@ class DashboardGraphs extends Component
         $productCategoryAve = collect(DB::select("
             SELECT 
                 c.category,
-                COALESCE(ROUND(AVG(t.year_total), 2), 0) AS avg_total_sales
+                SUM(x.category_sales) - SUM(x.discount_amount) AS avg_total_sales, 
+                c.category_id
             FROM categories c
             LEFT JOIN (
-                SELECT
+                SELECT 
                     p.category_id,
-                    YEAR(r.receipt_date) AS year,
-                    SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )) AS year_total
-                FROM products p
-                JOIN receipt_item ri ON p.prod_code = ri.prod_code
-                JOIN receipt r ON ri.receipt_id = r.receipt_id
-                WHERE r.owner_id = ?
-                GROUP BY p.category_id, YEAR(r.receipt_date)
-            ) AS t ON c.category_id = t.category_id
+                    x.receipt_id,
+                    x.discount_amount,
+                    SUM(x.item_sales) AS category_sales
+                FROM (
+                    SELECT 
+                        r.receipt_id,
+                        r.discount_amount,
+                        ri.prod_code,
+                        ri.item_quantity,
+                        ri.item_discount_amount,
+                        r.receipt_date,
+                        ri.item_quantity * (
+                            COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            ) 
+                        ) - COALESCE(ri.item_discount_amount, 0) AS item_sales
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE 
+                        r.owner_id = ? 
+                        AND p.owner_id = r.owner_id
+                ) AS x
+                JOIN products p ON p.prod_code = x.prod_code
+                GROUP BY p.category_id, x.receipt_id
+            ) AS x ON c.category_id = x.category_id
             WHERE c.owner_id = ?
             GROUP BY c.category_id, c.category
-            ORDER BY c.category_id
+            ORDER BY c.category_id;
         ", [$owner_id, $owner_id]))->toArray();
         $this->productsAve = array_map(fn($row) => (float) $row->avg_total_sales, $productCategoryAve);
 
@@ -266,7 +359,8 @@ class DashboardGraphs extends Component
                 FROM damaged_items d
                 Join inventory i on i.inven_code = d.inven_code
                 JOIN products p ON i.prod_code = p.prod_code
-                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ? and
+                    (d.set_to_return_to_supplier is null or d.set_to_return_to_supplier = 'Damaged')
                 GROUP BY MONTH(d.damaged_date)
             ) l ON m.month = l.month
             ORDER BY m.month
@@ -274,37 +368,41 @@ class DashboardGraphs extends Component
      
         $this->sales = collect(DB::select("
             SELECT 
-                m.month,
-                IFNULL(s.monthly_sales, 0) AS monthly_sales
+                MONTH(x.receipt_date) AS month,
+                SUM(x.item_sales) - SUM(x.discount_amount) AS monthly_sales
             FROM (
-                SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
-                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
-                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
-            ) m
-            LEFT JOIN (
                 SELECT 
-                    MONTH(r.receipt_date) AS month,
-                    SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )) AS monthly_sales
-                FROM 
-                    receipt r
+                    r.receipt_id,
+                    r.receipt_date,
+                    r.discount_amount,
+                    SUM(
+                        ri.item_quantity * (
+                            COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            ) 
+                        ) - ri.item_discount_amount
+                    ) AS item_sales
+
+                FROM receipt r
                 JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
                 JOIN products p ON p.prod_code = ri.prod_code
+
                 WHERE 
-                    r.owner_id = ? AND
-                    p.owner_id = r.owner_id AND
-                    YEAR(r.receipt_date) = ?
-                GROUP BY MONTH(r.receipt_date)
-            ) s ON m.month = s.month
-            ORDER BY m.month
-        ", [$owner_id, $latestYear]))->pluck('monthly_sales')->slice(0, $currentMonth)->toArray();
+                    r.owner_id = ? 
+                    AND p.owner_id = r.owner_id
+                    AND YEAR(r.receipt_date) = ?
+                    AND MONTH(r.receipt_date) = ?
+                GROUP BY r.receipt_id
+            ) AS x
+            GROUP BY MONTH(x.receipt_date)
+        ", [$owner_id, $latestYear, $currentMonth]))->pluck('monthly_sales')->slice(0, $currentMonth)->toArray();
+
 
         $latestSales = end($this->sales) ?: 0;
         $latestLoss = end($this->losses) ?: 0;

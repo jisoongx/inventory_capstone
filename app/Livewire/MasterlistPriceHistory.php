@@ -16,6 +16,11 @@ class MasterlistPriceHistory extends Component
 
     public $searchWord;
     
+    public function mount() {
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
+    }
 
     public function updateSearch() {
         $this->resetPage();
@@ -39,17 +44,35 @@ class MasterlistPriceHistory extends Component
         $search = '%' . $this->searchWord . '%';
 
         $this->history = collect(DB::select("
-            SELECT
+            SELECT  
                 ph.price_history_id,
                 ph.prod_code,
-                ph.old_cost_price,
+                
+                -- Get the original cost price when batch was added to inventory
+                COALESCE(
+                    -- Find the cost price that was active when the batch was added
+                    (
+                        SELECT ph2.old_cost_price
+                        FROM pricing_history ph2 
+                        WHERE ph2.prod_code = i.prod_code 
+                        AND ph2.effective_from <= i.date_added
+                        AND (ph2.effective_to IS NULL OR ph2.effective_to > i.date_added)
+                        ORDER BY ph2.effective_from DESC 
+                        LIMIT 1
+                    ),
+                    -- Fallback to current cost price if no history found
+                    p.cost_price
+                ) AS batch_original_cost_price,
+                
                 ph.old_selling_price,
                 ph.effective_from,
                 ph.effective_to,
 
                 i.inven_code,
                 i.batch_number,
+                i.date_added, 
                 p.name as prod_name,
+                i.stock AS batch_remaining,
 
                 (i.stock
                     + COALESCE((
@@ -83,20 +106,6 @@ class MasterlistPriceHistory extends Component
                 ),0) AS batch_damaged_in_period,
 
                 (
-                    i.stock
-                    - COALESCE((
-                        SELECT SUM(ri2.item_quantity)
-                        FROM receipt_item ri2
-                        WHERE ri2.inven_code = i.inven_code
-                    ), 0)
-                    - COALESCE((
-                        SELECT SUM(d2.damaged_quantity)
-                        FROM damaged_items d2
-                        WHERE d2.inven_code = i.inven_code
-                    ), 0)
-                ) AS batch_remaining,
-
-                (
                     COALESCE((
                         SELECT SUM(ri.item_quantity)
                         FROM receipt_item ri
@@ -111,13 +120,28 @@ class MasterlistPriceHistory extends Component
             FROM pricing_history ph
             LEFT JOIN inventory i 
                 ON i.prod_code = ph.prod_code
-            join products p
-                on p.prod_code = i.prod_code
+            JOIN products p
+                ON p.prod_code = i.prod_code
             WHERE i.owner_id = ?
-                and p.name like ?
+                AND p.name LIKE ?
+                -- Only include price history periods that are AFTER the batch was added
+                AND (
+                    -- Price period starts on or after batch was added
+                    ph.effective_from >= i.date_added
+                    OR 
+                    -- Price period was active when batch was added (must end AFTER batch was added)
+                    (
+                        ph.effective_from < i.date_added 
+                        AND (ph.effective_to IS NULL OR ph.effective_to > i.date_added)
+                    )
+                )
             ORDER BY p.name ASC, i.inven_code DESC,
                 ph.effective_from DESC
         ", [$owner_id, $search]));
+    }
+
+    public function pollList() {
+        $this->historyList();
     }
 
     public function render()

@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Receipt;
 use Illuminate\Support\Facades\Response;
 
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Row;
+
 class ReportSalesAndPerformance extends Component
 {
     public $sbc; 
@@ -15,7 +21,7 @@ class ReportSalesAndPerformance extends Component
     public $currentYear; 
     public $g;
     public $category;
-    public $monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    public $monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     public $years;
     public $selectedYearSingle; 
     public $selectedYears;
@@ -56,12 +62,24 @@ class ReportSalesAndPerformance extends Component
     public $globalReturnHistory = [];
     public $returnDateFrom;
     public $returnDateTo;
-    public $returnSelectedCategory = 'all';    
+    public $returnSelectedCategory = 'all';  
+    
+    public $lossRep;
+    public $lossSelectedMonths = null;
+    public $lossSelectedYears  = null;
+    public $selectedLossType;
+    public $showSuccess = false;
+    public $lossYears;
 
     // Listener for when return is processed
     protected $listeners = ['returnProcessed' => 'handleReturnProcessed'];
 
     public function mount() {
+        
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
+
         $this->currentMonth = now()->month;
         $this->selectedMonth = now()->month;
         $this->selectedYear = now()->year;
@@ -814,23 +832,36 @@ public function closeAllReceiptModals()
                             LIMIT 1),
                             p.selling_price
                         )), 0) AS total_sales,
-                COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_cost_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND ri.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.cost_price
-                        )), 0) AS cogs,
 
-                CASE
-                    WHEN COALESCE(SUM(p.selling_price * ri.item_quantity), 0) = 0 THEN 0
-                    ELSE (
-                        (SUM(p.selling_price * ri.item_quantity) - SUM(p.cost_price * ri.item_quantity))
-                        / SUM(p.selling_price * ri.item_quantity)
-                    ) * 100
-                END AS gross_margin,
+               COALESCE(SUM(
+                    ri.item_quantity * COALESCE(
+                        (
+                            SELECT ph.old_cost_price
+                            FROM pricing_history ph
+                            JOIN inventory i ON i.prod_code = ph.prod_code
+                            join receipt_item ri on ri.prod_code = p.prod_code
+                            WHERE i.inven_code = ri.inven_code
+                            AND ph.effective_from <= i.date_added
+                            AND (ph.effective_to IS NULL OR ph.effective_to >= i.date_added)
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1
+                        ),
+                        p.cost_price
+                    )
+                ), 0) AS cogs,
+
+                COALESCE((
+                    SELECT SUM(d.damaged_quantity)
+                    FROM damaged_items d
+                    JOIN inventory i3 ON i3.inven_code = d.inven_code
+                    JOIN products p2 ON p2.prod_code = i3.prod_code
+                    WHERE d.owner_id = ?
+                        AND YEAR(d.damaged_date) IN ($yearPlaceholders)
+                        AND MONTH(d.damaged_date) IN ($monthPlaceholders)
+                    AND p2.category_id = c.category_id   -- correlate to current category
+                    AND (d.set_to_return_to_supplier IN ('Damaged') OR d.set_to_return_to_supplier IS NULL)
+                ), 0) AS damaged_stock,
+
 
                 COALESCE((
                     SELECT p2.name
@@ -838,9 +869,9 @@ public function closeAllReceiptModals()
                     JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
                     JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
                     WHERE p2.category_id = c.category_id
-                    AND r2.owner_id = ?
-                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
-                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
+                        AND r2.owner_id = ?
+                        AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
+                        AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
                     GROUP BY p2.prod_code, p2.name
                     ORDER BY SUM(ri2.item_quantity) DESC
                     LIMIT 1
@@ -881,6 +912,7 @@ public function closeAllReceiptModals()
                 JOIN categories c2 ON p2.category_id = c2.category_id
                 WHERE p2.owner_id = ? 
                     and p2.prod_status = 'active'
+                    and inv.is_expired is null
                 GROUP BY c2.category_id
             ) i ON i.category_id = p.category_id
             LEFT JOIN (
@@ -900,11 +932,53 @@ public function closeAllReceiptModals()
         $bindings = array_merge(
             [$owner_id], $years, $months,
             [$owner_id], $years, $months,
+            [$owner_id], $years, $months,
             [$owner_id, $owner_id, $owner_id], $years, $months,
             [$owner_id]
         );
 
         $this->sbc = collect(DB::select($sql, $bindings));
+
+        $this->sbc = $this->sbc->map(function ($row) {
+
+            if ($row->total_sales > 0) {
+                $row->gross_margin = round((($row->total_sales - $row->cogs) / $row->total_sales) * 100, 1);
+                
+                if ($row->gross_margin > 35) {
+                    $profitability = 'High profitability';
+                } elseif ($row->gross_margin > 25) {
+                    $profitability = 'Medium profitability';
+                } else {
+                    $profitability = 'Low profitability';
+                }
+
+                $extra = [];
+                if ($row->unit_sold > 0 && $row->velocity_ratio > 1) {
+                    $extra[] = "Fast-moving category, consider promoting top sellers.";
+                } elseif ($row->unit_sold > 0) {
+                    $extra[] = "Steady sales, monitor pricing and margins.";
+                } else {
+                    $extra[] = "Slow sales, consider promotions or bundles.";
+                }
+
+                if ($row->stock_left < 5) {
+                    $extra[] = "Low stock, prioritize restocking high-demand items.";
+                }
+
+                if ($row->damaged_stock > 0) {
+                    $extra[] = "Review handling or supplier issues due to damaged stock.";
+                }
+
+                $row->insight = $profitability . ' : ' . implode(' ', $extra);
+
+            } else {
+                $row->gross_margin = 0;
+                $row->insight = "No sales in this period.";
+            }
+
+            return $row;
+        });
+
 
         if (! empty($this->searchWord)) {
             $search = strtolower($this->searchWord);
@@ -915,6 +989,11 @@ public function closeAllReceiptModals()
     }
 
     
+
+
+
+
+
     public function prodPerformance() {
         
         DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')"); 
@@ -935,7 +1014,36 @@ public function closeAllReceiptModals()
                             LIMIT 1),
                             p.selling_price
                         )), 0) AS total_sales,
-                COALESCE(SUM(p.cost_price * ri.item_quantity), 0) AS cogs,
+
+                COALESCE(SUM(
+                    ri.item_quantity * COALESCE(
+                        (
+                            SELECT ph.old_cost_price
+                            FROM pricing_history ph
+                            JOIN inventory i ON i.prod_code = ph.prod_code
+                            join receipt_item ri on ri.prod_code = p.prod_code
+                            WHERE i.inven_code = ri.inven_code
+                            AND ph.effective_from <= i.date_added
+                            AND (ph.effective_to IS NULL OR ph.effective_to >= i.date_added)
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1
+                        ),
+                        p.cost_price
+                    )
+                ), 0) AS cogs,
+
+                COALESCE((
+                    SELECT SUM(d.damaged_quantity)
+                    FROM damaged_items d
+                    JOIN inventory i3 ON i3.inven_code = d.inven_code
+                    JOIN products p2 ON p2.prod_code = i3.prod_code
+                    WHERE d.owner_id = ?
+                        AND YEAR(d.damaged_date) IN (?)
+                        AND MONTH(d.damaged_date) IN (?)
+                    AND p2.category_id = c.category_id   -- correlate to current category
+                    AND (d.set_to_return_to_supplier IN ('Damaged') OR d.set_to_return_to_supplier IS NULL)
+                ), 0) AS damaged_stock,
+
                 (COALESCE(SUM(ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
@@ -978,127 +1086,7 @@ public function closeAllReceiptModals()
                 ) AS contribution_percent,
 
                 COALESCE(inv.total_stock, 0) AS remaining_stocks,
-                COALESCE(DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1, 0) AS days_active,
-
-                CASE 
-                    WHEN COALESCE(inv.total_stock, 0) = 0 
-                        AND COALESCE(SUM(ri.item_quantity), 0) > 0
-                        THEN 'Out of stock.  Reorder needed.'
-                    
-                    WHEN COALESCE(inv.total_stock, 0) = 0
-                        THEN 'Out of stock with no recent sales.'
-                    
-                    WHEN COALESCE(inv.total_stock, 0) / NULLIF(
-                            CASE 
-                                WHEN DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1 > 0 
-                                THEN COALESCE(SUM(ri.item_quantity), 0) / (DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1)
-                                ELSE 0 
-                            END, 0
-                        ) < 3
-                        AND COALESCE(SUM(ri.item_quantity), 0) > 0
-                        THEN 'Low stock. Reorder soon.'
-                    
-                    WHEN COALESCE(SUM(ri.item_quantity), 0) = 0 
-                        AND COALESCE(inv.total_stock, 0) > 0
-                        THEN 'No sales this period.'
-                    
-                    WHEN COALESCE(SUM(ri.item_quantity), 0) = 0
-                        THEN 'No activity.'
-                    
-                    WHEN (COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0)) <= 0 
-                        THEN 'Unprofitable.  Losing money.'
-                    
-                    WHEN ((COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
-                        / NULLIF(COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0), 0)) * 100 < 10
-                        THEN 'Low margin. Review pricing.'
-                    
-                    WHEN ((COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
-                        / NULLIF(COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0), 0)) * 100 >= 20
-                        AND COALESCE(SUM(ri.item_quantity), 0) >= 10
-                        THEN 'Performing well.'
-                    
-                    WHEN ((COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
-                        / NULLIF(COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0), 0)) * 100 >= 20
-                        THEN 'Good margin, low volume.'
-                    
-                    WHEN ((COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
-                        / NULLIF(COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0), 0)) * 100 >= 10
-                        THEN 'Moderate performance.'
-                    
-                    ELSE 'Needs attention.'
-                END AS insight
+                COALESCE(DATEDIFF(MAX(r.receipt_date), MIN(r.receipt_date)) + 1, 0) AS days_active
 
             FROM products AS p
             LEFT JOIN (
@@ -1133,7 +1121,109 @@ public function closeAllReceiptModals()
             WHERE p.owner_id = ? 
                 and p.prod_status = 'active'
             GROUP BY p.prod_code, p.name, c.category, p.owner_id, c.category_id, total.total_sales_all, inv.total_stock
-        ", [$owner_id, $month, $latestYear, $month, $latestYear, $owner_id]));
+        ", [$owner_id, $latestYear, $month, $owner_id, $month, $latestYear, $month, $latestYear, $owner_id]));
+
+        $perf = $perf->map(function ($row) {
+
+            // ------------------------------------
+            // PROFIT MARGIN COMPUTATION
+            // ------------------------------------
+            $row->profit_margin_percent = $row->profit_margin_percent ?? (
+                $row->total_sales > 0
+                    ? (($row->total_sales - $row->cogs) / $row->total_sales) * 100
+                    : 0
+            );
+
+            $insights = [];
+
+            $stock   = $row->remaining_stocks ?? 0;
+            $sold    = $row->unit_sold ?? 0;
+            $damaged = $row->damaged_stock ?? 0;
+            $days    = max(1, $row->days_active ?? 1);
+
+            // ------------------------------------
+            // DAMAGE / STOCK-OUT ANALYSIS
+            // ------------------------------------
+            if ($stock == 0 && $damaged > 0 && $sold == 0) {
+
+                // Stock wiped out by damage only
+                $insights[] = "Stock depleted entirely due to damaged or expired items.";
+
+            } elseif ($stock == 0 && $damaged > 0 && $sold > 0) {
+
+                // Mixed stock‐out (Bangus case)
+                if ($damaged > $sold) {
+                    $insights[] = "Stock depleted primarily due to damaged or expired items, with limited customer sales.";
+                } else {
+                    $insights[] = "Stock depleted through a combination of sales and damaged items.";
+                }
+
+                $insights[] = "Out of stock. Reorder needed.";
+
+            } elseif ($stock == 0 && $sold > 0) {
+
+                // Normal sales-driven stock out
+                $insights[] = "Out of stock. Reorder needed.";
+
+            } elseif ($stock == 0) {
+
+                // No sales and no damage (stale product / tracking issue)
+                $insights[] = "Out of stock with no recent sales.";
+
+            } else {
+
+                // --------------------------------
+                // STOCK VELOCITY CHECK
+                // --------------------------------
+                $dailySales = $sold / $days;
+
+                if ($dailySales > 0 && ($stock / max(1, $dailySales)) < 3) {
+                    $insights[] = "Low stock. Reorder soon.";
+                }
+
+                if ($sold == 0) {
+                    $insights[] = $stock > 0
+                        ? "No sales this period."
+                        : "No activity.";
+                }
+            }
+
+            // ------------------------------------
+            // PROFITABILITY PERFORMANCE
+            // ------------------------------------
+            if ($row->profit <= 0) {
+
+                $insights[] = "Unprofitable. Losing money.";
+
+            } elseif ($row->profit_margin_percent < 10) {
+
+                $insights[] = "Low margin. Review pricing.";
+
+            } elseif ($row->profit_margin_percent >= 20 && $sold >= 10) {
+
+                $insights[] = "Performing well.";
+
+            } elseif ($row->profit_margin_percent >= 20) {
+
+                $insights[] = "Good margin, low volume.";
+
+            } elseif ($row->profit_margin_percent >= 10) {
+
+                $insights[] = "Moderate performance.";
+
+            } else {
+
+                $insights[] = "Needs attention.";
+            }
+
+            // ------------------------------------
+            // FINAL OUTPUT
+            // ------------------------------------
+            $row->insight = implode(' ', array_unique($insights));
+
+            return $row;
+        });
+
 
         if (!empty($this->selectedCategory) && $this->selectedCategory !== 'all') {
             $perf = $perf->where('category_id', (int) $this->selectedCategory);
@@ -1146,10 +1236,223 @@ public function closeAllReceiptModals()
         $this->perf = $perf->values();
     }
 
+
+
+
+
+
+
+
+    
+    public function showAll()
+    {
+        if (is_null($this->lossSelectedMonths) && is_null($this->lossSelectedYears)) {
+            
+            $this->lossSelectedMonths = now()->format('m');
+            $this->lossSelectedYears = now()->format('Y');
+            $this->selectedLossType = null;
+        } else {
+            
+            $this->lossSelectedMonths = null;
+            $this->lossSelectedYears = null;
+            $this->selectedLossType = null;
+        }
+
+        $this->loss(); 
+    }
+
+
+    public function updatedLossSelectedMonths() {
+        $this->loss();
+    }
+
+    public function updatedLossSelectedYears() {
+        $this->loss();
+    }
+
+    public function updatedSelectedLossType() {
+        $this->loss();
+    }
+
+    public function loss() {
+        $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        $this->lossYears = collect(DB::select("
+            SELECT DISTINCT(YEAR(receipt_date)) AS year
+            FROM receipt
+            WHERE owner_id = ?
+            ORDER BY year DESC", 
+            [$owner_id]
+        ))->pluck('year');
+
+        $whereClause = "WHERE p.owner_id = ? AND (di.set_to_return_to_supplier IS NULL OR di.set_to_return_to_supplier = ?)";
+        $bindings = [$owner_id, 'Damaged'];
+
+        if (!is_null($this->lossSelectedMonths)) {
+            $whereClause .= " AND MONTH(di.damaged_date) = ?";
+            $bindings[] = $this->lossSelectedMonths;
+        }
+
+        if (!is_null($this->lossSelectedYears)) {
+            $whereClause .= " AND YEAR(di.damaged_date) = ?";
+            $bindings[] = $this->lossSelectedYears;
+        }
+
+        if (!empty($this->selectedLossType)) {
+            $whereClause .= " AND di.damaged_type = ?";
+            $bindings[] = $this->selectedLossType;
+        }
+
+        // Convert stdClass objects to arrays
+        $this->lossRep = collect(DB::select("
+            SELECT 
+                di.damaged_id,
+                di.damaged_date AS date_reported, 
+                di.damaged_type AS type, 
+                di.damaged_quantity AS qty,
+                di.damaged_reason AS remarks,
+                p.name AS prod_name, 
+                c.category AS cat_name,
+                p.selling_price AS unit_cost,
+                (p.selling_price * di.damaged_quantity) AS total_loss,
+                CASE 
+                    WHEN s.staff_id IS NOT NULL 
+                    THEN s.firstname 
+                    ELSE o.firstname
+                END AS reported_by,
+                (SELECT i.batch_number FROM inventory i WHERE i.inven_code = di.inven_code) AS batch_num
+            FROM damaged_items di
+            join inventory i on i.inven_code = di.inven_code
+            JOIN products p ON p.prod_code = i.prod_code
+            JOIN categories c ON c.category_id = p.category_id
+            LEFT JOIN owners o ON o.owner_id = di.owner_id
+            LEFT JOIN staff s ON s.staff_id = di.staff_id
+            {$whereClause}
+            ORDER BY di.damaged_date DESC
+        ", $bindings));
+
+    }
+
+    public function exportLossReport() {
+
+        if (!$this->lossRep || $this->lossRep->isEmpty()) {
+            session()->flash('error', 'No stock data to export');
+            return;
+        }
+
+
+        $exportData = $this->lossRep->map(function ($row) {
+            
+            return [
+                'Date Reported'     => $row->date_reported,
+                'Batch #'           => $row->batch_num,
+                'Product Name'      => $row->prod_name,
+                'Category'          => $row->cat_name,
+                'Loss Type'         => $row->type,
+                'Quantity Lost'     => $row->qty,
+                'Unit Cost'         => ($row->unit_cost ?? 0),
+                'Total Loss'        => ($row->total_loss ?? 0),
+                'Reported By'       => $row->reported_by,
+                'Remarks'           => $row->remarks,
+            ];
+        });
+
+        $filename = 'Loss_Report_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = storage_path('app/' . $filename);
+
+        $qtyLost = $this->lossRep->sum('qty');
+        $totalLoss    = $this->lossRep->sum('total_loss');
+        $totalIncident = $this->lossRep->count();
+
+        $totalsRow = [
+            'Date Reported'     => 'TOTAL LOSS SUMMARY',
+            'Batch #'           => '',
+            'Product Name'          => '',
+            'Category'          => '',
+            'Type'              => '',
+            'Quantity Loss'     => $qtyLost . ' units',
+            'Unit Cost'         => '',
+            'Total Loss'        => '₱' . $totalLoss,
+            'Reported By'       => '',
+            'Remarks'           => $totalIncident . ' incedent(s) reported',
+        ];
+
+
+        $exportData->push($totalsRow);
+
+        
+        $filename = 'Loss_Report_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = storage_path('app/' . $filename);
+
+        $writer = new Writer();
+        $writer->openToFile($filePath);
+
+        
+        $headerStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(12)
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor(Color::rgb(76, 175, 80))
+            ->setCellAlignment(CellAlignment::CENTER);
+
+        $dateStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(10)
+            ->setFontColor(Color::rgb(100, 100, 100));
+
+        $totalStyle = (new Style())
+            ->setFontBold()
+            ->setBackgroundColor(Color::rgb(230, 230, 230));
+
+
+        $sheet = $writer->getCurrentSheet();
+        $sheet->setColumnWidth(18, 1); // Date Reported
+        $sheet->setColumnWidth(12, 2); // Batch #
+        $sheet->setColumnWidth(22, 3); // Product Name
+        $sheet->setColumnWidth(18, 4); // Category
+        $sheet->setColumnWidth(15, 5); // Loss Type
+        $sheet->setColumnWidth(14, 6); // Quantity Lost
+        $sheet->setColumnWidth(12, 7); // Unit Cost
+        $sheet->setColumnWidth(15, 8); // Total Loss
+        $sheet->setColumnWidth(18, 9); // Reported By
+        $sheet->setColumnWidth(25, 10); // Remarks
+
+        $exportDate = 'Exported on: ' . now()->format('F d, Y h:i A');
+        $writer->addRow(Row::fromValues([$exportDate], $dateStyle));
+
+        // empty row para naay space
+        $writer->addRow(Row::fromValues(['']));
+
+        
+        $headers = array_keys($exportData->first());
+        $writer->addRow(Row::fromValues($headers, $headerStyle));
+
+        foreach ($exportData as $dataRow) {
+            $rowStyle = null;
+
+            if ($dataRow['Date Reported'] === 'TOTAL LOSS SUMMARY') {
+                $rowStyle = (new Style())
+                    ->setFontBold()
+                    ->setBackgroundColor(Color::rgb(230, 230, 230));
+            }
+
+            $writer->addRow(Row::fromValues(array_values($dataRow), $rowStyle));
+        }
+
+        $writer->close();
+        
+
+        $this->showSuccess = true;
+        return response()->download($filePath)->deleteFileAfterSend(true);
+        
+    }
+
+
     public function pollAll() {
         $this->salesByCategory();
         $this->prodPerformance();
         $this->getTransactions();
+        $this->loss();
     }
 
     public function render() {
@@ -1159,6 +1462,7 @@ public function closeAllReceiptModals()
         $this->getSalesAnalytics();
         $this->prodPerformance();
         $this->checkReceiptReturns(); // Add this line
+        $this->loss();
         
         return view('livewire.report-sales-and-performance');
     }

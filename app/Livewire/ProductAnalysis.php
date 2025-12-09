@@ -53,7 +53,19 @@ class ProductAnalysis extends Component
     {
         DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')"); 
 
-        $owner_id = Auth::guard('owner')->user()->owner_id;
+        $ownerLoggedIn = Auth::guard('owner')->check();
+        $staffLoggedIn = Auth::guard('staff')->check();
+
+        if ($ownerLoggedIn) {
+            $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        } elseif ($staffLoggedIn) {
+            $owner_id = Auth::guard('staff')->user()->owner_id;
+
+        } else {
+            abort(403, 'Unauthorized access.');
+        }
+
         $latestYear = now()->year;
 
 

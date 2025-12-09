@@ -13,6 +13,10 @@ class BillingController extends Controller
 {
     public function search(Request $request)
     {
+        if (!Auth::guard('super_admin')->check()) {
+            abort(403, 'Access not available');
+        } 
+
         $query = $request->input('query');
         $date = $request->input('date');
 
@@ -38,6 +42,9 @@ class BillingController extends Controller
 
     public function billing(Request $request)
     {
+        if (!Auth::guard('super_admin')->check()) {
+            abort(403, 'Access not available');
+        } 
 
         $period = $request->input('period', 'all_time');
         $startDate = null;
@@ -213,6 +220,10 @@ class BillingController extends Controller
 
     public function billingOwner()
     {
+
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
         // Assuming the logged-in user is an Owner
         $owner = Auth::guard('owner')->user();
 

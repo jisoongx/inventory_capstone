@@ -522,6 +522,10 @@ class RestockController extends Controller
 
     public function restockSuggestion(Request $request)
     {
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
+
         $ownerId = Auth::guard('owner')->id();
         $currentYear = now()->year;
         $currentMonth = now()->month;
@@ -835,6 +839,10 @@ class RestockController extends Controller
 
     public function finalize(Request $request)
     {
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
+        
         $ownerId = auth()->guard('owner')->id();
 
         // 1️⃣ Validate Inputs

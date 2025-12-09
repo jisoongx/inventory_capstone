@@ -15,7 +15,18 @@ class StockAlert extends Component
 
     public function stockAlert()
     {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
+        $ownerLoggedIn = Auth::guard('owner')->check();
+        $staffLoggedIn = Auth::guard('staff')->check();
+
+        if ($ownerLoggedIn) {
+            $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        } elseif ($staffLoggedIn) {
+            $owner_id = Auth::guard('staff')->user()->owner_id;
+
+        } else {
+            abort(403, 'Unauthorized access.');
+        }
 
         $results = DB::select("
             SELECT 
@@ -41,33 +52,15 @@ class StockAlert extends Component
     }
 
 
+
+
     public function expirationNotice() {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
+        
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
 
         $results = DB::select("
-            SELECT 
-                p.name AS prod_name, i.stock as expired_stock, p.prod_image,
-                i.expiration_date, i.batch_number,
-                CASE 
-                    WHEN i.expiration_date IS NULL THEN NULL
-                    ELSE DATEDIFF(i.expiration_date, CURDATE())
-                END AS days_until_expiry,
-                CASE
-                    WHEN i.expiration_date IS NULL THEN 'No Expiry'
-                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 0 THEN 'Expired'
-                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 7 THEN 'Critical'
-                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 30 THEN 'Warning'
-                    WHEN DATEDIFF(i.expiration_date, CURDATE()) <= 60 THEN 'Monitor'
-                    ELSE 'Safe'
-                END AS status
-            FROM inventory i
-            JOIN products p ON i.prod_code = p.prod_code
-            WHERE p.owner_id = ?
-                AND i.expiration_date IS NOT NULL 
-                AND DATEDIFF(i.expiration_date, CURDATE()) BETWEEN 0 AND 60
-                and i.stock > 0
-            ORDER BY days_until_expiry ASC;
-        ", [$owner_id]);
+            select * from vw_expiration_status
+        ");
 
         $this->expiry = collect($results)->map(function ($item) {
             $item->image_url = asset('storage/' . ltrim($item->prod_image, '/'));
@@ -77,8 +70,20 @@ class StockAlert extends Component
 
 
     public function topSelling() {
+        
+        $ownerLoggedIn = Auth::guard('owner')->check();
+        $staffLoggedIn = Auth::guard('staff')->check();
 
-        $owner_id = Auth::guard('owner')->user()->owner_id;
+        if ($ownerLoggedIn) {
+            $owner_id = Auth::guard('owner')->user()->owner_id;
+
+        } elseif ($staffLoggedIn) {
+            $owner_id = Auth::guard('staff')->user()->owner_id;
+
+        } else {
+            abort(403, 'Unauthorized access.');
+        }
+
         $month = now()->month;
         $year = now()->year;
 

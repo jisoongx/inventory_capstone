@@ -27,13 +27,24 @@
             class="px-6 py-3 font-medium text-xs">
             Product Performance
         </button>
+
+         <button 
+            @click="tab = 'loss'"
+            :class="tab === 'loss' 
+                ? 'bg-blue-50 text-black border-blue-500 border-t border-l border-r rounded-t-lg' 
+                : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
+            class="px-6 py-3 font-medium text-xs">
+            Profit Loss Report
+        </button>
+
     </div>
 
     <div class="border bg-white rounded-b-lg h-[41rem]"
         :class="{
             'border-green-500 bg-green-50': tab === 'sales',
             'border-orange-500 bg-orange-50': tab === 'sales-category',
-            'border-purple-500 bg-purple-50': tab === 'product-performance'
+            'border-purple-500 bg-purple-50': tab === 'product-performance',
+            'border-blue-500 bg-blue-50': tab === 'loss'
         }">
 
 <!-- Conditional Polling - Only when no modals are open -->
@@ -203,89 +214,89 @@
                     </thead>
 
                     <tbody class="divide-y divide-gray-200 bg-white text-xs">
-    @forelse($transactions as $transaction)
-        <tr class="hover:bg-gray-50 transition-colors duration-150 cursor-pointer" 
-            wire:click="viewReceipt({{ $transaction->receipt_id }})">                                
-            <td class="px-4 py-3.5 font-bold text-gray-900">
-                <div class="flex items-center gap-2">
-                    #{{ str_pad($transaction->receipt_id, 6, '0', STR_PAD_LEFT) }}
-                    @if(in_array($transaction->receipt_id, $hasReturns))
-                        <span class="material-symbols-rounded text-orange-600 text-base" title="Has returns">
-                            undo
-                        </span>
-                    @endif
-                </div>
-            </td>
-            <td class="px-4 py-3.5 text-gray-700">
-                {{ \Carbon\Carbon::parse($transaction->receipt_date)->format('M d, Y') }}
-                <div class="text-[10px] text-gray-500">
-                    {{ \Carbon\Carbon::parse($transaction->receipt_date)->format('h:i A') }}
-                </div>
-            </td>
-            <td class="px-4 py-3.5 text-center font-bold text-gray-900">
-                {{ number_format($transaction->total_quantity) }}
-            </td>
-            
-            <td class="px-4 py-3.5 text-right bg-gray-50">
-                <div class="flex flex-col items-end gap-1">
-                    <span class="font-bold text-green-600">
-                        ₱{{ number_format($transaction->total_amount, 2) }}
-                    </span>
-                    
-                    <div class="flex items-center gap-1.5">
-                        @if($transaction->has_receipt_discount)
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[11px] font-bold border border-orange-300"
-                                title="Receipt discount applied">
-                                RD:  ₱{{ number_format($transaction->receipt_discount_amount, 2) }}
-                            </span>
-                        @endif
-                        
-                        @if($transaction->has_item_discounts && !   $transaction->has_receipt_discount)
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[11px] font-bold border border-blue-300"
-                                title="Item discounts applied">
-                                ID: ₱{{ number_format($transaction->total_item_discounts_raw, 2) }}
-                            </span>
-                        @endif
-                    </div>
-                </div>
-            </td>
-            <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
-                ₱{{ number_format($transaction->amount_paid, 2) }}
-            </td>
-            <td class="px-4 py-3.5 text-right font-bold text-blue-600 bg-gray-50">
-                ₱{{ number_format($transaction->change, 2) }}
-            </td>
+                            @forelse($transactions as $transaction)
+                                <tr class="hover:bg-gray-50 transition-colors duration-150 cursor-pointer" 
+                                    wire:click="viewReceipt({{ $transaction->receipt_id }})">                                
+                                    <td class="px-4 py-3.5 font-bold text-gray-900">
+                                        <div class="flex items-center gap-2">
+                                            #{{ str_pad($transaction->receipt_id, 6, '0', STR_PAD_LEFT) }}
+                                            @if(in_array($transaction->receipt_id, $hasReturns))
+                                                <span class="material-symbols-rounded text-orange-600 text-base" title="Has returns">
+                                                    undo
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3.5 text-gray-700">
+                                        {{ \Carbon\Carbon::parse($transaction->receipt_date)->format('M d, Y') }}
+                                        <div class="text-[10px] text-gray-500">
+                                            {{ \Carbon\Carbon::parse($transaction->receipt_date)->format('h:i A') }}
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3.5 text-center font-bold text-gray-900">
+                                        {{ number_format($transaction->total_quantity) }}
+                                    </td>
+                                    
+                                    <td class="px-4 py-3.5 text-right bg-gray-50">
+                                        <div class="flex flex-col items-end gap-1">
+                                            <span class="font-bold text-green-600">
+                                                ₱{{ number_format($transaction->total_amount, 2) }}
+                                            </span>
+                                            
+                                            <div class="flex items-center gap-1.5">
+                                                @if($transaction->has_receipt_discount)
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[11px] font-bold border border-orange-300"
+                                                        title="Receipt discount applied">
+                                                        RD:  ₱{{ number_format($transaction->receipt_discount_amount, 2) }}
+                                                    </span>
+                                                @endif
+                                                
+                                                @if($transaction->has_item_discounts && !   $transaction->has_receipt_discount)
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[11px] font-bold border border-blue-300"
+                                                        title="Item discounts applied">
+                                                        ID: ₱{{ number_format($transaction->total_item_discounts_raw, 2) }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right font-semibold text-gray-700 bg-gray-50">
+                                        ₱{{ number_format($transaction->amount_paid, 2) }}
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right font-bold text-blue-600 bg-gray-50">
+                                        ₱{{ number_format($transaction->change, 2) }}
+                                    </td>
 
-            <td class="px-4 py-3.5 text-center bg-blue-50">
-                <div class="flex items-center justify-center gap-2">
-                    <button wire:click="viewReceipt({{ $transaction->receipt_id }})"
-                        class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-colors"
-                        title="View Receipt">
-                        <span class="material-symbols-rounded text-xl">visibility</span>
-                    </button>
-                    
-                    <a href="{{ route('return_item', $transaction->receipt_id) }}"
-                        class="inline-flex items-center justify-center w-8 h-8 text-orange-600 hover:text-orange-700 hover:bg-orange-100 rounded-lg transition-colors"
-                        title="Return Items">
-                        <span class="material-symbols-rounded text-xl">undo</span>
-                    </a>
-                </div>
-            </td>
-        </tr>
-    @empty
-        <tr>
-            <td colspan="7" class="text-center py-16">
-                <div class="flex flex-col justify-center items-center space-y-3">
-                    <span class="material-symbols-rounded text-6xl text-gray-300">receipt_long</span>
-                    <div>
-                        <p class="text-gray-600 font-medium">No Transactions Found</p>
-                        <p class="text-gray-400 text-sm mt-1">No sales transactions for the selected period</p>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    @endforelse
-</tbody>
+                                    <td class="px-4 py-3.5 text-center bg-blue-50">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <button wire:click="viewReceipt({{ $transaction->receipt_id }})"
+                                                class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-colors"
+                                                title="View Receipt">
+                                                <span class="material-symbols-rounded text-xl">visibility</span>
+                                            </button>
+                                            
+                                            <a href="{{ route('return_item', $transaction->receipt_id) }}"
+                                                class="inline-flex items-center justify-center w-8 h-8 text-orange-600 hover:text-orange-700 hover:bg-orange-100 rounded-lg transition-colors"
+                                                title="Return Items">
+                                                <span class="material-symbols-rounded text-xl">undo</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="text-center py-16">
+                                        <div class="flex flex-col justify-center items-center space-y-3">
+                                            <span class="material-symbols-rounded text-6xl text-gray-300">receipt_long</span>
+                                            <div>
+                                                <p class="text-gray-600 font-medium">No Transactions Found</p>
+                                                <p class="text-gray-400 text-sm mt-1">No sales transactions for the selected period</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                    </tbody>
 
                     @if($transactions->isNotEmpty())
                     <tfoot class="sticky bottom-0 z-10 bg-slate-100 shadow-[0_-1px_0_0_rgb(209,213,219)]">
@@ -437,8 +448,8 @@
                                 </td>
                                 
                                 <!-- Analysis -->
-                                <td class="">
-                                    -
+                                <td class="px-4 py-3.5 text-center bg-gray-50 text-[10px] font-medium w-[25rem]">
+                                    {{ $input->insight }}
                                 </td>
                             </tr>
                         @empty
@@ -576,7 +587,7 @@
                                 </button>
                             </th>
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
-                                Margin %
+                                Gross Margin %
                             </th>
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">
                                 <div class="flex items-center justify-end gap-1">
@@ -645,7 +656,7 @@
                                 </td>
                                 
                                 <!-- Analysis -->
-                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50
+                                <td class="px-4 py-3.5 text-center text-[10px] font-semibold bg-blue-50 w-[13rem]
                                     @if (str_contains($product->insight, 'Out of stock')) 
                                         bg-gray-800 text-white border-gray-950
                                     @elseif (str_contains($product->insight, 'Low stock')) 
@@ -715,7 +726,286 @@
                 </table>
             </div>
         </div>
+
+        <div x-show="tab === 'loss'" class="bg-white rounded-lg shadow-sm">
+            <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900">Stock Loss & Damage Report</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Track and analyze all inventory losses and damage incidents</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-medium text-gray-700">Period:</label>
+                            <select wire:model.live="lossSelectedMonths" 
+                                class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                @foreach ($monthNames as $index => $name)
+                                    <option value="{{ $index + 1 }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <select wire:model.live="lossSelectedYears" 
+                                class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                @forelse ($lossYears as $y)
+                                    <option value="{{ $y }}">{{ $y }}</option>
+                                @empty
+                                    <option value="{{ now()->year }}">{{ now()->year }}</option>
+                                @endforelse
+                            </select>
+                        </div>
+                        
+                        <button wire:click="showAll" 
+                            class="text-xs border rounded-lg px-3 py-2 font-medium transition-colors
+                                {{ (is_null($lossSelectedMonths) || $lossSelectedMonths === '') 
+                                    && (is_null($lossSelectedYears) || $lossSelectedYears === '')
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50 bg-white' }}">
+                            Show All
+                        </button>
+
+                        <select wire:model.live="selectedLossType" 
+                            class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">All Damage Types</option>
+                            <option value="Expired">🕐 Expired</option>
+                            <option value="Broken">💔 Broken</option>
+                            <option value="Spoiled">🗑️ Spoiled</option>
+                            <option value="Damaged">⚠️ Damaged</option>
+                            <option value="Defective">🔧 Defective</option>
+                            <option value="Contaminated">☣️ Contaminated</option>
+                            <option value="Crushed">📦 Crushed</option>
+                            <option value="Leaking">💧 Leaking</option>
+                            <option value="Torn">✂️ Torn</option>
+                            <option value="Wet">🌊 Wet/Water Damaged</option>
+                            <option value="Mold">🦠 Mold/Fungus</option>
+                            <option value="Pest">🐛 Pest Damage</option>
+                            <option value="Temperature">🌡️ Temperature Abuse</option>
+                            <option value="Recalled">🚫 Recalled</option>
+                            <option value="Missing Parts">🧩 Missing Parts/Incomplete</option>
+                            <option value="Wrong Item">❌ Wrong Item Received</option>
+                            <option value="Unsealed">📭 Unsealed/Opened</option>
+                            <option value="Faded">🎨 Faded/Discolored</option>
+                            <option value="Stolen">🔒 Stolen/Lost</option>
+                        </select>
+                        
+                        <button 
+                            wire:click="exportLossReport" 
+                            class="border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-slate-50 flex items-center justify-center p-1.5 gap-1.5"
+                            @if(!$lossRep || $lossRep->isEmpty()) disabled @endif>
+                            <span class="material-symbols-rounded">file_export</span>
+                            <span class="text-xs">Export</span>
+                        </button>
+                    </div>  
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
+                <table class="w-full text-sm {{ $lossRep->isNotEmpty() ? 'min-w-[95rem]' : 'w-full' }}">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
+                        <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Date Reported
+                            </th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Batch #
+                            </th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Product Name
+                            </th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
+                                Category
+                            </th>
+                            
+                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Loss Type
+                            </th>
+                            
+                            <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                                Financial Impact
+                            </th>
+                            
+                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-blue-50 border-l-2 border-gray-300">
+                                Additional Details
+                            </th>
+                        </tr>
+                        <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Type</th>
+                            
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Quantity Lost</th>
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Unit Cost</th>
+                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Total Loss</th>
+                            
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Reported By</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white text-xs">
+                       
+                        @forelse ($lossRep as $row)
+                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td class="px-4 py-3.5 text-gray-700 whitespace-nowrap">
+                                    {{ \Carbon\Carbon::parse($row->date_reported)->format('M d, Y') }}
+                                    <div class="text-[10px] text-gray-500">
+                                        {{ \Carbon\Carbon::parse($row->date_reported)->format('h:i A') }}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3.5 font-medium text-gray-900 whitespace-nowrap">
+                                    {{ $row->batch_num }}
+                                </td>
+                                <td class="px-4 py-3.5 text-gray-700 font-medium">
+                                    {{ $row->prod_name }}
+                                </td>
+                                <td class="px-4 py-3.5 text-gray-600">
+                                    {{ $row->cat_name }}
+                                </td>
+                                
+                                <!-- Loss Type -->
+                                <td class="px-4 py-3.5 text-center bg-gray-50">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold
+                                        @if(strtolower($row->type) === 'expired') 
+                                            bg-red-100 text-red-700 border border-red-300
+                                        @elseif(strtolower($row->type) === 'broken') 
+                                            bg-orange-100 text-orange-700 border border-orange-300
+                                        @elseif(strtolower($row->type) === 'spoiled') 
+                                            bg-amber-100 text-amber-700 border border-amber-300
+                                        @elseif(strtolower($row->type) === 'damaged') 
+                                            bg-orange-100 text-orange-700 border border-orange-300
+                                        @elseif(strtolower($row->type) === 'defective') 
+                                            bg-yellow-100 text-yellow-700 border border-yellow-300
+                                        @elseif(strtolower($row->type) === 'contaminated') 
+                                            bg-red-100 text-red-700 border border-red-300
+                                        @elseif(strtolower($row->type) === 'crushed') 
+                                            bg-orange-100 text-orange-700 border border-orange-300
+                                        @elseif(strtolower($row->type) === 'leaking') 
+                                            bg-blue-100 text-blue-700 border border-blue-300
+                                        @elseif(strtolower($row->type) === 'torn') 
+                                            bg-amber-100 text-amber-700 border border-amber-300
+                                        @elseif(strtolower($row->type) === 'wet') 
+                                            bg-cyan-100 text-cyan-700 border border-cyan-300
+                                        @elseif(strtolower($row->type) === 'mold') 
+                                            bg-green-100 text-green-700 border border-green-300
+                                        @elseif(strtolower($row->type) === 'pest') 
+                                            bg-lime-100 text-lime-700 border border-lime-300
+                                        @elseif(strtolower($row->type) === 'temperature') 
+                                            bg-rose-100 text-rose-700 border border-rose-300
+                                        @elseif(strtolower($row->type) === 'recalled') 
+                                            bg-red-100 text-red-700 border border-red-300
+                                        @elseif(strtolower($row->type) === 'missing parts') 
+                                            bg-indigo-100 text-indigo-700 border border-indigo-300
+                                        @elseif(strtolower($row->type) === 'wrong item') 
+                                            bg-violet-100 text-violet-700 border border-violet-300
+                                        @elseif(strtolower($row->type) === 'unsealed') 
+                                            bg-pink-100 text-pink-700 border border-pink-300
+                                        @elseif(strtolower($row->type) === 'faded') 
+                                            bg-slate-100 text-slate-700 border border-slate-300
+                                        @elseif(strtolower($row->type) === 'stolen') 
+                                            bg-purple-100 text-purple-700 border border-purple-300
+                                        @else 
+                                            bg-gray-100 text-gray-700 border border-gray-300
+                                        @endif">
+                                        {{ ucfirst($row->type) }}
+                                    </span>
+                                </td>
+                                
+                                <!-- Financial Impact -->
+                                <td class="px-4 py-3.5 text-right font-bold text-gray-900 bg-gray-50">
+                                    {{ number_format($row->qty) }}
+                                </td>
+                                <td class="px-4 py-3.5 text-right text-gray-700 bg-gray-50">
+                                    ₱{{ number_format($row->unit_cost, 2) }}
+                                </td>
+                                <td class="px-4 py-3.5 text-right font-bold text-red-600 bg-gray-50">
+                                    ₱{{ number_format($row->total_loss, 2) }}
+                                </td>
+                                
+                                <!-- Additional Details -->
+                                <td class="px-4 py-3.5 text-center font-medium text-gray-700 bg-blue-50">
+                                    @if(str_contains(strtolower($row->remarks ?? ''), 'system'))
+                                        System
+                                    @else
+                                        {{ ucwords($row->reported_by ?? 'N/A') }}
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3.5 text-gray-600 text-center bg-blue-50">
+                                    @if($row->remarks)
+                                        <div class="max-w-xs truncate" title="{{ $row->remarks }}">
+                                            {{ $row->remarks }}
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty 
+                            <tr>
+                                <td colspan="10" class="text-center py-16">
+                                    <div class="flex flex-col justify-center items-center space-y-3">
+                                        <span class="material-symbols-rounded text-6xl text-gray-300">check_circle</span>
+                                        <div>
+                                            <p class="text-gray-600 font-medium">No Loss Records Found</p>
+                                            <p class="text-gray-400 text-sm mt-1">No damage or loss incidents for the selected period</p>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+
+                    @if($lossRep->isNotEmpty())
+                    <tfoot class="sticky bottom-0 z-10 bg-slate-100 shadow-[0_-1px_0_0_rgb(209,213,219)]">
+                        <tr class="border-t-2 border-gray-600">
+                            <td colspan="5" class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
+                                Total Loss Summary
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs">
+                                {{ number_format($lossRep->sum('qty')) }} units
+                            </td>
+                            <td class="px-4 text-center text-xs text-gray-400">
+                            </td>
+                            <td class="px-4 text-right font-bold text-xs text-red-700">
+                                ₱{{ number_format($lossRep->sum('total_loss'), 2) }}
+                            </td>
+                            <td colspan="2" class="px-4 text-center text-xs text-black">
+                                {{ $lossRep->count() }} incident(s) reported
+                            </td>
+                        </tr>
+                    </tfoot>
+                    @endif
+                </table>
+            </div>
+        </div>      
+
+
     </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
      <!-- Export Modal -->
     @if($showExportModal)

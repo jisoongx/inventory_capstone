@@ -268,9 +268,9 @@
     </div>
 
     @if($addModal)
-        <div id="add-modal" tabindex="-1" aria-hidden="true"
+        <div id="add-modal"
             class="overflow-y-auto overflow-x-hidden fixed z-50 inset-0 flex justify-center items-center w-full bg-black/60 backdrop-blur-sm transition-opacity duration-300">
-            <div class="relative p-4 w-full max-w-2xl max-h-full" wire:click.away="closeModal">
+            <div class="relative p-4 w-full max-w-2xl max-h-full"wire:click.away="closeModal">
                 <div class="border border-red-800 relative bg-white rounded-xl shadow-xl border border-gray-100 transform transition-all duration-300 scale-100">
 
                     <div class="absolute -top-12 left-1/2 transform -translate-x-1/2">
@@ -364,7 +364,7 @@
                         </div>
 
                         <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-                            <button type="button" wire:click="closeModal"
+                            <button type="button" wire:click="cancelModal"
                                     class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors duration-200">
                                 Cancel
                             </button>

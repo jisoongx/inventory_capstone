@@ -25,13 +25,59 @@ class TechnicalRequest extends Component
     public $addRequestTitle = '';
     public $addRequestMessage = '';
 
+    public $unauthorized;
+
     public function mount() {
+        $isOwner = Auth::guard('owner')->check();
+        $isStaff = Auth::guard('staff')->check();
+        
+        // No authentication at all
+        if (!$isOwner && !$isStaff) {
+            $this->redirect(route('login'), navigate: false);
+            return;
+        }
+        
+        if ($isOwner && $isStaff) {
+            abort(403, 'Unauthorized access.');
+        }
+        
+        $currentRoute = request()->route()->getName();
+        
+        if ($isOwner && !str_contains($currentRoute, 'owner')) {
+            abort(403, 'Unauthorized access.');
+        }
+        
+        if ($isStaff && !str_contains($currentRoute, 'staff')) {
+            abort(403, 'Unauthorized access.');
+        }
+        
         $this->loadRequests();
-        // $this->refreshConvo(); 
     }
 
     private function loadRequests() {
+        $isOwner = Auth::guard('owner')->check();
+        $isStaff = Auth::guard('staff')->check();
+        
+        if($isOwner) {
+            $this->loadReqOwner();
+        } elseif ($isStaff) {
+            $this->loadReqStaff();
+        }
+    }
+
+    public function refreshData()
+    {
+        $this->loadRequests();
+    }
+
+    private function loadReqOwner() {
+        
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
+
         if (Auth::guard('owner')->check()) {
+
             $owner_id = Auth::guard('owner')->user()->owner_id;
             
             $this->requests = collect(DB::select("
@@ -58,8 +104,16 @@ class TechnicalRequest extends Component
             ", [$owner_id]))->pluck('unread_count', 'req_id');
 
         }
+    }
+
+    private function loadReqStaff() {
+
+        if (!Auth::guard('staff')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
 
         if (Auth::guard('staff')->check()) {
+
             $staff_id = Auth::guard('staff')->user()->staff_id;
             $this->requests = collect(DB::select("
                 SELECT tr.*, cm_max.last_message_id, cm_max.last_message_date
@@ -84,16 +138,10 @@ class TechnicalRequest extends Component
                 group by cm.req_id
             ", [$staff_id]))->pluck('unread_count', 'req_id');
         }
-
-        if (!empty($this->searchWord)) {
-            $search = strtolower($this->searchWord);
-
-            $this->requests = $this->requests->filter(function ($item) use ($search) {
-                return str_contains(strtolower($item->title ?? ''), $search)
-                    || str_contains(strtolower($item->conversation ?? ''), $search);
-            })->values();
-        }
     }
+
+
+    
 
     public function seen($req_id = null) { //mo pa trigger sad sha nga mo display ang convo
         $this->recentreq = $req_id 
@@ -268,6 +316,8 @@ class TechnicalRequest extends Component
                 VALUES (?, 'owner', ?, ?, NOW())
             ", [$req_id, $owner_id, $this->addRequestMessage]);
 
+            $this->loadReqOwner();
+
         }
 
         
@@ -300,9 +350,10 @@ class TechnicalRequest extends Component
                 VALUES (?, 'staff', ?, ?, NOW())
             ", [$req_id, $staff_id, $this->addRequestMessage]);
             
+            $this->loadReqStaff();
         }
 
-        $this->loadRequests();
+        // $this->loadRequests();
         $this->addModalOpen = false;
 
     }
@@ -326,7 +377,7 @@ class TechnicalRequest extends Component
 
     public function render()
     {
-        $this->loadRequests(); 
         return view('livewire.technical-request');
     }
+    
 }

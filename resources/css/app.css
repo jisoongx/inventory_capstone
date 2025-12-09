@@ -279,3 +279,29 @@
 html, body {
     font-family: 'Poppins', sans-serif;
 }
+
+@keyframes shimmer-gradient {
+    0% {
+        background-position: 200% center;
+    }
+    100% {
+        background-position: -200% center;
+    }
+}
+
+.flash-green-gradient {
+    background: linear-gradient(
+        90deg,
+        #adf0da 0%,      /* emerald-500 */
+        #cde3db 15%,     /* emerald-400 */
+        #6ee7b7 30%,     /* emerald-300 */
+        #a7f3d0 45%,     /* emerald-200 */
+        #d1fae5 50%,     /* emerald-100 */
+        #a7f3d0 55%,     /* emerald-200 */
+        #6ee7b7 70%,     /* emerald-300 */
+        #aeeed7 85%,     /* emerald-400 */
+        #9fedd3 100%     /* emerald-500 */
+    );
+    background-size: 400% 100%;
+    animation: shimmer-gradient 7s ease-in-out;
+}

@@ -17,24 +17,15 @@
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
             Expiring Poducts
-        </button>        
+        </button>       
 
-        <!-- <button 
-            @click="tab = 'top-selling'"
-            :class="tab === 'top-selling' 
+        <button 
+            @click="tab = 'damaged'"
+            :class="tab === 'damaged' 
                 ? 'bg-green-50 text-black border-green-500 border-t border-l border-r rounded-t-lg' 
                 : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
             class="px-6 py-3 font-medium text-xs">
-            Top Selling Product
-        </button> -->
-
-        <button 
-            @click="tab = 'loss'"
-            :class="tab === 'loss' 
-                ? 'bg-gray-50 text-black border-gray-500 border-t border-l border-r rounded-t-lg' 
-                : 'bg-gray-200 text-gray-600 hover:text-black rounded-t-lg'"
-            class="px-6 py-3 font-medium text-xs">
-            Loss Report
+            Damage Product Report
         </button>
         
     </div>
@@ -43,17 +34,12 @@
         :class="{
             'border-blue-500 bg-blue-50': tab === 'expiring',
             'border-red-500 bg-red-50': tab === 'stock',
-            'border-green-500 bg-green-50': tab === 'top-selling',
+            'border-green-500 bg-green-50': tab === 'damaged',
             'border-gray-900 bg-gray-50': tab === 'loss'
         }">
 
-        <!-- TOP SELLING -->
-        <div x-show="tab === 'top-selling'">
-            <p class="text-gray-700">⚡ <b>top selling</b> report content goes here.</p>
-        </div>
-
         <!-- STOCK -->
-        <div wire:poll.15s="stockAlertReport" wire:keep-alive class="hidden"></div>
+        <div wire:poll.live="stockAlertReport" wire:keep-alive class="hidden"></div>
         <div x-show="tab === 'stock'">
             <div class="bg-white rounded-lg shadow-sm">
                 <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
@@ -329,7 +315,7 @@
             </div>
 
             <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
-                <table class="w-full text-sm {{ $expiredProd->isNotEmpty() ? 'min-w-[99rem]' : 'w-full' }}">
+                <table class="w-full text-sm {{ $expiredProd->isNotEmpty() ? 'w-[80rem]' : 'w-full' }}">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100 w-5"></th>
@@ -347,7 +333,7 @@
                                 Expiration Status
                             </th>
                             
-                            <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
                                 Financial Impact
                             </th>
                             
@@ -365,11 +351,20 @@
                             <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Days Left</th>
                             
                             <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Quantity</th>
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Cost/Unit</th>
                             <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Total Loss</th>
                             
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Will Sell?</th>
-                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Action</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">
+                                <div class="flex items-center justify-center gap-1">
+                                    <span>Action</span>
+                                    <span 
+                                        class="material-symbols-rounded cursor-pointer" 
+                                        title="Estimated days and units only. Actual sales may vary."
+                                    >
+                                        info
+                                    </span>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     
@@ -423,48 +418,23 @@
                                 <td class="px-4 py-3.5 text-right font-semibold text-gray-900 bg-gray-50">
                                     {{ number_format($row->expired_stock) }}
                                 </td>
-                                <td class="px-4 py-3.5 text-right text-gray-700 bg-gray-50">
-                                    ₱{{ number_format($row->cost, 2) }}
-                                </td>
                                 <td class="px-4 py-3.5 text-right font-bold text-red-600 bg-gray-50">
                                     ₱{{ number_format($row->total_loss, 2) }}
                                 </td>
                                 
                                 <!-- Analysis -->
-                                <td class="px-4 py-3.5 text-center bg-blue-50">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold
-                                        @if(str_contains($row->will_sell_before_expiry, 'unlikely to sell'))
-                                            bg-rose-100 text-red-700 border border-red-300
-                                        @elseif(str_contains($row->will_sell_before_expiry, 'Already expired'))
-                                            bg-red-200 text-red-900 border border-red-400
-                                        @elseif(str_contains($row->will_sell_before_expiry, 'At risk'))
-                                            bg-orange-100 text-orange-700 border border-orange-300
-                                        @elseif(str_contains($row->will_sell_before_expiry, 'Will likely sell out'))
-                                            bg-green-100 text-green-700 border border-green-300
-                                        @else
-                                            bg-gray-100 text-gray-700 border border-gray-300
-                                        @endif
-                                    ">
-                                        {{ $row->will_sell_before_expiry }}
+                                <td class="px-4 py-3.5 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-semibold
+                                        @if($row->risk_category === 'Likely to sell') bg-green-50 text-green-700 border border-green-700
+                                        @elseif($row->risk_category === 'May not sell all stock') bg-orange-50 text-orange-700  border border-orange-700
+                                        @elseif($row->risk_category === 'High risk of waste!') bg-red-50 text-red-700  border border-red-700
+                                        @else bg-slate-50 text-slate-700  border border-slate-700
+                                        @endif">
+                                        {{ $row->risk_category }}
                                     </span>
                                 </td>
             
-                                <td class="px-4 py-3.5 text-center text-xs font-semibold bg-blue-50
-                                    @if(str_contains($row->insight, 'Expired'))
-                                        bg-gray-900 text-white border-gray-950
-                                    @elseif(str_contains($row->insight, 'Critical') || str_contains($row->insight, 'Urgent'))
-                                        bg-red-600 text-white  border-red-800
-                                    @elseif(str_contains($row->insight, 'Action needed'))
-                                        bg-orange-500 text-white  border-orange-700
-                                    @elseif(str_contains($row->insight, 'Warning') || str_contains($row->insight, 'Sales pace too slow'))
-                                        bg-yellow-400 text-gray-900  border-yellow-600
-                                    @elseif(str_contains($row->insight, 'week left') || str_contains($row->insight, 'weeks left'))
-                                        bg-blue-500 text-white  border-blue-700
-                                    @elseif(str_contains($row->insight, 'month left'))
-                                        bg-indigo-500 text-white  border-indigo-700
-                                    @else
-                                        bg-green-600 text-white  border-green-800
-                                    @endif">
+                                <td class="px-4 py-3.5 text-center text-xs font-semibold bg-blue-50 w-[15rem]">
                                     <div class="flex items-center justify-center gap-2 text-[10px] font-medium">
                                         {{ $row->insight }}
                                     </div>
@@ -492,9 +462,8 @@
                                 Total Potential Loss
                             </td>
                             <td class="px-4 text-right font-bold text-xs">
-                                {{ number_format($expiredProd->sum('expired_stock')) }}
+                                {{ number_format($expiredProd->sum('expired_stock')) }} units
                             </td>
-                            <td class="px-4 text-center text-xs text-gray-400"></td>
                             <td class="px-4 text-right font-bold text-xs text-red-700">
                                 ₱{{ number_format($expiredProd->sum('total_loss'), 2) }}
                             </td>
@@ -507,222 +476,176 @@
         </div>
 
 
-
-
-        <!-- DAMAGED/ LOSS/ EXPIRED-->
-        <div wire:poll.15s="loss" wire:keep-alive class="hidden"></div>
-        <div x-show="tab === 'loss'" class="bg-white rounded-lg shadow-sm">
+        <!-- DAMAGED-->
+        <div></div>
+        <div x-show="tab === 'damaged'" class="bg-white rounded-lg shadow-sm">
             <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-sm font-semibold text-gray-900">Stock Loss & Damage Report</h2>
+                        <h2 class="text-sm font-semibold text-gray-900">Inventory Damage Report</h2>
                         <p class="text-xs text-gray-500 mt-0.5">Track and analyze all inventory losses and damage incidents</p>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-2">
-                            <label class="text-xs font-medium text-gray-700">Period:</label>
-                            <select wire:model.live="selectedMonths" 
-                                class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                @foreach ($monthNames as $index => $name)
-                                    <option value="{{ $index + 1 }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
-                            <select wire:model.live="selectedYears" 
-                                class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                @forelse ($years as $y)
-                                    <option value="{{ $y }}">{{ $y }}</option>
-                                @empty
-                                    <option value="{{ now()->year }}">{{ now()->year }}</option>
-                                @endforelse
-                            </select>
-                        </div>
-                        
-                        <button wire:click="showAll" 
-                            class="text-xs border rounded-lg px-3 py-2 font-medium transition-colors
-                                {{ is_null($selectedMonths) && is_null($selectedYears) 
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
-                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50 bg-white' }}">
-                            Show All
-                        </button>
-
-                        <select wire:model.live="selectedLossType" 
-                            class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">All Damage Types</option>
-                            <option value="Expired">🕐 Expired</option>
-                            <option value="Broken">💔 Broken</option>
-                            <option value="Spoiled">🗑️ Spoiled</option>
-                            <option value="Damaged">⚠️ Damaged</option>
-                            <option value="Defective">🔧 Defective</option>
-                            <option value="Contaminated">☣️ Contaminated</option>
-                            <option value="Crushed">📦 Crushed</option>
-                            <option value="Leaking">💧 Leaking</option>
-                            <option value="Torn">✂️ Torn</option>
-                            <option value="Wet">🌊 Wet/Water Damaged</option>
-                            <option value="Mold">🦠 Mold/Fungus</option>
-                            <option value="Pest">🐛 Pest Damage</option>
-                            <option value="Temperature">🌡️ Temperature Abuse</option>
-                            <option value="Recalled">🚫 Recalled</option>
-                            <option value="Missing Parts">🧩 Missing Parts/Incomplete</option>
-                            <option value="Wrong Item">❌ Wrong Item Received</option>
-                            <option value="Unsealed">📭 Unsealed/Opened</option>
-                            <option value="Faded">🎨 Faded/Discolored</option>
-                            <option value="Stolen">🔒 Stolen/Lost</option>
-                        </select>
-                        
-                        <button 
-                            wire:click="exportLossReport" 
-                            class="border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-slate-50 flex items-center justify-center p-1.5 gap-1.5"
-                            @if(!$stock || $stock->isEmpty()) disabled @endif>
-                            <span class="material-symbols-rounded">file_export</span>
-                            <span class="text-xs">Export</span>
-                        </button>
-                    </div>  
                 </div>
             </div>
 
             <!-- Table Container -->
             <div class="overflow-y-auto overflow-x-auto scrollbar-custom h-[36.3rem]">
-                <table class="w-full text-sm {{ $lossRep->isNotEmpty() ? 'min-w-[95rem]' : 'w-full' }}">
+                <table class="w-full text-sm {{ $lossRep->isNotEmpty() ? 'w-full' : 'w-full' }}">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr class="sticky top-0 bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]">
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
                                 Date Reported
                             </th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
-                                Batch #
-                            </th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
                                 Product Name
                             </th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-100">
-                                Category
-                            </th>
-                            
-                            <th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
                                 Loss Type
-                            </th>
-                            
-                            <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
+                            </th>      
+                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-gray-50 border-l-2 border-gray-300">
                                 Financial Impact
-                            </th>
-                            
-                            <th colspan="2" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-blue-50 border-l-2 border-gray-300">
+                            </th>      
+                            <th colspan="3" class="px-4 py-2 text-center font-semibold text-gray-700 uppercase text-xs tracking-wider bg-blue-50 border-l-2 border-gray-300">
                                 Additional Details
                             </th>
                         </tr>
                         <tr class="sticky bg-gray-100 shadow-[0_2px_0_0_rgb(209,213,219)]" style="top: 42px;">
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
                             <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
-                            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-600 bg-gray-100"></th>
                             
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Type</th>
                             
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Quantity Lost</th>
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Unit Cost</th>
-                            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-600 bg-gray-50">Total Loss</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Quantity</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-gray-50">Total</th>
                             
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Reported By</th>
                             <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Remarks</th>
+                            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-600 bg-blue-50">Status</th>
                         </tr>
                     </thead>
 
                     <tbody class="divide-y divide-gray-200 bg-white text-xs">
-                        @forelse ($lossRep as $row)
-                            <tr class="hover:bg-gray-50 transition-colors duration-150">
-                                <td class="px-4 py-3.5 text-gray-700 whitespace-nowrap">
-                                    {{ \Carbon\Carbon::parse($row->date_reported)->format('M d, Y') }}
-                                    <div class="text-[10px] text-gray-500">
-                                        {{ \Carbon\Carbon::parse($row->date_reported)->format('h:i A') }}
+                        @forelse ($damagedRep as $row)
+                        <tr wire:key="row-{{ $row->damaged_id }}"
+                            id="row-{{ $row->damaged_id }}"
+                            class="hover:bg-gray-50"
+                            x-data="{ flash: false }"
+                            x-on:row-updated.window="if ($event.detail.rowId === {{ $row->damaged_id }}) { flash = true; setTimeout(() => flash = false, 1000) }"
+                            :class="{ 'flash-green-gradient': flash }">
+                            <td class="px-4 py-3.5 text-gray-700 whitespace-nowrap">
+                                {{ \Carbon\Carbon::parse($row->date_reported)->format('M d, Y') }}
+                                <div class="text-[10px] text-gray-500">
+                                    {{ \Carbon\Carbon::parse($row->date_reported)->format('h:i A') }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-3.5 text-gray-700 font-medium">
+                                {{ $row->prod_name }}
+                            </td>
+                            
+                            <!-- Loss Type -->
+                            <td class="px-4 py-3.5 text-center">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold
+                                    @if(strtolower($row->type) === 'expired') 
+                                        bg-red-100 text-red-700 border border-red-300
+                                    @elseif(strtolower($row->type) === 'broken') 
+                                        bg-orange-100 text-orange-700 border border-orange-300
+                                    @elseif(strtolower($row->type) === 'spoiled') 
+                                        bg-amber-100 text-amber-700 border border-amber-300
+                                    @elseif(strtolower($row->type) === 'damaged') 
+                                        bg-orange-100 text-orange-700 border border-orange-300
+                                    @elseif(strtolower($row->type) === 'defective') 
+                                        bg-yellow-100 text-yellow-700 border border-yellow-300
+                                    @elseif(strtolower($row->type) === 'contaminated') 
+                                        bg-red-100 text-red-700 border border-red-300
+                                    @elseif(strtolower($row->type) === 'crushed') 
+                                        bg-orange-100 text-orange-700 border border-orange-300
+                                    @elseif(strtolower($row->type) === 'leaking') 
+                                        bg-blue-100 text-blue-700 border border-blue-300
+                                    @elseif(strtolower($row->type) === 'torn') 
+                                        bg-amber-100 text-amber-700 border border-amber-300
+                                    @elseif(strtolower($row->type) === 'wet') 
+                                        bg-cyan-100 text-cyan-700 border border-cyan-300
+                                    @elseif(strtolower($row->type) === 'mold') 
+                                        bg-green-100 text-green-700 border border-green-300
+                                    @elseif(strtolower($row->type) === 'pest') 
+                                        bg-lime-100 text-lime-700 border border-lime-300
+                                    @elseif(strtolower($row->type) === 'temperature') 
+                                        bg-rose-100 text-rose-700 border border-rose-300
+                                    @elseif(strtolower($row->type) === 'recalled') 
+                                        bg-red-100 text-red-700 border border-red-300
+                                    @elseif(strtolower($row->type) === 'missing parts') 
+                                        bg-indigo-100 text-indigo-700 border border-indigo-300
+                                    @elseif(strtolower($row->type) === 'wrong item') 
+                                        bg-violet-100 text-violet-700 border border-violet-300
+                                    @elseif(strtolower($row->type) === 'unsealed') 
+                                        bg-pink-100 text-pink-700 border border-pink-300
+                                    @elseif(strtolower($row->type) === 'faded') 
+                                        bg-slate-100 text-slate-700 border border-slate-300
+                                    @elseif(strtolower($row->type) === 'stolen') 
+                                        bg-purple-100 text-purple-700 border border-purple-300
+                                    @else 
+                                        bg-gray-100 text-gray-700 border border-gray-300
+                                    @endif">
+                                    {{ ucfirst($row->type) }}
+                                </span>
+                            </td>
+                            
+                            <!-- Financial Impact -->
+                            <td class="px-4 py-3.5 text-center font-bold text-gray-900">
+                                {{ number_format($row->qty) }}
+                            </td>
+                            <td class="px-4 py-3.5 text-center font-bold text-red-600">
+                                ₱{{ number_format($row->total_loss, 2) }}
+                            </td>
+                            
+                            <!-- Additional Details -->
+                            <td class="px-4 py-3.5 text-center font-medium text-gray-700">
+                                @if(str_contains(strtolower($row->remarks ?? ''), 'system'))
+                                    System
+                                @else
+                                    {{ ucwords($row->reported_by ?? 'N/A') }}
+                                @endif
+                            </td>
+                            <td class="px-4 py-3.5 text-gray-600 text-center">
+                                @if($row->remarks)
+                                <div x-data="{ open: false }" class="relative">
+                                    <div 
+                                        class="max-w-xs truncate hover:underline cursor-pointer"
+                                        @click="open = true"
+                                    >
+                                        {{ $row->remarks }}
                                     </div>
-                                </td>
-                                <td class="px-4 py-3.5 font-medium text-gray-900 whitespace-nowrap">
-                                    {{ $row->batch_num }}
-                                </td>
-                                <td class="px-4 py-3.5 text-gray-700 font-medium">
-                                    {{ $row->prod_name }}
-                                </td>
-                                <td class="px-4 py-3.5 text-gray-600">
-                                    {{ $row->cat_name }}
-                                </td>
-                                
-                                <!-- Loss Type -->
-                                <td class="px-4 py-3.5 text-center bg-gray-50">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold
-                                        @if(strtolower($row->type) === 'expired') 
-                                            bg-red-100 text-red-700 border border-red-300
-                                        @elseif(strtolower($row->type) === 'broken') 
-                                            bg-orange-100 text-orange-700 border border-orange-300
-                                        @elseif(strtolower($row->type) === 'spoiled') 
-                                            bg-amber-100 text-amber-700 border border-amber-300
-                                        @elseif(strtolower($row->type) === 'damaged') 
-                                            bg-orange-100 text-orange-700 border border-orange-300
-                                        @elseif(strtolower($row->type) === 'defective') 
-                                            bg-yellow-100 text-yellow-700 border border-yellow-300
-                                        @elseif(strtolower($row->type) === 'contaminated') 
-                                            bg-red-100 text-red-700 border border-red-300
-                                        @elseif(strtolower($row->type) === 'crushed') 
-                                            bg-orange-100 text-orange-700 border border-orange-300
-                                        @elseif(strtolower($row->type) === 'leaking') 
-                                            bg-blue-100 text-blue-700 border border-blue-300
-                                        @elseif(strtolower($row->type) === 'torn') 
-                                            bg-amber-100 text-amber-700 border border-amber-300
-                                        @elseif(strtolower($row->type) === 'wet') 
-                                            bg-cyan-100 text-cyan-700 border border-cyan-300
-                                        @elseif(strtolower($row->type) === 'mold') 
-                                            bg-green-100 text-green-700 border border-green-300
-                                        @elseif(strtolower($row->type) === 'pest') 
-                                            bg-lime-100 text-lime-700 border border-lime-300
-                                        @elseif(strtolower($row->type) === 'temperature') 
-                                            bg-rose-100 text-rose-700 border border-rose-300
-                                        @elseif(strtolower($row->type) === 'recalled') 
-                                            bg-red-100 text-red-700 border border-red-300
-                                        @elseif(strtolower($row->type) === 'missing parts') 
-                                            bg-indigo-100 text-indigo-700 border border-indigo-300
-                                        @elseif(strtolower($row->type) === 'wrong item') 
-                                            bg-violet-100 text-violet-700 border border-violet-300
-                                        @elseif(strtolower($row->type) === 'unsealed') 
-                                            bg-pink-100 text-pink-700 border border-pink-300
-                                        @elseif(strtolower($row->type) === 'faded') 
-                                            bg-slate-100 text-slate-700 border border-slate-300
-                                        @elseif(strtolower($row->type) === 'stolen') 
-                                            bg-purple-100 text-purple-700 border border-purple-300
-                                        @else 
-                                            bg-gray-100 text-gray-700 border border-gray-300
-                                        @endif">
-                                        {{ ucfirst($row->type) }}
-                                    </span>
-                                </td>
-                                
-                                <!-- Financial Impact -->
-                                <td class="px-4 py-3.5 text-right font-bold text-gray-900 bg-gray-50">
-                                    {{ number_format($row->qty) }}
-                                </td>
-                                <td class="px-4 py-3.5 text-right text-gray-700 bg-gray-50">
-                                    ₱{{ number_format($row->unit_cost, 2) }}
-                                </td>
-                                <td class="px-4 py-3.5 text-right font-bold text-red-600 bg-gray-50">
-                                    ₱{{ number_format($row->total_loss, 2) }}
-                                </td>
-                                
-                                <!-- Additional Details -->
-                                <td class="px-4 py-3.5 text-center font-medium text-gray-700 bg-blue-50">
-                                    @if(str_contains(strtolower($row->remarks ?? ''), 'system'))
-                                        System
-                                    @else
-                                        {{ ucwords($row->reported_by ?? 'N/A') }}
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3.5 text-gray-600 text-center bg-blue-50">
-                                    @if($row->remarks)
-                                        <div class="max-w-xs truncate" title="{{ $row->remarks }}">
+
+                                    <div 
+                                        x-show="open"
+                                        @click.outside="open = false"
+                                        x-transition
+                                        class="absolute left-0 w-64 bg-white border border-gray-300 rounded-lg shadow-lg p-5 z-50"
+                                        style="display: none;"
+                                    >
+                                        <div class="text-xs text-gray-700 whitespace-pre-line">
                                             {{ $row->remarks }}
                                         </div>
-                                    @else
-                                        <span class="text-gray-400">—</span>
-                                    @endif
-                                </td>
-                            </tr>
+                                    </div>
+                                </div>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3.5 text-gray-800 text-center">
+                                <select 
+                                    wire:change="updateStatus({{ $row->damaged_id }}, $event.target.value)"
+                                    class="border rounded px-2 py-0.5 text-[10px]"
+                                    {{ in_array($row->status, ['Completed', 'Damaged']) ? 'disabled' : '' }}
+                                >
+                                    <option disabled>Select status</option>
+                                    <option value="To be returned" {{ $row->status == 'To be returned' ? 'selected' : '' }}>To be returned</option>
+                                    <option value="Processing" {{ $row->status == 'Processing' ? 'selected' : '' }}>Processing</option>
+                                    <option value="Completed" {{ $row->status == 'Completed' ? 'selected' : '' }}>Completed</option>
+                                    <option value="Damaged" {{ $row->status == 'Damaged' ? 'selected' : '' }}>Unable to return</option>
+                                </select>
+                            </td>
+                        </tr>
                         @empty 
                             <tr>
                                 <td colspan="10" class="text-center py-16">
@@ -738,22 +661,20 @@
                         @endforelse
                     </tbody>
 
-                    @if($lossRep->isNotEmpty())
+                    @if($damagedRep->isNotEmpty())
                     <tfoot class="sticky bottom-0 z-10 bg-slate-100 shadow-[0_-1px_0_0_rgb(209,213,219)]">
                         <tr class="border-t-2 border-gray-600">
-                            <td colspan="5" class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
+                            <td colspan="3" class="px-4 py-3 text-left font-bold uppercase text-xs tracking-wider">
                                 Total Loss Summary
                             </td>
-                            <td class="px-4 text-right font-bold text-xs">
-                                {{ number_format($lossRep->sum('qty')) }} units
+                            <td class="px-4 text-center font-bold text-xs">
+                                {{ number_format($damagedRep->sum('qty')) }} units
                             </td>
-                            <td class="px-4 text-center text-xs text-gray-400">
+                            <td class="px-4 text-center font-bold text-xs text-red-700">
+                                ₱{{ number_format($damagedRep->sum('total_loss'), 2) }}
                             </td>
-                            <td class="px-4 text-right font-bold text-xs text-red-700">
-                                ₱{{ number_format($lossRep->sum('total_loss'), 2) }}
-                            </td>
-                            <td colspan="2" class="px-4 text-center text-xs text-black">
-                                {{ $lossRep->count() }} incident(s) reported
+                            <td colspan="3" class="px-4 text-center text-xs text-black">
+                                {{ $damagedRep->count() }} incident(s) reported
                             </td>
                         </tr>
                     </tfoot>
@@ -762,5 +683,38 @@
             </div>
         </div>
     </div>
+
+    @if($showReasonModal)
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-6">
+
+            <h2 class="text-sm font-semibold text-gray-800 mb-3">
+                Provide a Reason
+            </h2>
+
+            <textarea 
+                wire:model="damagedReason"
+                rows="7"
+                class="w-full border border-gray-300 rounded-sm p-3 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+                placeholder="Enter reason here..."></textarea>
+
+            <div class="flex justify-end gap-3 mt-2">
+                <button 
+                    wire:click="closeReasonModal"
+                    class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs">
+                    Nevermind
+                </button>
+
+                <button 
+                    wire:click="submitReason"
+                    class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs">
+                    Confirm
+                </button>
+            </div>
+
+        </div>
+    </div>
+    @endif
+
 </div>
 

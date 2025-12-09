@@ -43,7 +43,7 @@
                             {{ $p->stock_status === 'Critical' ? 'bg-red-500' : '' }}
                             {{ $p->stock_status === 'Warning' ? 'bg-orange-500' : '' }}
                             {{ $p->stock_status === 'Out of Stock' ? 'bg-red-700' : '' }}"></span>
-                        <span class="font-semibold text-xs">{{ $p->stock_status }}</span>
+                        <span class="font-semibold text-[10px]">{{ $p->stock_status }}</span>
                     </div>
                 </div>
             @empty
@@ -78,11 +78,22 @@
         <div class="mt-5 p-4 space-y-3 overflow-y-auto scrollbar-custom transition-all duration-300 h-[29rem]">
 
             @forelse ($expiry as $p)
-                <div class="rounded-xl p-2 flex items-center gap-4 border
-                    {{ $p->status === 'Expired' ? 'border-red-900 text-red-900' : '' }}
-                    {{ $p->status === 'Critical' ? 'border-red-500 text-red-600' : '' }}
-                    {{ $p->status === 'Warning' ? 'border-orange-500 text-orange-600' : '' }}
-                    {{ $p->status === 'Monitor' ? 'border-yellow-500 text-yellow-500' : '' }}">
+                <div class="relative rounded-xl p-2 flex items-center gap-4 border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow
+                    {{ $p->risk_category === 'Expired' ? 'border-red-900 text-red-900' : '' }}
+                    {{ $p->risk_category === 'High risk of waste!' ? 'border-red-500 text-red-600' : '' }}
+                    {{ $p->risk_category === 'May not sell all stock' ? 'border-orange-500 text-orange-600' : '' }}
+                    {{ $p->risk_category === 'Likely to sell' ? 'border-green-600 text-green-600' : '' }}">
+
+                    <div class="absolute bottom-2 right-2">
+                        <span class="inline-block px-3 py-1 rounded-full text-[9px] font-semibold tracking-wide
+                            {{ $p->risk_category === 'Expired' ? 'bg-red-900 text-white' : '' }}
+                            {{ $p->risk_category === 'High risk of waste!' ? 'bg-red-500 text-white' : '' }}
+                            {{ $p->risk_category === 'May not sell all stock' ? 'bg-orange-500 text-white' : '' }}
+                            {{ $p->risk_category === 'Likely to sell' ? 'bg-green-600 text-white' : '' }}
+                            {{ $p->risk_category === 'No Sales Data' ? 'bg-gray-500 text-white' : '' }}">
+                            {{ $p->risk_category }}
+                        </span>
+                    </div>
                     
                     @if($p->prod_image)
                     <img src="{{ Str::startsWith($p->prod_image, 'assets/') 
@@ -98,17 +109,8 @@
                     
                     <div class="flex-1">
                         <h3 class="text-xs font-semibold text-gray-800">{{ $p->prod_name }}</h3>
-                        <p class="text-xs font-medium"><span class="font-semibold">{{ $p->batch_number }}</span> • {{ $p->expired_stock }} items</p>
+                        <p class="text-xs font-medium"><span class="font-semibold">{{ $p->batch_number }}</span> • {{ $p->stock }} items</p>
                         <p class="text-xs font-bold">{{ $p->days_until_expiry }} days left!</p>
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full
-                            {{ $p->status === 'Expired' ? 'bg-red-900' : '' }}
-                            {{ $p->status === 'Critical' ? 'bg-red-500' : '' }}
-                            {{ $p->status === 'Warning' ? 'bg-orange-500' : '' }}
-                            {{ $p->status === 'Monitor' ? 'bg-yellow-500' : '' }}"></span>
-                        <span class="font-semibold text-xs">{{ $p->status }}</span>
                     </div>
                 </div>
             @empty

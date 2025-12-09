@@ -16,6 +16,11 @@ class ActivityLogController extends Controller
         $view = '';
 
         if (Auth::guard('super_admin')->check()) {
+            
+            if (!Auth::guard('super_admin')->check()) {
+                abort(403, 'Unauthorized access.');
+            }
+
             $superAdmin = Auth::guard('super_admin')->user();
             $logs = ActLog::with('superAdmin')
                 ->where('super_id', $superAdmin->super_id)
@@ -23,7 +28,13 @@ class ActivityLogController extends Controller
                 ->get();
 
             $view = 'dashboards.super_admin.actLogs';
+
         } elseif (Auth::guard('owner')->check()) {
+
+            if (!Auth::guard('owner')->check()) {
+                abort(403, 'Unauthorized access.');
+            }
+
             $owner = Auth::guard('owner')->user();
             $logs = ActLog::with('owner')
                 ->where('owner_id', $owner->owner_id)
@@ -40,6 +51,11 @@ class ActivityLogController extends Controller
     public function staffLogs()
     {
         $owner = Auth::guard('owner')->user();
+
+        if (!Auth::guard('owner')->check()) {
+            abort(403, 'Unauthorized access.');
+        }
+
         $logs = ActLog::with('staff')
             ->whereHas('staff', function ($query) use ($owner) {
                 $query->where('owner_id', $owner->owner_id);

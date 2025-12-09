@@ -70,7 +70,7 @@
                                                         wire:change="getInventory({{ $index }}, $event.target.value)"
                                                         required 
                                                         class="form-select text-sm w-full border-2 border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white">
-                                                    <option value="">Select Product</option>
+                                                    <option value="" disabled>Select Product</option>
                                                     @foreach ($products as $product)
                                                         <option value="{{ $product->prod_code }}">{{ $product->name }}</option>
                                                     @endforeach
@@ -94,6 +94,13 @@
                                                     <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> 
                                                 @enderror
                                             </div>
+                                        <div class="flex items-center space-x-2">
+                                            <input type="checkbox" id="returnToSupplier" class="form-checkbox"
+                                                wire:model.live="damageRecords.{{ $index }}.damaged_set_to_return" >
+                                            <label for="returnToSupplier" class="text-[11px] font-medium text-blue-600">
+                                                Mark check to set this item to be returned to the supplier
+                                            </label>
+                                        </div>
                                         </div>
                                         <!-- Column 2: Inventory & Type -->
                                         <div class="space-y-4">
@@ -105,14 +112,14 @@
                                                         required 
                                                         class="form-select text-sm w-full border-2 border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white">
                                                     <option value="">Select Inventory</option>
-                                                    @if(isset($inventories[$index]) && count($inventories[$index]) > 0)
-                                                        @foreach ($inventories[$index] as $row)
-                                                            <option value="{{ $row->inven_code }}">
-                                                                {{ $row->batch_number }} • {{ \Carbon\Carbon::parse($row->expiration_date)->format('M d, Y') }}
-                                                            </option>
-                                                        @endforeach
-                                                    @else
-                                                        <option value="" disabled>Choose Product first</option>
+                                                        @if(isset($inventories[$index]) && count($inventories[$index]) > 0)
+                                                            @foreach ($inventories[$index] as $row)
+                                                                <option value="{{ $row->inven_code }}">
+                                                                    {{ $row->batch_number }} • {{ \Carbon\Carbon::parse($row->expiration_date)->format('M d, Y') }}
+                                                                </option>
+                                                            @endforeach
+                                                        @else
+                                                    <option value="" disabled>Choose Product first</option>
                                                     @endif
                                                 </select>
                                                 @error("damageRecords.{$index}.inven_code") 

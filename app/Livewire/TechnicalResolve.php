@@ -36,7 +36,7 @@ class TechnicalResolve extends Component
         } 
 
         $this->loadRequest();
-         $this->updatedSearchWord();
+        $this->updatedSearchWord();
     }
 
 
