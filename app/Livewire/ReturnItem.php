@@ -39,11 +39,13 @@ class ReturnItem extends Component
     public $customReturnReason = '';
     
     // Replacement feature
-    public $isReplacement = false;
     public $replacementBarcode = '';
-    public $replacementProduct = null;
-    public $replacementQuantity = 1;
+    public $replacementItems = [];
     public $showReplacementSection = false;
+    
+    // Modal-specific error messages
+    public $modalError = '';
+    public $modalWarning = '';
     
     // Define single list of all reasons
     private $allReturnReasons = [
@@ -79,7 +81,7 @@ class ReturnItem extends Component
         $this->loadStoreInfo();
         $this->loadReceiptDetails();
         
-        if (! $this->receiptDetails) {
+        if (!  $this->receiptDetails) {
             $this->receiptNotFound = true;
             session()->flash('error', 'Receipt not found or you do not have permission to access it.');
             return;
@@ -103,7 +105,7 @@ class ReturnItem extends Component
             $owner = $staff->owner;
             $this->store_info = (object)[
                 'store_name' => $owner->store_name ?? 'Store Name',
-                'store_address' => $owner->store_address ?? '',
+                'store_address' => $owner->store_address ??  '',
                 'contact' => $owner->contact ?? ''
             ];
         }
@@ -166,7 +168,7 @@ class ReturnItem extends Component
 
     public function loadReturnHistory()
     {
-        $owner_id = Auth::guard('owner')->check() 
+        $owner_id = Auth:: guard('owner')->check() 
             ? Auth::guard('owner')->user()->owner_id 
             : Auth::guard('staff')->user()->owner_id;
         
@@ -196,7 +198,7 @@ class ReturnItem extends Component
             JOIN products p ON ri.prod_code = p.prod_code
             JOIN receipt r ON ri.receipt_id = r.receipt_id
             LEFT JOIN owners o ON ret.owner_id = o.owner_id AND ret.staff_id IS NULL
-            LEFT JOIN staff s ON ret.staff_id = s.staff_id AND s.owner_id = ?
+            LEFT JOIN staff s ON ret.staff_id = s.staff_id AND s.owner_id = ? 
             LEFT JOIN damaged_items d ON d.return_id = ret.return_id
             WHERE r.receipt_id = ?
             AND r.owner_id = ? 
@@ -220,18 +222,19 @@ class ReturnItem extends Component
 
     public function toggleReplacement()
     {
-        $this->showReplacementSection = !$this->showReplacementSection;
+        $this->showReplacementSection = ! $this->showReplacementSection;
         if (! $this->showReplacementSection) {
             $this->replacementBarcode = '';
-            $this->replacementProduct = null;
-            $this->replacementQuantity = 1;
+            $this->replacementItems = [];
         }
     }
 
     public function searchReplacementProduct()
     {
+        $this->modalError = '';
+        
         if (empty($this->replacementBarcode)) {
-            session()->flash('error', 'Please enter a barcode.');
+            $this->modalError = 'Please enter a barcode. ';
             return;
         }
 
@@ -256,26 +259,47 @@ class ReturnItem extends Component
         ", [$this->replacementBarcode, $owner_id]);
 
         if (!$product) {
-            session()->flash('error', 'Product not found or inactive.');
-            $this->replacementProduct = null;
+            $this->modalError = 'Product not found or inactive.';
             return;
         }
 
         if ($product->available_stock <= 0) {
-            session()->flash('error', 'Product out of stock.');
-            $this->replacementProduct = null;
+            $this->modalError = 'Product out of stock.';
             return;
         }
 
-        $this->replacementProduct = $product;
-        $this->replacementQuantity = 1;
+        $existingKey = array_search($product->prod_code, array_column($this->replacementItems, 'prod_code'));
+        
+        if ($existingKey !== false) {
+            if ($this->replacementItems[$existingKey]['quantity'] < $product->available_stock) {
+                $this->replacementItems[$existingKey]['quantity']++;
+            } else {
+                $this->modalError = 'Maximum available stock reached for this product.';
+            }
+        } else {
+            $this->replacementItems[] = [
+                'prod_code' => $product->prod_code,
+                'name' => $product->name,
+                'selling_price' => floatval($product->selling_price),
+                'barcode' => $product->barcode,
+                'available_stock' => intval($product->available_stock),
+                'quantity' => 1
+            ];
+        }
+
+        $this->replacementBarcode = '';
     }
 
-    public function clearReplacement()
+    public function removeReplacementItem($index)
     {
+        unset($this->replacementItems[$index]);
+        $this->replacementItems = array_values($this->replacementItems);
+    }
+
+    public function clearAllReplacements()
+    {
+        $this->replacementItems = [];
         $this->replacementBarcode = '';
-        $this->replacementProduct = null;
-        $this->replacementQuantity = 1;
     }
 
     public function openBulkReturnModal()
@@ -295,11 +319,11 @@ class ReturnItem extends Component
             if ($item) {
                 $this->bulkReturnItems[$itemId] = [
                     'item_id' => (int)$item->item_id,
-                    'product_name' => (string)($item->product_name ?? 'Unknown Product'),
+                    'product_name' => (string)($item->product_name ??  'Unknown Product'),
                     'selling_price' => (float)($item->selling_price ?? 0),
                     'returnable_quantity' => (int)($item->returnable_quantity ?? 0),
                     'max_quantity' => (int)($item->returnable_quantity ?? 0),
-                    'inven_code' => $item->inven_code ??  null,
+                    'inven_code' => $item->inven_code ?? null,
                     'prod_code' => (int)($item->prod_code ?? 0)
                 ];
                 
@@ -316,7 +340,9 @@ class ReturnItem extends Component
         $this->returnReason = '';
         $this->customReturnReason = '';
         $this->showReplacementSection = false;
-        $this->replacementProduct = null;
+        $this->replacementItems = [];
+        $this->modalError = '';
+        $this->modalWarning = '';
         $this->showReturnModal = true;
     }
 
@@ -337,7 +363,9 @@ class ReturnItem extends Component
         $this->customReturnReason = '';
         $this->returnAction = 'restock';
         $this->showReplacementSection = false;
-        $this->replacementProduct = null;
+        $this->replacementItems = [];
+        $this->modalError = '';
+        $this->modalWarning = '';
         $this->showReturnModal = true;
     }
 
@@ -354,8 +382,10 @@ class ReturnItem extends Component
         $this->returnAction = 'restock';
         $this->maxReturnQuantity = 0;
         $this->showReplacementSection = false;
-        $this->replacementProduct = null;
+        $this->replacementItems = [];
         $this->replacementBarcode = '';
+        $this->modalError = '';
+        $this->modalWarning = '';
     }
 
     public function goBackToReports()
@@ -365,16 +395,15 @@ class ReturnItem extends Component
 
     private function processReplacement($returnId, $owner_id, $staff_id)
     {
-        if (!$this->replacementProduct || (int)$this->replacementQuantity <= 0) {
+        if (empty($this->replacementItems)) {
             return null;
         }
-    
-        // Ensure values are properly typed
-        $replacementQty = (int)$this->replacementQuantity;
-        $sellingPrice = (float)$this->replacementProduct->selling_price;
-        $totalAmount = $sellingPrice * $replacementQty;
-    
-        // Create new receipt for replacement
+
+        $totalAmount = 0;
+        foreach ($this->replacementItems as $item) {
+            $totalAmount += floatval($item['selling_price']) * intval($item['quantity']);
+        }
+
         $newReceiptId = DB::table('receipt')->insertGetId([
             'receipt_date' => now(),
             'owner_id' => $owner_id,
@@ -384,20 +413,20 @@ class ReturnItem extends Component
             'discount_value' => 0,
             'discount_amount' => 0
         ]);
-    
-        // Deduct from inventory and create receipt items (FIFO)
-        $this->deductInventoryFIFO(
-            (int)$this->replacementProduct->prod_code,
-            $replacementQty,
-            $owner_id,
-            $newReceiptId
-        );
-    
-        // Update returned_items with the replacement receipt_id
+
+        foreach ($this->replacementItems as $item) {
+            $this->deductInventoryFIFO(
+                (int)$item['prod_code'],
+                (int)$item['quantity'],
+                $owner_id,
+                $newReceiptId
+            );
+        }
+
         DB::table('returned_items')
             ->where('return_id', $returnId)
             ->update(['receipt_id' => $newReceiptId]);
-    
+
         return $newReceiptId;
     }
 
@@ -421,12 +450,10 @@ class ReturnItem extends Component
             $batchStock = (int)$batch->stock;
             $deductFromThisBatch = min($remaining, $batchStock);
             
-            // Deduct from inventory
-            DB:: table('inventory')
+            DB::table('inventory')
                 ->where('inven_code', $batch->inven_code)
                 ->decrement('stock', $deductFromThisBatch);
     
-            // Insert receipt item for replacement
             DB::table('receipt_item')->insert([
                 'item_quantity' => $deductFromThisBatch,
                 'prod_code' => $prodCode,
@@ -442,34 +469,88 @@ class ReturnItem extends Component
         }
     }
 
+    // ✅ ADD BACK TO INVENTORY (RESTOCK)
+    private function restockInventory($prodCode, $quantity, $ownerId, $invenCode = null)
+    {
+        $prodCode = (int)$prodCode;
+        $quantity = (int)$quantity;
+        
+        // If we have the original inven_code, add it back to that batch
+        if ($invenCode) {
+            $batch = DB::table('inventory')
+                ->where('inven_code', $invenCode)
+                ->where('owner_id', $ownerId)
+                ->first();
+            
+            if ($batch) {
+                DB::table('inventory')
+                    ->where('inven_code', $invenCode)
+                    ->increment('stock', $quantity);
+                return;
+            }
+        }
+        
+        // Otherwise, add to the most recent batch
+        $latestInventory = DB::table('inventory')
+            ->where('prod_code', $prodCode)
+            ->where('owner_id', $ownerId)
+            ->orderBy('date_added', 'desc')
+            ->orderBy('inven_code', 'desc')
+            ->first();
+
+        if ($latestInventory) {
+            DB::table('inventory')
+                ->where('inven_code', $latestInventory->inven_code)
+                ->increment('stock', $quantity);
+        } else {
+            // Create new inventory entry if none exists
+            $product = DB::table('products')
+                ->where('prod_code', $prodCode)
+                ->first();
+
+            if ($product) {
+                DB::table('inventory')->insert([
+                    'prod_code' => $prodCode,
+                    'stock' => $quantity,
+                    'date_added' => now(),
+                    'owner_id' => $ownerId,
+                    'category_id' => $product->category_id
+                ]);
+            }
+        }
+    }
+
     public function submitBulkReturn()
     {
-        $rules = [
-            'returnAction' => 'required|in: restock,damage'
-        ];
-    
-        foreach ($this->bulkReturnItems as $itemId => $item) {
-            $maxQty = (int)$item['max_quantity'];
-            $rules["bulkReturnQuantities.{$itemId}"] = "required|integer|min: 1|max:{$maxQty}";
+        $this->modalError = '';
+        $this->modalWarning = '';
+        
+        $hasError = false;
+        
+        if (empty($this->returnAction) || ! in_array($this->returnAction, ['restock', 'damage'])) {
+            $this->modalError = 'Please select whether to restock or mark as damaged.';
+            $hasError = true;
         }
-    
-        if ($this->showReplacementSection && $this->replacementProduct) {
-            $maxStock = (int)$this->replacementProduct->available_stock;
-            $rules['replacementQuantity'] = "required|integer|min:1|max:{$maxStock}";
-        }
-    
-        $this->validate($rules, [
-            'returnAction.required' => 'Please select whether to restock or mark as damaged.',
-            'bulkReturnQuantities.*.max' => 'Return quantity exceeds available quantity.',
-            'replacementQuantity.max' => 'Replacement quantity exceeds available stock.'
-        ]);
-    
-        $finalReason = !empty($this->customReturnReason) 
+        
+        $finalReason = ! empty($this->customReturnReason) 
             ? trim($this->customReturnReason) 
             : $this->returnReason;
     
         if (empty($finalReason)) {
-            session()->flash('error', 'Please provide a return reason (either select from dropdown or type custom reason).');
+            $this->modalError = 'Please provide a return reason (either select from dropdown or type custom reason).';
+            $hasError = true;
+        }
+        
+        foreach ($this->bulkReturnItems as $itemId => $item) {
+            $qty = (int)($this->bulkReturnQuantities[$itemId] ?? 0);
+            if ($qty <= 0 || $qty > (int)$item['max_quantity']) {
+                $this->modalError = "Invalid quantity for {$item['product_name']}. Max returnable:  {$item['max_quantity']}";
+                $hasError = true;
+                break;
+            }
+        }
+        
+        if ($hasError) {
             return;
         }
     
@@ -506,16 +587,21 @@ class ReturnItem extends Component
                     'return_quantity' => $returnQuantity,
                     'return_reason' => $finalReason,
                     'return_date' => now(),
-                    'owner_id' => $staff_id ? null : $owner_id,
+                    'owner_id' => $staff_id ?  null : $owner_id,
                     'staff_id' => $staff_id,
                     'receipt_id' => null
                 ]);
+
+                // ✅ SUBTRACT RETURNED QUANTITY FROM ORIGINAL RECEIPT ITEM
+                DB::table('receipt_item')
+                ->where('item_id', $itemIdValue)
+                ->decrement('item_quantity', $returnQuantity);
     
                 $lastReturnId = $returnId;
-    
                 $totalRefund += $sellingPrice * $returnQuantity;
     
                 if ($isDamaged) {
+                    // ✅ DAMAGED:  Record in damaged_items table (NO inventory change)
                     DB::table('damaged_items')->insert([
                         'damaged_quantity' => $returnQuantity,
                         'damaged_date' => now(),
@@ -526,58 +612,25 @@ class ReturnItem extends Component
                         'staff_id' => $staff_id,
                         'inven_code' => $invenCode
                     ]);
-    
-                    if ($invenCode) {
-                        DB::table('inventory')
-                            ->where('inven_code', $invenCode)
-                            ->decrement('stock', $returnQuantity);
-                    } else {
-                        $this->decrementInventoryFIFO($prodCode, $returnQuantity, $owner_id);
-                    }
                 } else {
-                    $latestInventory = DB::table('inventory')
-                        ->where('prod_code', $prodCode)
-                        ->where('owner_id', $owner_id)
-                        ->orderBy('date_added', 'desc')
-                        ->orderBy('inven_code', 'desc')
-                        ->first();
-    
-                    if ($latestInventory) {
-                        DB::table('inventory')
-                            ->where('inven_code', $latestInventory->inven_code)
-                            ->increment('stock', $returnQuantity);
-                    } else {
-                        $product = DB::table('products')
-                            ->where('prod_code', $prodCode)
-                            ->first();
-    
-                        if ($product) {
-                            DB::table('inventory')->insert([
-                                'prod_code' => $prodCode,
-                                'stock' => $returnQuantity,
-                                'date_added' => now(),
-                                'owner_id' => $owner_id,
-                                'category_id' => $product->category_id
-                            ]);
-                        }
-                    }
+                    // ✅ RESTOCK: Add back to inventory
+                    $this->restockInventory($prodCode, $returnQuantity, $owner_id, $invenCode);
                 }
     
                 $totalItemsProcessed++;
             }
     
-            // Process replacement only for the last return
-            if ($this->showReplacementSection && $this->replacementProduct && $lastReturnId) {
+            if ($this->showReplacementSection && ! empty($this->replacementItems) && $lastReturnId) {
                 $replacementReceiptId = $this->processReplacement($lastReturnId, $owner_id, $staff_id);
             }
     
             DB::commit();
     
-            $message = "Successfully processed {$totalItemsProcessed} item(s) return. Total refund: ₱" . number_format($totalRefund, 2) . ". " . 
-                ($isDamaged ? 'Items recorded as damaged and removed from inventory.' : 'Items restocked to inventory.');
+            $message = "Successfully processed {$totalItemsProcessed} item(s) return. Total refund: ₱" . number_format($totalRefund, 2) . ".  " . 
+                ($isDamaged ? 'Items recorded as damaged (no inventory change).' : 'Items restocked to inventory.');
             
             if ($replacementReceiptId) {
-                $message .= ' Replacement receipt #' . str_pad($replacementReceiptId, 6, '0', STR_PAD_LEFT) . ' created.';
+                $message .  ' Replacement receipt #' . str_pad($replacementReceiptId, 6, '0', STR_PAD_LEFT) . ' created.';
             }
     
             session()->flash('success', $message);
@@ -587,40 +640,42 @@ class ReturnItem extends Component
             $this->closeReturnModal();
             $this->loadReturnableItems();
             $this->loadReturnHistory();
-            $this->dispatch('returnProcessed', receiptId:  $this->receiptId);
+            $this->dispatch('returnProcessed', receiptId: $this->receiptId);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Error processing bulk return: ' . $e->getMessage());
-            \Log::error('Error in submitBulkReturn:  ' . $e->getMessage());
+            $this->modalError = 'Error processing bulk return: ' . $e->getMessage();
+            \Log::error('Error in submitBulkReturn: ' . $e->getMessage());
         }
     }
 
     public function submitReturn()
     {
-        $rules = [
-            'returnQuantity' => 'required|integer|min:1|max: ' . $this->maxReturnQuantity,
-            'returnAction' => 'required|in:restock,damage',
-        ];
-    
-        if ($this->showReplacementSection && $this->replacementProduct) {
-            $maxStock = (int)$this->replacementProduct->available_stock;
-            $rules['replacementQuantity'] = "required|integer|min: 1|max:{$maxStock}";
+        $this->modalError = '';
+        $this->modalWarning = '';
+        
+        $hasError = false;
+        
+        if (empty($this->returnQuantity) || $this->returnQuantity < 1 || $this->returnQuantity > $this->maxReturnQuantity) {
+            $this->modalError = "Please enter a valid return quantity (1-{$this->maxReturnQuantity}).";
+            $hasError = true;
         }
-    
-        $this->validate($rules, [
-            'returnQuantity.required' => 'Please enter a return quantity.',
-            'returnQuantity.max' => 'Return quantity cannot exceed ' . $this->maxReturnQuantity,
-            'returnAction.required' => 'Please select whether to restock or mark as damaged.',
-            'replacementQuantity.max' => 'Replacement quantity exceeds available stock.'
-        ]);
-    
-        $finalReason = ! empty($this->customReturnReason) 
+        
+        if (empty($this->returnAction) || !in_array($this->returnAction, ['restock', 'damage'])) {
+            $this->modalError = 'Please select whether to restock or mark as damaged.';
+            $hasError = true;
+        }
+        
+        $finalReason = !empty($this->customReturnReason) 
             ? trim($this->customReturnReason) 
             : $this->returnReason;
     
         if (empty($finalReason)) {
-            session()->flash('error', 'Please provide a return reason (either select from dropdown or type custom reason).');
+            $this->modalError = 'Please provide a return reason (either select from dropdown or type custom reason).';
+            $hasError = true;
+        }
+        
+        if ($hasError) {
             return;
         }
     
@@ -640,16 +695,22 @@ class ReturnItem extends Component
                 'return_quantity' => (int)$this->returnQuantity,
                 'return_reason' => $finalReason,
                 'return_date' => now(),
-                'owner_id' => $staff_id ?  null : $owner_id,
+                'owner_id' => $staff_id ? null : $owner_id,
                 'staff_id' => $staff_id,
                 'receipt_id' => null
             ]);
+
+            // ✅ SUBTRACT RETURNED QUANTITY FROM ORIGINAL RECEIPT ITEM
+            DB::table('receipt_item')
+            ->where('item_id', $this->selectedItemForReturn->item_id)
+            ->decrement('item_quantity', (int)$this->returnQuantity);
     
             $isDamaged = ($this->returnAction === 'damage');
+            $invenCode = $this->selectedItemForReturn->inven_code;
+            $prodCode = $this->selectedItemForReturn->prod_code;
     
             if ($isDamaged) {
-                $invenCode = $this->selectedItemForReturn->inven_code;
-                
+                // ✅ DAMAGED: Record in damaged_items table (NO inventory change)
                 DB::table('damaged_items')->insert([
                     'damaged_quantity' => (int)$this->returnQuantity,
                     'damaged_date' => now(),
@@ -660,57 +721,20 @@ class ReturnItem extends Component
                     'staff_id' => $staff_id,
                     'inven_code' => $invenCode
                 ]);
-    
-                if ($invenCode) {
-                    DB::table('inventory')
-                        ->where('inven_code', $invenCode)
-                        ->decrement('stock', (int)$this->returnQuantity);
-                } else {
-                    $this->decrementInventoryFIFO(
-                        $this->selectedItemForReturn->prod_code, 
-                        (int)$this->returnQuantity, 
-                        $owner_id
-                    );
-                }
             } else {
-                $latestInventory = DB::table('inventory')
-                    ->where('prod_code', $this->selectedItemForReturn->prod_code)
-                    ->where('owner_id', $owner_id)
-                    ->orderBy('date_added', 'desc')
-                    ->orderBy('inven_code', 'desc')
-                    ->first();
-    
-                if ($latestInventory) {
-                    DB::table('inventory')
-                        ->where('inven_code', $latestInventory->inven_code)
-                        ->increment('stock', (int)$this->returnQuantity);
-                } else {
-                    $product = DB::table('products')
-                        ->where('prod_code', $this->selectedItemForReturn->prod_code)
-                        ->first();
-    
-                    if ($product) {
-                        DB::table('inventory')->insert([
-                            'prod_code' => $this->selectedItemForReturn->prod_code,
-                            'stock' => (int)$this->returnQuantity,
-                            'date_added' => now(),
-                            'owner_id' => $owner_id,
-                            'category_id' => $product->category_id
-                        ]);
-                    }
-                }
+                // ✅ RESTOCK: Add back to inventory
+                $this->restockInventory($prodCode, (int)$this->returnQuantity, $owner_id, $invenCode);
             }
     
-            // Process replacement and get new receipt ID
             $replacementReceiptId = null;
-            if ($this->showReplacementSection && $this->replacementProduct) {
+            if ($this->showReplacementSection && !empty($this->replacementItems)) {
                 $replacementReceiptId = $this->processReplacement($returnId, $owner_id, $staff_id);
             }
     
             DB::commit();
     
-            $message = 'Return processed successfully.  ' . 
-                ($isDamaged ? 'Item recorded as damaged and removed from inventory.' : 'Item restocked to inventory.');
+            $message = 'Return processed successfully. ' . 
+                ($isDamaged ? 'Item recorded as damaged (no inventory change).' : 'Item restocked to inventory.');
             
             if ($replacementReceiptId) {
                 $message .= ' Replacement receipt #' . str_pad($replacementReceiptId, 6, '0', STR_PAD_LEFT) . ' created.';
@@ -721,37 +745,12 @@ class ReturnItem extends Component
             $this->closeReturnModal();
             $this->loadReturnableItems();
             $this->loadReturnHistory();
-            $this->dispatch('returnProcessed', receiptId: $this->receiptId);
+            $this->dispatch('returnProcessed', receiptId:  $this->receiptId);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Error processing return: ' . $e->getMessage());
+            $this->modalError = 'Error processing return: ' . $e->getMessage();
             \Log::error('Error in submitReturn: ' . $e->getMessage());
-        }
-    }
-
-    private function decrementInventoryFIFO($prodCode, $quantity, $ownerId)
-    {
-        $remaining = $quantity;
-        
-        $inventoryBatches = DB::table('inventory')
-            ->where('prod_code', $prodCode)
-            ->where('owner_id', $ownerId)
-            ->where('stock', '>', 0)
-            ->orderBy('date_added', 'asc')
-            ->orderBy('inven_code', 'asc')
-            ->get();
-
-        foreach ($inventoryBatches as $batch) {
-            if ($remaining <= 0) break;
-
-            $deductFromThisBatch = min($remaining, $batch->stock);
-            
-            DB::table('inventory')
-                ->where('inven_code', $batch->inven_code)
-                ->decrement('stock', $deductFromThisBatch);
-            
-            $remaining -= $deductFromThisBatch;
         }
     }
 
