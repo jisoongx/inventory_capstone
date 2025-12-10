@@ -171,7 +171,7 @@
                             <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Daily, weekly, and monthly sales tracking</li>
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock alert, expiration notice, and top-selling products</li>
-                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales and loss analysis ( chart included)</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales and loss chart </li>
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Monthly net profit overview</li>
                                 <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Up to 50 inventory items</li>
 
@@ -209,7 +209,7 @@
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Basic Plan</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 items)</li>
-                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales ans stock performance reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales and stock performance reports</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock loss, damage, and expiration reports</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs</li>
                             <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>One staff account</li>
@@ -271,7 +271,7 @@
                 features: [
                     "Daily, weekly, and monthly sales tracking",
                     "Stock alert, expiration notice, and top-selling products",
-                    "Sales and loss analysis(chart included)",
+                    "Sales and loss chart",
                     "Monthly net profit overview",
                     "Up to 50 inventory items"
                 ]
@@ -283,7 +283,7 @@
                 features: [
                     "All features from Basic Plan",
                     "Inventory expansion (up to 200 inventory items)",
-                    "Sales ans stock performance reports",
+                    "Sales and stock performance reports",
                     "Stock loss, damage, and expiration reports",
                     "Activity logs",
                     "One staff account"
