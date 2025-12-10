@@ -520,16 +520,343 @@ class RestockController extends Controller
     //     ));
     // }
 
+    // public function restockSuggestion(Request $request)
+    // {
+    //     if (!Auth::guard('owner')->check()) {
+    //         abort(403, 'Unauthorized access.');
+    //     }
+
+    //     $ownerId = Auth::guard('owner')->id();
+    //     $currentYear = now()->year;
+    //     $currentMonth = now()->month;
+    //     $daysInMonth = now()->daysInMonth;
+
+    //     // ------------------------------------
+    //     // 1️⃣ LOAD CATEGORIES
+    //     // ------------------------------------
+    //     $categories = DB::table('categories')
+    //         ->where('owner_id', $ownerId)
+    //         ->get();
+
+    //     // ------------------------------------
+    //     // 2️⃣ LOAD ALL ACTIVE PRODUCTS (dropdown)
+    //     // ------------------------------------
+    //     $allProducts = DB::table('products')
+    //         ->leftJoinSub(
+    //             DB::table('inventory')
+    //                 ->select('prod_code', DB::raw('SUM(stock) as total_stock'))
+    //                 ->where('owner_id', $ownerId)
+    //                 ->groupBy('prod_code'),
+    //             'inventory',
+    //             fn($join) => $join->on('products.prod_code', '=', 'inventory.prod_code')
+    //         )
+    //         ->where('products.owner_id', $ownerId)
+    //         ->where('products.prod_status', 'active')
+    //         ->select(
+    //             'products.prod_code as inven_code',
+    //             'products.name',
+    //             'products.category_id',
+    //             'products.cost_price',
+    //             DB::raw('COALESCE(inventory.total_stock, 0) as stock')
+    //         )
+    //         ->get();
+
+    //     // ------------------------------------
+    //     // 3️⃣ LOAD PRODUCTS + STOCK + SALES + EXPIRED
+    //     // ------------------------------------
+    //     $inventoryAgg = DB::table('inventory')
+    //         ->select('prod_code', DB::raw('SUM(stock) as total_stock'))
+    //         ->where('owner_id', $ownerId)
+    //         ->groupBy('prod_code');
+
+    //     $products = DB::table('products')
+    //         ->where('products.owner_id', $ownerId)
+    //         ->where('products.prod_status', 'active')
+    //         ->join('categories', 'products.category_id', '=', 'categories.category_id')
+    //         ->leftJoinSub(
+    //             $inventoryAgg,
+    //             'inventory',
+    //             fn($join) =>
+    //             $join->on('products.prod_code', '=', 'inventory.prod_code')
+    //         )
+
+    //         // Fixed monthly sales subquery
+    //         ->leftJoin(DB::raw("(
+    //         SELECT 
+    //             ri.prod_code,
+    //             SUM(
+    //                 CASE 
+    //                     WHEN YEAR(r.receipt_date) = {$currentYear}
+    //                     AND MONTH(r.receipt_date) = {$currentMonth}
+    //                     THEN ri.item_quantity ELSE 0 
+    //                 END
+    //             ) AS sold_this_month
+    //         FROM receipt_item ri
+    //         INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
+    //         GROUP BY ri.prod_code
+    //     ) AS sales_month"), 'products.prod_code', '=', 'sales_month.prod_code')
+
+    //         // Fixed expired stock subquery
+    //         ->leftJoin(DB::raw("(
+    //         SELECT 
+    //             prod_code,
+    //             SUM(stock) AS expired_stock
+    //         FROM inventory
+    //         WHERE expiration_date < CURDATE()
+    //           AND is_expired = 1
+    //           AND MONTH(expiration_date) = {$currentMonth}
+    //           AND YEAR(expiration_date) = {$currentYear}
+    //         GROUP BY prod_code
+    //     ) AS expired"), 'products.prod_code', '=', 'expired.prod_code')
+
+    //         ->select(
+    //             'products.prod_code',
+    //             'products.name',
+    //             'categories.category',
+    //             'products.category_id',
+    //             'products.cost_price',
+    //             DB::raw('COALESCE(inventory.total_stock, 0) as stock'),
+    //             'products.stock_limit',
+    //             DB::raw('COALESCE(sales_month.sold_this_month, 0) as sold_this_month'),
+    //             DB::raw('COALESCE(expired.expired_stock, 0) as expired_stock')
+    //         )
+    //         ->get();
+
+    //     $forecastService = app(\App\Services\ForecastService::class);
+
+    //     // ------------------------------------
+    //     // 4️⃣ PROCESS EACH PRODUCT
+    //     // ------------------------------------
+    //     $products = $products->map(function ($product) use ($ownerId, $forecastService, $daysInMonth) {
+
+    //         // A. Monthly sales series
+    //         $monthlySales = DB::table('receipt_item')
+    //             ->join('receipt', 'receipt.receipt_id', '=', 'receipt_item.receipt_id')
+    //             ->where('receipt.owner_id', $ownerId)
+    //             ->where('receipt_item.prod_code', $product->prod_code)
+    //             ->where('receipt.receipt_date', '>=', now()->subYears(3)) // <-- only last 3 years
+    //             ->selectRaw("YEAR(receipt.receipt_date) AS y, MONTH(receipt.receipt_date) AS m, SUM(item_quantity) AS total")
+    //             ->groupBy('y', 'm')
+    //             ->orderBy('y')
+    //             ->orderBy('m')
+    //             ->pluck('total')
+    //             ->toArray();
+
+
+    //         // LOG #1 – INPUT
+    //         Log::info("[RESTOCK] Forecast input", [
+    //             "product_code" => $product->prod_code,
+    //             "product_name" => $product->name,
+    //             "sales_history" => $monthlySales
+    //         ]);
+
+
+    //         // ------------------------------------
+    //         // B. Forecasting Logic
+    //         // ------------------------------------
+    //         $forecast = 0;
+    //         $algoUsed = null;
+
+    //         if (count($monthlySales) > 0) {
+
+    //             $result = $forecastService->forecast($monthlySales);
+
+    //             // LOG #2 – ALGO OUTPUT
+    //             Log::info("[RESTOCK] Forecast result", [
+    //                 "product_code" => $product->prod_code,
+    //                 "product_name" => $product->name,
+    //                 "ses" => $result['ses'] ?? null,
+    //                 "holtwinters" => $result['holtwinters'] ?? null,
+    //             ]);
+
+
+    //             if (!empty($result['holtwinters'])) {
+    //                 $forecast = $result['holtwinters'];
+    //                 $algoUsed = "holt-winters";
+    //             } elseif (!empty($result['ses'])) {
+    //                 $forecast = $result['ses'];
+    //                 $algoUsed = "ses";
+    //             } else {
+    //                 $forecast = null;
+    //                 $algoUsed = null;
+    //             }
+    //         }
+
+    //         // LOG #3 – WHAT WAS CHOSEN
+    //         Log::info("[RESTOCK] Forecast chosen", [
+    //             "product_code" => $product->prod_code,
+    //             "product_name" => $product->name,
+    //             "forecast_used" => $forecast,
+    //             "algorithm" => $algoUsed
+    //         ]);
+
+
+    //         $avgDailyDemand = $forecast / 30;
+
+    //         // ------------------------------------
+    //         // C. Dynamic Lead Time (Based on Restock Frequency)
+    //         // ------------------------------------
+    //         $restockDates = DB::table('inventory')
+    //             ->where('owner_id', $ownerId)
+    //             ->where('prod_code', $product->prod_code)
+    //             ->orderBy('date_added')
+    //             ->pluck('date_added')
+    //             ->map(fn($d) => \Carbon\Carbon::parse($d))
+    //             ->toArray();
+
+    //         // Default fallback
+    //         $leadTime = 3;
+
+    //         if (count($restockDates) > 1) {
+    //             $intervals = [];
+
+    //             for ($i = 1; $i < count($restockDates); $i++) {
+    //                 $intervals[] = $restockDates[$i]->diffInDays($restockDates[$i - 1]);
+    //             }
+
+    //             if (!empty($intervals)) {
+    //                 $avgInterval = array_sum($intervals) / count($intervals);
+
+    //                 // Cap to avoid extreme values
+    //                 $leadTime = max(1, min(14, round($avgInterval)));
+    //             }
+    //         }
+
+
+    //         // ------------------------------------
+    //         // D. Reorder Point
+    //         // ------------------------------------
+    //         $safetyStock = $product->stock_limit;
+    //         $reorderPoint = round(($avgDailyDemand * $leadTime) + $safetyStock);
+
+    //         // ------------------------------------
+    //         // E. High Demand
+    //         // ------------------------------------
+    //         if (count($monthlySales) >= 3 && $forecast > 0) {
+    //             $isHighDemand = $product->sold_this_month > ($forecast * 1.20);
+    //         } else {
+    //             $avgDailyThisMonth = $product->sold_this_month / max($daysInMonth, 1);
+    //             $isHighDemand = $avgDailyThisMonth >= 1;
+    //         }
+
+    //         // ------------------------------------
+    //         // F. Low Stock
+    //         // ------------------------------------
+    //         $isLowStock = $product->stock < $safetyStock;
+    //         $isOutOfStock = $product->stock == 0;
+
+    //         // ------------------------------------
+    //         // G. Multipliers
+    //         // ------------------------------------
+    //         if ($isLowStock && $isHighDemand) {
+    //             $multiplierFinal = 0.35;
+    //         } elseif ($isHighDemand) {
+    //             $multiplierFinal = 0.25;
+    //         } elseif ($isLowStock) {
+    //             $multiplierFinal = 0.15;
+    //         } else {
+    //             $multiplierFinal = 0.10;
+    //         }
+
+    //         $ropTargetStock = round($reorderPoint * $multiplierFinal);
+
+    //         // ------------------------------------
+    //         // H. Suggested Quantity (Corrected Logic)
+    //         // ------------------------------------
+
+    //         // 1️⃣ Buffer Qty = percentage of reorder point
+    //         $bufferQty = round($reorderPoint * $multiplierFinal);
+
+    //         // 2️⃣ Total target stock = reorder point + buffer
+    //         $targetStock = $reorderPoint + $bufferQty;
+
+    //         // 3️⃣ Suggested order = target - current stock
+    //         $suggestedQty = max($targetStock - $product->stock, 0);
+
+    //         // 4️⃣ Deduct expired stock (expired = unsellable)
+    //         if ($product->expired_stock > 0) {
+    //             $suggestedQty = max($suggestedQty - $product->expired_stock, 0);
+    //         }
+
+    //         // 5️⃣ Round cleanly
+    //         $suggestedQty = (int) round($suggestedQty);
+
+
+    //         // ------------------------------------
+    //         // I. Badges
+    //         // ------------------------------------
+    //         $reason = null;
+
+    //         // Out of Stock → highest priority
+    //         if ($product->stock == 0) {
+    //             $reason = "Out of Stock";
+    //             $badge = 'background-color:#fee2e2;color:#b91c1c;'; // red
+    //         }
+    //         // Low Stock only
+    //         elseif ($isLowStock && !$isHighDemand) {
+    //             $reason = "Low Stock";
+    //             $badge = 'background-color:#fef3c7;color:#92400e;'; // yellow
+    //         }
+    //         // High Demand only
+    //         elseif ($isHighDemand && !$isLowStock) {
+    //             $reason = "High Demand";
+    //             $badge = 'background-color:#dcfce7;color:#166534;'; // green
+    //         }
+    //         // Low Stock + High Demand
+    //         elseif ($isLowStock && $isHighDemand) {
+    //             $reason = "Low Stock + High Demand";
+    //             $badge = 'background-color:#dcfce7;color:#166534;'; // green badge but mixed text
+    //         }
+    //         // Default
+    //         else {
+    //             $badge = null;
+    //         }
+
+    //         // Attach fields
+    //         $product->forecast = round($forecast);
+    //         $product->algo_used = $algoUsed;
+    //         $product->lead_time = $leadTime;
+    //         $product->avg_daily_demand = round($avgDailyDemand, 2);
+    //         $product->reorder_point = $reorderPoint;
+    //         $product->suggested_quantity = $suggestedQty;
+    //         $product->reason = $reason;
+    //         $product->reason_badge = $badge;
+    //         $product->isOutOfStock = $isOutOfStock;
+    //         $product->isLowStock = $isLowStock;
+    //         $product->isHighDemand = $isHighDemand;
+
+    //         return $product;
+    //     })
+
+    //         ->filter(fn($p) => $p->suggested_quantity > 0
+    //         && ($p->isLowStock || $p->isHighDemand || $p->isOutOfStock)
+    //             && $p->stock < $p->reorder_point)
+
+    //         ->values();
+
+
+    //     // ------------------------------------
+    //     // RETURN VIEW
+    //     // ------------------------------------
+    //     return view('dashboards.owner.restock_suggestion', compact(
+    //         'products',
+    //         'categories',
+    //         'allProducts',
+    //         'currentYear',
+    //         'currentMonth'
+    //     ));
+    // }
+
     public function restockSuggestion(Request $request)
     {
         if (!Auth::guard('owner')->check()) {
             abort(403, 'Unauthorized access.');
         }
 
-        $ownerId = Auth::guard('owner')->id();
-        $currentYear = now()->year;
+        $ownerId      = Auth::guard('owner')->id();
+        $currentYear  = now()->year;
         $currentMonth = now()->month;
-        $daysInMonth = now()->daysInMonth;
+        $daysInMonth  = now()->daysInMonth;
 
         // ------------------------------------
         // 1️⃣ LOAD CATEGORIES
@@ -579,8 +906,6 @@ class RestockController extends Controller
                 fn($join) =>
                 $join->on('products.prod_code', '=', 'inventory.prod_code')
             )
-
-            // Fixed monthly sales subquery
             ->leftJoin(DB::raw("(
             SELECT 
                 ri.prod_code,
@@ -595,8 +920,6 @@ class RestockController extends Controller
             INNER JOIN receipt r ON ri.receipt_id = r.receipt_id
             GROUP BY ri.prod_code
         ) AS sales_month"), 'products.prod_code', '=', 'sales_month.prod_code')
-
-            // Fixed expired stock subquery
             ->leftJoin(DB::raw("(
             SELECT 
                 prod_code,
@@ -608,7 +931,6 @@ class RestockController extends Controller
               AND YEAR(expiration_date) = {$currentYear}
             GROUP BY prod_code
         ) AS expired"), 'products.prod_code', '=', 'expired.prod_code')
-
             ->select(
                 'products.prod_code',
                 'products.name',
@@ -629,12 +951,12 @@ class RestockController extends Controller
         // ------------------------------------
         $products = $products->map(function ($product) use ($ownerId, $forecastService, $daysInMonth) {
 
-            // A. Monthly sales series
+            // A. Monthly sales series (for SES / Holt-Winters)
             $monthlySales = DB::table('receipt_item')
                 ->join('receipt', 'receipt.receipt_id', '=', 'receipt_item.receipt_id')
                 ->where('receipt.owner_id', $ownerId)
                 ->where('receipt_item.prod_code', $product->prod_code)
-                ->where('receipt.receipt_date', '>=', now()->subYears(3)) // <-- only last 3 years
+                ->where('receipt.receipt_date', '>=', now()->subYears(3))
                 ->selectRaw("YEAR(receipt.receipt_date) AS y, MONTH(receipt.receipt_date) AS m, SUM(item_quantity) AS total")
                 ->groupBy('y', 'm')
                 ->orderBy('y')
@@ -642,33 +964,27 @@ class RestockController extends Controller
                 ->pluck('total')
                 ->toArray();
 
-
-            // LOG #1 – INPUT
             Log::info("[RESTOCK] Forecast input", [
-                "product_code" => $product->prod_code,
-                "product_name" => $product->name,
-                "sales_history" => $monthlySales
+                "product_code"   => $product->prod_code,
+                "product_name"   => $product->name,
+                "sales_history"  => $monthlySales
             ]);
 
-
             // ------------------------------------
-            // B. Forecasting Logic
+            // B. Forecasting Logic (SES / Holt-Winters)
             // ------------------------------------
             $forecast = 0;
             $algoUsed = null;
 
             if (count($monthlySales) > 0) {
-
                 $result = $forecastService->forecast($monthlySales);
 
-                // LOG #2 – ALGO OUTPUT
                 Log::info("[RESTOCK] Forecast result", [
                     "product_code" => $product->prod_code,
                     "product_name" => $product->name,
-                    "ses" => $result['ses'] ?? null,
-                    "holtwinters" => $result['holtwinters'] ?? null,
+                    "ses"          => $result['ses'] ?? null,
+                    "holtwinters"  => $result['holtwinters'] ?? null,
                 ]);
-
 
                 if (!empty($result['holtwinters'])) {
                     $forecast = $result['holtwinters'];
@@ -677,35 +993,77 @@ class RestockController extends Controller
                     $forecast = $result['ses'];
                     $algoUsed = "ses";
                 } else {
-                    $forecast = null;
+                    $forecast = 0;
                     $algoUsed = null;
                 }
             }
 
-            // LOG #3 – WHAT WAS CHOSEN
             Log::info("[RESTOCK] Forecast chosen", [
-                "product_code" => $product->prod_code,
-                "product_name" => $product->name,
-                "forecast_used" => $forecast,
-                "algorithm" => $algoUsed
+                "product_code"   => $product->prod_code,
+                "product_name"   => $product->name,
+                "forecast_used"  => $forecast,
+                "algorithm"      => $algoUsed
             ]);
 
+            // ------------------------------------
+            // C. SHORT-TERM SALES (last 7 days & last 3 days)
+            // ------------------------------------
+            $last7Sales = DB::table('receipt_item')
+                ->join('receipt', 'receipt.receipt_id', '=', 'receipt_item.receipt_id')
+                ->where('receipt.owner_id', $ownerId)
+                ->where('receipt_item.prod_code', $product->prod_code)
+                ->where('receipt.receipt_date', '>=', now()->subDays(7))
+                ->sum('item_quantity');
 
-            $avgDailyDemand = $forecast / 30;
+            $last3Sales = DB::table('receipt_item')
+                ->join('receipt', 'receipt.receipt_id', '=', 'receipt_item.receipt_id')
+                ->where('receipt.owner_id', $ownerId)
+                ->where('receipt_item.prod_code', $product->prod_code)
+                ->where('receipt.receipt_date', '>=', now()->subDays(3))
+                ->sum('item_quantity');
 
             // ------------------------------------
-            // C. Dynamic Lead Time (Based on Restock Frequency)
+            // D. AVG DAILY DEMAND (Hybrid)
+            // ------------------------------------
+            $avgDailyDemand = 0;
+
+            $hasMatureHistory = count($monthlySales) >= 3 && $forecast > 0;
+
+            if ($hasMatureHistory) {
+                // Mature product → use monthly forecast first
+                $avgDailyDemand = $forecast / 30;
+
+                // SPIKE OVERRIDE: if last 3 days are very strong, trust them more
+                if ($last3Sales > 0 && $last3Sales >= ($forecast * 0.25)) {
+                    $avgDaily3 = $last3Sales / min(3, $daysInMonth);
+                    $avgDailyDemand = max($avgDailyDemand, $avgDaily3);
+                }
+            } else {
+                // New or young product → use short-term demand
+                if ($last7Sales > 0) {
+                    $avgDailyDemand = $last7Sales / min(7, $daysInMonth);
+                } elseif ($forecast > 0) {
+                    $avgDailyDemand = $forecast / 30;
+                } else {
+                    $avgDailyDemand = 0.5; // very small baseline to avoid zero
+                }
+            }
+
+            // ------------------------------------
+            // E. Dynamic Lead Time (Frequency-based)
             // ------------------------------------
             $restockDates = DB::table('inventory')
                 ->where('owner_id', $ownerId)
                 ->where('prod_code', $product->prod_code)
                 ->orderBy('date_added')
                 ->pluck('date_added')
+                ->filter()
                 ->map(fn($d) => \Carbon\Carbon::parse($d))
+                ->unique(fn($d) => $d->format('Y-m-d'))
+                ->values()
                 ->toArray();
 
-            // Default fallback
-            $leadTime = 3;
+            $leadTime = 3; // default
 
             if (count($restockDates) > 1) {
                 $intervals = [];
@@ -716,37 +1074,52 @@ class RestockController extends Controller
 
                 if (!empty($intervals)) {
                     $avgInterval = array_sum($intervals) / count($intervals);
-
-                    // Cap to avoid extreme values
-                    $leadTime = max(1, min(14, round($avgInterval)));
+                    $leadTime    = max(3, min(14, round($avgInterval))); // 3–14 days
                 }
             }
 
-
             // ------------------------------------
-            // D. Reorder Point
+            // F. Reorder Point
             // ------------------------------------
-            $safetyStock = $product->stock_limit;
+            $safetyStock  = $product->stock_limit;        // your "minimum stock"
             $reorderPoint = round(($avgDailyDemand * $leadTime) + $safetyStock);
 
             // ------------------------------------
-            // E. High Demand
+            // G. High Demand (Hybrid & Spike-based)
             // ------------------------------------
-            if (count($monthlySales) >= 3 && $forecast > 0) {
-                $isHighDemand = $product->sold_this_month > ($forecast * 1.20);
+            $isHighDemand = false;
+
+            if ($hasMatureHistory) {
+                // Mature: compare this month's sales vs forecast
+                if ($product->sold_this_month > ($forecast * 1.20)) {
+                    $isHighDemand = true;
+                }
             } else {
-                $avgDailyThisMonth = $product->sold_this_month / max($daysInMonth, 1);
-                $isHighDemand = $avgDailyThisMonth >= 1;
+                // New product: use last 7 days pace
+                $avgDaily7 = ($last7Sales > 0)
+                    ? $last7Sales / min(7, $daysInMonth)
+                    : 0;
+
+                if ($avgDaily7 >= 2) { // ≥2 per day → hot
+                    $isHighDemand = true;
+                }
+            }
+
+            // Spike catch: if last 3 days are strong vs monthly expectation
+            if (!$isHighDemand && $forecast > 0 && $last3Sales > 0) {
+                if ($last3Sales >= ($forecast * 0.25)) {
+                    $isHighDemand = true;
+                }
             }
 
             // ------------------------------------
-            // F. Low Stock
+            // H. Low Stock
             // ------------------------------------
-            $isLowStock = $product->stock < $safetyStock;
+            $isLowStock   = $product->stock <= $safetyStock; // include equals
             $isOutOfStock = $product->stock == 0;
 
             // ------------------------------------
-            // G. Multipliers
+            // I. Multipliers (how aggressive we restock)
             // ------------------------------------
             if ($isLowStock && $isHighDemand) {
                 $multiplierFinal = 0.35;
@@ -758,82 +1131,89 @@ class RestockController extends Controller
                 $multiplierFinal = 0.10;
             }
 
-            $ropTargetStock = round($reorderPoint * $multiplierFinal);
-
             // ------------------------------------
-            // H. Suggested Quantity (Corrected Logic)
+            // J. Suggested Quantity
             // ------------------------------------
-
-            // 1️⃣ Buffer Qty = percentage of reorder point
-            $bufferQty = round($reorderPoint * $multiplierFinal);
-
-            // 2️⃣ Total target stock = reorder point + buffer
+            $bufferQty   = round($reorderPoint * $multiplierFinal);
             $targetStock = $reorderPoint + $bufferQty;
 
-            // 3️⃣ Suggested order = target - current stock
             $suggestedQty = max($targetStock - $product->stock, 0);
 
-            // 4️⃣ Deduct expired stock (expired = unsellable)
             if ($product->expired_stock > 0) {
                 $suggestedQty = max($suggestedQty - $product->expired_stock, 0);
             }
 
-            // 5️⃣ Round cleanly
             $suggestedQty = (int) round($suggestedQty);
 
-
             // ------------------------------------
-            // I. Badges
+            // K. Badges
             // ------------------------------------
             $reason = null;
+            $badge  = null;
 
-            // Out of Stock → highest priority
-            if ($product->stock == 0) {
+            if ($isOutOfStock) {
                 $reason = "Out of Stock";
-                $badge = 'background-color:#fee2e2;color:#b91c1c;'; // red
-            }
-            // Low Stock only
-            elseif ($isLowStock && !$isHighDemand) {
+                $badge  = 'background-color:#fee2e2;color:#b91c1c;'; // red
+            } elseif ($isLowStock && !$isHighDemand) {
                 $reason = "Low Stock";
-                $badge = 'background-color:#fef3c7;color:#92400e;'; // yellow
-            }
-            // High Demand only
-            elseif ($isHighDemand && !$isLowStock) {
+                $badge  = 'background-color:#fef3c7;color:#92400e;'; // yellow
+            } elseif ($isHighDemand && !$isLowStock) {
                 $reason = "High Demand";
-                $badge = 'background-color:#dcfce7;color:#166534;'; // green
-            }
-            // Low Stock + High Demand
-            elseif ($isLowStock && $isHighDemand) {
+                $badge  = 'background-color:#dcfce7;color:#166534;'; // green
+            } elseif ($isLowStock && $isHighDemand) {
                 $reason = "Low Stock + High Demand";
-                $badge = 'background-color:#dcfce7;color:#166534;'; // green badge but mixed text
-            }
-            // Default
-            else {
-                $badge = null;
+                $badge  = 'background-color:#dcfce7;color:#166534;'; // green
             }
 
-            // Attach fields
-            $product->forecast = round($forecast);
-            $product->algo_used = $algoUsed;
-            $product->lead_time = $leadTime;
-            $product->avg_daily_demand = round($avgDailyDemand, 2);
-            $product->reorder_point = $reorderPoint;
+            // Attach fields for blade
+            $product->forecast           = round($forecast);
+            $product->algo_used          = $algoUsed;
+            $product->lead_time          = $leadTime;
+            $product->avg_daily_demand   = round($avgDailyDemand, 2);
+            $product->reorder_point      = $reorderPoint;
             $product->suggested_quantity = $suggestedQty;
-            $product->reason = $reason;
-            $product->reason_badge = $badge;
-            $product->isOutOfStock = $isOutOfStock;
-            $product->isLowStock = $isLowStock;
-            $product->isHighDemand = $isHighDemand;
+            $product->reason             = $reason;
+            $product->reason_badge       = $badge;
+            $product->isOutOfStock       = $isOutOfStock;
+            $product->isLowStock         = $isLowStock;
+            $product->isHighDemand       = $isHighDemand;
+
+            // DEBUG LOG
+            Log::info("[RESTOCK DEBUG]", [
+                "prod_code"            => $product->prod_code,
+                "name"                 => $product->name,
+                "monthly_sales"        => $monthlySales,
+                "forecast_used"        => $forecast,
+                "algorithm_used"       => $algoUsed,
+                "last7Sales"           => $last7Sales,
+                "last3Sales"           => $last3Sales,
+                "avg_daily_demand"     => $avgDailyDemand,
+                "lead_time"            => $leadTime,
+                "current_stock"        => $product->stock,
+                "safety_stock_limit"   => $product->stock_limit,
+                "expired_stock"        => $product->expired_stock,
+                "reorder_point"        => $reorderPoint,
+                "multiplier_used"      => $multiplierFinal,
+                "buffer_qty"           => $bufferQty,
+                "target_stock"         => $targetStock,
+                "suggested_quantity"   => $suggestedQty,
+                "is_low_stock"         => $isLowStock,
+                "is_high_demand"       => $isHighDemand,
+                "is_out_of_stock"      => $isOutOfStock,
+                "reason"               => $reason,
+            ]);
 
             return $product;
         })
 
-            ->filter(fn($p) => $p->suggested_quantity > 0
-            && ($p->isLowStock || $p->isHighDemand || $p->isOutOfStock)
-                && $p->stock < $p->reorder_point)
-
+            // Only show products that actually need ordering
+            ->filter(
+                fn($p) =>
+                $p->suggested_quantity > 0 &&
+                    ($p->isLowStock || $p->isHighDemand || $p->isOutOfStock) &&
+                    $p->stock < $p->reorder_point
+            )
             ->values();
-
 
         // ------------------------------------
         // RETURN VIEW
