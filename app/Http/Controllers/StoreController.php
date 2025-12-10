@@ -827,44 +827,49 @@ class StoreController extends Controller
                 ];
             }
     
-            // ✅ Step 2: Calculate item-level discounts (CALCULATED AMOUNTS)
+            // ✅ Step 2: Calculate item-level discounts (PER UNIT)
             $totalItemDiscounts = 0;
             $itemDiscountAmounts = []; // Store calculated amounts per item
-            
+
             foreach ($items as $item) {
                 $product = Product::where('prod_code', $item['prod_code'])->first();
-                $itemTotal = $product->selling_price * $item['quantity'];
+                $pricePerUnit = $product->selling_price;
                 
-                $calculatedDiscountAmount = 0;
+                $calculatedDiscountAmountPerUnit = 0;
                 
                 if (isset($itemDiscounts[$item['prod_code']])) {
                     $discount = $itemDiscounts[$item['prod_code']];
                     $discountType = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
                     
                     if ($discountType === 'percent') {
-                        // ✅ Calculate the actual discount amount from percentage
-                        $calculatedDiscountAmount = $itemTotal * ($discount['value'] / 100);
+                        // ✅ Calculate discount per unit from percentage
+                        $calculatedDiscountAmountPerUnit = $pricePerUnit * ($discount['value'] / 100);
                     } else {
-                        // ✅ Use the fixed amount directly
-                        $calculatedDiscountAmount = min($discount['value'], $itemTotal); // Can't exceed item total
+                        // ✅ Use the fixed amount per unit directly
+                        $calculatedDiscountAmountPerUnit = min($discount['value'], $pricePerUnit); // Can't exceed unit price
                     }
                 }
                 
-                $itemDiscountAmounts[$item['prod_code']] = $calculatedDiscountAmount;
-                $totalItemDiscounts += $calculatedDiscountAmount;
+                // ✅ Total discount for this item = discount per unit × quantity
+                $totalDiscountForItem = $calculatedDiscountAmountPerUnit * $item['quantity'];
+                $itemDiscountAmounts[$item['prod_code']] = $totalDiscountForItem;
+                $totalItemDiscounts += $totalDiscountForItem;
             }
-    
+
             $afterItemDiscounts = $subtotal - $totalItemDiscounts;
-    
-            // ✅ Step 3: Calculate receipt-level discount (ONLY if no item discounts)
+
+            // ✅ Step 3: Calculate receipt-level discount (PER UNIT basis)
             $receiptDiscountAmount = 0;
-            if (! $hasItemDiscounts && $hasReceiptDiscount) {
+            if (!  $hasItemDiscounts && $hasReceiptDiscount) {
                 if ($receiptDiscountType === 'percent') {
-                    // ✅ Calculate the actual discount amount from percentage
+                    // ✅ Apply percentage to total after item discounts
                     $receiptDiscountAmount = $afterItemDiscounts * ($receiptDiscountValue / 100);
                 } else {
-                    // ✅ Use the fixed amount directly
-                    $receiptDiscountAmount = min($receiptDiscountValue, $afterItemDiscounts);
+                    // ✅ For fixed amount receipt discount, apply per unit across all items
+                    $totalQuantity = array_sum(array_column($items, 'quantity'));
+                    $discountPerUnit = $receiptDiscountValue; // This is now per unit
+                    $calculatedReceiptDiscount = $discountPerUnit * $totalQuantity;
+                    $receiptDiscountAmount = min($calculatedReceiptDiscount, $afterItemDiscounts);
                 }
             }
     
@@ -915,10 +920,10 @@ class StoreController extends Controller
                 $product = Product::where('prod_code', $item['prod_code'])
                                 ->where('owner_id', $owner_id)
                                 ->first();
-    
+
                 $itemDiscountType = 'percent';
                 $itemDiscountValue = 0;
-                $calculatedItemDiscountAmount = $itemDiscountAmounts[$item['prod_code']] ?? 0;
+                $discountPerUnit = 0; // ✅ NEW: Calculate discount per unit first
                 
                 if (isset($itemDiscounts[$item['prod_code']])) {
                     $itemDiscountType = $itemDiscounts[$item['prod_code']]['type'];
@@ -926,8 +931,18 @@ class StoreController extends Controller
                         $itemDiscountType = 'amount';
                     }
                     $itemDiscountValue = $itemDiscounts[$item['prod_code']]['value'];
+                    
+                    // ✅ Calculate discount per unit
+                    if ($itemDiscountType === 'percent') {
+                        $discountPerUnit = $product->selling_price * ($itemDiscountValue / 100);
+                    } else {
+                        $discountPerUnit = min($itemDiscountValue, $product->selling_price);
+                    }
                 }
-    
+                
+                // ✅ Total item discount = discount per unit × quantity
+                $totalItemDiscount = $discountPerUnit * $item['quantity'];
+
                 // Calculate VAT per item proportionally
                 $itemTotal = $product->selling_price * $item['quantity'];
                 $discountMultiplier = $subtotal > 0 ? ($afterReceiptDiscount / $subtotal) : 0;
@@ -937,26 +952,31 @@ class StoreController extends Controller
                 if ($vatEnabled && $vatRate > 0 && $product->vat_category === 'vat_inclusive') {
                     $itemVatAmount = $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
                 }
-    
+
                 // Process each batch
                 foreach ($item['allocated_batches'] as $batch) {
                     // Deduct inventory
                     Inventory::where('inven_code', $batch['inven_code'])
                             ->where('owner_id', $owner_id)
                             ->decrement('stock', $batch['quantity']);
-    
+
                     $batchProportion = $batch['quantity'] / $item['quantity'];
                     $batchVatAmount = $itemVatAmount * $batchProportion;
-                    $batchDiscountAmount = $calculatedItemDiscountAmount * $batchProportion;
-    
-                    // ✅ Create receipt item (store CALCULATED item_discount_amount)
+                    
+                    // ✅ CHANGED: Calculate batch discount based on per-unit discount
+                    $batchDiscountAmount = $discountPerUnit * $batch['quantity'];
+                    
+                    // ✅ Calculate the item_discount_value to store (per unit for this batch)
+                    $batchItemDiscountValue = $itemDiscountValue * $batchProportion;
+
+                    // ✅ Create receipt item (store CALCULATED item_discount_amount PER UNIT BASIS)
                     ReceiptItem::create([
                         'item_quantity' => $batch['quantity'],
                         'prod_code' => $item['prod_code'],
                         'receipt_id' => $receipt->receipt_id,
                         'item_discount_type' => $itemDiscountType,
-                        'item_discount_value' => $itemDiscountValue * $batchProportion,
-                        'item_discount_amount' => $batchDiscountAmount, // ✅ Store calculated amount
+                        'item_discount_value' => $batchItemDiscountValue, // ✅ Proportional value for this batch
+                        'item_discount_amount' => $batchDiscountAmount, // ✅ CHANGED: Per unit × batch quantity
                         'vat_amount' => $batchVatAmount,
                         'inven_code' => $batch['inven_code']
                     ]);

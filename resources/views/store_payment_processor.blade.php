@@ -791,8 +791,10 @@ class PaymentProcessor {
 
         this.cartItems.forEach(item => {
             const itemTotal = item.amount;
+            const pricePerUnit = parseFloat(item.product.selling_price);
+            const quantity = item.quantity;
             
-            if (! this.itemDiscounts[item.product.prod_code]) {
+            if (!  this.itemDiscounts[item.product.prod_code]) {
                 this.itemDiscounts[item.product.prod_code] = {
                     type: 'percent',
                     value: 0
@@ -800,15 +802,19 @@ class PaymentProcessor {
             }
             
             const discount = this.itemDiscounts[item.product.prod_code];
-            let discountAmount = 0;
+            let discountPerUnit = 0;
 
             if (discount.type === 'percent') {
-                discountAmount = itemTotal * (discount.value / 100);
+                // ✅ Calculate discount per unit from percentage
+                discountPerUnit = pricePerUnit * (discount.value / 100);
             } else {
-                discountAmount = Math.min(discount.value, itemTotal);
+                // ✅ Fixed discount per unit (can't exceed unit price)
+                discountPerUnit = Math.min(discount.value, pricePerUnit);
             }
 
-            totalItemDiscounts += discountAmount;
+            // ✅ Total discount = per unit discount × quantity
+            const totalDiscountForItem = discountPerUnit * quantity;
+            totalItemDiscounts += totalDiscountForItem;
             subtotal += itemTotal;
         });
 
@@ -817,11 +823,15 @@ class PaymentProcessor {
         let receiptDiscountAmount = 0;
         const hasItemDiscounts = totalItemDiscounts > 0;
         
-        if (! hasItemDiscounts && this.receiptDiscount.value > 0) {
+        if (!  hasItemDiscounts && this.receiptDiscount.value > 0) {
             if (this.receiptDiscount.type === 'percent') {
+                // ✅ Percentage applies to total
                 receiptDiscountAmount = afterItemDiscounts * (this.receiptDiscount.value / 100);
             } else {
-                receiptDiscountAmount = Math.min(this.receiptDiscount.value, afterItemDiscounts);
+                // ✅ Fixed amount is per unit
+                const totalQuantity = this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
+                const calculatedReceiptDiscount = this.receiptDiscount.value * totalQuantity;
+                receiptDiscountAmount = Math.min(calculatedReceiptDiscount, afterItemDiscounts);
             }
         }
 
