@@ -786,103 +786,92 @@ class PaymentProcessor {
     }
 
     calculateTotals() {
-    let subtotal = 0;
-    let totalItemDiscounts = 0;
+        let subtotal = 0;
+        let totalItemDiscounts = 0;
 
-    this.cartItems.forEach(item => {
-        const unitPrice = item.product.selling_price;
-        const quantity = item.quantity;
-        const itemTotal = unitPrice * quantity;
+        this.cartItems.forEach(item => {
+            const itemTotal = item.amount;
+            
+            if (! this.itemDiscounts[item.product.prod_code]) {
+                this.itemDiscounts[item.product.prod_code] = {
+                    type: 'percent',
+                    value: 0
+                };
+            }
+            
+            const discount = this.itemDiscounts[item.product.prod_code];
+            let discountAmount = 0;
+
+            if (discount.type === 'percent') {
+                discountAmount = itemTotal * (discount.value / 100);
+            } else {
+                discountAmount = Math.min(discount.value, itemTotal);
+            }
+
+            totalItemDiscounts += discountAmount;
+            subtotal += itemTotal;
+        });
+
+        const afterItemDiscounts = subtotal - totalItemDiscounts;
+
+        let receiptDiscountAmount = 0;
+        const hasItemDiscounts = totalItemDiscounts > 0;
         
-        if (! this.itemDiscounts[item.product.prod_code]) {
-            this.itemDiscounts[item.product.prod_code] = {
-                type: 'percent',
-                value: 0
-            };
+        if (! hasItemDiscounts && this.receiptDiscount.value > 0) {
+            if (this.receiptDiscount.type === 'percent') {
+                receiptDiscountAmount = afterItemDiscounts * (this.receiptDiscount.value / 100);
+            } else {
+                receiptDiscountAmount = Math.min(this.receiptDiscount.value, afterItemDiscounts);
+            }
         }
-        
-        const discount = this.itemDiscounts[item.product.prod_code];
-        let discountPerUnit = 0;
 
-        if (discount.type === 'percent') {
-            // ✅ Percentage discount per unit
-            discountPerUnit = unitPrice * (discount.value / 100);
+        const afterReceiptDiscount = afterItemDiscounts - receiptDiscountAmount;
+
+        let vatAmountInclusive = 0;
+        let vatAmountExempt = 0;
+        
+        const discountMultiplier = subtotal > 0 ? (afterReceiptDiscount / subtotal) : 0;
+        
+        this.cartItems.forEach(item => {
+            const itemTotal = item.amount;
+            const itemAfterDiscounts = itemTotal * discountMultiplier;
+            
+            const vatCategory = item.product?.vat_category || 'vat_exempt';
+            
+            if (vatCategory === 'vat_inclusive') {
+                vatAmountInclusive += itemAfterDiscounts * (this.vatRate / (100 + this.vatRate));
+            } else {
+                vatAmountExempt += itemAfterDiscounts;
+            }
+        });
+
+        const totalAmount = afterReceiptDiscount;
+
+        document.getElementById('calcSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
+        
+        if (totalItemDiscounts > 0) {
+            document.getElementById('calcItemDiscountsRow').classList.remove('hidden');
+            document.getElementById('calcItemDiscounts').textContent = `₱${totalItemDiscounts.toFixed(2)}`;
         } else {
-            // ✅ Fixed amount per unit (can't exceed unit price)
-            discountPerUnit = Math.min(discount.value, unitPrice);
+            document.getElementById('calcItemDiscountsRow').classList.add('hidden');
         }
-
-        // ✅ Total discount = discount per unit × quantity
-        const totalDiscountForItem = discountPerUnit * quantity;
-        totalItemDiscounts += totalDiscountForItem;
-        subtotal += itemTotal;
-    });
-
-    const afterItemDiscounts = subtotal - totalItemDiscounts;
-
-    let receiptDiscountAmount = 0;
-    const hasItemDiscounts = totalItemDiscounts > 0;
-    
-    if (! hasItemDiscounts && this.receiptDiscount.value > 0) {
-        if (this.receiptDiscount.type === 'percent') {
-            // ✅ Percentage applies to total after item discounts
-            receiptDiscountAmount = afterItemDiscounts * (this.receiptDiscount.value / 100);
-        } else {
-            // ✅ Fixed amount is per unit
-            const totalUnits = this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
-            const receiptDiscountPerUnit = this.receiptDiscount.value;
-            receiptDiscountAmount = Math.min(receiptDiscountPerUnit * totalUnits, afterItemDiscounts);
-        }
-    }
-
-    const afterReceiptDiscount = afterItemDiscounts - receiptDiscountAmount;
-
-    let vatAmountInclusive = 0;
-    let vatAmountExempt = 0;
-    
-    const discountMultiplier = subtotal > 0 ? (afterReceiptDiscount / subtotal) : 0;
-    
-    this.cartItems.forEach(item => {
-        const itemTotal = item.amount;
-        const itemAfterDiscounts = itemTotal * discountMultiplier;
         
-        const vatCategory = item.product?.vat_category || 'vat_exempt';
-        
-        if (vatCategory === 'vat_inclusive') {
-            vatAmountInclusive += itemAfterDiscounts * (this.vatRate / (100 + this.vatRate));
+        if (receiptDiscountAmount > 0) {
+            document.getElementById('calcReceiptDiscountRow').classList.remove('hidden');
+            document.getElementById('calcReceiptDiscount').textContent = `₱${receiptDiscountAmount.toFixed(2)}`;
         } else {
-            vatAmountExempt += itemAfterDiscounts;
+            document.getElementById('calcReceiptDiscountRow').classList.add('hidden');
         }
-    });
+        
+        document.getElementById('calcVATInclusive').textContent = `₱${vatAmountInclusive.toFixed(2)}`;
+        document.getElementById('calcVATExempt').textContent = `₱${vatAmountExempt.toFixed(2)}`;
+        
+        document.getElementById('calcTotal').textContent = `₱${totalAmount.toFixed(2)}`;
+        document.getElementById('quickTotal').textContent = `₱${totalAmount.toFixed(2)}`;
 
-    const totalAmount = afterReceiptDiscount;
-
-    // Update display elements
-    document.getElementById('calcSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
-    
-    if (totalItemDiscounts > 0) {
-        document.getElementById('calcItemDiscountsRow').classList.remove('hidden');
-        document.getElementById('calcItemDiscounts').textContent = `₱${totalItemDiscounts.toFixed(2)}`;
-    } else {
-        document.getElementById('calcItemDiscountsRow').classList.add('hidden');
+        this.totalAmount = totalAmount;
+        this.calculateChange();
     }
-    
-    if (receiptDiscountAmount > 0) {
-        document.getElementById('calcReceiptDiscountRow').classList.remove('hidden');
-        document.getElementById('calcReceiptDiscount').textContent = `₱${receiptDiscountAmount.toFixed(2)}`;
-    } else {
-        document.getElementById('calcReceiptDiscountRow').classList.add('hidden');
-    }
-    
-    document.getElementById('calcVATInclusive').textContent = `₱${vatAmountInclusive.toFixed(2)}`;
-    document.getElementById('calcVATExempt').textContent = `₱${vatAmountExempt.toFixed(2)}`;
-    
-    document.getElementById('calcTotal').textContent = `₱${totalAmount.toFixed(2)}`;
-    document.getElementById('quickTotal').textContent = `₱${totalAmount.toFixed(2)}`;
-
-    this.totalAmount = totalAmount;
-    this.calculateChange();
-}
 
     calculateChange() {
     const amountPaidInput = document.getElementById('amountPaidInput');
