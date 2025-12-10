@@ -61,7 +61,12 @@ class RecordDamage extends Component
 
     public function getProducts()
     {
-        $owner_id = Auth::guard('owner')->user()->owner_id;
+        $owner_id = session('owner_id');
+
+        if (!$owner_id) {
+            $this->products = collect([]);
+            return;
+        }
 
         $this->products = collect(DB::select("
             SELECT p.name, p.prod_code, sum(i.stock) as stocks 

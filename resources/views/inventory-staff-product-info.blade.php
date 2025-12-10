@@ -435,7 +435,7 @@
                                 <th class="px-4 py-3">Quantity Sold</th>
                                 <th class="px-4 py-3">Price Used</th>
                                 <th class="px-4 py-3">Total Amount</th>
-                                <th class="px-4 py-3">Sold By</th>
+                                <th class="px-4 py-3"></th>
                             </tr>
                         </thead>
                         <tbody id="salesTableBody">
@@ -456,7 +456,7 @@
                                     <td class="px-4 py-3 text-center font-medium">{{ $sale->quantity_sold }}</td>
                                     <td class="px-4 py-3 text-center font-medium">₱{{ number_format($sale->selling_price_used, 2) }}</td>
                                     <td class="px-4 py-3 text-center font-medium">₱{{ number_format($sale->total_amount, 2) }}</td>
-                                    <td class="px-4 py-3 text-center">{{ $sale->sold_by }}</td>
+                                    <!-- <td class="px-4 py-3 text-center">{{ $sale->sold_by }}</td> -->
                                 </tr>
                             @empty
                                 <tr class="no-data-row">
@@ -486,7 +486,7 @@
                                 <td class="px-4 py-3 text-center text-amber-600 font-bold" id="salesTotalQuantity">{{ $totalStockOutSold }}</td>
                                 <td class="px-4 py-3 text-center">—</td>
                                 <td class="px-4 py-3 text-center text-amber-600 font-bold" id="salesTotalAmount">₱{{ number_format($totalRevenue, 2) }}</td>
-                                <td class="px-4 py-3 text-center">—</td>
+                                <td class="px-4 py-3 text-center"></td>
                             </tr>
                         </tfoot>
                         @endif
@@ -587,7 +587,7 @@
                                 <th class="px-4 py-3">Date Out</th>
                                 <th class="px-4 py-3">Quantity Out</th>
                                 <th class="px-4 py-3">Type</th>
-                                <th class="px-4 py-3">Processed By</th>
+                                <!-- <th class="px-4 py-3">Processed By</th> -->
                             </tr>
                         </thead>
                         <tbody id="damagedTableBody">
@@ -610,7 +610,7 @@
                                             {{ $damaged->damaged_type }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-center">{{ $damaged->reported_by }}</td>
+                                    <!-- <td class="px-4 py-3 text-center">{{ $damaged->reported_by }}</td> -->
                                 </tr>
                             @empty
                                 <tr class="no-data-row">
