@@ -1006,36 +1006,63 @@ public function update(Request $request, $prodCode)
 
    
 
-    public function checkBarcode(Request $request)
-    {
-        $staff = Auth::guard('staff')->user();
-        $staff_id = $staff->staff_id;
-        $owner_id = $staff->owner_id;
+public function checkBarcode(Request $request)
+{
+    $barcode = $request->input('barcode');
+    
+    $staff = Auth::guard('staff')->user();
+    $staff_id = $staff->staff_id;
+    $owner_id = $staff->owner_id;
+    $staff_name = $staff->firstname;
 
         session(['staff_id' => $staff_id, 'owner_id' => $owner_id]);
 
-        $barcode = $request->input('barcode');
-
-        $product = DB::table('products')
-            ->where('barcode', $barcode)
+    
+    \Log::info('🔍 Barcode check started', [
+        'barcode' => $barcode,
+        'owner_id' => $owner_id,
+        'session_data' => session()->all()
+    ]);
+    
+    $product = DB::table('products')
+        ->where('barcode', $barcode)
+        ->where('owner_id', $owner_id)
+        ->first();
+    
+    if ($product) {
+        // Calculate current stock EXCLUDING expired items
+        $currentStock = DB::table('inventory')
+            ->where('prod_code', $product->prod_code)
             ->where('owner_id', $owner_id)
-            ->first();
-
-        if ($product) {
-            return response()->json([
-                'exists' => true,
-                'product' => [
-                    'prod_code'   => $product->prod_code,
-                    'name'        => $product->name,
-                    'prod_image'  => $product->prod_image,
-                    'category_id' => $product->category_id,
-                    'barcode'     => $product->barcode,
-                ]
-            ]);
-        } else {
-            return response()->json(['exists' => false]);
-        }
+            ->where(function($query) {
+                $query->whereNull('expiration_date')
+                    ->orWhereRaw('expiration_date >= CURDATE()');
+            })
+            ->sum('stock');
+        
+        $currentStock = $currentStock ?? 0;
+        
+        $responseData = [
+            'exists' => true,
+            'product' => [
+                'prod_code'     => $product->prod_code,
+                'name'          => $product->name,
+                'prod_image'    => $product->prod_image,
+                'category_id'   => $product->category_id,
+                'barcode'       => $product->barcode,
+                'current_stock' => (int)$currentStock,
+                'stock'         => (int)$currentStock,
+            ]
+        ];
+        
+        \Log::info('✅ Barcode check - sending response', $responseData);
+        
+        return response()->json($responseData);
+    } else {
+        \Log::info('❌ Barcode not found', ['barcode' => $barcode]);
+        return response()->json(['exists' => false]);
     }
+}
 
 
 

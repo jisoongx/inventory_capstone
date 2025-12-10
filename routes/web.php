@@ -214,7 +214,7 @@ Route::middleware(['auth:staff'])->group(function () {
     Route::get('/inventory-staff', [InventoryStaffController::class, 'index'])->name('inventory-staff');   
     Route::get('/inventory-staff/search', [InventoryStaffController::class, 'index'])->name('inventory.search');
     Route::get('/inventory-staff/suggest', [InventoryOwnerController::class, 'suggest']);
-    Route::post('/inventory-staff/check-barcode', [InventoryStaffController::class, 'inventory-staff-checkBarcode']);
+    Route::post('/inventory-staff/check-barcode', [InventoryStaffController::class, 'checkBarcodeStaff']);
     Route::post('/inventory-staff/register-product', [InventoryStaffController::class, 'registerProduct']);
     Route::post('/inventory-staff/restock', [InventoryStaffController::class, 'restockProduct'])->name('inventory.restock');
     Route::get('/inventory-staff/latest-batch/{prodCode}', [InventoryStaffController::class, 'getLatestBatch'])->name('inventory.latestBatch');

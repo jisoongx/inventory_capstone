@@ -2739,7 +2739,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log('Checking barcode:', barcode);
             console.log('Registration context:', isRegistrationContext());
 
-            fetch('/inventory-staff/check-barcode', {
+            fetch('/check-barcode', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
