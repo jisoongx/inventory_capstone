@@ -115,13 +115,15 @@ class ComparativeAnalysis extends Component
                                     LIMIT 1),
                                     p.selling_price
                                 )
-                            ) - ri.item_discount_amount
-                        ) AS item_sales
+                            ) 
+                        ) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)) AS item_sales
+
+
                     FROM receipt r
                     JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
                     JOIN products p ON p.prod_code = ri.prod_code
-                    WHERE r.owner_id = ?
-                    AND YEAR(r.receipt_date) = ?
+                    WHERE r.owner_id = ? 
+                        AND YEAR(receipt_date) = ?
                     GROUP BY r.receipt_id
                 ) AS x
                 GROUP BY MONTH(x.receipt_date)

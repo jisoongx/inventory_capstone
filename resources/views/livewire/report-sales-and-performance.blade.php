@@ -428,7 +428,7 @@
                                 
                                 <!-- Financial Performance -->
                                 <td class="px-4 py-3.5 text-center font-bold text-green-600 bg-gray-50">
-                                    ₱{{ number_format($input->total_sales, 2) }}
+                                    ₱{{ number_format($input->total_amount, 2) }}
                                 </td>
                                 
                                 <!-- Profitability -->
@@ -480,10 +480,10 @@
                                 {{ number_format($sbc->sum('stock_left')) }}
                             </td>
                             <td class="px-4 text-center font-bold text-xs text-green-600">
-                                ₱{{ number_format($sbc->sum('total_sales'), 2) }}
+                                ₱{{ number_format($sbc->sum('total_amount'), 2) }}
                             </td>
                             <td class="px-4 text-center font-bold text-xs text-yellow-700">
-                                {{ $sbc->sum('total_sales') > 0 ? number_format((($sbc->sum('total_sales') - $sbc->sum('cogs')) / $sbc->sum('total_sales')) * 100, 1) : '0.0' }}%
+                                {{ $sbc->sum('total_amount') > 0 ? number_format((($sbc->sum('total_amount') - $sbc->sum('cogs')) / $sbc->sum('total_amount')) * 100, 1) : '0.0' }}%
                             </td>
                             <td class="px-4 text-center text-xs text-gray-400">
                             </td>

@@ -83,7 +83,7 @@ class ProductAnalysis extends Component
                 SUM(ri.item_quantity) AS unit_sold,
 
                 SUM(
-                    ri.item_quantity * COALESCE(
+                    (ri.item_quantity * COALESCE(
                         (SELECT ph.old_selling_price
                         FROM pricing_history ph
                         WHERE ph.prod_code = ri.prod_code
@@ -91,6 +91,37 @@ class ProductAnalysis extends Component
                         ORDER BY ph.effective_from DESC
                         LIMIT 1),
                         p.selling_price
+                    ))
+                    - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                    - (
+                        /* Proportional receipt-level discount */
+                        ((ri.item_quantity * COALESCE(
+                            (SELECT ph.old_selling_price
+                            FROM pricing_history ph
+                            WHERE ph.prod_code = ri.prod_code
+                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                            ORDER BY ph.effective_from DESC
+                            LIMIT 1),
+                            p.selling_price
+                        )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                        / NULLIF((
+                            SELECT SUM(
+                                (ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                            )
+                            FROM receipt_item ri2
+                            JOIN products p2 ON p2.prod_code = ri2.prod_code
+                            JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                            WHERE r2.receipt_id = r.receipt_id
+                        ), 0)
+                        * COALESCE(r.discount_amount, 0)
                     )
                 ) AS total_sales,
 
@@ -108,7 +139,7 @@ class ProductAnalysis extends Component
 
                 (
                     SUM(
-                        ri.item_quantity * COALESCE(
+                        (ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
                             WHERE ph.prod_code = ri.prod_code
@@ -116,6 +147,37 @@ class ProductAnalysis extends Component
                             ORDER BY ph.effective_from DESC
                             LIMIT 1),
                             p.selling_price
+                        ))
+                        - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                        - (
+                            /* Proportional receipt-level discount */
+                            ((ri.item_quantity * COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                            / NULLIF((
+                                SELECT SUM(
+                                    (ri2.item_quantity * COALESCE(
+                                        (SELECT ph2.old_selling_price
+                                        FROM pricing_history ph2
+                                        WHERE ph2.prod_code = ri2.prod_code
+                                        AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                        ORDER BY ph2.effective_from DESC
+                                        LIMIT 1),
+                                        p2.selling_price
+                                    )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                                )
+                                FROM receipt_item ri2
+                                JOIN products p2 ON p2.prod_code = ri2.prod_code
+                                JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                                WHERE r2.receipt_id = r.receipt_id
+                            ), 0)
+                            * COALESCE(r.discount_amount, 0)
                         )
                     )
                     -
@@ -135,7 +197,7 @@ class ProductAnalysis extends Component
                 (
                     (
                         SUM(
-                            ri.item_quantity * COALESCE(
+                            (ri.item_quantity * COALESCE(
                                 (SELECT ph.old_selling_price
                                 FROM pricing_history ph
                                 WHERE ph.prod_code = ri.prod_code
@@ -143,6 +205,37 @@ class ProductAnalysis extends Component
                                 ORDER BY ph.effective_from DESC
                                 LIMIT 1),
                                 p.selling_price
+                            ))
+                            - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                            - (
+                                /* Proportional receipt-level discount */
+                                ((ri.item_quantity * COALESCE(
+                                    (SELECT ph.old_selling_price
+                                    FROM pricing_history ph
+                                    WHERE ph.prod_code = ri.prod_code
+                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                    ORDER BY ph.effective_from DESC
+                                    LIMIT 1),
+                                    p.selling_price
+                                )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                                / NULLIF((
+                                    SELECT SUM(
+                                        (ri2.item_quantity * COALESCE(
+                                            (SELECT ph2.old_selling_price
+                                            FROM pricing_history ph2
+                                            WHERE ph2.prod_code = ri2.prod_code
+                                            AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                            ORDER BY ph2.effective_from DESC
+                                            LIMIT 1),
+                                            p2.selling_price
+                                        )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                                    )
+                                    FROM receipt_item ri2
+                                    JOIN products p2 ON p2.prod_code = ri2.prod_code
+                                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                                    WHERE r2.receipt_id = r.receipt_id
+                                ), 0)
+                                * COALESCE(r.discount_amount, 0)
                             )
                         )
                         -
@@ -161,7 +254,7 @@ class ProductAnalysis extends Component
                     /
                     NULLIF(
                         SUM(
-                            ri.item_quantity * COALESCE(
+                            (ri.item_quantity * COALESCE(
                                 (SELECT ph.old_selling_price
                                 FROM pricing_history ph
                                 WHERE ph.prod_code = ri.prod_code
@@ -169,6 +262,37 @@ class ProductAnalysis extends Component
                                 ORDER BY ph.effective_from DESC
                                 LIMIT 1),
                                 p.selling_price
+                            ))
+                            - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                            - (
+                                /* Proportional receipt-level discount */
+                                ((ri.item_quantity * COALESCE(
+                                    (SELECT ph.old_selling_price
+                                    FROM pricing_history ph
+                                    WHERE ph.prod_code = ri.prod_code
+                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                    ORDER BY ph.effective_from DESC
+                                    LIMIT 1),
+                                    p.selling_price
+                                )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                                / NULLIF((
+                                    SELECT SUM(
+                                        (ri2.item_quantity * COALESCE(
+                                            (SELECT ph2.old_selling_price
+                                            FROM pricing_history ph2
+                                            WHERE ph2.prod_code = ri2.prod_code
+                                            AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                            ORDER BY ph2.effective_from DESC
+                                            LIMIT 1),
+                                            p2.selling_price
+                                        )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                                    )
+                                    FROM receipt_item ri2
+                                    JOIN products p2 ON p2.prod_code = ri2.prod_code
+                                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                                    WHERE r2.receipt_id = r.receipt_id
+                                ), 0)
+                                * COALESCE(r.discount_amount, 0)
                             )
                         ),
                         0
@@ -177,7 +301,7 @@ class ProductAnalysis extends Component
 
                 (
                     SUM(
-                        ri.item_quantity * COALESCE(
+                        (ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
                             WHERE ph.prod_code = ri.prod_code
@@ -185,12 +309,43 @@ class ProductAnalysis extends Component
                             ORDER BY ph.effective_from DESC
                             LIMIT 1),
                             p.selling_price
+                        ))
+                        - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                        - (
+                            /* Proportional receipt-level discount */
+                            ((ri.item_quantity * COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                            / NULLIF((
+                                SELECT SUM(
+                                    (ri2.item_quantity * COALESCE(
+                                        (SELECT ph2.old_selling_price
+                                        FROM pricing_history ph2
+                                        WHERE ph2.prod_code = ri2.prod_code
+                                        AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                        ORDER BY ph2.effective_from DESC
+                                        LIMIT 1),
+                                        p2.selling_price
+                                    )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                                )
+                                FROM receipt_item ri2
+                                JOIN products p2 ON p2.prod_code = ri2.prod_code
+                                JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                                WHERE r2.receipt_id = r.receipt_id
+                            ), 0)
+                            * COALESCE(r.discount_amount, 0)
                         )
                     )
                     /
                     NULLIF((
                         SELECT SUM(
-                            ri2.item_quantity * COALESCE(
+                            (ri2.item_quantity * COALESCE(
                                 (SELECT ph2.old_selling_price
                                 FROM pricing_history ph2
                                 WHERE ph2.prod_code = ri2.prod_code
@@ -198,6 +353,37 @@ class ProductAnalysis extends Component
                                 ORDER BY ph2.effective_from DESC
                                 LIMIT 1),
                                 p2.selling_price
+                            ))
+                            - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                            - (
+                                /* Proportional receipt-level discount for total */
+                                ((ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0)))
+                                / NULLIF((
+                                    SELECT SUM(
+                                        (ri3.item_quantity * COALESCE(
+                                            (SELECT ph3.old_selling_price
+                                            FROM pricing_history ph3
+                                            WHERE ph3.prod_code = ri3.prod_code
+                                            AND r3.receipt_date BETWEEN ph3.effective_from AND ph3.effective_to
+                                            ORDER BY ph3.effective_from DESC
+                                            LIMIT 1),
+                                            p3.selling_price
+                                        )) - (ri3.item_quantity * COALESCE(ri3.item_discount_amount, 0))
+                                    )
+                                    FROM receipt_item ri3
+                                    JOIN products p3 ON p3.prod_code = ri3.prod_code
+                                    JOIN receipt r3 ON r3.receipt_id = ri3.receipt_id
+                                    WHERE r3.receipt_id = r2.receipt_id
+                                ), 0)
+                                * COALESCE(r2.discount_amount, 0)
                             )
                         )
                         FROM receipt_item ri2

@@ -2,10 +2,6 @@
 
 @section('content')
 
-<div class="px-4">
-    @livewire('expiration-container')
-</div>
-
 <div class="md:p-4 space-y-5 ">
 
     <div class="flex flex-col md:flex-row md:gap-4">

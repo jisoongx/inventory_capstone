@@ -806,6 +806,17 @@ public function closeAllReceiptModals()
         $this->sortField = $field;
         $this->prodPerformance();
     }
+
+
+
+
+
+
+
+
+
+
+
     
     public function salesByCategory() {
 
@@ -814,135 +825,143 @@ public function closeAllReceiptModals()
         $years = is_array($this->selectedYears) ? $this->selectedYears : [$this->selectedYears ?: now()->year];
         $months = is_array($this->selectedMonths) ? $this->selectedMonths : [$this->selectedMonths ?: now()->month];
 
-        $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
-        $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
 
         $owner_id = Auth::guard('owner')->user()->owner_id;
         
-        $sql = "
-            SELECT
+
+        // Prepare your placeholders for years and months
+        $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
+        $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
+
+
+        // Prepare placeholders for years and months
+        $yearPlaceholders = implode(',', array_fill(0, count($years), '?'));
+        $monthPlaceholders = implode(',', array_fill(0, count($months), '?'));
+
+        // Execute category-level aggregation query
+        $categorySales = collect(DB::select("
+            SELECT 
                 c.category,
-                COALESCE(SUM(ri.item_quantity), 0) AS unit_sold,
-                COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND ri.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) AS total_sales,
-
-               COALESCE(SUM(
-                    ri.item_quantity * COALESCE(
-                        (
-                            SELECT ph.old_cost_price
-                            FROM pricing_history ph
-                            JOIN inventory i ON i.prod_code = ph.prod_code
-                            join receipt_item ri on ri.prod_code = p.prod_code
-                            WHERE i.inven_code = ri.inven_code
-                            AND ph.effective_from <= i.date_added
-                            AND (ph.effective_to IS NULL OR ph.effective_to >= i.date_added)
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1
-                        ),
-                        p.cost_price
-                    )
-                ), 0) AS cogs,
-
-                COALESCE((
-                    SELECT SUM(d.damaged_quantity)
-                    FROM damaged_items d
-                    JOIN inventory i3 ON i3.inven_code = d.inven_code
-                    JOIN products p2 ON p2.prod_code = i3.prod_code
-                    WHERE d.owner_id = ?
-                        AND YEAR(d.damaged_date) IN ($yearPlaceholders)
-                        AND MONTH(d.damaged_date) IN ($monthPlaceholders)
-                    AND p2.category_id = c.category_id   -- correlate to current category
-                    AND (d.set_to_return_to_supplier IN ('Damaged') OR d.set_to_return_to_supplier IS NULL)
-                ), 0) AS damaged_stock,
-
-
-                COALESCE((
-                    SELECT p2.name
-                    FROM products p2
-                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
-                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
-                    WHERE p2.category_id = c.category_id
-                        AND r2.owner_id = ?
-                        AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
-                        AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
-                    GROUP BY p2.prod_code, p2.name
-                    ORDER BY SUM(ri2.item_quantity) DESC
-                    LIMIT 1
-                ), '—') AS top_product_unit,
-
-                COALESCE((
-                    SELECT p2.name
-                    FROM products p2
-                    JOIN receipt_item ri2 ON p2.prod_code = ri2.prod_code
-                    JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
-                    WHERE p2.category_id = c.category_id
-                    AND r2.owner_id = ?
-                    AND YEAR(r2.receipt_date) IN ($yearPlaceholders)
-                    AND MONTH(r2.receipt_date) IN ($monthPlaceholders)
-                    GROUP BY p2.prod_code, p2.name
-                    ORDER BY SUM(ri2.item_quantity * p2.selling_price) DESC
-                    LIMIT 1
-                ), '—') AS top_product_sales,
-
-                COALESCE(i.stock, 0) AS stock_left,
-
-                COALESCE(SUM(ri.item_quantity), 0) / NULLIF(
-                    AVG(COALESCE(SUM(ri.item_quantity), 0)) OVER (), 0
-                ) AS velocity_ratio,
-
-                COALESCE(i.stock, 0) / NULLIF(
-                    COALESCE(SUM(ri.item_quantity), 0) / NULLIF(COUNT(DISTINCT ri.receipt_date), 0), 0
-                ) AS days_of_supply                
-                
+                COALESCE(cat_aggs.total_sales, 0) AS total_amount,
+                COALESCE(cat_aggs.total_cogs, 0) AS cogs,
+                COALESCE(cat_aggs.unit_sold, 0) AS unit_sold,
+                COALESCE(damaged.damaged_stock, 0) AS damaged_stock,
+                COALESCE(inv.stock_left, 0) AS stock_left,
+                CASE
+                    WHEN COALESCE(cat_aggs.unit_sold,0) > 0 AND COALESCE(cat_aggs.distinct_receipt_days,0) > 0
+                    THEN ROUND(COALESCE(inv.stock_left,0) / (COALESCE(cat_aggs.unit_sold,0) / COALESCE(cat_aggs.distinct_receipt_days,0)), 2)
+                    ELSE NULL
+                END AS days_of_supply,
+                c.category_id
             FROM categories c
-            LEFT JOIN products p
-                ON c.category_id = p.category_id
-                AND c.owner_id = ?
             LEFT JOIN (
-                SELECT c2.category_id, SUM(inv.stock) AS stock
+                /* category-level aggregation */
+                SELECT
+                    t.category_id,
+                    SUM(t.category_sales - t.allocated_discount) AS total_sales,
+                    SUM(t.item_cogs) AS total_cogs,
+                    SUM(t.item_quantity) AS unit_sold,
+                    COUNT(DISTINCT t.receipt_id) AS distinct_receipt_days
+                FROM (
+                    SELECT
+                        p.category_id,
+                        r.receipt_id,
+                        r.discount_amount,
+                        SUM(ri.item_quantity) AS item_quantity,
+                        SUM(
+                            ri.item_quantity * COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            ) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                        ) AS category_sales,
+                        SUM(
+                            ri.item_quantity * COALESCE(
+                                (SELECT ph.old_cost_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.cost_price
+                            )
+                        ) AS item_cogs,
+                        /* proportional receipt discount */
+                        (SUM(
+                            ri.item_quantity * COALESCE(
+                                (SELECT ph.old_selling_price
+                                FROM pricing_history ph
+                                WHERE ph.prod_code = ri.prod_code
+                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                ORDER BY ph.effective_from DESC
+                                LIMIT 1),
+                                p.selling_price
+                            ) - (ri.item_quantity * COALESCE(ri.item_discount_amount,0))
+                        ) / NULLIF((
+                            SELECT SUM(
+                                ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                ) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount,0))
+                            )
+                            FROM receipt_item ri2
+                            JOIN products p2 ON p2.prod_code = ri2.prod_code
+                            JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                            WHERE r2.receipt_id = r.receipt_id
+                        ),0)) * r.discount_amount AS allocated_discount
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE r.owner_id = ?
+                    AND YEAR(r.receipt_date) IN ($yearPlaceholders)
+                    AND MONTH(r.receipt_date) IN ($monthPlaceholders)
+                    GROUP BY p.category_id, r.receipt_id, r.discount_amount
+                ) AS t
+                GROUP BY t.category_id
+            ) AS cat_aggs ON cat_aggs.category_id = c.category_id
+            LEFT JOIN (
+                /* stock left per category */
+                SELECT p.category_id, SUM(inv.stock) AS stock_left
                 FROM inventory inv
-                JOIN products p2 ON inv.prod_code = p2.prod_code
-                JOIN categories c2 ON p2.category_id = c2.category_id
-                WHERE p2.owner_id = ? 
-                    and p2.prod_status = 'active'
-                    and inv.is_expired is null
-                GROUP BY c2.category_id
-            ) i ON i.category_id = p.category_id
+                JOIN products p ON p.prod_code = inv.prod_code
+                WHERE p.owner_id = ? AND p.prod_status = 'active' AND inv.is_expired IS NULL
+                GROUP BY p.category_id
+            ) inv ON inv.category_id = c.category_id
             LEFT JOIN (
-                SELECT ritems.prod_code, ritems.item_quantity, ritems.receipt_id, r.owner_id, r.receipt_date
-                FROM receipt_item ritems
-                JOIN receipt r ON r.receipt_id = ritems.receipt_id
-                WHERE r.owner_id = ?
-                AND YEAR(r.receipt_date) IN ($yearPlaceholders)
-                AND MONTH(r.receipt_date) IN ($monthPlaceholders)
-            ) AS ri ON p.prod_code = ri.prod_code
-            WHERE c.owner_id = ? 
-                and p.prod_status = 'active'
-            GROUP BY c.category, c.category_id, i.stock
-            ORDER BY c.category ASC
-        ";
+                /* damaged stock per category */
+                SELECT p.category_id, COALESCE(SUM(d.damaged_quantity),0) AS damaged_stock
+                FROM damaged_items d
+                JOIN inventory i2 ON i2.inven_code = d.inven_code
+                JOIN products p ON p.prod_code = i2.prod_code
+                WHERE d.owner_id = ?
+                AND YEAR(d.damaged_date) IN ($yearPlaceholders)
+                AND MONTH(d.damaged_date) IN ($monthPlaceholders)
+                AND (d.set_to_return_to_supplier IN ('Damaged') OR d.set_to_return_to_supplier IS NULL)
+                GROUP BY p.category_id
+            ) damaged ON damaged.category_id = c.category_id
+            WHERE c.owner_id = ?
+            GROUP BY c.category_id, c.category, cat_aggs.total_sales, cat_aggs.total_cogs, cat_aggs.unit_sold, damaged.damaged_stock, inv.stock_left, cat_aggs.distinct_receipt_days
+            ORDER BY c.category_id;
+            ", array_merge(
+                [$owner_id], $years, $months,
+                [$owner_id],
+                [$owner_id], $years, $months,
+                [$owner_id]
+        )));
 
-        $bindings = array_merge(
-            [$owner_id], $years, $months,
-            [$owner_id], $years, $months,
-            [$owner_id], $years, $months,
-            [$owner_id, $owner_id, $owner_id], $years, $months,
-            [$owner_id]
-        );
-
-        $this->sbc = collect(DB::select($sql, $bindings));
-
-        $this->sbc = $this->sbc->map(function ($row) {
-
-            if ($row->total_sales > 0) {
-                $row->gross_margin = round((($row->total_sales - $row->cogs) / $row->total_sales) * 100, 1);
+        // Map insights and gross margin
+        $this->sbc = $categorySales->map(function ($row) {
+            if ($row->total_amount > 0) {
+                $row->gross_margin = round((($row->total_amount - $row->cogs) / $row->total_amount) * 100, 1);
                 
                 if ($row->gross_margin > 35) {
                     $profitability = 'High profitability';
@@ -953,18 +972,9 @@ public function closeAllReceiptModals()
                 }
 
                 $extra = [];
-                if ($row->unit_sold > 0 && $row->velocity_ratio > 1) {
-                    $extra[] = "Fast-moving category, consider promoting top sellers.";
-                } elseif ($row->unit_sold > 0) {
-                    $extra[] = "Steady sales, monitor pricing and margins.";
-                } else {
-                    $extra[] = "Slow sales, consider promotions or bundles.";
-                }
-
                 if ($row->stock_left < 5) {
                     $extra[] = "Low stock, prioritize restocking high-demand items.";
                 }
-
                 if ($row->damaged_stock > 0) {
                     $extra[] = "Review handling or supplier issues due to damaged stock.";
                 }
@@ -978,6 +988,9 @@ public function closeAllReceiptModals()
 
             return $row;
         });
+
+
+
 
 
         if (! empty($this->searchWord)) {
@@ -1005,7 +1018,21 @@ public function closeAllReceiptModals()
         $perf = collect(DB::select("
             SELECT p.prod_code, p.name AS product_name, c.category AS category, c.category_id,
                 COALESCE(SUM(ri.item_quantity), 0) AS unit_sold,
-                COALESCE(SUM(ri.item_quantity * COALESCE(
+                
+                COALESCE(SUM(
+                    (ri.item_quantity * COALESCE(
+                        (SELECT ph.old_selling_price
+                        FROM pricing_history ph
+                        WHERE ph.prod_code = ri.prod_code
+                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        ORDER BY ph.effective_from DESC
+                        LIMIT 1),
+                        p.selling_price
+                    )) 
+                    - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                    - (
+                        /* Proportional receipt-level discount allocation */
+                        ((ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
                             WHERE ph.prod_code = ri.prod_code
@@ -1013,7 +1040,27 @@ public function closeAllReceiptModals()
                             ORDER BY ph.effective_from DESC
                             LIMIT 1),
                             p.selling_price
-                        )), 0) AS total_sales,
+                        )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                        / NULLIF((
+                            SELECT SUM(
+                                (ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                            )
+                            FROM receipt_item ri2
+                            JOIN products p2 ON p2.prod_code = ri2.prod_code
+                            JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                            WHERE r2.receipt_id = r.receipt_id
+                        ), 0)
+                        * COALESCE(r.discount_amount, 0)
+                    )
+                ), 0) AS total_sales,
 
                 COALESCE(SUM(
                     ri.item_quantity * COALESCE(
@@ -1021,7 +1068,7 @@ public function closeAllReceiptModals()
                             SELECT ph.old_cost_price
                             FROM pricing_history ph
                             JOIN inventory i ON i.prod_code = ph.prod_code
-                            join receipt_item ri on ri.prod_code = p.prod_code
+                            JOIN receipt_item ri2 ON ri2.prod_code = p.prod_code
                             WHERE i.inven_code = ri.inven_code
                             AND ph.effective_from <= i.date_added
                             AND (ph.effective_to IS NULL OR ph.effective_to >= i.date_added)
@@ -1040,11 +1087,24 @@ public function closeAllReceiptModals()
                     WHERE d.owner_id = ?
                         AND YEAR(d.damaged_date) IN (?)
                         AND MONTH(d.damaged_date) IN (?)
-                    AND p2.category_id = c.category_id   -- correlate to current category
+                    AND p2.category_id = c.category_id
                     AND (d.set_to_return_to_supplier IN ('Damaged') OR d.set_to_return_to_supplier IS NULL)
                 ), 0) AS damaged_stock,
 
-                (COALESCE(SUM(ri.item_quantity * COALESCE(
+                (COALESCE(SUM(
+                    (ri.item_quantity * COALESCE(
+                        (SELECT ph.old_selling_price
+                        FROM pricing_history ph
+                        WHERE ph.prod_code = ri.prod_code
+                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        ORDER BY ph.effective_from DESC
+                        LIMIT 1),
+                        p.selling_price
+                    )) 
+                    - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                    - (
+                        /* Proportional receipt-level discount allocation */
+                        ((ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
                             WHERE ph.prod_code = ri.prod_code
@@ -1052,9 +1112,42 @@ public function closeAllReceiptModals()
                             ORDER BY ph.effective_from DESC
                             LIMIT 1),
                             p.selling_price
-                        )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0)) AS profit,
+                        )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                        / NULLIF((
+                            SELECT SUM(
+                                (ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                            )
+                            FROM receipt_item ri2
+                            JOIN products p2 ON p2.prod_code = ri2.prod_code
+                            JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                            WHERE r2.receipt_id = r.receipt_id
+                        ), 0)
+                        * COALESCE(r.discount_amount, 0)
+                    )
+                ), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0)) AS profit,
 
-                ((COALESCE(SUM(ri.item_quantity * COALESCE(
+                ((COALESCE(SUM(
+                    (ri.item_quantity * COALESCE(
+                        (SELECT ph.old_selling_price
+                        FROM pricing_history ph
+                        WHERE ph.prod_code = ri.prod_code
+                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        ORDER BY ph.effective_from DESC
+                        LIMIT 1),
+                        p.selling_price
+                    )) 
+                    - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                    - (
+                        /* Proportional receipt-level discount allocation */
+                        ((ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
                             WHERE ph.prod_code = ri.prod_code
@@ -1062,8 +1155,41 @@ public function closeAllReceiptModals()
                             ORDER BY ph.effective_from DESC
                             LIMIT 1),
                             p.selling_price
-                        )), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
-                    / NULLIF(COALESCE(SUM(ri.item_quantity * COALESCE(
+                        )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                        / NULLIF((
+                            SELECT SUM(
+                                (ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                            )
+                            FROM receipt_item ri2
+                            JOIN products p2 ON p2.prod_code = ri2.prod_code
+                            JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                            WHERE r2.receipt_id = r.receipt_id
+                        ), 0)
+                        * COALESCE(r.discount_amount, 0)
+                    )
+                ), 0) - COALESCE(SUM(p.cost_price * ri.item_quantity), 0))
+                    / NULLIF(COALESCE(SUM(
+                    (ri.item_quantity * COALESCE(
+                        (SELECT ph.old_selling_price
+                        FROM pricing_history ph
+                        WHERE ph.prod_code = ri.prod_code
+                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        ORDER BY ph.effective_from DESC
+                        LIMIT 1),
+                        p.selling_price
+                    )) 
+                    - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                    - (
+                        /* Proportional receipt-level discount allocation */
+                        ((ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
                             WHERE ph.prod_code = ri.prod_code
@@ -1071,10 +1197,43 @@ public function closeAllReceiptModals()
                             ORDER BY ph.effective_from DESC
                             LIMIT 1),
                             p.selling_price
-                        )), 0), 0)) * 100 AS profit_margin_percent,
+                        )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                        / NULLIF((
+                            SELECT SUM(
+                                (ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                            )
+                            FROM receipt_item ri2
+                            JOIN products p2 ON p2.prod_code = ri2.prod_code
+                            JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                            WHERE r2.receipt_id = r.receipt_id
+                        ), 0)
+                        * COALESCE(r.discount_amount, 0)
+                    )
+                    ), 0), 0)) * 100 AS profit_margin_percent,
 
                 COALESCE(
-                    (SUM(ri.item_quantity * COALESCE(
+                    (SUM(
+                    (ri.item_quantity * COALESCE(
+                        (SELECT ph.old_selling_price
+                        FROM pricing_history ph
+                        WHERE ph.prod_code = ri.prod_code
+                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        ORDER BY ph.effective_from DESC
+                        LIMIT 1),
+                        p.selling_price
+                    )) 
+                    - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0))
+                    - (
+                        /* Proportional receipt-level discount allocation */
+                        ((ri.item_quantity * COALESCE(
                             (SELECT ph.old_selling_price
                             FROM pricing_history ph
                             WHERE ph.prod_code = ri.prod_code
@@ -1082,7 +1241,27 @@ public function closeAllReceiptModals()
                             ORDER BY ph.effective_from DESC
                             LIMIT 1),
                             p.selling_price
-                        ))/NULLIF(total.total_sales_all, 0)) * 100,0
+                        )) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)))
+                        / NULLIF((
+                            SELECT SUM(
+                                (ri2.item_quantity * COALESCE(
+                                    (SELECT ph2.old_selling_price
+                                    FROM pricing_history ph2
+                                    WHERE ph2.prod_code = ri2.prod_code
+                                    AND r2.receipt_date BETWEEN ph2.effective_from AND ph2.effective_to
+                                    ORDER BY ph2.effective_from DESC
+                                    LIMIT 1),
+                                    p2.selling_price
+                                )) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                            )
+                            FROM receipt_item ri2
+                            JOIN products p2 ON p2.prod_code = ri2.prod_code
+                            JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
+                            WHERE r2.receipt_id = r.receipt_id
+                        ), 0)
+                        * COALESCE(r.discount_amount, 0)
+                    )
+                    )/NULLIF(total.total_sales_all, 0)) * 100, 0
                 ) AS contribution_percent,
 
                 COALESCE(inv.total_stock, 0) AS remaining_stocks,
@@ -1095,7 +1274,7 @@ public function closeAllReceiptModals()
                 JOIN products p2 ON i.prod_code = p2.prod_code
                 WHERE p2.owner_id = ? 
                     AND (i.expiration_date IS NULL OR i.expiration_date > CURDATE())
-                    and p2.prod_status = 'active'
+                    AND p2.prod_status = 'active'
                 GROUP BY i.prod_code
             ) inv ON inv.prod_code = p.prod_code
             LEFT JOIN categories AS c 
@@ -1110,16 +1289,32 @@ public function closeAllReceiptModals()
             LEFT JOIN (
                 SELECT 
                     p2.owner_id, 
-                    SUM(p2.selling_price * ri2.item_quantity) AS total_sales_all
+                    SUM(
+                        (ri2.item_quantity * p2.selling_price) 
+                        - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0))
+                        - (
+                            /* Proportional receipt discount */
+                            ((ri2.item_quantity * p2.selling_price) - (ri2.item_quantity * COALESCE(ri2.item_discount_amount, 0)))
+                            / NULLIF((
+                                SELECT SUM(
+                                    (ri3.item_quantity * p3.selling_price) - (ri3.item_quantity * COALESCE(ri3.item_discount_amount, 0))
+                                )
+                                FROM receipt_item ri3
+                                JOIN products p3 ON p3.prod_code = ri3.prod_code
+                                WHERE ri3.receipt_id = r2.receipt_id
+                            ), 0)
+                            * COALESCE(r2.discount_amount, 0)
+                        )
+                    ) AS total_sales_all
                 FROM products p2
                 JOIN receipt_item ri2 ON ri2.prod_code = p2.prod_code
                 JOIN receipt r2 ON r2.receipt_id = ri2.receipt_id
                 WHERE MONTH(r2.receipt_date) = ? AND YEAR(r2.receipt_date) = ?
-                    and p2.prod_status = 'active'
+                    AND p2.prod_status = 'active'
                 GROUP BY p2.owner_id
             ) total ON total.owner_id = p.owner_id
             WHERE p.owner_id = ? 
-                and p.prod_status = 'active'
+                AND p.prod_status = 'active'
             GROUP BY p.prod_code, p.name, c.category, p.owner_id, c.category_id, total.total_sales_all, inv.total_stock
         ", [$owner_id, $latestYear, $month, $owner_id, $month, $latestYear, $month, $latestYear, $owner_id]));
 
@@ -1193,7 +1388,7 @@ public function closeAllReceiptModals()
             // ------------------------------------
             if ($row->profit <= 0) {
 
-                $insights[] = "Losing money. You have to promote it more.";
+                $insights[] = "Unprofitable. Losing money.";
 
             } elseif ($row->profit_margin_percent < 10) {
 

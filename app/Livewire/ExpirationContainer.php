@@ -16,22 +16,32 @@ class ExpirationContainer extends Component
     }
 
     private function expirationTracker() {
-        $owner_id = session('owner_id');
-    
-        if (!$owner_id) {
-            return $this->isExpired = false;
+        // Determine owner_id based on login type
+        if (Auth::guard('owner')->check()) {
+            $owner_id = Auth::guard('owner')->id();
+        } elseif (Auth::guard('staff')->check()) {
+            // Get the owner_id associated with the staff
+            $owner_id = Auth::guard('staff')->user()->owner_id;
+        } else {
+            $this->isExpired = false;
+            return;
         }
 
+        // Fetch the latest subscription for this owner
         $owner = collect(DB::select("
-            select o.owner_id, s.subscription_end 
-            from owners o
-            join subscriptions s on o.owner_id = s.owner_id
-            where o.owner_id = ?
-            order by subscription_id desc
-            limit 1", [$owner_id]))->first();
+            SELECT o.owner_id, s.subscription_end
+            FROM owners o
+            JOIN subscriptions s ON o.owner_id = s.owner_id
+            WHERE o.owner_id = ?
+            ORDER BY s.subscription_id DESC
+            LIMIT 1
+        ", [$owner_id]))->first();
 
+        // Check if subscription is expired
         if ($owner && $owner->subscription_end !== null && $owner->subscription_end <= date('Y-m-d')) {
-            return $this->isExpired = true;
+            $this->isExpired = true;
+        } else {
+            $this->isExpired = false;
         }
     }
 
