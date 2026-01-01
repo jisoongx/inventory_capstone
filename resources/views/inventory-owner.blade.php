@@ -3928,20 +3928,61 @@ document.addEventListener("DOMContentLoaded", () => {
         if (unitSelect) unitSelect.value = '';
     }
 
-        // Auto-calc Selling Price
+        // Auto-calc Selling Price with VAT handling
         function calculateSellingPrice() {
             const cost = parseFloat(document.getElementById("costPrice").value) || 0;
             const type = document.getElementById("markupType").value;
             const markup = parseFloat(document.getElementById("markupValue").value) || 0;
-            let selling = cost;
-
+            const vatCategory = document.getElementById("vatCategory").value;
+            
+            // Calculate base price (cost + markup)
+            let basePrice = cost;
+            let markupAmount = 0;
+            
             if (type === "percentage") {
-                selling = cost + (cost * (markup / 100));
+                markupAmount = cost * (markup / 100);
+                basePrice = cost + markupAmount;
             } else {
-                selling = cost + markup;
+                markupAmount = markup;
+                basePrice = cost + markup;
             }
-
-            document.getElementById("sellingPrice").value = selling.toFixed(2);
+            
+            // Calculate tax based on VAT category
+            let taxAmount = 0;
+            let taxRate = 0;
+            let sellingPrice = basePrice;
+            
+            if (vatCategory === 'vat_exempt') {
+                taxAmount = 0;
+                taxRate = 0;
+            } else {
+                // VAT-Inclusive (12%)
+                taxAmount = basePrice * 0.12;
+                taxRate = 12;
+            }
+            
+            sellingPrice = basePrice + taxAmount;
+            
+            // Update the form fields
+            document.getElementById("sellingPrice").value = sellingPrice.toFixed(2);
+            
+            // Update tax breakdown display
+            const markupLabel = type === "percentage" 
+                ? `Markup (${markup}%):` 
+                : `Markup:`;
+            
+            const taxLabel = taxRate === 0 ? 'VAT (0%):' : `VAT (${taxRate}%):`;
+            
+            document.getElementById("costDisplay").textContent = '₱' + cost.toFixed(2);
+            document.getElementById("markupLabel").textContent = markupLabel;
+            document.getElementById("markupAmount").textContent = '₱' + markupAmount.toFixed(2);
+            document.getElementById("basePrice").textContent = '₱' + basePrice.toFixed(2);
+            document.getElementById("taxLabel").textContent = taxLabel;
+            document.getElementById("taxAmount").textContent = '₱' + taxAmount.toFixed(2);
+            document.getElementById("taxAmount").className = taxRate === 0 
+                ? 'font-medium text-gray-600' 
+                : 'font-medium text-green-700';
+            document.getElementById("totalPrice").textContent = '₱' + sellingPrice.toFixed(2);
         }
 
         // Reset photo preview helper
@@ -3982,6 +4023,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     element.addEventListener("change", calculateSellingPrice);
                 }
             });
+            
+            // ✅ NEW: Add event listener for VAT category changes to recalculate selling price
+            const vatCategory = document.getElementById("vatCategory");
+            if (vatCategory) {
+                vatCategory.addEventListener("change", calculateSellingPrice);
+            }
 
         // Photo preview
         if (photoInput) {
@@ -4095,10 +4142,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const categorySelect = document.getElementById('categorySelect');
         const unitSelect = document.getElementById('unitSelect');
         
-        // Clear category errors when changing dropdown selection
+        // Define VAT-Exempt categories (per tax guidelines)
+        const vatExemptCategories = ['Vegetables', 'Fruits', 'Meat & Poultry', 'Fish & Seafood', 'Eggs', 'Rice & Grains'];
+        
+        // Clear category errors when changing dropdown selection & Auto-update VAT category
         if (categorySelect) {
             categorySelect.addEventListener('change', function() {
                 const customCategory = document.getElementById('customCategory');
+                const vatCategory = document.getElementById('vatCategory');
+                
                 if (this.value !== 'other' && customCategory) {
                     const existingError = customCategory.parentNode.querySelector('.duplicate-error');
                     if (existingError) {
@@ -4106,6 +4158,29 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     customCategory.classList.remove('border-red-500');
                     customCategory.value = '';
+                    
+                    // ✅ NEW: Get the selected category name and check if it's VAT-exempt
+                    const selectedOption = this.options[this.selectedIndex];
+                    const selectedCategoryName = selectedOption ? selectedOption.text : '';
+                    
+                    // Auto-update VAT category based on selected category
+                    if (vatCategory) {
+                        if (vatExemptCategories.includes(selectedCategoryName)) {
+                            // Category is VAT-exempt → Auto-select VAT-Exempt (0%)
+                            vatCategory.value = 'vat_exempt';
+                        } else {
+                            // Category is NOT VAT-exempt → Auto-select VAT-Inclusive (12%)
+                            vatCategory.value = 'vat_inclusive';
+                        }
+                        // Trigger change event to recalculate selling price
+                        vatCategory.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                } else if (this.value === 'other' && customCategory) {
+                    // When "Other" is selected, reset VAT category to default (VAT-Inclusive)
+                    if (vatCategory) {
+                        vatCategory.value = 'vat_inclusive';
+                        vatCategory.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                 }
             });
         }
@@ -4859,6 +4934,4 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-
-
-    @endsection
+@endsection
