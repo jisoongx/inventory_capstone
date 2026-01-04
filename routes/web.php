@@ -23,6 +23,7 @@ use App\Livewire\ReportSalesAndPerformance;
 use App\Livewire\TechnicalRequest;
 use App\Http\Controllers\InventoryOwnerSettingsController;
 use App\Http\Controllers\InventoryStaffSettingsController;
+use App\Models\Plan;
 
 
 
@@ -37,7 +38,8 @@ Route::get('/resend-verification', [RegisterController::class, 'resendVerificati
 
 
 
-Route::view('/welcome/to/shoplytix', 'landing-page');
+Route::get('/welcome/to/shoplytix', [SubscriptionController::class, 'index']);
+
 
 
 Route::view('/owner/dashboard', 'dashboards.owner.dashboard')->name('dashboards.owner.dashboard');
@@ -144,6 +146,30 @@ Route::get('/super-admin/dashboard', fn() => view('dashboards.super_admin.super_
 //subscription plan management
 Route::get('/subscription/management', [SubscriptionController::class, 'subscribers'])->name('subscription');
 Route::get('/billing-history', [BillingController::class, 'billing'])->name('billing.history');
+Route::get('/super-admin/plans-pricing', function () {
+    $plans = Plan::orderBy('plan_price')->get();
+
+    return view(
+        'dashboards.super_admin.plans_and_pricing',
+        compact('plans')
+    );
+})->name('plans_and_pricing');
+Route::put('/super-admin/plans-pricing/{plan}', function (Plan $plan) {
+    $plan->update(request()->only([
+        'plan_title',
+        'plan_price',
+        'plan_duration_months',
+        'plan_includes',
+    ]));
+    return back();
+});
+
+Route::patch('/super-admin/plans-pricing/{plan}/toggle', function (Plan $plan) {
+    $plan->update(['is_active' => !$plan->is_active]);
+    return back();
+});
+Route::post('/super-admin/plans-pricing', [SubscriptionController::class, 'createPlan']);
+
 // activity logs
 Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('actLogs');
 Route::get('/staff-logs', [ActivityLogController::class, 'staffLogs'])->name('staffLogs');

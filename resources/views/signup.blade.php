@@ -128,9 +128,9 @@
                     <input type="checkbox" required class="w-4 h-4 border-gray-400 rounded accent-red-600" />
                     <span>
                         I agree to the
-                        <a href="#" class="text-red-600 hover:underline font-medium">Terms of Service</a>
+                        <a href="{{ url('welcome/to/shoplytix/#terms') }}" class="text-red-600 hover:underline font-medium">Terms of Service</a>
                         and
-                        <a href="#" class="text-red-600 hover:underline font-medium">Privacy Policy</a>.
+                        <a href="{{ url('welcome/to/shoplytix/#policy') }}" class="text-red-600 hover:underline font-medium">Privacy Policy</a>.
                     </span>
                 </label>
 
