@@ -45,6 +45,72 @@ class PayPalService
         }
     }
 
+   
+
+    /**
+     * Create a PayPal Billing Plan
+     */
+    public function createPlan(
+        string $productId,
+        string $planTitle,
+        float $price,
+        string $currency = 'PHP',
+        string $intervalUnit = 'MONTH',
+        int $intervalCount = 1
+    ): ?string {
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) return null;
+
+            $client = new Client();
+
+            $response = $client->post("{$this->baseUrl}/v1/billing/plans", [
+                'headers' => [
+                    'Authorization' => "Bearer {$token}",
+                    'Content-Type'  => 'application/json',
+                ],
+                'json' => [
+                    'product_id' => $productId,
+                    'name'        => $planTitle,                       // ✅ dynamic
+                    'description' => $planTitle . ' subscription',     // ✅ optional but good
+                    'status'      => 'ACTIVE',
+
+                    'billing_cycles' => [[
+                        'frequency' => [
+                            'interval_unit'  => $intervalUnit,
+                            'interval_count' => $intervalCount,
+                        ],
+                        'tenure_type'   => 'REGULAR',
+                        'sequence'      => 1,
+                        'total_cycles'  => 0,
+                        'pricing_scheme' => [
+                            'fixed_price' => [
+                                'value'         => number_format($price, 2, '.', ''),
+                                'currency_code' => $currency,
+                            ],
+                        ],
+                    ]],
+
+                    'payment_preferences' => [
+                        'auto_bill_outstanding'     => true,
+                        'setup_fee_failure_action'  => 'CONTINUE',
+                        'payment_failure_threshold' => 3,
+                    ],
+                ],
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+            return $data['id'] ?? null;
+        } catch (\Exception $e) {
+            Log::error('PayPal createPlan error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+
+
+
+
     /**
      * Cancel a PayPal subscription
      */

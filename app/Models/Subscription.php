@@ -18,11 +18,11 @@ class Subscription extends Model
         'plan_id',
         'owner_id',
         'status',
-        'progress_view'
+   
     ];
 
     protected $casts = [
-        'progress_view' => 'boolean',
+      
         'subscription_start' => 'datetime',
         'subscription_end'   => 'datetime'
     ];

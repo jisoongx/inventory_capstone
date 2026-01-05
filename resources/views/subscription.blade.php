@@ -325,41 +325,73 @@
                 '₱0.00' :
                 `₱${parseFloat(currentPlan.plan_price).toFixed(2)}`;
 
-            // FREE PLAN
             if (currentPlan.plan_price == 0) {
-                paymentFormView.classList.add('hidden');
-                successView.classList.remove('hidden');
+                fetch(`/subscribe/${currentPlan.plan_id}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                    }
+                }).then(() => {
+                    paymentFormView.classList.add('hidden');
+                    successView.classList.remove('hidden');
+                });
+
                 return;
             }
 
+
             // PAID PLAN (PayPal)
-            paypal.Buttons({
-                style: {
-                    layout: 'vertical',
-                    color: 'gold',
-                    label: 'subscribe'
-                },
-                createSubscription: function(data, actions) {
-                    return actions.subscription.create({
-                        plan_id: currentPlan.paypal_plan_id
-                    });
-                },
-                onApprove: function(data) {
-                    fetch(`/subscribe/${currentPlan.plan_id}`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({
-                            paypal_subscription_id: data.subscriptionID
-                        })
-                    }).then(() => {
-                        paymentFormView.classList.add('hidden');
-                        successView.classList.remove('hidden');
-                    });
-                }
-            }).render("#paypal-button-container");
+            const paypalContainer = document.getElementById('paypal-button-container');
+            paypalContainer.innerHTML = ''; // 🔥 clear previous buttons
+
+            setTimeout(() => {
+                paypal.Buttons({
+                    style: {
+                        layout: 'vertical',
+                        color: 'gold',
+                        label: 'subscribe'
+                    },
+
+                    createSubscription: function(data, actions) {
+                        const paypalPlanId = currentPlan.paypal_plan_id;
+                        console.log('Using PayPal Plan ID:', paypalPlanId);
+
+                        if (!paypalPlanId) {
+                            alert('This plan is not available for PayPal payment.');
+                            throw new Error('Missing PayPal Plan ID');
+                        }
+
+                        return actions.subscription.create({
+                            plan_id: paypalPlanId
+                        });
+                    },
+
+
+                    onApprove: function(data) {
+                        fetch(`/subscribe/${currentPlan.plan_id}`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                paypal_subscription_id: data.subscriptionID
+                            })
+                        }).then(() => {
+                            paymentFormView.classList.add('hidden');
+                            successView.classList.remove('hidden');
+                        });
+                    },
+
+                    onError: function(err) {
+                        console.error('PayPal Error:', err);
+                        alert('PayPal popup failed to open.');
+                    }
+
+                }).render("#paypal-button-container");
+            }, 300); // ⏳ wait for modal animation
+
         }
     </script>
 

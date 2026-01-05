@@ -15,7 +15,7 @@ class Product extends Model
         'name',
         'cost_price',
         'selling_price',
-        'vat_category',  // ✅ Add this line
+        'vat_category',  
         'stock_limit',
         'description',
         'owner_id',
@@ -29,7 +29,7 @@ class Product extends Model
         'cost_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
         'stock_limit' => 'integer',
-        'vat_category' => 'string'  // ✅ Add this line (optional but good practice)
+        'vat_category' => 'string'  
     ];
 
     // Relationships
