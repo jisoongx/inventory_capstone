@@ -24,24 +24,25 @@ class Owner extends Authenticatable
         'contact',
         'store_name',
         'store_address',
+        'tin_number',
         'owner_pass',
         'status',
         'email_verified_at',
-        'verification_token', // ✅ make sure this is fillable
+        'verification_token', 
     ];
 
     protected $hidden = [
         'owner_pass',
-        'verification_token', // keep it hidden from accidental exposure
+        'verification_token', 
     ];
 
-    // ✅ Authentication password field (custom column)
+ 
     public function getAuthPassword()
     {
         return $this->owner_pass;
     }
 
-    // ✅ Email verification helpers
+  
     public function generateVerificationToken()
     {
         $this->verification_token = Str::random(64);
@@ -60,7 +61,7 @@ class Owner extends Authenticatable
         $this->save();
     }
 
-    // ✅ Relationships
+    
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class, 'owner_id', 'owner_id');

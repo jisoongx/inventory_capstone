@@ -15,11 +15,11 @@ class Payment extends Model
 
     protected $fillable = [
         'owner_id',
-        'subscription_id',   // 👈 add this
+        'subscription_id',  
         'payment_mode',
-        'payment_acc_number',
-        'payment_amount',
+        'paypal_subscription_id',
         'payment_date',
+        'payment_amount'
     ];
 
     public function owner()
@@ -30,7 +30,7 @@ class Payment extends Model
     public function subscription()
     {
         return $this->belongsTo(Subscription::class, 'subscription_id', 'subscription_id');
-        // 👆 adjust 'id' if your subscriptions table uses 'subscription_id' instead of the default 'id'
+       
     }
 
     protected $casts = [

@@ -384,71 +384,73 @@
             selectedPlanPrice.textContent =
                 plan.price === 0 ? "₱0.00" : `₱${plan.price.toFixed(2)}`;
 
-            paypalContainer.innerHTML = "";
-
-            // Handle Basic plan → no PayPal, just direct activation
-            if (plan.name.toLowerCase() === "basic") {
-                // Hide payment form (if it was visible)
-                paymentFormView.classList.add('hidden');
-
-                // Show the success view
-                successView.classList.remove('hidden');
-
-                // Update success view text
-                document.querySelector("#successView h2").textContent = "Basic Plan Activated!";
-                document.querySelector("#successView p").textContent = "You now have access to the Basic plan forever!";
-
-                // Optional: you can still do a backend call if you want to store that the user availed it
-                fetch(`/subscribe/${planId}`, {
+            if (currentPlan.plan_price == 0) {
+                fetch(`/subscribe/${currentPlan.plan_id}`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({})
-                }).catch(() => console.log("Basic plan activation recorded."));
+                    }
+                }).then(() => {
+                    paymentFormView.classList.add('hidden');
+                    successView.classList.remove('hidden');
+                });
 
-                return; // stop further execution
+                return;
             }
 
 
-            // Standard / Premium → PayPal subscription
-            paypal.Buttons({
-                style: {
-                    layout: 'vertical',
-                    color: 'gold',
-                    shape: 'rect',
-                    label: 'subscribe'
-                },
-                createSubscription: function(data, actions) {
-                    return actions.subscription.create({
-                        plan_id: PAYPAL_PLAN_IDS[planId]
-                    });
-                },
-                onApprove: function(data, actions) {
-                    fetch(`/subscribe/${planId}`, {
+            // PAID PLAN (PayPal)
+            const paypalContainer = document.getElementById('paypal-button-container');
+            paypalContainer.innerHTML = ''; // 🔥 clear previous buttons
+
+            setTimeout(() => {
+                paypal.Buttons({
+                    style: {
+                        layout: 'vertical',
+                        color: 'gold',
+                        label: 'subscribe'
+                    },
+
+                    createSubscription: function(data, actions) {
+                        const paypalPlanId = currentPlan.paypal_plan_id;
+                        console.log('Using PayPal Plan ID:', paypalPlanId);
+
+                        if (!paypalPlanId) {
+                            alert('This plan is not available for PayPal payment.');
+                            throw new Error('Missing PayPal Plan ID');
+                        }
+
+                        return actions.subscription.create({
+                            plan_id: paypalPlanId
+                        });
+                    },
+
+
+                    onApprove: function(data) {
+                        fetch(`/subscribe/${currentPlan.plan_id}`, {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
                                 "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify({
-                                paypal_order_id: data.subscriptionID,
-                                plan_id: planId
+                                paypal_subscription_id: data.subscriptionID
                             })
-                        })
-                        .then(res => res.json())
-                        .then(() => {
+                        }).then(() => {
                             paymentFormView.classList.add('hidden');
                             successView.classList.remove('hidden');
-                        })
-                        .catch(() => alert("Failed to activate subscription on backend."));
-                },
-                onError: function(err) {
-                    alert("Something went wrong with PayPal subscription.");
-                    console.error(err);
-                }
-            }).render("#paypal-button-container");
+                        });
+                    },
+
+                    onError: function(err) {
+                        console.error('PayPal Error:', err);
+                        alert('PayPal popup failed to open.');
+                    }
+
+                }).render("#paypal-button-container");
+            }, 300); // ⏳ wait for modal animation
+
         }
 
         // Close modal button
