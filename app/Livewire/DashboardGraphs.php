@@ -37,7 +37,14 @@ class DashboardGraphs extends Component
     public $selectedYear;
 
 
+    public $nextMonth;
+    public $previousMonth;
+    public int $selectedMonthSL;
+    public int $selectedYearSL;
+
     public function currencySales() {
+
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
 
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
@@ -47,12 +54,10 @@ class DashboardGraphs extends Component
         $owner_id = $owner->owner_id;
         $this->owner_name = $owner->firstname;
 
-        $this->year = collect(DB::select("
-            SELECT DISTINCT YEAR(receipt_date) AS year
-            FROM receipt
-            WHERE receipt_date IS NOT NULL and owner_id = ?
-            ORDER BY year DESC
-        ", [$owner_id]))->pluck('year')->toArray();
+        $startYear = Auth::guard('owner')->user()->created_on ?? now()->year;
+        $currentYear = now()->year;
+
+        $this->year = range($currentYear, $startYear);
 
         $this->dateDisplay = Carbon::now('Asia/Manila');
         $this->day = now()->format('Y-m-d');
@@ -313,13 +318,14 @@ class DashboardGraphs extends Component
         $productCategoryAve = collect(DB::select("
             SELECT 
                 c.category,
-                SUM(x.category_sales - x.allocated_discount) AS avg_total_sales, 
-                c.category_id
+                COALESCE( SUM(x.category_sales - x.allocated_discount) / NULLIF(COUNT(DISTINCT YEAR(x.receipt_date)), 0), 0 ) AS avg_total_sales,
+                c.category_id 
             FROM categories c
             LEFT JOIN (
                 SELECT 
                     p.category_id,
                     x.receipt_id,
+                    x.receipt_date,
                     SUM(x.item_sales) AS category_sales,
                     /* Proportional receipt discount for this category */
                     (SUM(x.item_sales) / NULLIF((
@@ -378,7 +384,45 @@ class DashboardGraphs extends Component
 
 
 
+    public function mount()
+    {
+        $this->selectedMonthSL = now()->month;
+        $this->selectedYearSL = now()->year;
+
+        $this->salesVSloss();
+    }
+
+
+
+    public function changeMonth(int $direction)
+    {
+        if ($direction === -1) {
+            // go to previous month
+            if ($this->selectedMonthSL === 1) {
+                $this->selectedMonthSL = 12;
+                $this->selectedYearSL--;
+            } else {
+                $this->selectedMonthSL--;
+            }
+        }
+
+        if ($direction === 1) {
+            // go to next month
+            if ($this->selectedMonthSL === 12) {
+                $this->selectedMonthSL = 1;
+                $this->selectedYearSL++;
+            } else {
+                $this->selectedMonthSL++;
+            }
+        }
+
+        $this->salesVSloss();
+    }
+
+
     public function salesVSloss() {
+
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
 
         if (!Auth::guard('owner')->check()) {
             return redirect()->route('login')->with('error', 'Please login first.');
@@ -387,10 +431,11 @@ class DashboardGraphs extends Component
         $owner = Auth::guard('owner')->user();
         $owner_id = $owner->owner_id;
 
-        $latestYear = now()->year;        
-        $currentMonth = (int) date('m');
+        $latestYear = $this->selectedYearSL;
+        $currentMonth = $this->selectedMonthSL;
 
-        $this->losses = collect(DB::select("
+        // Get ALL months data for the selected year to properly compare
+        $allLosses = collect(DB::select("
             SELECT 
                 m.month,
                 IFNULL(l.total_loss, 0) AS total_loss
@@ -411,42 +456,69 @@ class DashboardGraphs extends Component
                 GROUP BY MONTH(d.damaged_date)
             ) l ON m.month = l.month
             ORDER BY m.month
-        ", [$owner_id, $latestYear]))->pluck('total_loss')->slice(0, $currentMonth)->toArray();
-     
-        $this->sales = collect(DB::select("
-            SELECT 
-                MONTH(x.receipt_date) AS month,
-                SUM(x.item_sales) - SUM(x.discount_amount) AS monthly_sales
-            FROM (
+        ", [$owner_id, $latestYear]))->pluck('total_loss')->toArray();
+
+        $this->losses = array_slice($allLosses, 0, $currentMonth);
+
+        // Get ALL months data for the selected year
+        $allSales = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $salesData = collect(DB::select("
                 SELECT 
-                    r.receipt_id,
-                    r.receipt_date,
-                    r.discount_amount,
-                    SUM(
-                        ri.item_quantity * (
-                            COALESCE(
-                                (SELECT ph.old_selling_price
-                                FROM pricing_history ph
-                                WHERE ph.prod_code = ri.prod_code
-                                AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                                ORDER BY ph.effective_from DESC
-                                LIMIT 1),
-                                p.selling_price
-                            )
-                        ) 
-                    ) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)) AS item_sales
+                    MONTH(x.receipt_date) AS month,
+                    SUM(x.item_sales) - SUM(x.discount_amount) AS monthly_sales
+                FROM (
+                    SELECT 
+                        r.receipt_id,
+                        r.receipt_date,
+                        r.discount_amount,
+                        SUM(
+                            ri.item_quantity * (
+                                COALESCE(
+                                    (SELECT ph.old_selling_price
+                                    FROM pricing_history ph
+                                    WHERE ph.prod_code = ri.prod_code
+                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                    ORDER BY ph.effective_from DESC
+                                    LIMIT 1),
+                                    p.selling_price
+                                )
+                            ) 
+                        ) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)) AS item_sales
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE r.owner_id = ? 
+                        AND MONTH(receipt_date) = ?
+                        AND YEAR(receipt_date) = ?
+                    GROUP BY r.receipt_id
+                ) AS x
+            ", [$owner_id, $month, $latestYear]))->pluck('monthly_sales')->first();
+            
+            $allSales[] = $salesData ?? 0;
+        }
 
+        $this->sales = array_slice($allSales, 0, $currentMonth);
 
+        // Check if this is the first month of the year AND no data exists for previous months
+        $isFirstMonthOfYear = ($currentMonth == 1);
+        $hasPreviousYearData = false;
+        
+        if ($isFirstMonthOfYear) {
+            // Check if there's data from the previous year
+            $prevYear = $latestYear - 1;
+            $prevYearData = collect(DB::select("
+                SELECT COUNT(*) as count 
                 FROM receipt r
-                JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
-                JOIN products p ON p.prod_code = ri.prod_code
-                WHERE r.owner_id = ? 
-                    AND MONTH(receipt_date) = ?
-                    AND YEAR(receipt_date) = ?
-                GROUP BY r.receipt_id
-            ) AS x
-        ", [$owner_id, $currentMonth, $latestYear]))->pluck('monthly_sales')->slice(0, $currentMonth)->toArray();
-
+                WHERE r.owner_id = ? AND YEAR(receipt_date) = ?
+                UNION ALL
+                SELECT COUNT(*) 
+                FROM damaged_items d
+                WHERE d.owner_id = ? AND YEAR(d.damaged_date) = ?
+            ", [$owner_id, $prevYear, $owner_id, $prevYear]))->sum('count');
+            
+            $hasPreviousYearData = ($prevYearData > 0);
+        }
 
         $latestSales = end($this->sales) ?: 0;
         $latestLoss = end($this->losses) ?: 0;
@@ -458,7 +530,58 @@ class DashboardGraphs extends Component
         $this->salesPercentage = $totalActivity > 0 ? round(($latestSales / $totalActivity) * 100, 1) : 0;
         $this->lossPercentage = $totalActivity > 0 ? round(($latestLoss / $totalActivity) * 100, 1) : 0;
 
-        // Calculate ACTUAL percentage change for insights (this is what was missing)
+        // For January (month 1), check if we should compare with December of previous year
+        if ($currentMonth == 1 && $hasPreviousYearData) {
+            // Get December data from previous year for comparison
+            $prevYear = $latestYear - 1;
+            
+            $prevDecSales = collect(DB::select("
+                SELECT 
+                    SUM(x.item_sales) - SUM(x.discount_amount) AS monthly_sales
+                FROM (
+                    SELECT 
+                        r.receipt_id,
+                        r.discount_amount,
+                        SUM(
+                            ri.item_quantity * (
+                                COALESCE(
+                                    (SELECT ph.old_selling_price
+                                    FROM pricing_history ph
+                                    WHERE ph.prod_code = ri.prod_code
+                                    AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                                    ORDER BY ph.effective_from DESC
+                                    LIMIT 1),
+                                    p.selling_price
+                                )
+                            ) 
+                        ) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)) AS item_sales
+                    FROM receipt r
+                    JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
+                    JOIN products p ON p.prod_code = ri.prod_code
+                    WHERE r.owner_id = ? 
+                        AND MONTH(receipt_date) = 12
+                        AND YEAR(receipt_date) = ?
+                    GROUP BY r.receipt_id
+                ) AS x
+            ", [$owner_id, $prevYear]))->pluck('monthly_sales')->first() ?: 0;
+            
+            $prevDecLoss = collect(DB::select("
+                SELECT 
+                    SUM(d.damaged_quantity * p.selling_price) AS total_loss
+                FROM damaged_items d
+                Join inventory i on i.inven_code = d.inven_code
+                JOIN products p ON i.prod_code = p.prod_code
+                WHERE d.owner_id = ? 
+                    AND MONTH(d.damaged_date) = 12
+                    AND YEAR(d.damaged_date) = ?
+                    AND (d.set_to_return_to_supplier is null or d.set_to_return_to_supplier = 'Damaged')
+            ", [$owner_id, $prevYear]))->pluck('total_loss')->first() ?: 0;
+            
+            $previousSales = $prevDecSales;
+            $previousLoss = $prevDecLoss;
+        }
+
+        // Calculate ACTUAL percentage change for insights
         if ($previousSales > 0) {
             $salesChangePercent = (($latestSales - $previousSales) / $previousSales) * 100;
         } else {
@@ -471,9 +594,13 @@ class DashboardGraphs extends Component
             $lossChangePercent = $latestLoss > 0 ? 100 : 0; 
         }
 
-        $previousSalesAll = array_slice($this->sales, 0, -1);
+        // Modified baseline check - only treat as baseline if NO previous data exists at all
+        $hasAnyPreviousData = ($previousSales > 0 || $previousLoss > 0 || 
+                            array_sum(array_slice($this->sales, 0, -1)) > 0 || 
+                            array_sum(array_slice($this->losses, 0, -1)) > 0 ||
+                            $hasPreviousYearData);
 
-        if(array_sum($previousSalesAll)==0 && $this->lossPercentage == 0) {
+        if (!$hasAnyPreviousData && $latestSales == 0 && $latestLoss == 0) {
             $this->salesInsights = "This is your baseline month. Future sales comparisons will be based on this data.";
             $this->salesState = 'Start';
             $this->lossInsights = "This is your baseline month. Future loss comparisons will be based on this data.";
@@ -484,10 +611,10 @@ class DashboardGraphs extends Component
         } else {
             
             if($salesChangePercent > 0) {
-                $this->salesInsights = "Compared to last month, sales improved by " . number_format(abs($salesChangePercent), 1) . "%.";
+                $this->salesInsights = "Compared to " . ($currentMonth == 1 && $hasPreviousYearData ? "last December" : "last month") . ", sales improved by " . number_format(abs($salesChangePercent), 1) . "%.";
                 $this->salesState = 'Positive';
             } elseif ($salesChangePercent < 0) {
-                $this->salesInsights = "Compared to last month, sales decreased by " . number_format(abs($salesChangePercent), 1) . "%.";
+                $this->salesInsights = "Compared to " . ($currentMonth == 1 && $hasPreviousYearData ? "last December" : "last month") . ", sales decreased by " . number_format(abs($salesChangePercent), 1) . "%.";
                 $this->salesState = 'Negative';
             } else {
                 $this->salesInsights = "Sales remained consistent at " . number_format($this->salesPercentage, 1) . "%.";
@@ -495,10 +622,10 @@ class DashboardGraphs extends Component
             }
 
             if($lossChangePercent > 0) {
-                $this->lossInsights = "Compared to last month, loss increased by " . number_format(abs($lossChangePercent), 1) . "%.";
+                $this->lossInsights = "Compared to " . ($currentMonth == 1 && $hasPreviousYearData ? "last December" : "last month") . ", loss increased by " . number_format(abs($lossChangePercent), 1) . "%.";
                 $this->lossState = 'Negative';
             } elseif ($lossChangePercent < 0) {
-                $this->lossInsights = "Compared to last month, loss decreased by " . number_format(abs($lossChangePercent), 1) . "%.";
+                $this->lossInsights = "Compared to " . ($currentMonth == 1 && $hasPreviousYearData ? "last December" : "last month") . ", loss decreased by " . number_format(abs($lossChangePercent), 1) . "%.";
                 $this->lossState = 'Positive';
             } else {
                 $this->lossInsights = "Loss remained steady at " . number_format($this->lossPercentage, 1) . "%.";
@@ -506,7 +633,6 @@ class DashboardGraphs extends Component
             }
         }
 
-        // FIX: Check if there's actually no activity in the current month
         if ($totalActivity === 0) {
             $this->insight = "No sales activity recorded this month. Consider reviewing your inventory or marketing strategies.";
             $this->performanceLabel = "No Activity";
