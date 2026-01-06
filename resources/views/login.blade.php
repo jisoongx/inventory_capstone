@@ -60,7 +60,7 @@
 
                 <div class="relative">
                     <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl">person</span>
-                    <input type="email" name="email" placeholder="Email" required
+                    <input type="email" name="email" placeholder="Enter your email" required
                         class="w-full pl-11 pr-4 py-3 bg-white border border-gray-400 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 placeholder-gray-500" />
                 </div>
             </div>
@@ -70,7 +70,7 @@
 
                 <div class="relative">
                     <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl">lock</span>
-                    <input type="password" id="password" name="password" placeholder="Password" required
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required
                         class="w-full pl-11 pr-12 py-3 bg-white border border-gray-400 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 placeholder-gray-500" />
                     <span id="togglePasswordIcon"
                         class="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer opacity-0 transition-opacity duration-200 text-xl">

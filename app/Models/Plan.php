@@ -18,8 +18,6 @@ class Plan extends Model
         'plan_includes',
         'plan_duration_months',
         'is_active',
-        'paypal_plan_id',
-        'paypal_product_id'
     ];
 
     protected $casts = [
