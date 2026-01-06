@@ -64,7 +64,7 @@ Route::view('/reports/customer-and-behavior-reports', 'dashboards.owner.report-c
 Route::view('/report/sales-and-performance', 'dashboards.owner.report-sales-performance')->name('report.sales.performance');
 
 Route::view('/owner/masterlist-pricing-history', 'dashboards.owner.masterlist-pricing-history')->name('dashboards.owner.masterlist_pricing_history');
-Route::view('/owner/create-bundle', 'dashboards.owner.bundle')->name('dashboards.owner.bundle');
+
 
 
 
@@ -333,3 +333,4 @@ Route::middleware(['auth:owner,staff'])->group(function() {
         return view('dashboards.owner.report-return-item', compact('receiptId'));
     })->name('return_item');
 });
+

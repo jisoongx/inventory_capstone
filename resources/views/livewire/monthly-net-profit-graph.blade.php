@@ -15,9 +15,15 @@
         </div>
 
         <div class="flex flex-col text-left lg:text-right">
-            <span class="text-xl font-bold text-gray-900">
-                ₱{{ number_format($profitMonth, 2) }}
-            </span>
+            @if (is_null($profitMonth) || $profitMonth === 0)
+                <span class="text-xl font-semibold text-red-700">
+                    No data yet.
+                </span>
+            @else
+                <span class="text-xl font-bold text-gray-900">
+                    ₱{{ number_format($profitMonth, 2) }}
+                </span>
+            @endif
             <p class="text-xs text-gray-600">Current Net Profit</p>
         </div>
 

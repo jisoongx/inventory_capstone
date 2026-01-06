@@ -42,14 +42,13 @@ class MonthlyNetProfitGraph extends Component
         
         $this->dateDisplay = Carbon::now('Asia/Manila');
 
-        $startYear = Auth::guard('owner')->user()->created_on;
-        $currentYear = now()->year;
+        $this->year = collect(DB::select("
+            SELECT DISTINCT YEAR(receipt_date) AS year
+            FROM receipt
+            WHERE receipt_date IS NOT NULL and owner_id = ?
+            ORDER BY year DESC
+        ", [$owner_id]))->pluck('year')->toArray();
 
-        // Ensure they're integers for range, then convert to strings
-        $startYearInt = is_string($startYear) ? (int) date('Y', strtotime($startYear)) : (int) $startYear;
-        $currentYearInt = (int) $currentYear;
-
-        $this->year = array_map('strval', range($currentYearInt, $startYearInt));
 
         $latestYear = now()->year;
         $yearToUse = $this->selectedYear ?? $latestYear;
@@ -110,8 +109,7 @@ class MonthlyNetProfitGraph extends Component
             ) l ON m.month = l.month
             ORDER BY m.month
         ", [$owner_id, $yearToUse]))->pluck('total_loss')->toArray();
-    
-        // FIXED: Changed $latestYear to $yearToUse in both WHERE clause and query parameters
+     
         $GraphSales = collect(DB::select("
             SELECT 
                 m.month,
@@ -143,6 +141,8 @@ class MonthlyNetProfitGraph extends Component
                                 )
                             ) 
                         ) - (ri.item_quantity * COALESCE(ri.item_discount_amount, 0)) AS item_sales
+
+
                     FROM receipt r
                     JOIN receipt_item ri ON ri.receipt_id = r.receipt_id
                     JOIN products p ON p.prod_code = ri.prod_code
@@ -153,7 +153,7 @@ class MonthlyNetProfitGraph extends Component
                 GROUP BY MONTH(x.receipt_date)
             ) s ON m.month = s.month
             ORDER BY m.month
-        ", [$owner_id, $yearToUse]))->pluck('monthly_sales')->toArray();
+        ", [$owner_id, $latestYear]))->pluck('monthly_sales')->toArray();
 
         foreach ($allMonths as $month) {
             $Gsale     = $GraphSales[$month]    ?? null;
@@ -162,6 +162,8 @@ class MonthlyNetProfitGraph extends Component
 
             $this->profits[$month] = $Gsale - ($Gexpense + $Gloss);
         }
+
+        // $this->profitMonth = $this->profits[$currentMonth - 1] ?? 0;
 
         $this->dispatch('chart-updated', [
             'profits' => array_values($this->profits),

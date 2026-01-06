@@ -35,63 +35,6 @@ function initProfitChart()
     profitChart.style.height = "23rem"; 
     profitChart.style.width = "100%";
 
-    // Custom plugin for permanent labels on data points
-    // const profitLabelsPlugin = {
-    //     id: 'profitLabels',
-    //     afterDatasetsDraw: function(chart) {
-    //         const ctx = chart.ctx;
-    //         chart.data.datasets.forEach((dataset, i) => {
-    //             const meta = chart.getDatasetMeta(i);
-                
-    //             meta.data.forEach((point, index) => {
-    //                 const value = dataset.data[index];
-                    
-    //                 ctx.save();
-    //                 ctx.font = 'semibold 5px Poppins, sans-serif';
-    //                 ctx.textBaseline = 'bottom';
-                    
-    //                 const text = '₱ ' + value.toLocaleString('en-US', {
-    //                     minimumFractionDigits: 2,
-    //                     maximumFractionDigits: 2
-    //                 });
-                    
-    //                 // Measure text width
-    //                 const textWidth = ctx.measureText(text).width;
-    //                 const padding = 6;
-    //                 const boxWidth = textWidth + (padding * 2);
-    //                 const boxHeight = 18;
-                    
-    //                 // Position above the point
-    //                 const x = point.x - boxWidth / 2;
-    //                 const y = point.y - boxHeight - 8;
-                    
-    //                 // Red background matching the line color
-    //                 ctx.fillStyle = 'rgba(190, 21, 21, 0.95)';
-    //                 ctx.shadowColor = 'rgba(190, 21, 21, 0.3)';
-    //                 ctx.shadowBlur = 6;
-    //                 ctx.shadowOffsetX = 0;
-    //                 ctx.shadowOffsetY = 2;
-                    
-    //                 // Draw rounded rectangle background
-    //                 ctx.beginPath();
-    //                 ctx.roundRect(x, y, boxWidth, boxHeight, 5);
-    //                 ctx.fill();
-                    
-    //                 // Reset shadow for text
-    //                 ctx.shadowBlur = 0;
-    //                 ctx.shadowOffsetX = 0;
-    //                 ctx.shadowOffsetY = 0;
-                    
-    //                 // Draw text in white
-    //                 ctx.fillStyle = '#ffffff';
-    //                 ctx.textAlign = 'center';
-    //                 ctx.fillText(text, point.x, y + boxHeight - 4);
-                    
-    //                 ctx.restore();
-    //             });
-    //         });
-    //     }
-    // };
 
     if (!canvas.chartInstance) {
         canvas.chartInstance = new Chart(ctx, {
@@ -113,67 +56,15 @@ function initProfitChart()
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 200 },
-                layout: {
-                    padding: {
-                        top: 35,
-                        right: 10,
-                        bottom: 10,
-                        left: 10
-                    }
-                },
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#444',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        titleFont: {
-                            family: 'Poppins, sans-serif',
-                            size: 13,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            family: 'Poppins, sans-serif',
-                            size: 12
-                        },
-                        callbacks: {
-                            title: function(context) {
-                                return context[0].label;
-                            },
-                            label: function(context) {
-                                return 'Profit: ' + context.parsed.y.toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                });
-                            }
-                        }
-                    },
                     zoom: {
                         zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "x" },
                         pan: { enabled: true, mode: "x" }
                     }
                 },
-                scales: { 
-                    y: { 
-                        beginAtZero: true,
-                        ticks: {
-                            font: { family: "Poppins, sans-serif" }
-                        }
-                    }, 
-                    x: { 
-                        display: true,
-                        ticks: {
-                            font: { family: "Poppins, sans-serif" }
-                        }
-                    } 
-                }
+                scales: { y: { beginAtZero: true }, x: { display: true } }
             },
-            // plugins: [profitLabelsPlugin]
         });
     } else {
         
@@ -214,73 +105,6 @@ function initSalesVSLossChart()
     redGradient.addColorStop(0, "#f02951ff");
     redGradient.addColorStop(1, "#f9a29aff");
 
-    // const valuePlugin = {
-    //     id: 'valueLabels',
-    //     afterDatasetsDraw: function(chart) {
-    //         const ctx = chart.ctx;
-    //         chart.data.datasets.forEach((dataset, i) => {
-    //             const meta = chart.getDatasetMeta(i);
-    //             const isSales = dataset.label === 'Sales';
-                
-    //             meta.data.forEach((bar, index) => {
-    //                 const value = dataset.data[index];
-                    
-    //                 ctx.save();
-    //                 ctx.font = '11px Poppins, sans-serif';
-    //                 ctx.textBaseline = 'middle';
-                    
-    //                 const text = '₱ ' + value.toLocaleString('en-US', {
-    //                     minimumFractionDigits: 2,
-    //                     maximumFractionDigits: 2
-    //                 });
-                    
-    //                 // Measure text width
-    //                 const textWidth = ctx.measureText(text).width;
-    //                 const padding = 4;
-    //                 const boxWidth = textWidth + (padding * 2);
-    //                 const boxHeight = 20;
-                    
-    //                 // Position at the start of the bar
-    //                 const x = bar.x - boxWidth - 8;
-    //                 const y = bar.y;
-                    
-    //                 // Different colors based on Sales or Loss
-    //                 if (isSales) {
-    //                     // Green background for Sales
-    //                     ctx.fillStyle = 'transparent';
-    //                     ctx.shadowColor = 'rgba(5, 181, 78, 0.3)';
-    //                 } else {
-    //                     // Red background for Loss
-    //                     ctx.fillStyle = 'transparent';
-    //                     ctx.shadowColor = 'rgba(240, 41, 81, 0.3)';
-    //                 }
-                    
-    //                 // Add subtle shadow
-    //                 ctx.shadowBlur = 8;
-    //                 ctx.shadowOffsetX = 0;
-    //                 ctx.shadowOffsetY = 2;
-                    
-    //                 // Draw rounded rectangle background
-    //                 ctx.beginPath();
-    //                 ctx.roundRect(x, y - boxHeight/2, boxWidth, boxHeight, 6);
-    //                 ctx.fill();
-                    
-    //                 // Reset shadow for text
-    //                 ctx.shadowBlur = 0;
-    //                 ctx.shadowOffsetX = 0;
-    //                 ctx.shadowOffsetY = 0;
-                    
-    //                 // Draw text in white
-    //                 ctx.fillStyle = '#ffffff';
-    //                 ctx.textAlign = 'center';
-    //                 ctx.fillText(text, x + boxWidth/2, y);
-                    
-    //                 ctx.restore();
-    //             });
-    //         });
-    //     }
-    // };
-
     if (!canvas.chartInstance) {
         
         canvas.chartInstance = new Chart(cty, {
@@ -308,37 +132,6 @@ function initSalesVSLossChart()
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#444',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        titleFont: {
-                            family: 'Poppins, sans-serif',
-                            size: 13,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            family: 'Poppins, sans-serif',
-                            size: 12
-                        },
-                        callbacks: {
-                            title: function(context) {
-                                return context[0].dataset.label;
-                            },
-                            label: function(context) {
-                                let label = context.parsed.x || 0;
-                                return 'Amount: ' + label.toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                });
-                            }
-                        }
-                    }
                 },
                 scales: {
                     x: {
@@ -358,7 +151,6 @@ function initSalesVSLossChart()
                     easing: "easeOutQuart",
                 },
             },
-            // plugins: [valuePlugin]
         });
     } else {
 

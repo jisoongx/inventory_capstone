@@ -98,18 +98,7 @@
 
                 <!-- sales vs loss -->
                 <div class="bg-white p-5 rounded shadow border w-[50%] h-[26rem]">
-                    <div class="flex justify-between">
-                        <p class="text-left text-black font-semibold text-xs"> Sales VS Loss - {{ \Carbon\Carbon::createFromDate(null, $selectedMonthSL, 1)->format('F') }}</p>
-                        <!-- <div class="gap-2 flex">
-                            <a wire:click="changeMonth(-1)" class="cursor-pointer hover:bg-slate-100 rounded">
-                                <span class="material-symbols-rounded">arrow_back</span>
-                            </a>
-
-                            <a wire:click="changeMonth(1)" class="cursor-pointer hover:bg-slate-100 rounded">
-                                <span class="material-symbols-rounded">arrow_forward</span>
-                            </a>
-                        </div> -->
-                    </div>
+                    <p class="text-left text-black font-semibold text-xs">Sales VS Loss - {{ $dateDisplay->format('F') }}</p>
                     <div class="mt-3">
                         @if((count($losses) ?? 0) == 0 && (count($sales) ?? 0) == 0)
                             <div class="flex flex-col items-center justify-center py-24 text-gray-500 text-center">
