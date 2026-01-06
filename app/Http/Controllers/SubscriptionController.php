@@ -18,15 +18,6 @@ use App\Services\PayPalService;
 
 class SubscriptionController extends Controller
 {
-    public function index()
-    {
-        $plans = Plan::where('is_active', true)
-            ->orderBy('plan_price')
-            ->get();
-
-        return view('landing-page', compact('plans'));
-    }
-
     public function subscribers(Request $request)
     {
         if (!Auth::guard('super_admin')->check()) {
@@ -137,30 +128,12 @@ class SubscriptionController extends Controller
     }
 
 
-
+   
     public function create()
     {
-        $plans = Plan::where('is_active', 1)
-            ->orderBy('plan_price')
-            ->get();
-
+        $plans = Plan::all();
         return view('subscription', compact('plans'));
     }
-
-    public function createPlan(Request $request)
-    {
-        $validated = $request->validate([
-            'plan_title' => 'required|string|max:100',
-            'plan_price' => 'required|numeric|min:0',
-            'plan_duration_months' => 'nullable|integer|min:1',
-            'plan_includes' => 'required|string',
-        ]);
-
-        Plan::create($validated);
-
-        return redirect()->back()->with('success', 'Plan created successfully.');
-    }
-
 
 
     public function createPlan(Request $request, PayPalService $paypal)

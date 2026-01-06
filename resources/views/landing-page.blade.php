@@ -16,14 +16,13 @@
                 <div class="mx-auto p-8 relative z-10">
                     <nav class="flex items-center justify-between mb-16">
                         <div class="flex items-center">
-                            <img src="{{ asset('assets/logo.png') }}" class="w-10 h-10 mb-2">
+                            <img src="{{ asset('assets/logo.png') }}" class="w-8 h-8 mb-2">
                             <h1 class="ml-2 text-2xl font-bold text-primary-700">Shoplytix</h1>
                         </div>
                         <div class="hidden md:flex space-x-8 items-center">
                             <a href="#features" class="font-medium hover:text-primary-600 transition-colors">Features</a>
                             <a href="#plans" class="font-medium hover:text-primary-600 transition-colors">Pricing</a>
-                            <a href="#terms" class="font-medium hover:text-primary-600 transition-colors">Terms of Service</a>
-                            <a href="#policy" class="font-medium hover:text-primary-600 transition-colors">Privacy Policy</a>
+                            <a href="#contact" class="font-medium hover:text-primary-600 transition-colors">Contact</a>
                         </div>
                         <div class="flex items-center space-x-4">
                             <a href="{{ route('login') }}">
@@ -48,7 +47,10 @@
                             </p>
 
                             <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-
+                                <button
+                                    class="px-6 py-3 rounded-full bg-primary-600 text-white font-medium shadow-lg hover:shadow-xl hover:bg-primary-700 transform hover:-translate-y-1 transition-all">
+                                    Start Free Trial
+                                </button>
                                 <button
                                     class="px-6 py-3 rounded-full border border-slate-300 font-medium hover:bg-slate-50 transition-colors flex items-center justify-center">
                                     <span class="material-symbols-outlined mr-2">play_circle</span> Watch Demo
@@ -230,83 +232,177 @@
             </section>
             <section id="plans" class="py-20 bg-slate-50">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
                     <div class="text-center mb-16">
                         <h2 class="text-3xl font-bold mb-4">Choose the Perfect Plan for Your Business</h2>
                         <p class="text-lg text-slate-600 max-w-3xl mx-auto">
                             Our flexible pricing options are designed to accommodate businesses of all sizes.
                         </p>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-                        @foreach($plans as $plan)
                         <div
-                            class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all
-           transform hover:-translate-y-1 overflow-hidden
-           flex flex-col h-full">
-
-                            {{-- HEADER --}}
+                            class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 overflow-hidden">
                             <div class="p-6 border-b">
-                                <h3 class="text-2xl font-bold text-center">
-                                    {{ $plan->plan_title }}
-                                </h3>
-
+                                <h3 class="text-2xl font-bold text-center">Basic</h3>
                                 <div class="mt-4 text-center">
-                                    <span class="text-4xl font-bold">
-                                        ₱{{ number_format($plan->plan_price, 2) }}
-                                    </span>
-
-                                    @if($plan->plan_duration_months)
-                                    <span class="text-slate-500">
-                                        / {{ $plan->plan_duration_months }}
-                                        month{{ $plan->plan_duration_months > 1 ? 's' : '' }}
-                                    </span>
-                                    @endif
+                                    <span class="text-4xl font-bold">₱0</span>
+                                    <span class="text-slate-500">/free</span>
                                 </div>
+                                <p class="mt-2 text-center text-slate-600">
+                                    Perfect for small businesses just getting started
+                                </p>
                             </div>
-
-                            {{-- FEATURES --}}
-                            <div class="p-6 flex flex-col flex-1">
+                            <div class="p-6">
                                 <ul class="space-y-3">
-
-                                    @foreach(explode("\n", $plan->plan_includes) as $feature)
-                                    @if(trim($feature))
                                     <li class="flex items-center">
-                                        <span class="material-symbols-outlined text-primary-600 mr-2">
-                                            check
-                                        </span>
-                                        <span>{{ trim($feature) }}</span>
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Up to 50 inventory items</span>
                                     </li>
-                                    @endif
-                                    @endforeach
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Daily, weekly, and monthly sales tracking</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Stock alert, expiration notice, and top-selling products</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Sales and loss analysis (chart included)</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Monthly net profit overview</span>
+                                    </li>
 
                                 </ul>
-
-                                <a href="{{ route('signup') }}" class="mt-auto">
-                                    <button
-                                        class="w-full mt-6 px-4 py-2 rounded-lg
-               border border-primary-600 text-primary-600
-               font-medium hover:bg-primary-50 transition-colors">
+                                <a href="{{ route('signup') }}">
+                                    <button class="w-full mt-6 px-4 py-2 rounded-lg border border-primary-600 text-primary-600 font-medium hover:bg-primary-50 transition-colors">
                                         Get Started
                                     </button>
                                 </a>
 
                             </div>
                         </div>
-                        @endforeach
+                        <div
+                            class="bg-white rounded-xl shadow-lg relative transform hover:-translate-y-1 transition-all overflow-hidden">
+                            <div
+                                class="absolute top-0 right-0 bg-primary-600 text-white px-4 py-1 rounded-bl-lg font-medium">
+                                Popular
+                            </div>
+                            <div class="p-6 border-b bg-primary-50">
+                                <h3 class="text-2xl font-bold text-center">Standard</h3>
+                                <div class="mt-4 text-center">
+                                    <span class="text-4xl font-bold">₱500</span>
+                                    <span class="text-slate-500">/month</span>
+                                </div>
+                                <p class="mt-2 text-center text-slate-600">
+                                    Ideal for growing businesses with expanding inventory
+                                </p>
+                            </div>
+                            <div class="p-6">
+                                <ul class="space-y-3">
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Up to 200 inventory items</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>All features from Basic</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Sales and stock performance reports</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Stock loss, damage, and expiration reports</span>
+                                    </li>
 
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Activity Logs</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>One staff account</span>
+                                    </li>
+
+                                </ul>
+                                <a href="{{ route('signup') }}">
+                                    <button class="w-full mt-6 px-4 py-2 rounded-lg border border-primary-600 text-primary-600 font-medium hover:bg-primary-50 transition-colors">
+                                        Get Started
+                                    </button>
+                                </a>
+                            </div>
+                        </div>
+                        <div
+                            class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 overflow-hidden">
+                            <div class="p-6 border-b">
+                                <h3 class="text-2xl font-bold text-center">Premium</h3>
+                                <div class="mt-4 text-center">
+                                    <span class="text-4xl font-bold">₱1500</span>
+                                    <span class="text-slate-500">/month</span>
+                                </div>
+                                <p class="mt-2 text-center text-slate-600">
+                                    Complete solution for large businesses with complex needs
+                                </p>
+                            </div>
+                            <div class="p-6">
+                                <ul class="space-y-3">
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Unlimited inventory items</span>
+                                    </li>
+
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>All features from Standard</span>
+                                    </li>
+
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Product association analysis</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Sales frequency analysis</span>
+                                    </li>
+
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Restock suggestion list</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Seasonal trend analysis</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <span class="material-symbols-outlined text-primary-600 mr-2">check</span>
+                                        <span>Add and manage multiple staff acounts</span>
+                                    </li>
+                                </ul>
+                                <a href="{{ route('signup') }}">
+                                    <button class="w-full mt-6 px-4 py-2 rounded-lg border border-primary-600 text-primary-600 font-medium hover:bg-primary-50 transition-colors">
+                                        Get Started
+                                    </button>
+                                </a>
+                            </div>
+                        </div>
                     </div>
-
-                    @if($plans->isEmpty())
-                    <p class="text-center text-slate-500 mt-10">
-                        No plans available at the moment.
-                    </p>
-                    @endif
-
+                    <div class="mt-12 bg-white p-8 rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold mb-4 text-center">Need a custom solution?</h3>
+                        <p class="text-center text-slate-600 mb-6">
+                            Contact our team for a tailored plan that fits your specific business requirements.
+                        </p>
+                        <div class="flex justify-center">
+                            <button
+                                class="px-6 py-2 rounded-full bg-primary-600 text-white font-medium hover:bg-primary-700 shadow-md transition-colors">
+                                Contact Us
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </section>
-
             <section id="testimonials" class="py-20">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="text-center mb-16">
@@ -444,325 +540,6 @@
                     </div>
                 </div>
             </section>
-            <!-- TERMS OF SERVICE SECTION -->
-            <section id="terms" class="py-20">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-                    <!-- Header -->
-                    <div class="text-center mb-16">
-                       
-                        <h2 class="text-3xl font-bold text-slate-900 mb-4">Terms of Service</h2>
-                        <p class="text-slate-600">Last updated: January 2026</p>
-                    </div>
-
-                    <!-- Content -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                        <!-- Left Column -->
-                        <div class="space-y-6">
-
-                            <!-- Section 1 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">1</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Acceptance of Terms</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed">
-                                    By accessing and using Shoplytix ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
-                                </p>
-                            </div>
-
-                            <!-- Section 2 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">2</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Use License</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed mb-3">
-                                    Permission is granted to temporarily use Shoplytix for personal, non-commercial transitory viewing only. Under this license you may not:
-                                </p>
-                                <ul class="space-y-2">
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-red-500 text-lg mt-0.5">close</span>
-                                        <span>Modify or copy the materials</span>
-                                    </li>
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-red-500 text-lg mt-0.5">close</span>
-                                        <span>Use for commercial purposes</span>
-                                    </li>
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-red-500 text-lg mt-0.5">close</span>
-                                        <span>Reverse engineer any software</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <!-- Section 3 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">3</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">User Accounts</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed mb-3">
-                                    When you create an account, you must provide accurate information. You are responsible for:
-                                </p>
-                                <ul class="space-y-2">
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-green-500 text-lg mt-0.5">check_circle</span>
-                                        <span>Maintaining account confidentiality</span>
-                                    </li>
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-green-500 text-lg mt-0.5">check_circle</span>
-                                        <span>Restricting account access</span>
-                                    </li>
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-green-500 text-lg mt-0.5">check_circle</span>
-                                        <span>All activities under your account</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                        </div>
-
-                        <!-- Right Column -->
-                        <div class="space-y-6">
-
-                            <!-- Section 4 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-pink-100 rounded-lg flex items-center justify-center text-pink-600 font-bold text-sm flex-shrink-0">4</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Subscription & Payment</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed">
-                                    Some parts of the Service are billed on a subscription basis. You will be billed in advance on a recurring periodic basis. Billing cycles are set monthly or annually.
-                                </p>
-                            </div>
-
-                            <!-- Section 5 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-sm flex-shrink-0">5</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Termination</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed">
-                                    We may terminate or suspend your account immediately, without prior notice, for any reason including if you breach the Terms. Upon termination, your right to use the Service will cease.
-                                </p>
-                            </div>
-
-                            <!-- Section 6 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 font-bold text-sm flex-shrink-0">6</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Limitation of Liability</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed">
-                                    Shoplytix, its directors, employees, partners, or affiliates shall not be liable for any indirect, incidental, special, or consequential damages including loss of profits or data.
-                                </p>
-                            </div>
-
-                            <!-- Contact Card -->
-                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md p-6 border border-blue-200">
-                                <div class="flex items-start gap-3">
-                                    <span class="material-symbols-outlined text-blue-600 text-xl">info</span>
-                                    <div>
-                                        <h4 class="font-semibold text-slate-900 mb-1 text-sm">Questions about our Terms?</h4>
-                                        <p class="text-slate-600 text-xs">
-                                            Contact us at <a href="mailto:legal@shoplytix.com" class="text-blue-600 hover:underline font-medium">legal@shoplytix.com</a>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- PRIVACY POLICY SECTION -->
-            <section id="policy" class="py-20 bg-slate-50">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-                    <!-- Header -->
-                    <div class="text-center mb-16">
-                        
-                        <h2 class="text-3xl font-bold text-slate-900 mb-4">Privacy Policy</h2>
-                        <p class="text-slate-600">Last updated: January 2026</p>
-                    </div>
-
-                    <!-- Content -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                        <!-- Left Column -->
-                        <div class="space-y-6">
-
-                            <!-- Introduction -->
-                            <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 shadow-md">
-                                <p class="text-slate-700 text-sm leading-relaxed">
-                                    At Shoplytix, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information.
-                                </p>
-                            </div>
-
-                            <!-- Section 1 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">1</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Information We Collect</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm mb-3">We collect information that you provide directly to us:</p>
-                                <div class="space-y-2">
-                                    <div class="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-green-600 text-lg">person</span>
-                                        <div>
-                                            <h4 class="font-semibold text-slate-900 text-sm">Personal Info</h4>
-                                            <p class="text-xs text-slate-600">Name, email, phone number</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-green-600 text-lg">inventory_2</span>
-                                        <div>
-                                            <h4 class="font-semibold text-slate-900 text-sm">Business Data</h4>
-                                            <p class="text-xs text-slate-600">Inventory and transactions</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 2 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">2</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">How We Use Your Info</h3>
-                                </div>
-                                <ul class="space-y-2">
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-blue-600 text-lg mt-0.5">check_circle</span>
-                                        <span>Provide and maintain our Service</span>
-                                    </li>
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-blue-600 text-lg mt-0.5">check_circle</span>
-                                        <span>Improve user experience</span>
-                                    </li>
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-blue-600 text-lg mt-0.5">check_circle</span>
-                                        <span>Send updates and notifications</span>
-                                    </li>
-                                    <li class="flex items-start gap-2 text-slate-600 text-sm">
-                                        <span class="material-symbols-outlined text-blue-600 text-lg mt-0.5">check_circle</span>
-                                        <span>Detect and prevent fraud</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <!-- Section 3 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">3</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Information Sharing</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm mb-3">We do not sell your data. We may share only when:</p>
-                                <div class="space-y-2">
-                                    <div class="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-purple-600 text-lg">verified_user</span>
-                                        <span class="text-sm text-slate-600">With trusted service providers</span>
-                                    </div>
-                                    <div class="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-purple-600 text-lg">gavel</span>
-                                        <span class="text-sm text-slate-600">When required by law</span>
-                                    </div>
-                                    <div class="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-purple-600 text-lg">business</span>
-                                        <span class="text-sm text-slate-600">During business transfers</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <!-- Right Column -->
-                        <div class="space-y-6">
-
-                            <!-- Section 4 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-sm flex-shrink-0">4</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Data Security</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm mb-4">We protect your information with:</p>
-                                <div class="grid grid-cols-3 gap-3">
-                                    <div class="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-                                        <span class="material-symbols-outlined text-2xl text-orange-600 mb-1">lock</span>
-                                        <p class="text-xs font-semibold text-slate-900">Encryption</p>
-                                    </div>
-                                    <div class="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-                                        <span class="material-symbols-outlined text-2xl text-orange-600 mb-1">cloud_done</span>
-                                        <p class="text-xs font-semibold text-slate-900">Secure Storage</p>
-                                    </div>
-                                    <div class="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-                                        <span class="material-symbols-outlined text-2xl text-orange-600 mb-1">admin_panel_settings</span>
-                                        <p class="text-xs font-semibold text-slate-900">Access Control</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 5 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 font-bold text-sm flex-shrink-0">5</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Your Rights</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm mb-3">You have the right to:</p>
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-teal-600 text-lg">visibility</span>
-                                        <span class="text-sm text-slate-700"><strong>Access</strong> your data</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-teal-600 text-lg">edit</span>
-                                        <span class="text-sm text-slate-700"><strong>Correct</strong> your information</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-teal-600 text-lg">delete</span>
-                                        <span class="text-sm text-slate-700"><strong>Delete</strong> your account</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                                        <span class="material-symbols-outlined text-teal-600 text-lg">block</span>
-                                        <span class="text-sm text-slate-700"><strong>Opt-out</strong> of marketing</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 6 -->
-                            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                                <div class="flex items-start gap-3 mb-3">
-                                    <span class="w-7 h-7 bg-pink-100 rounded-lg flex items-center justify-center text-pink-600 font-bold text-sm flex-shrink-0">6</span>
-                                    <h3 class="text-xl font-semibold text-slate-900">Policy Changes</h3>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed">
-                                    We may update our Privacy Policy from time to time. We will notify you of changes by posting the new policy on this page and updating the "Last updated" date.
-                                </p>
-                            </div>
-
-                            <!-- Contact Card -->
-                            <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md p-6 border border-green-200">
-                                <div class="flex items-start gap-3">
-                                    <span class="material-symbols-outlined text-green-600 text-xl">contact_support</span>
-                                    <div>
-                                        <h4 class="font-semibold text-slate-900 mb-1 text-sm">Privacy Questions?</h4>
-                                        <p class="text-slate-600 text-xs">
-                                            Contact us at <a href="mailto:privacy@shoplytix.com" class="text-green-600 hover:underline font-medium">privacy@shoplytix.com</a>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-            </section>
             <footer class="bg-slate-800 text-white py-12">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -839,7 +616,7 @@
                             <ul class="space-y-2">
                                 <li class="flex items-center">
                                     <span class="material-symbols-outlined mr-2 text-slate-400">email</span>
-                                    <span class="text-slate-300">shoplytix4@gmail.com</span>
+                                    <span class="text-slate-300">support@inventrack.com</span>
                                 </li>
                                 <li class="flex items-center">
                                     <span class="material-symbols-outlined mr-2 text-slate-400">call</span>
@@ -854,7 +631,7 @@
                     </div>
                     <div
                         class="mt-12 pt-8 border-t border-slate-700 flex flex-col md:flex-row justify-between items-center">
-                        <p class="text-slate-400 mb-4 md:mb-0">© 2026</p>
+                        <p class="text-slate-400 mb-4 md:mb-0">© 2023</p>
                     </div>
                 </div>
             </footer>
