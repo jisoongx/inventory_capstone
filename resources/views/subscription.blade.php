@@ -156,93 +156,104 @@
                 </p>
             </div>
 
-            <div class="mt-16 w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-                @foreach ($plans as $plan)
-
-                @php
-                $styles = match(strtolower($plan->plan_title)) {
-                'basic' => [
-                'title' => 'text-yellow-500',
-                'button' => 'bg-yellow-500 hover:bg-yellow-600',
-                'desc' => 'All the essentials to get your business started.'
-                ],
-                'standard' => [
-                'title' => 'text-orange-600',
-                'button' => 'bg-orange-600 hover:bg-orange-700',
-                'desc' => 'Enhanced tools to keep your business organized and efficient.'
-                ],
-                'premium' => [
-                'title' => 'text-red-600',
-                'button' => 'bg-red-600 hover:bg-red-700',
-                'desc' => 'Unlock powerful tools for growth and efficiency.'
-                ],
-                default => [
-                'title' => 'text-slate-800',
-                'button' => 'bg-blue-600 hover:bg-blue-700',
-                'desc' => ''
-                ]
-                };
-                @endphp
-
-                <div class="relative bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col p-8 transition-transform hover:-translate-y-2">
+            <div class="mt-16 w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-stretch justify-center gap-8">
 
 
-                    {{-- Best Value Badge --}}
-                    @if(strtolower($plan->plan_title) === 'premium')
-                    <div class="absolute top-0 -mt-3.5 left-1/2 -translate-x-1/2">
-                        <span class="px-4 py-1 bg-red-600 text-white text-xs font-semibold rounded-full shadow">
-                            Best Value
-                        </span>
-                    </div>
-                    @endif
-
+                <div class="bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col p-8 transition-transform duration-300 hover:-translate-y-2">
                     <div class="flex-grow">
-                        <h3 class="text-lg font-bold {{ $styles['title'] }}">
-                            {{ $plan->plan_title }}
-                        </h3>
-
-                        <p class="mt-2 text-sm text-slate-500">
-                            {{ $styles['desc'] }}
-                        </p>
-
+                        <h3 class="text-lg font-bold text-yellow-500">Basic</h3>
+                        <p class="mt-2 text-sm text-slate-500">All the essentials to get your business started.</p>
                         <p class="mt-6">
-                            <span class="text-5xl font-extrabold text-slate-900">
-                                ₱{{ number_format($plan->plan_price, 0) }}
-                            </span>
-                            @if($plan->plan_price > 0)
-                            <span class="text-base text-slate-500">/month</span>
-                            @else
-                            <span class="text-base text-slate-500">Free</span>
-                            @endif
+                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱0</span>
+                            <span class="text-base font-medium text-slate-500">Free</span>
                         </p>
-
                         <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
-                            @foreach (explode("\n", $plan->plan_includes) as $feature)
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-rounded text-green-500 mt-0.5">
-                                    check_circle
-                                </span>
-                                {{ trim($feature) }}
-                            </li>
-                            @endforeach
+                            <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Daily, weekly, and monthly sales tracking</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock alert, expiration notice, and top-selling products</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales and loss chart </li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Monthly net profit overview</li>
+                                <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Up to 50 inventory items</li>
+
+                            </ul>
+
+
                         </ul>
                     </div>
-
                     <div class="mt-8">
-                        <button
-                            onclick='openModal(@json($plan))'
-                            class="w-full text-white py-3 rounded-lg font-semibold transition-colors {{ $styles['button'] }}">
-                            {{ $plan->plan_price == 0 ? 'Get Started for FREE!' : 'Subscribe Now' }}
-                        </button>
-                    </div>
 
+                        @if(Auth::guard('owner')->check())
+                        <button
+                            type="button"
+                            onclick="openModal(3, 'Basic', 0)"
+                            class="w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-colors text-sm shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30">
+                            Get Started for FREE!
+                        </button>
+                        @endif
+
+
+
+
+
+                    </div>
                 </div>
 
-                @endforeach
+                <div class="bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col p-8 transition-transform duration-300 hover:-translate-y-2">
+                    <div class="flex-grow">
+                        <h3 class="text-lg font-bold text-orange-600">Standard</h3>
+                        <p class="mt-2 text-sm text-slate-500">Enhanced tools to keep your business organized and efficient.</p>
+                        <p class="mt-6">
+                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱500</span>
+                            <span class="text-base font-medium text-slate-500">/month</span>
+                        </p>
+                        <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Basic Plan</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Inventory expansion (up to 200 items)</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales and stock performance reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Stock loss, damage, and expiration reports</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Activity logs</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>One staff account</li>
+
+                        </ul>
+
+
+                    </div>
+                    <div class="mt-8">
+                        <button onclick="openModal(1, 'Standard', 250)" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors text-sm shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30">
+                            Subscribe Now
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-2xl ring-2 ring-red-500 flex flex-col p-8 relative transition-transform duration-300 hover:-translate-y-2">
+                    <div class="absolute top-0 -mt-3.5 left-1/2 -translate-x-1/2">
+                        <span class="inline-flex items-center px-4 py-1 bg-red-600 text-white text-xs font-semibold rounded-full shadow-md">Best Value</span>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="text-lg font-bold text-red-600">Premium</h3>
+                        <p class="mt-2 text-sm text-slate-500">Unlock powerful tools for growth and efficiency.</p>
+                        <p class="mt-6">
+                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₱1500</span>
+                            <span class="text-base font-medium text-slate-500">/month</span>
+                        </p>
+                        <ul class="mt-8 space-y-4 text-sm font-medium text-slate-700">
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>All features from Standard Plan</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Product Association Analysis</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Sales Frequency Analysis</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Restock Suggestion List</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Seasonal trend analysis</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Unlimited inventory items</li>
+                            <li class="flex items-start gap-3"><span class="material-symbols-rounded text-green-500 mt-0.5">check_circle</span>Add and manage multiple staff accounts</li>
+                        </ul>
+
+                    </div>
+                    <div class="mt-8">
+                        <button onclick="openModal(2, 'Premium', 500)" class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors text-sm shadow-lg shadow-red-500/20 hover:shadow-xl hover:shadow-red-500/30">
+                            Subscribe Now
+                        </button>
+                    </div>
+                </div>
             </div>
-
-
             <p class="mt-10 text-center text-sm text-slate-300">
                 All plans include access to the core POS system, regular updates, and customer support.
             </p>
@@ -252,11 +263,55 @@
 
 
     <script>
-        let currentPlan = null;
+        const plans = {
+            3: {
+                name: "Basic",
+                price: 0,
+                duration: "Free",
+                features: [
+                    "Daily, weekly, and monthly sales tracking",
+                    "Stock alert, expiration notice, and top-selling products",
+                    "Sales and loss chart",
+                    "Monthly net profit overview",
+                    "Up to 50 inventory items"
+                ]
+            },
+            1: {
+                name: "Standard",
+                price: 500,
+                duration: "month",
+                features: [
+                    "All features from Basic Plan",
+                    "Inventory expansion (up to 200 inventory items)",
+                    "Sales and stock performance reports",
+                    "Stock loss, damage, and expiration reports",
+                    "Activity logs",
+                    "One staff account"
+                ]
+            },
+            2: {
+                name: "Premium",
+                price: 1500,
+                duration: "month",
+                features: [
+                    "All features from Standard Plan",
+                    "Product association analysis",
+                    "Sales frequency analysis",
+                    "Restock suggestion list",
+                    "Seasonal trend analysis",
+                    "Unlimited inventory items",
+                    "Add and manage multiple staff account"
+                ]
+            }
+        };
 
-        function openModal(plan) {
-            currentPlan = plan;
+        // Map plan IDs to PayPal subscription plan IDs (from your PayPal dashboard)
+        const PAYPAL_PLAN_IDS = {
+            1: "P-7C785523EJ448962XNEV5C6Q", // replace with your actual PayPal plan ID
+            2: "P-9BL62740BA150960NNEV5EJI" // replace with your actual PayPal plan ID
+        };
 
+        function openModal(planId) {
             const modal = document.getElementById('paymentModal');
             const overview = document.getElementById('planOverview');
             const paymentForm = document.getElementById('paymentFormView');
@@ -267,102 +322,142 @@
             paymentForm.classList.add('hidden');
             successView.classList.add('hidden');
 
-            // Fill plan data
-            document.getElementById('overviewPlanName').textContent = plan.plan_title;
+            // Fill plan overview
+            const plan = plans[planId];
+            document.getElementById('overviewPlanName').textContent = plan.name;
             document.getElementById('overviewPlanPrice').textContent =
-                plan.plan_price == 0 ?
-                '₱0.00' :
-                `₱${parseFloat(plan.plan_price).toFixed(2)}`;
+                plan.price === 0 ? "₱0.00" : `₱${plan.price.toFixed(2)}`;
 
-            // VAT breakdown
-            const breakdown = document.getElementById('overviewPriceBreakdown');
-            if (plan.plan_price > 0) {
-                const net = plan.plan_price / 1.12;
-                document.getElementById('overviewTotalAfterVat').textContent = `₱${net.toFixed(2)}`;
-                document.getElementById('overviewVatAmount').textContent = `₱${(plan.plan_price - net).toFixed(2)}`;
-                breakdown.classList.remove('hidden');
+            // document.getElementById('overviewPlanDuration').textContent = plan.duration;
+            // VAT calculation for overview step
+            // Correct VAT breakdown: price already includes 12% VAT
+            const net = plan.price / 1.12; // Monthly subscription (no VAT)
+            const vat = plan.price - net; // VAT amount
+
+            // Update UI
+            const breakdown = document.getElementById("overviewPriceBreakdown");
+
+            if (plan.price > 0) {
+                document.getElementById("overviewTotalAfterVat").textContent = `₱${net.toFixed(2)}`;
+                document.getElementById("overviewVatAmount").textContent = `₱${vat.toFixed(2)}`;
+                breakdown.classList.remove("hidden");
             } else {
-                breakdown.classList.add('hidden');
+                breakdown.classList.add("hidden");
             }
 
-            // Features
-            document.getElementById('overviewFeatures').innerHTML =
-                plan.plan_includes.split("\n").map(feature => `
-                <li class="flex items-start gap-2">
-                    <span class="material-symbols-rounded text-green-500">check_circle</span>
-                    ${feature.trim()}
-                </li>
-            `).join('');
 
-            // Show modal
+            const featuresList = document.getElementById('overviewFeatures');
+            featuresList.innerHTML = plan.features.map(f => `
+        <li class="flex items-start gap-2">
+            <span class="material-symbols-rounded text-green-500 text-base mt-0.5">check_circle</span>${f}
+        </li>
+    `).join('');
+
             modal.classList.remove('hidden');
             setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+            // Cancel button
+            document.getElementById('cancelOverview').onclick = () => {
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            };
+
+            // Confirm button → start payment / subscription
+            document.getElementById('confirmOverview').onclick = () => {
+                overview.classList.add('hidden');
+                startSubscriptionFlow(planId);
+            };
         }
 
-        document.getElementById('cancelOverview').onclick = closeModal;
-        document.getElementById('closeModalBtn').onclick = closeModal;
-
-        function closeModal() {
-            const modal = document.getElementById('paymentModal');
-            modal.classList.add('opacity-0');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        }
-
-        document.getElementById('confirmOverview').onclick = () => {
-            document.getElementById('planOverview').classList.add('hidden');
-            startSubscriptionFlow();
-        };
-
-        function startSubscriptionFlow() {
+        function startSubscriptionFlow(planId) {
+            const plan = plans[planId];
             const paymentFormView = document.getElementById('paymentFormView');
             const successView = document.getElementById('successView');
+            const selectedPlanName = document.getElementById('selectedPlanName');
+            const selectedPlanPrice = document.getElementById('selectedPlanPrice');
+            const paypalContainer = document.getElementById('paypal-button-container');
 
+            // Show payment form
             paymentFormView.classList.remove('hidden');
+            successView.classList.add('hidden');
+            selectedPlanName.textContent = plan.name;
+            selectedPlanPrice.textContent =
+                plan.price === 0 ? "₱0.00" : `₱${plan.price.toFixed(2)}`;
 
-            document.getElementById('selectedPlanName').textContent = currentPlan.plan_title;
-            document.getElementById('selectedPlanPrice').textContent =
-                currentPlan.plan_price == 0 ?
-                '₱0.00' :
-                `₱${parseFloat(currentPlan.plan_price).toFixed(2)}`;
+            paypalContainer.innerHTML = "";
 
-            // FREE PLAN
-            if (currentPlan.plan_price == 0) {
+            // Handle Basic plan → no PayPal, just direct activation
+            if (plan.name.toLowerCase() === "basic") {
+                // Hide payment form (if it was visible)
                 paymentFormView.classList.add('hidden');
+
+                // Show the success view
                 successView.classList.remove('hidden');
-                return;
+
+                // Update success view text
+                document.querySelector("#successView h2").textContent = "Basic Plan Activated!";
+                document.querySelector("#successView p").textContent = "You now have access to the Basic plan forever!";
+
+                // Optional: you can still do a backend call if you want to store that the user availed it
+                fetch(`/subscribe/${planId}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({})
+                }).catch(() => console.log("Basic plan activation recorded."));
+
+                return; // stop further execution
             }
 
-            // PAID PLAN (PayPal)
+
+            // Standard / Premium → PayPal subscription
             paypal.Buttons({
                 style: {
                     layout: 'vertical',
                     color: 'gold',
+                    shape: 'rect',
                     label: 'subscribe'
                 },
                 createSubscription: function(data, actions) {
                     return actions.subscription.create({
-                        plan_id: currentPlan.paypal_plan_id
+                        plan_id: PAYPAL_PLAN_IDS[planId]
                     });
                 },
-                onApprove: function(data) {
-                    fetch(`/subscribe/${currentPlan.plan_id}`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({
-                            paypal_subscription_id: data.subscriptionID
+                onApprove: function(data, actions) {
+                    fetch(`/subscribe/${planId}`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                paypal_order_id: data.subscriptionID,
+                                plan_id: planId
+                            })
                         })
-                    }).then(() => {
-                        paymentFormView.classList.add('hidden');
-                        successView.classList.remove('hidden');
-                    });
+                        .then(res => res.json())
+                        .then(() => {
+                            paymentFormView.classList.add('hidden');
+                            successView.classList.remove('hidden');
+                        })
+                        .catch(() => alert("Failed to activate subscription on backend."));
+                },
+                onError: function(err) {
+                    alert("Something went wrong with PayPal subscription.");
+                    console.error(err);
                 }
             }).render("#paypal-button-container");
         }
-    </script>
 
+        // Close modal button
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            const modal = document.getElementById('paymentModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        });
+    </script>
 
 
 
