@@ -59,15 +59,9 @@ class RegisterController extends Controller
                 'regex:/[0-9]/', // At least one number
                 'regex:/[\W_]/', // At least one special character
             ],
-            'tin_number' => [
-                'nullable',
-                'regex:/^\d{3}-\d{3}-\d{3}-\d{3}$/'
-            ],
-
         ], [
 
             'firstname.regex' => 'First name must only contain letters.',
-            'tin_number.regex' => 'format should be XXX-XXX-XXX-XXX.',
             'middlename.regex' => 'Middle name must only contain letters.',
             'lastname.regex' => 'Last name must only contain letters.',
             'store_name.unique' => 'This store name is already registered.',
@@ -94,7 +88,6 @@ class RegisterController extends Controller
                 'store_address' => $request->store_address,
                 'email'         => $request->email,
                 'contact'       => $request->contact,
-                'tin_number'    => $request->tin_number,
                 'owner_pass'    => Hash::make($request->password),
                 'created_on'    => now(),
             ]);
