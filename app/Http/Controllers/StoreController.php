@@ -14,6 +14,8 @@ use App\Http\Controllers\ActivityLogController;
 
 class StoreController extends Controller
 {
+    public $bundle; 
+    
     private function getCurrentOwnerId()
     {
         if (Auth::guard('owner')->check()) {
@@ -731,7 +733,7 @@ class StoreController extends Controller
         }
     }
 
-    public function processPayment(Request $request)
+    public function processPayment(Request $request) 
     {
         $request->validate([
             'payment_method' => 'required|string',

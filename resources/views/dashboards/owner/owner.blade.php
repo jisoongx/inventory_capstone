@@ -106,6 +106,12 @@
                     <span class="material-symbols-rounded">local_mall</span>
                     <span class="nav-label">Store</span>
                 </a>
+                
+                <a href="{{ route('dashboards.owner.bundle') }}" class="flex items-center gap-3 p-3 rounded hover:bg-red-600 text-slate-100 hover:text-white">
+                    <span class="material-symbols-rounded">redeem</span>
+                    <span class="text-xs">Create Bundle</span>
+                    <span class="material-symbols-rounded-premium {{ ($expired || $plan === 3 || $plan === 1) ? '' : 'invisible' }}">crown</span>
+                </a>
             </nav>
         </div>
 
