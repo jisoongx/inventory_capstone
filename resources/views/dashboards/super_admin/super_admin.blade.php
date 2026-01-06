@@ -44,6 +44,11 @@
                         <span class="material-symbols-rounded">support_agent</span>
                         <span class="nav-label">Tech Support</span>
                     </a>
+                    <a href="{{ route('plans_and_pricing') }}"
+                        class="flex items-center gap-3 p-3 rounded hover:bg-red-600 hover:text-white">
+                        <span class="material-symbols-rounded">edit</span>
+                        <span class="nav-label">Plans & Pricing</span>
+                    </a>
                 </nav>
             </div>
         </aside>
