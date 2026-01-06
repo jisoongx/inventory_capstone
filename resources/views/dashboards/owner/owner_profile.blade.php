@@ -52,10 +52,6 @@
                     $gradient = 'from-yellow-400 to-yellow-500';
                     $textColor = 'text-yellow-50';
 
-                    $icon = 'magic_button';
-                    $gradient = 'from-blue-400 to-blue-500';
-                    $textColor = 'text-blue-50';
-
                     if ($plan === 'standard') {
                     $icon = 'star';
                     $gradient = 'from-orange-400 to-orange-500';
@@ -201,69 +197,19 @@
                     @csrf
                     @method('PUT')
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-
-                        {{-- Store Name --}}
                         <div>
-                            <label for="store_name" class="block text-sm font-medium text-slate-700 mb-1">
-                                Store Name
-                            </label>
-                            <input type="text"
-                                name="store_name"
-                                id="store_name"
-                                value="{{ old('store_name', $owner->store_name ?? '') }}"
-                                class="block w-full rounded-lg border-slate-300 shadow-sm
-                   focus:border-indigo-500 focus:ring-indigo-500
-                   disabled:bg-slate-50 disabled:text-slate-500 text-base"
-                                disabled>
+                            <label for="store_name" class="block text-sm font-medium text-slate-700 mb-1">Store Name</label>
+                            <input type="text" name="store_name" id="store_name" value="{{ old('store_name', $owner->store_name ?? '') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-500 text-base" disabled>
                         </div>
-
-                        {{-- Contact Number --}}
                         <div>
-                            <label for="contact" class="block text-sm font-medium text-slate-700 mb-1">
-                                Contact Number
-                            </label>
-                            <input type="text"
-                                name="contact"
-                                id="contact"
-                                value="{{ old('contact', $owner->contact ?? '') }}"
-                                class="block w-full rounded-lg border-slate-300 shadow-sm
-                   focus:border-indigo-500 focus:ring-indigo-500
-                   disabled:bg-slate-50 disabled:text-slate-500 text-base"
-                                disabled>
+                            <label for="contact" class="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+                            <input type="text" name="contact" id="contact" value="{{ old('contact', $owner->contact ?? '') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-500 text-base" disabled>
                         </div>
-
-                        {{-- Store Address --}}
-                        <div>
-                            <label for="store_address" class="block text-sm font-medium text-slate-700 mb-1">
-                                Store Address
-                            </label>
-                            <input type="text"
-                                name="store_address"
-                                id="store_address"
-                                value="{{ old('store_address', $owner->store_address ?? '') }}"
-                                class="block w-full rounded-lg border-slate-300 shadow-sm
-                   focus:border-indigo-500 focus:ring-indigo-500
-                   disabled:bg-slate-50 disabled:text-slate-500 text-base"
-                                disabled>
+                        <div class="md:col-span-2">
+                            <label for="store_address" class="block text-sm font-medium text-slate-700 mb-1">Store Address</label>
+                            <input type="text" name="store_address" id="store_address" value="{{ old('store_address', $owner->store_address ?? '') }}" class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-500 text-base" disabled>
                         </div>
-
-                        {{-- TIN Number (locked) --}}
-                        <div>
-                            <label for="tin_number" class="block text-sm font-medium text-slate-700 mb-1">
-                                TIN Number
-                            </label>
-                            <input type="text"
-                                id="tin_number"
-                                value="{{ $owner->tin_number ?? '—' }}"
-                                class="block w-full rounded-lg border-slate-300 bg-slate-100
-                   text-slate-600 text-base cursor-not-allowed"
-                                disabled>
-
-                           
-                        </div>
-
                     </div>
-
                     <div class="text-right mt-6">
                         <button type="submit" id="saveProfileDetailsButton" class="inline-flex items-center px-5 py-2 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 transition-colors duration-200 hidden">Save Profile Details</button>
                     </div>

@@ -136,61 +136,210 @@ class SubscriptionController extends Controller
     }
 
 
-    public function createPlan(Request $request, PayPalService $paypal)
-    {
-        $validated = $request->validate([
-            'plan_title' => 'required|string|max:100',
-            'plan_price' => 'required|numeric|min:0',
-            'plan_duration_months' => 'nullable|integer|min:1',
-            'plan_includes' => 'required|string',
-        ]);
-
-        DB::beginTransaction();
-
-        try {
-            $paypalPlanId = null;
-
-       
-            if ($validated['plan_price'] > 0) {
-                $productId = config('paypal.product_id'); // from env
-
-                $paypalPlanId = $paypal->createPlan(
-                    config('paypal.product_id'),        // Shoplytix product
-                    $validated['plan_title'],            
-                    $validated['plan_price'],
-                    'PHP',
-                    'MONTH',
-                    $validated['plan_duration_months'] ?? 1
-                );
-
-                if (!$paypalPlanId) {
-                    throw new \Exception('Failed to create PayPal plan');
-                }
-            }
-
-            // Save to DB ONLY if PayPal succeeded
-            Plan::create([
-                'plan_title' => $validated['plan_title'],
-                'plan_price' => $validated['plan_price'],
-                'plan_duration_months' => $validated['plan_duration_months'],
-                'plan_includes' => $validated['plan_includes'],
-                'paypal_plan_id' => $paypalPlanId, 
-                'is_active' => true,
-            ]);
-
-            DB::commit();
-
-            return redirect()->back()->with('success', 'Plan created successfully.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Admin createPlan failed: ' . $e->getMessage());
-
-            return redirect()->back()
-                ->withErrors(['paypal' => 'Failed to create PayPal plan. Please check PayPal configuration.']);
-        }
-    }
 
 
+    // public function store(Request $request, $planId)
+    // {
+    //     $owner = Auth::guard('owner')->user();
+    //     $plan = Plan::find($planId);
+
+    //     // Check if plan exists
+    //     if (!$plan) {
+    //         return response()->json(['message' => 'Plan not found.'], 404);
+    //     }
+
+    //     $basicSubscription = $owner->subscription()
+    //         ->where('plan_id', 3)
+    //         ->first();
+
+    //     if ($basicSubscription) {
+    //         $basicSubscription->update([
+    //             'status' => 'inactive',
+    //         ]);
+    //     }
+    //         // Get the current active subscription
+    //     $currentSubscription = $owner->activeSubscription()->first();
+
+    //     // If there's a current active subscription and the plan is different, we need to handle it
+    //     if ($currentSubscription) {
+    //         // If the user is trying to upgrade to the same plan, return an alert
+    //         if ($currentSubscription->plan_id == $plan->plan_id) {
+    //             return response()->json(['message' => 'You are already subscribed to this plan.'], 409);
+    //         }
+
+    //         if ($currentSubscription->plan_id == 3) {
+    //             $currentSubscription->update([
+    //                 'status' => 'inactive'
+
+    //             ]);
+    //         } else {
+    //             // Expire other plans
+    //             $currentSubscription->update([
+    //                 'status' => 'expired',
+    //                 'subscription_end' => now(),
+    //             ]);
+    //         }
+    //     }
+
+    //     try {
+    //         // If the plan price is greater than 0, validate PayPal order ID
+    //         if ($plan->plan_price > 0) {
+    //             $validatedData = $request->validate([
+    //                 'paypal_order_id' => 'required|string',
+    //                 'plan_id' => 'required|exists:plans,plan_id',
+    //             ]);
+    //         }
+
+
+    //         // Create the new subscription with the new plan
+    //         $subscription = Subscription::create([
+    //             'owner_id' => $owner->owner_id,
+    //             'plan_id' => $plan->plan_id,
+    //             'subscription_start' => now(),
+    //             'subscription_end' => $plan->plan_duration_months
+    //                 ? now()->addMonths($plan->plan_duration_months)
+    //                 : null, // no expiry for Basic
+    //             'status' => 'active',
+    //         ]);
+
+
+    //         // Create the payment record
+    //         Payment::create([
+    //             'owner_id' => $owner->owner_id,
+    //             'subscription_id' => $subscription->subscription_id,
+    //             'payment_mode' => $plan->plan_price == 0 ? 'free' : 'paypal',
+    //             'payment_acc_number' => $plan->plan_price == 0 ? '0' : $request->paypal_order_id,
+    //             'payment_amount' => $plan->plan_price,
+    //             'payment_date' => now(),
+    //         ]);
+
+    //         // Return success response
+    //         return response()->json(['success' => true, 'message' => 'Subscription upgraded successfully!']);
+    //     } catch (\Exception $e) {
+    //         Log::error('Subscription or Payment creation failed: ' . $e->getMessage());
+    //         return response()->json(['message' => 'Failed to process subscription. Please try again.'], 500);
+    //     }
+    // }
+
+    // public function store(Request $request, $planId)
+    // {
+    //     $owner = Auth::guard('owner')->user();
+    //     $plan = Plan::find($planId);
+
+    //     // Check if plan exists
+    //     if (!$plan) {
+    //         return response()->json(['message' => 'Plan not found.'], 404);
+    //     }
+
+    //     // Get the current active subscription (including Basic or other plans)
+    //     $currentSubscription = $owner->subscription()
+    //         ->where('status', 'active')
+    //         ->where(function ($q) {
+    //             $q->whereNull('subscription_end')
+    //                 ->orWhere('subscription_end', '>=', now());
+    //         })
+    //         ->orderByDesc('subscription_end')
+    //         ->first();
+
+    //     // Handle choosing Basic plan
+    //     if ($planId == 3) { // Basic
+    //         // Check if an old Basic subscription exists
+    //         $oldBasic = $owner->subscription()
+    //             ->where('plan_id', 3)
+    //             ->first();
+
+    //         if ($oldBasic) {
+    //             // Mark old Basic as inactive
+    //             $oldBasic->update(['status' => 'inactive']);
+    //         } else {
+    //             $currentSubscription->update([
+    //                 'status' => 'expired',
+    //                 'subscription_end' => now(),
+    //             ]);
+    //         }
+
+    //         // If current subscription is Basic, mark it inactive
+    //         if ($currentSubscription && $currentSubscription->plan_id == 3) {
+    //             $currentSubscription->update(['status' => 'inactive']);
+    //         }
+
+    //         // Create new Basic subscription only if no active Basic exists
+    //         if (!$oldBasic || $oldBasic->status != 'active') {
+    //             $subscription = Subscription::create([
+    //                 'owner_id' => $owner->owner_id,
+    //                 'plan_id' => 3,
+    //                 'subscription_start' => now(),
+    //                 'subscription_end' => null, // Basic has no expiry
+    //                 'status' => 'active',
+    //             ]);
+
+    //             // Create free payment record
+    //             Payment::create([
+    //                 'owner_id' => $owner->owner_id,
+    //                 'subscription_id' => $subscription->subscription_id,
+    //                 'payment_mode' => 'free',
+    //                 'payment_acc_number' => '0',
+    //                 'payment_amount' => 0,
+    //                 'payment_date' => now(),
+    //             ]);
+    //         }
+
+    //         return response()->json(['success' => true, 'message' => 'Switched to Basic plan successfully!']);
+    //     }
+
+    //     // Handle non-Basic plans (Standard, Premium, etc.)
+    //     if ($currentSubscription) {
+    //         if ($currentSubscription->plan_id == $plan->plan_id) {
+    //             return response()->json(['message' => 'You are already subscribed to this plan.'], 409);
+    //         }
+
+    //         // If current is Basic → mark inactive, otherwise expire
+    //         if ($currentSubscription->plan_id == 3) {
+    //             $currentSubscription->update(['status' => 'inactive']);
+    //         } else {
+    //             $currentSubscription->update([
+    //                 'status' => 'expired',
+    //                 'subscription_end' => now(),
+    //             ]);
+    //         }
+    //     }
+
+    //     try {
+    //         // Validate PayPal info if plan is paid
+    //         if ($plan->plan_price > 0) {
+    //             $request->validate([
+    //                 'paypal_order_id' => 'required|string',
+    //                 'plan_id' => 'required|exists:plans,plan_id',
+    //             ]);
+    //         }
+
+    //         // Create new subscription
+    //         $subscription = Subscription::create([
+    //             'owner_id' => $owner->owner_id,
+    //             'plan_id' => $plan->plan_id,
+    //             'subscription_start' => now(),
+    //             'subscription_end' => $plan->plan_duration_months
+    //                 ? now()->addMonths($plan->plan_duration_months)
+    //                 : null,
+    //             'status' => 'active',
+    //         ]);
+
+    //         // Create payment record
+    //         Payment::create([
+    //             'owner_id' => $owner->owner_id,
+    //             'subscription_id' => $subscription->subscription_id,
+    //             'payment_mode' => $plan->plan_price == 0 ? 'free' : 'paypal',
+    //             'payment_acc_number' => $plan->plan_price == 0 ? '0' : $request->paypal_order_id,
+    //             'payment_amount' => $plan->plan_price,
+    //             'payment_date' => now(),
+    //         ]);
+
+    //         return response()->json(['success' => true, 'message' => 'Subscription upgraded successfully!']);
+    //     } catch (\Exception $e) {
+    //         Log::error('Subscription or Payment creation failed: ' . $e->getMessage());
+    //         return response()->json(['message' => 'Failed to process subscription. Please try again.'], 500);
+    //     }
+    // }
 
     public function store(Request $request, $planId)
     {
@@ -251,7 +400,7 @@ class SubscriptionController extends Controller
                         'owner_id' => $owner->owner_id,
                         'subscription_id' => $subscription->subscription_id,
                         'payment_mode' => 'free',
-                        'paypal_subscription_id' => '0',
+                        'payment_acc_number' => '0',
                         'payment_amount' => 0,
                         'payment_date' => now(),
                     ]);
@@ -282,7 +431,8 @@ class SubscriptionController extends Controller
             // Validate PayPal info if plan is paid
             if ($plan->plan_price > 0) {
                 $request->validate([
-                    'paypal_subscription_id' => 'required|string',
+                    'paypal_order_id' => 'required|string',
+                    'plan_id' => 'required|exists:plans,plan_id',
                 ]);
             }
 
@@ -302,7 +452,7 @@ class SubscriptionController extends Controller
                 'owner_id' => $owner->owner_id,
                 'subscription_id' => $subscription->subscription_id,
                 'payment_mode' => $plan->plan_price == 0 ? 'free' : 'paypal',
-                'paypal_subscription_id' => $plan->plan_price == 0 ? '0' : $request->paypal_subscription_id,
+                'payment_acc_number' => $plan->plan_price == 0 ? '0' : $request->paypal_order_id,
                 'payment_amount' => $plan->plan_price,
                 'payment_date' => now(),
             ]);
@@ -313,6 +463,9 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'Failed to process subscription. Please try again.'], 500);
         }
     }
+
+
+
 
 
     public function upgrade()
@@ -357,12 +510,12 @@ class SubscriptionController extends Controller
             ->orderByDesc('payment_date')
             ->first();
 
-        if (!$payment || !$payment->paypal_subscription_id) {
+        if (!$payment || !$payment->payment_acc_number) {
             return response()->json(['error' => 'No active PayPal subscription payment found.'], 400);
         }
 
         // Cancel via PayPal
-        $success = $paypal->cancelSubscription($payment->paypal_subscription_id, 'Canceled by user');
+        $success = $paypal->cancelSubscription($payment->payment_acc_number, 'Canceled by user');
 
         if (!$success) {
             return response()->json(['error' => 'Failed to cancel PayPal subscription. Check API credentials & permissions.'], 500);

@@ -43,27 +43,14 @@
             </div>
 
 
-            <!-- Store Address + TIN Number -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <input type="text" name="store_address" placeholder="Store Address *" required
-                        value="{{ old('store_address') }}"
-                        class="w-full px-4 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
-                    @error('store_address')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <input type="text" name="tin_number" placeholder="Tax Identifier Number *"
-                        value="{{ old('tin_number') }}"
-                        class="w-full px-4 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
-                    @error('tin_number')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
+            <!-- Store Address -->
+            <div>
+                <input type="text" name="store_address" placeholder="Store Address *" required value="{{ old('store_address') }}"
+                    class="w-full px-4 py-2.5 bg-white border border-gray-400 text-black rounded-xl text-sm shadow-sm placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" />
+                @error('store_address')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                @enderror
             </div>
-
 
             <!-- Store Name + Email -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
