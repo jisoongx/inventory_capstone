@@ -1235,6 +1235,9 @@
                             {{ $originalReceiptDetails->owner->store_name ??  $store_info->store_name ??  'Store Name' }}
                         </h2>
                         <p class="text-sm text-gray-600">{{ $store_info->store_address }}</p>
+                        @if(! empty($store_info->tin_number))
+                            <p class="text-xs text-gray-500 mt-1">TIN: {{ $store_info->tin_number }}</p>
+                        @endif
                     </div>
 
                     <div class="mb-4">
@@ -1366,6 +1369,9 @@
                             {{ $returnReceiptDetails->owner->store_name ?? $store_info->store_name ??  'Store Name' }}
                         </h2>
                         <p class="text-sm text-gray-600">{{ $store_info->store_address }}</p>
+                        @if(! empty($store_info->tin_number))
+                            <p class="text-xs text-gray-500 mt-1">TIN: {{ $store_info->tin_number }}</p>
+                        @endif
                         <div class="mt-2 inline-flex items-center gap-1 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-semibold">
                             <span class="material-symbols-rounded text-sm">undo</span>
                             Adjusted for Returns

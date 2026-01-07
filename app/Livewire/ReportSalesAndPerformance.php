@@ -96,7 +96,8 @@ class ReportSalesAndPerformance extends Component
             $this->store_info = (object)[
                 'store_name' => $owner->store_name ??  'Store Name',
                 'store_address' => $owner->store_address ??  '',
-                'contact' => $owner->contact ?? ''
+                'contact' => $owner->contact ?? '',
+                'tin_number' => $owner->tin_number ?? ''
             ];
         } elseif (Auth::guard('staff')->check()) {
             $staff = Auth::guard('staff')->user();
@@ -104,7 +105,8 @@ class ReportSalesAndPerformance extends Component
             $this->store_info = (object)[
                 'store_name' => $owner->store_name ?? 'Store Name',
                 'store_address' => $owner->store_address ?? '',
-                'contact' => $owner->contact ?? ''
+                'contact' => $owner->contact ?? '',
+                'tin_number' => $owner->tin_number ?? ''
             ];
         }
 

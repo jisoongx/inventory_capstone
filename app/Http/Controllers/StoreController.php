@@ -150,7 +150,7 @@ class StoreController extends Controller
         }
         
         $store_info = DB::table('owners')
-            ->select('store_name', 'store_address', 'contact')
+            ->select('store_name', 'store_address', 'contact', 'tin_number')
             ->where('owner_id', $owner_id)
             ->first();
 
@@ -186,7 +186,7 @@ class StoreController extends Controller
         }
         
         $store_info = DB::table('owners')
-            ->select('store_name', 'store_address', 'contact')
+            ->select('store_name', 'store_address', 'contact', 'tin_number')
             ->where('owner_id', $owner_id)
             ->first();
         

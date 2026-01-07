@@ -208,6 +208,9 @@
                 <div class="text-center mb-6 pb-4 border-b-2 border-gray-200">
                     <h2 id="storeNameReceipt" class="text-xl font-bold text-gray-800">{{ $store_info->store_name ??  'Store Name' }}</h2>
                     <p class="text-sm text-gray-600">{{ $store_info->store_address }}</p>
+                    @if(! empty($store_info->tin_number))
+                        <p class="text-xs text-gray-500 mt-1">TIN: {{ $store_info->tin_number }}</p>
+                    @endif
                 </div>
 
                 <div class="mb-4">
@@ -489,8 +492,7 @@ class PaymentProcessor {
         document.querySelectorAll('.quick-amount-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const amount = parseFloat(e.target.dataset.amount);
-                const currentAmount = parseFloat(document.getElementById('amountPaidInput').value) || 0;
-                document.getElementById('amountPaidInput').value = currentAmount + amount;
+                document.getElementById('amountPaidInput').value = amount;
                 this.calculateChange();
                 this.saveState();
             });
