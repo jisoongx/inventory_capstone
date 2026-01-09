@@ -97,6 +97,7 @@
                     <input type="text" id="searchInput" placeholder="Search products by name or barcode" 
                         class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
                 </div>
+                @livewire('bundle-POS')
             </div>
         </div>
     </div>
@@ -1471,6 +1472,21 @@ window.addEventListener('error', function(e) {
         'color: #ef4444; margin-left: 5px',
         e.error);
 });
+</script>
+
+<script>
+    window.addEventListener('bundle-selected', event => {
+        const bundle = event.detail.bundle;
+
+        console.log(bundle); // ✅ available here
+
+        // Example: store globally
+        window.selectedBundle = bundle;
+
+        // OR populate hidden inputs
+        document.getElementById('bundle_id').value = bundle[0].bundle_id;
+        document.getElementById('bundle_name').value = bundle[0].bundle_name;
+    });
 </script>
 
 <meta name="csrf-token" content="{{ csrf_token() }}">

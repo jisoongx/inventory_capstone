@@ -193,6 +193,8 @@
     </div>
 </div>
 
+
+
 <!-- Receipt Display Modal -->
 <div id="receiptModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] hidden p-4">
     <div class="bg-white rounded-lg w-full max-w-md mx-auto h-full max-h-[90vh] flex flex-col">
@@ -298,105 +300,126 @@
     </div>
 </div>
 
+<!-- Modal container -->
+<div id="bundleModal" class="fixed inset-0 hidden z-50 flex items-center justify-center">
+    <!-- Background overlay -->
+    <div class="absolute inset-0 bg-black bg-opacity-50" onclick="paymentProcessor.cancelBundle()"></div>
+
+    <!-- Modal content -->
+    <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-10">
+        <h2 class="text-lg font-semibold mb-4">Eligible Bundle Detected</h2>
+
+        <!-- Bundle list container -->
+        <div id="bundleList" class="space-y-2"></div>
+
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="cancelBundleBtn" class="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+            <button id="applyBundleBtn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">OK</button>
+        </div>
+    </div>
+</div>
+
+
+
 <style>
-.scrollbar-custom::-webkit-scrollbar {
-    width: 6px;
-}
+    .scrollbar-custom::-webkit-scrollbar {
+        width: 6px;
+    }
 
-.scrollbar-custom::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 3px;
-}
+    .scrollbar-custom::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
 
-.scrollbar-custom::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
+    .scrollbar-custom::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
 
-.scrollbar-custom::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
+    .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
 
-.payment-cart-item {
-    background: white;
-    border:  1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
-    transition: all 0.2s;
-}
+    .payment-cart-item {
+        background: white;
+        border:  1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        transition: all 0.2s;
+    }
 
-.payment-cart-item:hover {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+    .payment-cart-item:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-.quick-amount-btn {
-    padding: 12px;
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-weight: 600;
-    color: #374151;
-    transition: all 0.2s;
-}
+    .quick-amount-btn {
+        padding: 12px;
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-weight: 600;
+        color: #374151;
+        transition: all 0.2s;
+    }
 
-.quick-amount-btn:hover {
-    background:  linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    border-color: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
+    .quick-amount-btn:hover {
+        background:  linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border-color: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
 
-/* Inline discount input styling */
-.item-discount-inline {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    margin-top:  6px;
-}
+    /* Inline discount input styling */
+    .item-discount-inline {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        margin-top:  6px;
+    }
 
-.item-discount-label {
-    font-size: 0.65rem;
-    color: #6b7280;
-    font-weight: 500;
-    white-space: nowrap;
-    margin-right: 4px;
-}
+    .item-discount-label {
+        font-size: 0.65rem;
+        color: #6b7280;
+        font-weight: 500;
+        white-space: nowrap;
+        margin-right: 4px;
+    }
 
-.item-discount-inline select,
-.item-discount-inline input {
-    font-size: 0.65rem;
-    padding: 4px 6px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    transition: all 0.2s;
-    height: 26px;
-}
+    .item-discount-inline select,
+    .item-discount-inline input {
+        font-size: 0.65rem;
+        padding: 4px 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        transition: all 0.2s;
+        height: 26px;
+    }
 
-.item-discount-inline select {
-    flex:  0 0 70px;
-    min-width: 70px;
-}
+    .item-discount-inline select {
+        flex:  0 0 70px;
+        min-width: 70px;
+    }
 
-.item-discount-inline input {
-    flex: 0 0 80px;
-    min-width: 80px;
-}
+    .item-discount-inline input {
+        flex: 0 0 80px;
+        min-width: 80px;
+    }
 
-.item-discount-inline select:focus,
-.item-discount-inline input:focus {
-    outline: none;
-    border-color: #f97316;
-    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
-}
+    .item-discount-inline select:focus,
+    .item-discount-inline input:focus {
+        outline: none;
+        border-color: #f97316;
+        box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
+    }
 
-.item-discount-inline select:disabled,
-.item-discount-inline input:disabled {
-    background-color: #f3f4f6;
-    cursor: not-allowed;
-    opacity: 0.6;
-}
+    .item-discount-inline select:disabled,
+    .item-discount-inline input:disabled {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
 </style>
 
 <script>
@@ -410,6 +433,11 @@ class PaymentProcessor {
         this.totalAmount = 0;
         this.discountsExpanded = false;
         this.storageKey = 'payment_processor_state';
+
+        this.appliedBundles = new Set(); // Track which products have bundles applied
+        this.eligibleBundles = null;
+        
+
         
         this.init();
     }
@@ -656,13 +684,118 @@ class PaymentProcessor {
         if (el) el.textContent = formatted;
     }
 
+    
+
+    showBundleModal(eligibleBundles) {
+        const modal = document.getElementById('bundleModal');
+        const bundleList = document.getElementById('bundleList');
+
+        bundleList.innerHTML = '';
+
+        Object.entries(eligibleBundles).forEach(([bundleId, bundleItems]) => {
+            if (!bundleItems.length) return;
+
+        
+            const {
+                name,
+                bundle_code,
+                discount_percent,
+                bundle_type,
+                bogoType,
+            } = bundleItems[0];
+
+            const bundleTypeLabel =
+                bundle_type === 'BOGO1'
+                    ? 'Buy One Get One (Discounted Product)'
+                    : bundle_type === 'BOGO2'
+                        ? 'Buy One Get One (Free Product)'
+                        : bundle_type; 
+
+            const bogoTypeLabel = bogoType == 'P' ? 'PAID' : '';
+
+            const wrapper = document.createElement('div');
+            wrapper.classList.add(
+                'border',
+                'rounded',
+                'p-3',
+                'mb-4',
+                'bg-gray-50'
+            );
+
+            // 🔹 Bundle header
+            const header = document.createElement('div');
+            header.classList.add('mb-2');
+
+            header.innerHTML = `
+                <div class="font-semibold text-gray-900">${bundle_code}</div>
+                <div class="text-xs text-gray-500">
+                    ${bundleTypeLabel} • 
+                    Discount: ${discount_percent}%
+                </div>
+            `;
+
+            wrapper.appendChild(header);
+
+            // 🔹 Product list
+            const ul = document.createElement('ul');
+            ul.classList.add('text-sm', 'text-gray-700', 'space-y-1');
+
+            bundleItems.forEach(item => {
+                const li = document.createElement('li');
+
+                // Determine label and styles
+                let bogoLabel = '';
+                let bgColor = ''; // default no background
+
+                if (item.bogoType === 'P') {
+                    bogoLabel = 'PAID';
+                    bgColor = 'bg-yellow-100 text-yellow-800 px-1 rounded'; // light yellow background for PAID
+                } else if (item.bogoType && item.bogoType !== 'P') {
+                    bogoLabel = 'FREE';
+                    bgColor = 'bg-green-100 text-green-800 px-1 rounded'; // optional green background for free
+                }
+
+                // Build inner HTML with optional span for label
+                li.innerHTML = `
+                    ${item.name} × ${item.required_qty} 
+                    ${bogoLabel ? `<span class="${bgColor} ml-2 text-xs font-semibold">${bogoLabel}</span>` : ''}
+                `;
+
+                ul.appendChild(li);
+            });
+
+            wrapper.appendChild(ul);
+            bundleList.appendChild(wrapper);
+        });
+
+        modal.classList.remove('hidden');
+
+        document.getElementById('applyBundleBtn').onclick = () => this.applyBundle();
+        document.getElementById('cancelBundleBtn').onclick = () => this.cancelBundle();
+    }
+
+    cancelBundle() {
+        const modal = document.getElementById('bundleModal');
+        modal.classList.add('hidden');
+
+        this.finalizePaymentWithoutBundle();
+    }
+    
     async loadCartItems() {
         try {
             const response = await fetch('{{ route("get_cart_items") }}');
             const data = await response.json();
+
             
             if (data.success) {
                 this.cartItems = data.cart_items;
+
+                this.cartItems = this.cartItems.map(item => ({
+                    ...item,
+                    bundle_applied: item.bundle_applied ?? false
+                }));
+
+                
                 
                 if (this.cartItems.length === 0) {
                     this.showToast('Cart is empty.  Redirecting... ', 'error');
@@ -692,11 +825,136 @@ class PaymentProcessor {
                 
                 this.calculateTotals();
                 this.updateDiscountFieldStates();
+
+                if (data.requireConfirmation) {
+                    this.eligibleBundles = data.eligibleBundles;
+                    this.showBundleModal(this.eligibleBundles);
+                    return;
+                }
             }
         } catch (error) {
             console.error('Error loading cart:', error);
-            this.showToast('Error loading cart items', 'error');
+            // this.showToast('Error loading cart items', 'error');
         }
+    }
+
+    applyBundle() {
+        const modal = document.getElementById('bundleModal');
+        modal.classList.add('hidden');
+
+        if (!this.eligibleBundles) return;
+
+        Object.values(this.eligibleBundles).forEach(bundleItems => {
+            bundleItems.forEach(bundleItem => {
+                const cartItem = this.cartItems.find(
+                    ci => ci.product.prod_code === bundleItem.prod_code
+                );
+                if (!cartItem) return;
+
+                // Initialize appliedBundles set if missing
+                if (!cartItem.bundle_applied_units) cartItem.bundle_applied_units = 0;
+
+                // Determine how many units this rule applies
+                const ruleQty = bundleItem.required_qty || 1;
+                const remainingQty = cartItem.quantity - cartItem.bundle_applied_units;
+                const applicableQty = Math.min(ruleQty, remainingQty);
+                if (applicableQty <= 0) return;
+
+                switch (bundleItem.bundle_type) {
+                    case 'BOGO1':
+                        if (!bundleItem.bogoType) {
+                            const discountPercent = bundleItem.discount_percent || 0;
+                            cartItem.amount -= (cartItem.product.selling_price * applicableQty) * (discountPercent / 100);
+                        }
+                        break;
+
+                    case 'BOGO2':
+                        if (!bundleItem.bogoType) {
+                            cartItem.amount -= cartItem.product.selling_price * applicableQty;
+                        }
+                        break;
+
+                    case 'MULTI-BUY':
+                    case 'EXPIRY':
+                    case 'MIXED':
+                        const discountPercent = bundleItem.discount_percent || 0;
+                        cartItem.amount -= (cartItem.product.selling_price * applicableQty) * (discountPercent / 100);
+                        break;
+                }
+
+                cartItem.bundle_applied_units += applicableQty;
+                cartItem.bundle_applied = true; 
+            });
+        });
+
+        this.renderCart();
+        this.calculateTotals();
+    }
+
+
+    renderCart() {
+        const container = document.getElementById('paymentCartItems');
+        if (!container) return;
+
+        container.innerHTML = this.cartItems.map(item => {
+            
+            const vatCategory = item.product?.vat_category || 'vat_exempt';
+            const vatBadge = vatCategory === 'vat_inclusive'
+                ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">VAT-Inc</span>'
+                : '<span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium">VAT-Ex</span>';
+
+
+            // Check if this item has a bundle applied
+            const hasBundle = item.bundle_applied === true;
+            const promoBadge = hasBundle
+                ? '<span class="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">PROMO Applied</span>'
+                : '';
+            const isPromoApplied = item.bundle_applied === true;
+
+            return `
+            <div class="payment-cart-item" data-product-code="${item.product.prod_code}">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-semibold text-gray-900">${item.product.name}</h4>
+                            ${vatBadge} 
+                        </div>
+                        <p class="text-sm text-gray-600">₱${parseFloat(item.product.selling_price).toFixed(2)} × ${item.quantity}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-gray-900 mb-2">₱${item.amount.toFixed(2)}</p>
+                        
+                        <div class="item-discount-inline">
+                            <span class="item-discount-label">Discount:</span>
+                            <select class="item-discount-type" data-product-code="${item.product.prod_code}" ${isPromoApplied ? 'disabled' : ''}>
+                                <option value="percent">% Off</option>
+                                <option value="amount">₱ Off</option>
+                            </select>
+                            <input type="number" 
+                                class="item-discount-value" 
+                                data-product-code="${item.product.prod_code}"
+                                min="0" 
+                                step="0.01" 
+                                value="0" 
+                                placeholder="0.00"
+                                ${isPromoApplied ? 'disabled' : ''}>
+                        </div>
+                        ${promoBadge}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        this.bindInlineDiscountEvents();
+
+        const totalItems = this.cartItems.length;
+        const totalQuantity = this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
+        const subtotal = this.cartItems.reduce((sum, item) => sum + item.amount, 0);
+
+        document.getElementById('cartTotalItems').textContent = totalItems;
+        document.getElementById('cartTotalQuantity').textContent = totalQuantity;
+        document.getElementById('cartSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
     }
 
     restoreItemDiscountInputs() {
@@ -711,60 +969,6 @@ class PaymentProcessor {
         });
     }
 
-    renderCart() {
-        const container = document.getElementById('paymentCartItems');
-        if (!container) return;
-
-        container.innerHTML = this.cartItems.map((item, index) => {
-            const vatCategory = item.product?.vat_category || 'vat_exempt';
-            const vatBadge = vatCategory === 'vat_inclusive' 
-                ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">VAT-Inc</span>'
-                : '<span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium">VAT-Ex</span>';
-            
-            return `
-        <div class="payment-cart-item" data-product-code="${item.product.prod_code}">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                        <h4 class="font-semibold text-gray-900">${item.product.name}</h4>
-                        ${vatBadge}
-                    </div>
-                    <p class="text-sm text-gray-600">₱${parseFloat(item.product.selling_price).toFixed(2)} × ${item.quantity}</p>
-                </div>
-                <div class="text-right">
-                    <p class="font-bold text-gray-900 mb-2">₱${item.amount.toFixed(2)}</p>
-                    
-                    <!-- ✅ RIGHT ALIGNED Discount Controls -->
-                    <div class="item-discount-inline">
-                        <span class="item-discount-label">Discount:</span>
-                        <select class="item-discount-type" data-product-code="${item.product.prod_code}">
-                            <option value="percent">% Off</option>
-                            <option value="amount">₱ Off</option>
-                        </select>
-                        <input type="number" 
-                            class="item-discount-value" 
-                            data-product-code="${item.product.prod_code}"
-                            min="0" 
-                            step="0.01" 
-                            value="0" 
-                            placeholder="0.00">
-                    </div>
-                </div>
-            </div>
-        </div>
-        `}).join('');
-
-        // Bind events for inline discount controls
-        this.bindInlineDiscountEvents();
-
-        const totalItems = this.cartItems.length;
-        const totalQuantity = this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        const subtotal = this.cartItems.reduce((sum, item) => sum + item.amount, 0);
-
-        document.getElementById('cartTotalItems').textContent = totalItems;
-        document.getElementById('cartTotalQuantity').textContent = totalQuantity;
-        document.getElementById('cartSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
-    }
 
     bindInlineDiscountEvents() {
         document.querySelectorAll('.item-discount-type').forEach(select => {
@@ -792,92 +996,64 @@ class PaymentProcessor {
         let totalItemDiscounts = 0;
 
         this.cartItems.forEach(item => {
-            const itemTotal = item.amount;
-            const pricePerUnit = parseFloat(item.product.selling_price);
-            const quantity = item.quantity;
-            
-            if (!  this.itemDiscounts[item.product.prod_code]) {
-                this.itemDiscounts[item.product.prod_code] = {
-                    type: 'percent',
-                    value: 0
-                };
-            }
-            
-            const discount = this.itemDiscounts[item.product.prod_code];
-            let discountPerUnit = 0;
+            // Use item.amount which already includes bundle discounts
+            const lineTotal = item.amount;
 
-            if (discount.type === 'percent') {
-                // ✅ Calculate discount per unit from percentage
-                discountPerUnit = pricePerUnit * (discount.value / 100);
-            } else {
-                // ✅ Fixed discount per unit (can't exceed unit price)
-                discountPerUnit = Math.min(discount.value, pricePerUnit);
-            }
+            subtotal += lineTotal;
 
-            // ✅ Total discount = per unit discount × quantity
-            const totalDiscountForItem = discountPerUnit * quantity;
-            totalItemDiscounts += totalDiscountForItem;
-            subtotal += itemTotal;
+            // Apply manual item discount (entered by user)
+            const discount = this.itemDiscounts[item.product.prod_code] || { type: 'percent', value: 0 };
+            let discountAmount = 0;
+
+            if (discount.value > 0) {
+                if (discount.type === 'percent') {
+                    discountAmount = lineTotal * (discount.value / 100);
+                } else {
+                    discountAmount = Math.min(discount.value * item.quantity, lineTotal);
+                }
+                totalItemDiscounts += discountAmount;
+            }
         });
 
         const afterItemDiscounts = subtotal - totalItemDiscounts;
 
+        // Receipt discount
         let receiptDiscountAmount = 0;
-        const hasItemDiscounts = totalItemDiscounts > 0;
-        
-        if (!  hasItemDiscounts && this.receiptDiscount.value > 0) {
+        if (this.receiptDiscount.value > 0) {
             if (this.receiptDiscount.type === 'percent') {
-                // ✅ Percentage applies to total
                 receiptDiscountAmount = afterItemDiscounts * (this.receiptDiscount.value / 100);
             } else {
-                // ✅ Fixed amount is per unit
                 const totalQuantity = this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
-                const calculatedReceiptDiscount = this.receiptDiscount.value * totalQuantity;
-                receiptDiscountAmount = Math.min(calculatedReceiptDiscount, afterItemDiscounts);
+                receiptDiscountAmount = Math.min(this.receiptDiscount.value, afterItemDiscounts);
             }
         }
 
         const afterReceiptDiscount = afterItemDiscounts - receiptDiscountAmount;
 
+        // VAT calculation
         let vatAmountInclusive = 0;
         let vatAmountExempt = 0;
-        
-        const discountMultiplier = subtotal > 0 ? (afterReceiptDiscount / subtotal) : 0;
-        
+
         this.cartItems.forEach(item => {
-            const itemTotal = item.amount;
-            const itemAfterDiscounts = itemTotal * discountMultiplier;
-            
             const vatCategory = item.product?.vat_category || 'vat_exempt';
-            
+            const itemShare = item.amount / subtotal * afterReceiptDiscount; // proportion after discounts
             if (vatCategory === 'vat_inclusive') {
-                vatAmountInclusive += itemAfterDiscounts * (this.vatRate / (100 + this.vatRate));
+                vatAmountInclusive += itemShare * (this.vatRate / (100 + this.vatRate));
             } else {
-                vatAmountExempt += itemAfterDiscounts;
+                vatAmountExempt += itemShare;
             }
         });
 
         const totalAmount = afterReceiptDiscount;
 
+        // Update UI
         document.getElementById('calcSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
-        
-        if (totalItemDiscounts > 0) {
-            document.getElementById('calcItemDiscountsRow').classList.remove('hidden');
-            document.getElementById('calcItemDiscounts').textContent = `₱${totalItemDiscounts.toFixed(2)}`;
-        } else {
-            document.getElementById('calcItemDiscountsRow').classList.add('hidden');
-        }
-        
-        if (receiptDiscountAmount > 0) {
-            document.getElementById('calcReceiptDiscountRow').classList.remove('hidden');
-            document.getElementById('calcReceiptDiscount').textContent = `₱${receiptDiscountAmount.toFixed(2)}`;
-        } else {
-            document.getElementById('calcReceiptDiscountRow').classList.add('hidden');
-        }
-        
+        document.getElementById('calcItemDiscountsRow').classList.toggle('hidden', totalItemDiscounts === 0);
+        document.getElementById('calcItemDiscounts').textContent = `₱${totalItemDiscounts.toFixed(2)}`;
+        document.getElementById('calcReceiptDiscountRow').classList.toggle('hidden', receiptDiscountAmount === 0);
+        document.getElementById('calcReceiptDiscount').textContent = `₱${receiptDiscountAmount.toFixed(2)}`;
         document.getElementById('calcVATInclusive').textContent = `₱${vatAmountInclusive.toFixed(2)}`;
         document.getElementById('calcVATExempt').textContent = `₱${vatAmountExempt.toFixed(2)}`;
-        
         document.getElementById('calcTotal').textContent = `₱${totalAmount.toFixed(2)}`;
         document.getElementById('quickTotal').textContent = `₱${totalAmount.toFixed(2)}`;
 
@@ -886,43 +1062,48 @@ class PaymentProcessor {
     }
 
     calculateChange() {
-    const amountPaidInput = document.getElementById('amountPaidInput');
-    if (!amountPaidInput) return;
+        const amountPaidInput = document.getElementById('amountPaidInput');
+        if (!amountPaidInput) return;
 
-    this.amountPaid = parseFloat(amountPaidInput.value) || 0;
-    const change = this.amountPaid - this.totalAmount;
+        this.amountPaid = parseFloat(amountPaidInput.value) || 0;
+        const change = this.amountPaid - this.totalAmount;
 
-    const insufficientWarning = document.getElementById('insufficientWarning');
-    const changeDisplay = document.getElementById('changeDisplay');
-    const completeBtn = document.getElementById('completePayment');
+        const insufficientWarning = document.getElementById('insufficientWarning');
+        const changeDisplay = document.getElementById('changeDisplay');
+        const completeBtn = document.getElementById('completePayment');
 
-    // ✅ FIX: Use a small threshold to handle floating-point precision issues
-    const threshold = 0.01; // 1 cent tolerance
-    
-    if (this.amountPaid > threshold && this.amountPaid < (this.totalAmount - threshold)) {
-        // Truly insufficient - more than 1 cent short
-        const shortage = this.totalAmount - this.amountPaid;
-        document.getElementById('amountShortage').textContent = `₱${shortage.toFixed(2)}`;
-        insufficientWarning.classList.remove('hidden');
-        changeDisplay.classList.add('hidden');
-        completeBtn.disabled = true;
-    } else if (this.amountPaid >= (this.totalAmount - threshold) && this.amountPaid > 0) {
-        // Sufficient amount (including exact amount with rounding differences)
-        document.getElementById('changeAmount').textContent = `₱${Math.max(0, change).toFixed(2)}`;
-        changeDisplay.classList.remove('hidden');
-        insufficientWarning.classList.add('hidden');
-        completeBtn.disabled = false;
-    } else {
-        // No amount entered yet
-        changeDisplay.classList.add('hidden');
-        insufficientWarning.classList.add('hidden');
-        completeBtn.disabled = true;
+        // ✅ FIX: Use a small threshold to handle floating-point precision issues
+        const threshold = 0.01; // 1 cent tolerance
+        
+        if (this.amountPaid > threshold && this.amountPaid < (this.totalAmount - threshold)) {
+            // Truly insufficient - more than 1 cent short
+            const shortage = this.totalAmount - this.amountPaid;
+            document.getElementById('amountShortage').textContent = `₱${shortage.toFixed(2)}`;
+            insufficientWarning.classList.remove('hidden');
+            changeDisplay.classList.add('hidden');
+            completeBtn.disabled = true;
+        } else if (this.amountPaid >= (this.totalAmount - threshold) && this.amountPaid > 0) {
+            // Sufficient amount (including exact amount with rounding differences)
+            document.getElementById('changeAmount').textContent = `₱${Math.max(0, change).toFixed(2)}`;
+            changeDisplay.classList.remove('hidden');
+            insufficientWarning.classList.add('hidden');
+            completeBtn.disabled = false;
+        } else {
+            // No amount entered yet
+            changeDisplay.classList.add('hidden');
+            insufficientWarning.classList.add('hidden');
+            completeBtn.disabled = true;
+        }
     }
-}
 
     async processPayment() {
-        if (this.amountPaid < this.totalAmount) {
-            this.showToast('Insufficient amount paid', 'error');
+
+        const paid = Math.round(this.amountPaid * 100);
+        const total = Math.round(this.totalAmount * 100);
+
+        if (this.paid < this.total) {
+            this.showToast(`Insufficient amount paid: ₱${this.totalAmount.toFixed(2)} ----- ₱${this.totalAmount.toFixed(2)}`,
+            'error');
             return;
         }
 
@@ -1012,24 +1193,108 @@ class PaymentProcessor {
             hour12: true
         };
         document.getElementById('receiptTransactionDate').textContent = now.toLocaleString('en-US', options);
-        
+
+        // --- Apply eligible bundles to receipt_items ---
+        Object.values(this.eligibleBundles).forEach(bundleItems => {
+            bundleItems.forEach(bundleItem => {
+                const cartItem = paymentData.receipt_items.find(
+                    ci => ci.product.prod_code === bundleItem.prod_code
+                );
+                if (!cartItem) return;
+
+                if (!cartItem.bundle_applied_units) cartItem.bundle_applied_units = 0;
+                if (!cartItem.promo_lines) cartItem.promo_lines = [];
+
+                const ruleQty = bundleItem.required_qty || 1;
+                const remainingQty = cartItem.quantity - cartItem.bundle_applied_units;
+                const applicableQty = Math.min(ruleQty, remainingQty);
+                if (applicableQty <= 0) return;
+
+                let promoAmount = 0;
+                let promoLabel = '';
+
+                switch (bundleItem.bundle_type) {
+                    case 'BOGO1':
+                        if (!bundleItem.bogoType) {
+                            const discountPercent = bundleItem.discount_percent || 0;
+                            promoAmount = (cartItem.product.selling_price * applicableQty) * (discountPercent / 100);
+                            promoLabel = 'BOGO (Discount)';
+                        }
+                        break;
+                    case 'BOGO2':
+                        if (!bundleItem.bogoType) {
+                            promoAmount = cartItem.product.selling_price * applicableQty;
+                            promoLabel = 'BOGO (Free)';
+                        }
+                        break;
+                    case 'MULTI-BUY':
+                    case 'EXPIRY':
+                    case 'MIXED':
+                        const discountPercent = bundleItem.discount_percent || 0;
+                        promoAmount = (cartItem.product.selling_price * applicableQty) * (discountPercent / 100);
+                        promoLabel = 'Bundle Discount';
+                        break;
+                }
+
+                if (promoAmount > 0) {
+                    // Track promo lines for display
+                    cartItem.promo_lines.push({
+                        label: promoLabel,
+                        quantity: applicableQty,
+                        amount: -promoAmount
+                    });
+
+                    // Update total amount for this item
+                    cartItem.amount = (cartItem.amount ?? cartItem.product.selling_price * cartItem.quantity) - promoAmount;
+
+                    // Track applied units
+                    cartItem.bundle_applied_units += applicableQty;
+                    cartItem.bundle_applied = true;
+                }
+            });
+        });
+
+        // --- Render receipt items with promo lines ---
         const itemsList = document.getElementById('receiptItemsList');
+
         if (paymentData.receipt_items && paymentData.receipt_items.length > 0) {
-            itemsList.innerHTML = paymentData.receipt_items.map(item => `
-                <div class="flex justify-between items-start py-2 border-b border-gray-100 last:border-b-0">
-                    <div class="flex-1 pr-2">
-                        <div class="text-sm font-medium text-gray-900">${item.product.name}</div>
-                        <div class="text-xs text-gray-500">${item.quantity} × ₱${parseFloat(item.product.selling_price).toFixed(2)}</div>
+            itemsList.innerHTML = paymentData.receipt_items.map(item => {
+                // Build promo lines
+                const promoHtml = (item.promo_lines || []).map(promo => `
+                    <div class="flex justify-between text-xs text-red-600 pl-4">
+                        <div>${promo.label}${promo.quantity ? ` ${promo.quantity}x` : ''}</div>
+                        <div>₱${parseFloat(promo.amount).toFixed(2)}</div>
                     </div>
-                    <div class="text-sm font-bold text-gray-900">₱${item.amount.toFixed(2)}</div>
-                </div>
-            `).join('');
+                `).join('');
+
+                return `
+                    <div class="flex flex-col py-2 border-b border-gray-100 last:border-b-0">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1 pr-2">
+                                <div class="text-sm font-medium text-gray-900">${item.product.name}</div>
+                                <div class="text-xs text-gray-500">
+                                    ${item.quantity} × ₱${parseFloat(item.product.selling_price).toFixed(2)}
+                                </div>
+                            </div>
+                            <!-- Keep original product amount -->
+                            <div class="text-sm font-bold text-gray-900">
+                                ₱${(item.product.selling_price * item.quantity).toFixed(2)}
+                            </div>
+                        </div>
+                        <!-- Show promo lines subtracting from total -->
+                        ${promoHtml}
+                    </div>
+                `;
+            }).join('');
         } else {
             itemsList.innerHTML = '<div class="text-center py-4 text-gray-500">No items found</div>';
         }
+
         
         document.getElementById('receiptModal').classList.remove('hidden');
     }
+
+    
 
     printReceipt() {
         const receiptContent = document.querySelector('#receiptModal .overflow-y-auto').innerHTML;

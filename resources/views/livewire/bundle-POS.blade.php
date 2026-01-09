@@ -160,12 +160,6 @@
                             </div>
                             @endif
                         </div>
-
-                        <!-- Footer -->
-                        <button wire:click="confirmBundle"
-                                class="w-full px-4 py-2 bg-gray-900 text-white text-xs font-medium rounded-md">
-                            Use this Bundle
-                        </button>
                     </div>
                 </div>
             </div>

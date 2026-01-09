@@ -262,6 +262,8 @@ class TechnicalRequest extends Component
             and sender_type = ?
         ", [NOW(), $req_id, 'super']);
 
+
+
         
     }
 
@@ -355,6 +357,8 @@ class TechnicalRequest extends Component
 
         // $this->loadRequests();
         $this->addModalOpen = false;
+        $this->addRequestTitle = ''; 
+        $this->addRequestMessage = '';
 
     }
 

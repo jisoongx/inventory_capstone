@@ -14,8 +14,6 @@ use App\Http\Controllers\ActivityLogController;
 
 class StoreController extends Controller
 {
-    public $bundle; 
-    
     private function getCurrentOwnerId()
     {
         if (Auth::guard('owner')->check()) {
@@ -114,6 +112,10 @@ class StoreController extends Controller
                 ->where('receipt_item.receipt_id', $receiptId)
                 ->get();
 
+           
+            // ----------------------
+            // Include eligible bundles in response
+            // ----------------------
             $storeInfo = DB::table('owners')
                 ->select('store_name', 'store_address', 'contact')
                 ->where('owner_id', $ownerId)
@@ -123,7 +125,7 @@ class StoreController extends Controller
                 'success' => true,
                 'receipt' => $receipt,
                 'items' => $items,
-                'store_info' => $storeInfo
+                'store_info' => $storeInfo,
             ]);
 
         } catch (\Exception $e) {
@@ -652,29 +654,123 @@ class StoreController extends Controller
         }
     }
 
+
     public function getCartItems()
     {
         try {
             $ownerId = $this->getCurrentOwnerId();
             $currentItems = session()->get('transaction_items', []);
-            $cartItems = $this->getFormattedCartItems($currentItems, $ownerId);
+            $formattedData = $this->getFormattedCartItems($currentItems, $ownerId);
+            
+            $cartItems = $formattedData['items'] ?? [];
+            $totalQuantity = $formattedData['total_quantity'] ?? 0;
+            $totalAmount = $formattedData['total_amount'] ?? 0;
+            
+            // Option 2: If it returns just the items array directly
+            // $cartItems = $formattedData;
+            // $totalQuantity = array_sum(array_column($cartItems, 'quantity'));
+            // $totalAmount = array_sum(array_column($cartItems, 'total'));
 
+            // ----------------------
+            // Build cart quantities
+            // ----------------------
+            $cartQuantities = [];
+            foreach ($cartItems as $item) {
+                $prodCode = $item['prod_code'] ?? $item['product']['prod_code'] ?? null;
+                if ($prodCode) {
+                    $cartQuantities[$prodCode] = ($cartQuantities[$prodCode] ?? 0) + ($item['quantity'] ?? 0);
+                }
+            }
+
+            // Only proceed with bundle logic if we have items
+            $eligibleBundles = [];
+
+            if (!empty($cartQuantities)) {
+                // --------------------------------
+                // Step 2: Fetch bundle rules with business priority
+                // --------------------------------
+                $bundleRules = DB::table('vw_active_bundle_items')
+                    ->orderBy("priority_level")
+                    ->get();
+
+                // --------------------------------
+                // Step 3: Build product → bundle map
+                // --------------------------------
+                $productBundleMap = [];
+                foreach ($bundleRules as $rule) {
+                    $productBundleMap[$rule->prod_code][] = $rule->bundle_id;
+                }
+
+                // --------------------------------
+                // Step 4: Attach bundle IDs to cart items
+                // --------------------------------
+                foreach ($cartItems as &$cartItem) {
+                    $prodCode = $cartItem['prod_code'] ?? $cartItem['product']['prod_code'] ?? null;
+                    $cartItem['bundle_ids'] = $prodCode ? ($productBundleMap[$prodCode] ?? []) : [];
+                }
+                unset($cartItem);
+
+                // --------------------------------
+                // Step 5: Determine eligible bundles and subtract quantities
+                // --------------------------------
+                $bundlesGrouped = $bundleRules->groupBy('bundle_id');
+
+                foreach ($bundlesGrouped as $bundleId => $bundleItems) {
+                    $isEligible = true;
+
+                    // Sum required quantities per product
+                    $requiredPerProduct = [];
+                    foreach ($bundleItems as $rule) {
+                        $requiredPerProduct[$rule->prod_code] = 
+                            ($requiredPerProduct[$rule->prod_code] ?? 0) + $rule->required_qty;
+                    }
+
+                    // Check if the cart contains enough for every product in the bundle
+                    foreach ($requiredPerProduct as $prodCode => $totalRequired) {
+                        $availableQty = $cartQuantities[$prodCode] ?? 0;
+                        if ($availableQty < $totalRequired) {
+                            $isEligible = false;
+                            break;
+                        }
+                    }
+
+                    if ($isEligible) {
+                        $eligibleBundles[$bundleId] = $bundleItems;
+
+                        // Subtract quantities used by this bundle
+                        foreach ($requiredPerProduct as $prodCode => $totalRequired) {
+                            $cartQuantities[$prodCode] -= $totalRequired;
+                        }
+                    }
+                }
+
+            }
+
+            // ✅ Return JSON with cart and eligible bundles
             return response()->json([
                 'success' => true,
-                'cart_items' => $cartItems['items'],
+                'cart_items' => $cartItems,
                 'cart_summary' => [
-                    'total_quantity' => $cartItems['total_quantity'],
-                    'total_amount' => $cartItems['total_amount']
-                ]
+                    'total_quantity' => $totalQuantity,
+                    'total_amount' => $totalAmount
+                ],
+                'eligibleBundles' => $eligibleBundles,
+                'requireConfirmation' => count($eligibleBundles) > 0
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Get Cart Items Error:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Error getting cart items: ' .  $e->getMessage()
+                'message' => 'Error getting cart items: ' . $e->getMessage()
             ], 500);
         }
     }
+
 
     public function processBarcodeSearch(Request $request)
     {
@@ -732,6 +828,7 @@ class StoreController extends Controller
             ], 500);
         }
     }
+    
 
     public function processPayment(Request $request) 
     {
@@ -778,7 +875,6 @@ class StoreController extends Controller
             $vatRate = $request->input('vat_rate', 0);
             $itemDiscounts = $request->input('item_discounts', []);
     
-            // ✅ Validate mutual exclusivity
             $hasItemDiscounts = false;
             foreach ($itemDiscounts as $discount) {
                 if ($discount['value'] > 0) {
@@ -797,7 +893,6 @@ class StoreController extends Controller
             $receiptItems = [];
             $subtotal = 0;
     
-            // ✅ Step 1: Calculate subtotal and validate stock
             foreach ($items as $item) {
                 $product = Product::where('prod_code', $item['prod_code'])
                                 ->where('owner_id', $owner_id)
@@ -827,9 +922,11 @@ class StoreController extends Controller
                     'amount' => $itemTotal,
                     'allocated_batches' => $item['allocated_batches']
                 ];
+
             }
+
     
-            // ✅ Step 2: Calculate item-level discounts (PER UNIT)
+            // item-level discounts (PER UNIT)
             $totalItemDiscounts = 0;
             $itemDiscountAmounts = []; // Store calculated amounts per item
 
@@ -860,24 +957,87 @@ class StoreController extends Controller
 
             $afterItemDiscounts = $subtotal - $totalItemDiscounts;
 
-            // ✅ Step 3: Calculate receipt-level discount (PER UNIT basis)
+            $cartItemsResponse = $this->getCartItems();
+            $eligibleBundles = $cartItemsResponse->original['eligibleBundles'] ?? [];
+
+            $afterDiscount = 0;
+            $bundleAppliedUnits = 0;
+
+            // -----------------------PROMO DISCOUNT----------------
+            foreach ($items as $item) {
+                $product = Product::where('prod_code', $item['prod_code'])->first();
+                $pricePerUnit = $product->selling_price;
+
+                $totalItemDiscount = 0;
+                $totalPromoDiscount = 0;
+
+                // --- Item discount ---
+                if (isset($itemDiscounts[$item['prod_code']])) {
+                    $discount = $itemDiscounts[$item['prod_code']];
+                    $type = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
+                    $discountPerUnit = $type === 'percent' ? $pricePerUnit * ($discount['value'] / 100) : min($discount['value'], $pricePerUnit);
+                    $totalItemDiscount = $discountPerUnit * $item['quantity'];
+                }
+
+                // --- Promo/bundle discount ---
+                if (isset($eligibleBundles[$item['prod_code']])) {
+                    foreach ($eligibleBundles[$item['prod_code']] as $bundle) {
+
+                        $ruleQty = $bundle['required_qty'] ?? 1;
+                        $remainingQty = $item['quantity'] - $bundleAppliedUnits;
+                        $applyQty = min($ruleQty, $remainingQty);
+                        
+                        switch ($bundle['bundle_type']) {
+                            case 'BOGO1':
+                                // P = regular price, NULL = discounted
+                                if ($bundle['bogoType'] === null) {
+                                    $percent = $bundle['discount_percent'] ?? 0;
+                                    $totalPromoDiscount += $pricePerUnit * ($percent / 100) * $applyQty;
+                                }
+                                break;
+
+                            case 'BOGO2':
+                                // P = paid, NULL = free
+                                if ($bundle['bogoType'] === null) {
+                                    $totalPromoDiscount += $pricePerUnit * $applyQty;
+                                }
+                                break;
+
+                            case 'MULTI-BUY':
+                            case 'EXPIRY':
+                            case 'MIXED':
+                                // Everyone discounted
+                                $percent = $bundle['discount_percent'] ?? 0;
+                                $totalPromoDiscount += $pricePerUnit * ($percent / 100) * $applyQty;
+                                break;
+                        }
+
+                        
+                    }
+                }
+
+                $totalDiscount = $totalItemDiscount + $totalPromoDiscount;
+                $afterDiscount = $pricePerUnit * $item['quantity'] - $totalDiscount;
+            }
+
+            $afterPromoDiscounts = $afterItemDiscounts - $afterDiscount;
+
+
+            // receipt-level discount (PER UNIT basis)
             $receiptDiscountAmount = 0;
-            if (!  $hasItemDiscounts && $hasReceiptDiscount) {
+
+            if (! $hasItemDiscounts && $hasReceiptDiscount) {
                 if ($receiptDiscountType === 'percent') {
-                    // ✅ Apply percentage to total after item discounts
-                    $receiptDiscountAmount = $afterItemDiscounts * ($receiptDiscountValue / 100);
+                    $receiptDiscountAmount = $afterPromoDiscounts * ($receiptDiscountValue / 100);
                 } else {
-                    // ✅ For fixed amount receipt discount, apply per unit across all items
-                    $totalQuantity = array_sum(array_column($items, 'quantity'));
-                    $discountPerUnit = $receiptDiscountValue; // This is now per unit
-                    $calculatedReceiptDiscount = $discountPerUnit * $totalQuantity;
-                    $receiptDiscountAmount = min($calculatedReceiptDiscount, $afterItemDiscounts);
+                    // FIXED receipt discount — apply ONCE
+                    $receiptDiscountAmount = min($receiptDiscountValue, $afterPromoDiscounts);
                 }
             }
+
+            $afterReceiptDiscount = $afterPromoDiscounts - $receiptDiscountAmount;
     
-            $afterReceiptDiscount = $afterItemDiscounts - $receiptDiscountAmount;
-    
-            // ✅ Step 4: Calculate VAT (Inclusive + Exempt breakdown)
+            // VAT (Inclusive + Exempt breakdown)
             $vatAmountInclusive = 0;
             $vatAmountExempt = 0;
             
@@ -899,11 +1059,18 @@ class StoreController extends Controller
             
             $totalVatAmount = $vatAmountInclusive;
     
-            // ✅ Step 5: Total amount
+            // Total amount
             $totalAmount = $afterReceiptDiscount;
     
-            if ($request->amount_paid < $totalAmount) {
-                throw new \Exception("Amount paid (₱" .number_format($request->amount_paid, 2) . ") is less than total amount (₱" .number_format($totalAmount, 2) . ")");
+            $paidRounded  = round($request->amount_paid, 2);
+            $totalRounded = round($totalAmount, 2);
+
+            if ($paidRounded < $totalRounded) {
+                throw new \Exception(
+                    "Amount paid (₱" . number_format($paidRounded, 2) . 
+                    ") is less than total amount (₱" . number_format($totalRounded, 2) . ")" . 
+                    "\n" . number_format($afterDiscount, 2) . "   - " . number_format($afterReceiptDiscount, 2) 
+                );
             }
     
             // ✅ Step 6: Create receipt (store CALCULATED discount_amount)
@@ -955,9 +1122,7 @@ class StoreController extends Controller
                     $itemVatAmount = $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
                 }
 
-                // Process each batch
                 foreach ($item['allocated_batches'] as $batch) {
-                    // Deduct inventory
                     Inventory::where('inven_code', $batch['inven_code'])
                             ->where('owner_id', $owner_id)
                             ->decrement('stock', $batch['quantity']);
@@ -965,20 +1130,17 @@ class StoreController extends Controller
                     $batchProportion = $batch['quantity'] / $item['quantity'];
                     $batchVatAmount = $itemVatAmount * $batchProportion;
                     
-                    // ✅ CHANGED: Calculate batch discount based on per-unit discount
                     $batchDiscountAmount = $discountPerUnit * $batch['quantity'];
                     
-                    // ✅ Calculate the item_discount_value to store (per unit for this batch)
                     $batchItemDiscountValue = $itemDiscountValue * $batchProportion;
 
-                    // ✅ Create receipt item (store CALCULATED item_discount_amount PER UNIT BASIS)
                     ReceiptItem::create([
                         'item_quantity' => $batch['quantity'],
                         'prod_code' => $item['prod_code'],
                         'receipt_id' => $receipt->receipt_id,
                         'item_discount_type' => $itemDiscountType,
-                        'item_discount_value' => $batchItemDiscountValue, // ✅ Proportional value for this batch
-                        'item_discount_amount' => $batchDiscountAmount, // ✅ CHANGED: Per unit × batch quantity
+                        'item_discount_value' => $batchItemDiscountValue, 
+                        'item_discount_amount' => $batchDiscountAmount,
                         'vat_amount' => $batchVatAmount,
                         'inven_code' => $batch['inven_code']
                     ]);
@@ -1031,7 +1193,7 @@ class StoreController extends Controller
                 'amount_paid' => $request->amount_paid,
                 'change' => $request->amount_paid - $totalAmount,
                 'receipt_items' => $receiptItems,
-                'total_quantity' => array_sum(array_column($items, 'quantity'))
+                'total_quantity' => array_sum(array_column($items, 'quantity')),
             ];
     
             if (! empty($lowStockProducts)) {

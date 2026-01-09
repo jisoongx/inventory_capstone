@@ -20,6 +20,9 @@ class CreateBundle extends Component
     public $startDate;
     public $endDate;
     public $bogoType;
+    public $bundleObjective;
+    public $bundlePriority;
+    public $bundleGoal;
 
     public $test;
 
@@ -41,6 +44,8 @@ class CreateBundle extends Component
     public $newBundlePrice;
     public $discountType = 'predefined';
     public $discountValue = null;
+    public $freeBundlePrice;
+    public $regularBundlePrice;
 
     public $searchWord = '';
 
@@ -54,30 +59,127 @@ class CreateBundle extends Component
         $this->activeTab = $tab;
     }
 
+
     public function toggleProduct($prodCode)
     {
-        if (isset($this->selectedProducts[$prodCode])) {
-            unset($this->selectedProducts[$prodCode]);
+        $prod = $this->products->firstWhere('prod_code', $prodCode);
+        if (!$prod) return;
+
+        // Check if any row of this product is already selected
+        $isSelected = collect($this->selectedProducts)->contains(function($data) use ($prodCode) {
+            return $data['prod_code'] === $prodCode;
+        });
+
+        if ($isSelected) {
+            // Remove all rows for this product
+            foreach ($this->selectedProducts as $key => $data) {
+                if ($data['prod_code'] === $prodCode) {
+                    unset($this->selectedProducts[$key]);
+                }
+            }
             return;
         }
 
+        // Count distinct products currently selected
+        $currentProducts = collect($this->selectedProducts)
+            ->pluck('prod_code')
+            ->unique()
+            ->count();
+        
+        $futureProductsCount = $currentProducts + 1;
+        $isSingleProductBogo = in_array($this->bundleType, ['BOGO1','BOGO2']) && $currentProducts === 0;
+
+        if ($isSingleProductBogo) {
+            // Add two entries for the same product with different quantities
+            $this->selectedProducts[$prodCode.'_1'] = [
+                'prod_code' => $prodCode,
+                'selected' => true,
+                'product_name' => $prod->name,
+                'product_barcode' => $prod->barcode,
+                'quantity' => 1,
+                'bogo_type' => null, // will be set via setBogoType
+            ];
+
+            $this->selectedProducts[$prodCode.'_2'] = [
+                'prod_code' => $prodCode,
+                'selected' => true,
+                'product_name' => $prod->name,
+                'product_barcode' => $prod->barcode,
+                'quantity' => 2,
+                'bogo_type' => null, // will be set via setBogoType
+            ];
+
+            return;
+        }
+
+        // Normal product toggle for multi-product bundles
         $this->selectedProducts[$prodCode] = [
             'prod_code' => $prodCode,
-            'selected'  => true,
-            'product_name' => $this->products->firstWhere('prod_code', $prodCode)->name ?? '',
-            'product_barcode' => $this->products->firstWhere('prod_code', $prodCode)->barcode ?? '',
+            'selected' => true,
+            'product_name' => $prod->name,
+            'product_barcode' => $prod->barcode,
             'quantity' => $this->bundleQty,
-            'bogo_type' => $this->bogoType,
+            'bogo_type' => null,
         ];
+
+        if ($futureProductsCount > 1) {
+            foreach ($this->selectedProducts as $key => $data) {
+                if (str_ends_with($key, '_2')) {
+                    unset($this->selectedProducts[$key]);
+                }
+            }
+        }
     }
+
+
+    public function removeProduct($prodCodeKey)
+    {
+        unset($this->selectedProducts[$prodCodeKey]);
+    }
+
+
+
+
+
+
+
+
+
+
+    public function toggleBatch($prodCode)
+    {
+        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
+
+        // collapse if same product clicked
+        if ($this->expandedProductCode === $prodCode) {
+            $this->expandedProductCode = null;
+            return;
+        }
+
+        $this->expandedProductCode = $prodCode;
+
+        // load only if not loaded yet
+        if (!isset($this->batchDetails[$prodCode])) {
+            $this->batchDetails[$prodCode] = DB::select("
+                SELECT batch_number, stock, expiration_date
+                FROM inventory
+                WHERE prod_code = ?
+                ORDER BY inven_code ASC
+            ", [$prodCode]);
+        }
+    }
+
 
     protected $rules = [
         'bundleName'  => 'required|string|max:255',
+        'bundleObjective'  => 'required|string|max:255',
         'bundleCode'  => 'required|string|max:100|unique:bundles,bundle_code',
         'bundlePrice' => 'required|numeric|min:0',
     ];
 
     protected $messages = [
+        'bundleObjective.required'  => 'Bundle objective is required.',
+        'bundlePriority.required'  => 'Bundle priority is required.',
         'bundleName.required'  => 'Bundle name is required.',
         'bundleCode.required'  => 'Bundle code is required.',
         'bundleCode.unique'    => 'This bundle code already exists.',
@@ -117,6 +219,8 @@ class CreateBundle extends Component
         $this->validate([
             'bundleCode' => 'required|unique:bundles,bundle_code',
             'bundleName' => 'required',
+            'bundleObjective' => 'required',
+            'bundlePriority' => 'required',
             'bundleCategory' => 'required',
             'bundleType' => 'required',
             'status' => 'required',
@@ -132,6 +236,9 @@ class CreateBundle extends Component
             $bundleId = DB::table('bundles')->insertGetId([
                 'bundle_code' => $this->bundleCode,
                 'bundle_name' => $this->bundleName,
+                'bundle_objective' => $this->bundleObjective,
+                'bundle_notes' => $this->bundleGoal,
+                'priority_level' => $this->bundlePriority,
                 'bundle_category' => $this->bundleCategory,
                 'bundle_type' => $this->bundleType,
                 'status' => $this->status,
@@ -183,37 +290,12 @@ class CreateBundle extends Component
             'endDate',
             'minProfit',
             'selectedDiscount',
+            'bundleType',
+            'status',
         ]);
 
         $this->resetValidation();
     }
-
-
-
-
-    public function toggleBatch($prodCode)
-    {
-        DB::connection()->getPdo()->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
-
-        // collapse if same product clicked
-        if ($this->expandedProductCode === $prodCode) {
-            $this->expandedProductCode = null;
-            return;
-        }
-
-        $this->expandedProductCode = $prodCode;
-
-        // load only if not loaded yet
-        if (!isset($this->batchDetails[$prodCode])) {
-            $this->batchDetails[$prodCode] = DB::select("
-                SELECT batch_number, stock, expiration_date
-                FROM inventory
-                WHERE prod_code = ?
-                ORDER BY inven_code ASC
-            ", [$prodCode]);
-        }
-    }
-
 
 
 
@@ -227,252 +309,274 @@ class CreateBundle extends Component
         $this->calculatePricingPreview();
     }
 
-public function calculatePricingPreview()
-{
-    $this->selectedDiscount = null;
+    public function calculatePricingPreview()
+    {
+        $this->selectedDiscount = null;
 
-    if (empty($this->selectedProducts)) {
-        $this->pricingPreview = [];
-        return;
-    }
-
-    $totalCost    = 0;
-    $regularTotal = 0;
-    $productDetails = [];
-
-    foreach ($this->selectedProducts as $prodCode => $data) {
-        if (!($data['selected'] ?? false)) {
-            continue;
+        if (empty($this->selectedProducts)) {
+            $this->pricingPreview = [];
+            return;
         }
 
-        $qty = $data['quantity'] ?? 1;
+        $totalCost    = 0;
+        $regularTotal = 0;
+        $productDetails = [];
 
-        $product = DB::table('products')
-            ->select('cost_price', 'selling_price')
-            ->where('prod_code', $prodCode)
-            ->first();
-
-        if (!$product) {
-            continue;
-        }
-
-        $totalCost    += $product->cost_price * $qty;
-        $regularTotal += $product->selling_price * $qty;
-
-        $productDetails[$prodCode] = [
-            'product' => $product,
-            'quantity' => $qty,
-            'bogo_type' => $data['bogo_type'] ?? null,
-            'cost_price' => $product->cost_price,
-            'selling_price' => $product->selling_price,
-        ];
-    }
-
-    if ($totalCost <= 0 || $regularTotal <= 0) {
-        $this->pricingPreview = [];
-        return;
-    }
-
-    $bundlePrice = $regularTotal;
-    $profit      = $regularTotal - $totalCost;
-
-    if ($this->bundleType === 'BOGO1') {
-        // Buy X, Get Y Discounted
-        $bundlePrice = 0;
-        $totalCostBogo = 0;
-        $totalQuantity = 0;
-        $discountPercent = $this->selectedDiscount ?? 0;
-        if (is_string($discountPercent)) {
-            $discountPercent = (float) $discountPercent;
-        }
-        
-        $xProducts = [];
-        $yProducts = [];
-        
-        foreach ($productDetails as $prodCode => $data) {
-            $p = $data['product'];
-            $qty = $data['quantity'];
-            $bogoType = $data['bogo_type'] ?? null;
-            
-            if ($bogoType === 'D') {
-                $yProducts[] = [
-                    'prodCode' => $prodCode,
-                    'selling_price' => $p->selling_price,
-                    'cost_price' => $p->cost_price,
-                    'quantity' => $qty,
-                    'name' => $prodCode,
-                ];
-            } else {
-                $xProducts[] = [
-                    'prodCode' => $prodCode,
-                    'selling_price' => $p->selling_price,
-                    'cost_price' => $p->cost_price,
-                    'quantity' => $qty,
-                    'name' => $prodCode,
-                ];
+        foreach ($this->selectedProducts as $prodCode => $data) {
+            if (!($data['selected'] ?? false)) {
+                continue;
             }
-        }
-        
-        foreach ($xProducts as $product) {
-            $bundlePrice += $product['selling_price'] * $product['quantity'];
-            $totalCostBogo += $product['cost_price'] * $product['quantity'];
-            $totalQuantity += $product['quantity'];
-        }
-        
-        foreach ($yProducts as $product) {
-            $discountMultiplier = 1 - ($discountPercent / 100);
-            $bundlePrice += $product['selling_price'] * $product['quantity'] * $discountMultiplier;
-            $totalCostBogo += $product['cost_price'] * $product['quantity'];
-            $totalQuantity += $product['quantity'];
+
+            $qty = $data['quantity'] ?? 1;
+
+            $product = DB::table('products')
+                ->select('cost_price', 'selling_price')
+                ->where('prod_code', $prodCode)
+                ->first();
+
+            if (!$product) {
+                continue;
+            }
+
+            $totalCost    += $product->cost_price * $qty;
+            $regularTotal += $product->selling_price * $qty;
+
+            $productDetails[$prodCode] = [
+                'product' => $product,
+                'quantity' => $qty,
+                'bogo_type' => $data['bogo_type'] ?? null,
+                'cost_price' => $product->cost_price,
+                'selling_price' => $product->selling_price,
+            ];
         }
 
-        
-        $profit = $bundlePrice - $totalCostBogo;
-        
-        $minProfit = max(0, (float) $this->minProfit);
-        
-        // If profit is less than minimum, adjust bundle price
-        // if ($profit < $minProfit) {
-        //     $bundlePrice = $totalCostBogo + $minProfit;
-        //     $profit = $minProfit;
-        // }
-        
-        $minBundlePrice = $totalCostBogo + $minProfit;
-        if ($minBundlePrice > $regularTotal) {
-            $minBundlePrice = $regularTotal;
+        if ($totalCost <= 0 || $regularTotal <= 0) {
+            $this->pricingPreview = [];
+            return;
         }
-        
-        $maxDiscountPercent = max(0, (($regularTotal - $minBundlePrice) / $regularTotal) * 100);
-        
-        $discountTiers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30,35, 40, 45, 50, 55, 60, 65, 70, 75];
 
-        $discountOptions = collect($discountTiers)
-            ->map(function ($yDiscountPercent) use ($regularTotal, $totalCostBogo, $minProfit, $yProducts, $xProducts) {
-                
-                
-                $tierBundlePrice = 0;
-                
-                foreach ($xProducts as $product) {
-                    $tierBundlePrice += $product['selling_price'] * $product['quantity'];
-                }
-                
-                foreach ($yProducts as $product) {
-                    $discountMultiplier = 1 - ($yDiscountPercent / 100);
-                    $tierBundlePrice += $product['selling_price'] * $product['quantity'] * $discountMultiplier;
-                }
-                
-                $tierProfit = round($tierBundlePrice - $totalCostBogo, 2);
-                
-                $effectiveDiscountPercent = round((($regularTotal - $tierBundlePrice) / $regularTotal) * 100, 2);
-                
-                return [
-                    'y_discount_percent' => $yDiscountPercent, 
-                    'discount_percent' => $yDiscountPercent, 
-                    'bundle_price'     => round($tierBundlePrice, 2),
-                    'profit'           => $tierProfit,
-                    'calculation_note' => "{$yDiscountPercent}% on Y = {$effectiveDiscountPercent}% overall",
-                ];
-            })
-            ->filter(fn ($opt) => $opt['profit'] >= $minProfit)
-            ->values();
-        
-        $selectedBundlePrice = optional($discountOptions->first())['bundle_price'] ?? $bundlePrice;
-        $matchingOption = $discountOptions->firstWhere('y_discount_percent', $discountPercent);
-        
-        $this->pricingPreview = [
-            'total_cost'       => round($totalCostBogo, 2),
-            'regular_price'    => round($regularTotal, 2),
-            'bundle_price' => round($matchingOption['bundle_price'] ?? $bundlePrice, 2),
-            'selected_bundle_price' => round($selectedBundlePrice, 2),
-            'discount_offer'   => $this->selectedDiscount,
-            'max_discount'     => round($maxDiscountPercent, 2),
-            'expected_profit'  => round($profit, 2),
-            'discount_options' => $discountOptions,
-            'x_products'       => $xProducts,
-            'y_products'       => $yProducts,
-        ];
-        
-        return;
+        $bundlePrice = $regularTotal;
+        $profit      = $regularTotal - $totalCost;
 
-    } elseif ($this->bundleType === 'BOGO2') {
-       
-        $bundlePrice = 0;
-        $totalCostBogo = 0;
-        $freeQty = 0;
-        
-        foreach ($productDetails as $prodCode => $data) {
-            $p = $data['product'];
-            
-            if ($data['bogo_type'] == 'F') {
-                $freeQty = $data['quantity'] ?? 1;
-            } else {
-                $qty = $data['quantity'] ?? 1;
+        if ($this->bundleType === 'BOGO1') {
+            // Buy X, Get Y Discounted
+            $bundlePrice = 0;
+            $totalCostBogo = 0;
+            $totalQuantity = 0;
+            $discountPercent = $this->selectedDiscount ?? 0;
+            if (is_string($discountPercent)) {
+                $discountPercent = (float) $discountPercent;
             }
             
-            $bundlePrice += $p->selling_price * $qty;
-            $totalCostBogo += $p->cost_price * ($qty + $freeQty);
-        }
-        
-        $profit = $bundlePrice - $totalCostBogo;
-        
-        $minProfit = max(0, (float) $this->minProfit);
-        
-        if ($profit < $minProfit) {
-            $bundlePrice = $totalCostBogo + $minProfit;
-            $profit = $minProfit;
-        }
-        
-        $this->pricingPreview = [
-            'total_cost'       => round($totalCostBogo, 2),
-            'regular_price'    => round($regularTotal, 2),
-            'bundle_price'     => round($bundlePrice, 2),
-            'expected_profit'  => round($profit, 2),
-            'discount_offer'   => $this->selectedDiscount,
-            'discount_options' => collect([]),
-        ];
-        
-        return;
-    } else {
-        
-        $minProfit = max(0, (float) $this->minProfit);
-        $minBundlePrice = $totalCost + $minProfit;
-        
-        if ($minBundlePrice > $regularTotal) {
-            $minBundlePrice = $regularTotal;
-        }
-        
-        $maxDiscountPercent = max(0, (($regularTotal - $minBundlePrice) / $regularTotal) * 100);
-        
-        $discountTiers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30,35, 40, 45, 50, 55, 60, 65, 70, 75];
-        
-        $discountOptions = collect($discountTiers)
-            ->map(function ($discount) use ($regularTotal, $totalCost, $minProfit) {
-                $bundlePrice = round($regularTotal * (1 - ($discount / 100)));
-                $profit = round($bundlePrice - $totalCost, 2);
-                $effectiveDiscountPercent = round((($regularTotal - $bundlePrice) / $regularTotal) * 100, 2);
+            $xProducts = [];
+            $yProducts = [];
+            
+            foreach ($productDetails as $prodCode => $data) {
+                $p = $data['product'];
+                $qty = $data['quantity'];
+                $bogoType = $data['bogo_type'] ?? null;
                 
-                return [
-                    'discount_percent' => $effectiveDiscountPercent,
-                    'bundle_price'     => $bundlePrice,
-                    'profit'           => $profit,
-                ];
-            })
-            ->filter(fn ($opt) => $opt['profit'] >= $minProfit)
-            ->values();
+                if ($bogoType == null) {
+                    $yProducts[] = [
+                        'prodCode' => $prodCode,
+                        'selling_price' => $p->selling_price,
+                        'cost_price' => $p->cost_price,
+                        'quantity' => $qty,
+                        'name' => $prodCode,
+                    ];
+                } else {
+                    $xProducts[] = [
+                        'prodCode' => $prodCode,
+                        'selling_price' => $p->selling_price,
+                        'cost_price' => $p->cost_price,
+                        'quantity' => $qty,
+                        'name' => $prodCode,
+                    ];
+                }
+            }
+            
+            foreach ($xProducts as $product) {
+                $bundlePrice += $product['selling_price'] * $product['quantity'];
+                $totalCostBogo += $product['cost_price'] * $product['quantity'];
+                $totalQuantity += $product['quantity'];
+            }
+            
+            foreach ($yProducts as $product) {
+                $discountMultiplier = 1 - ($discountPercent / 100);
+                $bundlePrice += $product['selling_price'] * $product['quantity'] * $discountMultiplier;
+                $totalCostBogo += $product['cost_price'] * $product['quantity'];
+                $totalQuantity += $product['quantity'];
+            }
+
+            
+            $profit = $bundlePrice - $totalCostBogo;
+            
+            $minProfit = max(0, (float) $this->minProfit);
+            
+            // If profit is less than minimum, adjust bundle price
+            // if ($profit < $minProfit) {
+            //     $bundlePrice = $totalCostBogo + $minProfit;
+            //     $profit = $minProfit;
+            // }
+            
+            $minBundlePrice = $totalCostBogo + $minProfit;
+            if ($minBundlePrice > $regularTotal) {
+                $minBundlePrice = $regularTotal;
+            }
+            
+            $maxDiscountPercent = max(0, (($regularTotal - $minBundlePrice) / $regularTotal) * 100);
+            
+            $discountTiers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30,35, 40, 45, 50, 55, 60, 65, 70, 75];
+
+            $discountOptions = collect($discountTiers)
+                ->map(function ($yDiscountPercent) use ($regularTotal, $totalCostBogo, $minProfit, $yProducts, $xProducts) {
+                    
+                    
+                    $tierBundlePrice = 0;
+                    
+                    foreach ($xProducts as $product) {
+                        $tierBundlePrice += $product['selling_price'] * $product['quantity'];
+                    }
+                    
+                    foreach ($yProducts as $product) {
+                        $discountMultiplier = 1 - ($yDiscountPercent / 100);
+                        $tierBundlePrice += $product['selling_price'] * $product['quantity'] * $discountMultiplier;
+                    }
+                    
+                    $tierProfit = round($tierBundlePrice - $totalCostBogo, 2);
+                    
+                    $effectiveDiscountPercent = round((($regularTotal - $tierBundlePrice) / $regularTotal) * 100, 2);
+                    
+                    return [
+                        'y_discount_percent' => $yDiscountPercent, 
+                        'discount_percent' => $yDiscountPercent, 
+                        'bundle_price'     => round($tierBundlePrice, 2),
+                        'profit'           => $tierProfit,
+                        'calculation_note' => "{$yDiscountPercent}% on Y = {$effectiveDiscountPercent}% overall",
+                    ];
+                })
+                ->filter(fn ($opt) => $opt['profit'] >= $minProfit)
+                ->values();
+            
+            $selectedBundlePrice = optional($discountOptions->first())['bundle_price'] ?? $bundlePrice;
+            $matchingOption = $discountOptions->firstWhere('y_discount_percent', $discountPercent);
+            
+            $this->pricingPreview = [
+                'total_cost'       => round($totalCostBogo, 2),
+                'regular_price'    => round($regularTotal, 2),
+                'bundle_price' => round($matchingOption['bundle_price'] ?? $bundlePrice, 2),
+                'selected_bundle_price' => round($selectedBundlePrice, 2),
+                'discount_offer'   => $this->selectedDiscount,
+                'max_discount'     => round($maxDiscountPercent, 2),
+                'expected_profit'  => round($profit, 2),
+                'discount_options' => $discountOptions,
+                'x_products'       => $xProducts,
+                'y_products'       => $yProducts,
+            ];
+            
+            return;
+
+        } elseif ($this->bundleType === 'BOGO2') {
         
-        $selectedBundlePrice = optional($discountOptions->first())['bundle_price'] ?? null;
-        
-        $this->pricingPreview = [
-            'total_cost'        => round($totalCost, 2),
-            'regular_price'     => round($regularTotal, 2),
-            'bundle_price'      => $selectedBundlePrice,
-            'discount_offer'    => $this->selectedDiscount,
-            'max_discount'      => round($maxDiscountPercent, 2),
-            'expected_profit'   => round($minProfit, 2),
-            'discount_options'  => $discountOptions,
-        ];
+            $bundlePrice = 0;
+            $totalCostBogo = 0;
+            $totalQuantity = 0;
+            $discountPercent = $this->selectedDiscount ?? 0;
+            if (is_string($discountPercent)) {
+                $discountPercent = (float) $discountPercent;
+            }
+            
+            $xProducts = [];
+            $yProducts = [];
+            
+            foreach ($productDetails as $prodCode => $data) {
+                $p = $data['product'];
+                $qty = $data['quantity'];
+                $bogoType = $data['bogo_type'] ?? null;
+                
+                if ($bogoType == null) {
+                    $yProducts[] = [
+                        'prodCode' => $prodCode,
+                        'selling_price' => $p->selling_price,
+                        'cost_price' => $p->cost_price,
+                        'quantity' => $qty,
+                        'name' => $prodCode,
+                    ];
+                } else {
+                    $xProducts[] = [
+                        'prodCode' => $prodCode,
+                        'selling_price' => $p->selling_price,
+                        'cost_price' => $p->cost_price,
+                        'quantity' => $qty,
+                        'name' => $prodCode,
+                    ];
+                }
+            }
+
+            $this->regularBundlePrice = $qty * $data['selling_price'];
+            
+            foreach ($xProducts as $product) {
+                $this->freeBundlePrice = $bundlePrice += $product['selling_price'] * $product['quantity'];
+                $totalCostBogo += $product['cost_price'] * $product['quantity'];
+                $totalQuantity += $product['quantity'];
+            }
+
+            
+            $profit = $bundlePrice - $totalCostBogo;
+            
+            $minProfit = max(0, (float) $this->minProfit);
+            
+            $this->pricingPreview = [
+                'total_cost'       => round($totalCostBogo, 2),
+                'regular_price'    => round($regularTotal, 2),
+                'bundle_price'     => round($bundlePrice, 2),
+                'expected_profit'  => round($profit, 2),
+                'discount_offer'   => $this->selectedDiscount,
+                'discount_options' => collect([]),
+            ];
+            
+            return;
+        } else {
+            
+            $minProfit = max(0, (float) $this->minProfit);
+            $minBundlePrice = $totalCost + $minProfit;
+            
+            if ($minBundlePrice > $regularTotal) {
+                $minBundlePrice = $regularTotal;
+            }
+            
+            $maxDiscountPercent = max(0, (($regularTotal - $minBundlePrice) / $regularTotal) * 100);
+            
+            $discountTiers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30,35, 40, 45, 50, 55, 60, 65, 70, 75];
+            
+            $discountOptions = collect($discountTiers)
+                ->map(function ($discount) use ($regularTotal, $totalCost, $minProfit) {
+                    $bundlePrice = round($regularTotal * (1 - ($discount / 100)));
+                    $profit = round($bundlePrice - $totalCost, 2);
+                    $effectiveDiscountPercent = round((($regularTotal - $bundlePrice) / $regularTotal) * 100, 2);
+                    
+                    return [
+                        'discount_percent' => $effectiveDiscountPercent,
+                        'bundle_price'     => $bundlePrice,
+                        'profit'           => $profit,
+                    ];
+                })
+                ->filter(fn ($opt) => $opt['profit'] >= $minProfit)
+                ->values();
+            
+            $selectedBundlePrice = optional($discountOptions->first())['bundle_price'] ?? null;
+            
+            $this->pricingPreview = [
+                'total_cost'        => round($totalCost, 2),
+                'regular_price'     => round($regularTotal, 2),
+                'bundle_price'      => $selectedBundlePrice,
+                'discount_offer'    => $this->selectedDiscount,
+                'max_discount'      => round($maxDiscountPercent, 2),
+                'expected_profit'   => round($minProfit, 2),
+                'discount_options'  => $discountOptions,
+            ];
+        }
     }
-}
 
     public function selectDiscount($discountPercent, $newBundlePrice)
     {
@@ -488,34 +592,30 @@ public function calculatePricingPreview()
 
     }
 
-
-    public function setBogoType($prodCode)
+    public function setBogoType($rowKey)
     {
-        if (!isset($this->selectedProducts[$prodCode])) {
-            $this->calculatePricingPreview();
+        if (!isset($this->selectedProducts[$rowKey])) {
             return;
         }
 
-        $isActive = $this->selectedProducts[$prodCode]['bogo_type'] ?? null;
-
-        // If clicking the already-active one → turn it OFF
-        if ($isActive) {
-            $this->selectedProducts[$prodCode]['bogo_type'] = null;
-            $this->calculatePricingPreview();
-            return;
-        }
-
-        // Otherwise, turn OFF all others first
-        foreach ($this->selectedProducts as $code => $item) {
-            $this->selectedProducts[$code]['bogo_type'] = null;
-        }
-
-        // Turn ON only the clicked product
-        $this->selectedProducts[$prodCode]['bogo_type'] =
-            $this->bundleType === 'BOGO1' ? 'D' : 'F';
+        // Toggle between:
+        // - null = Regular product (BUY/PAY)
+        // - 'P' = Promotional product (GET/FREE)
         
+        $current = $this->selectedProducts[$rowKey]['bogo_type'] ?? null;
+        
+        if ($current === 'P') {
+            // Changing from Promotional (GET) to Regular (BUY)
+            $this->selectedProducts[$rowKey]['bogo_type'] = null;
+        } else {
+            // Changing from Regular (BUY) to Promotional (GET)
+            $this->selectedProducts[$rowKey]['bogo_type'] = 'P';
+        }
+
         $this->calculatePricingPreview();
     }
+
+
 
     public function updatedBundleType($value)
     {
