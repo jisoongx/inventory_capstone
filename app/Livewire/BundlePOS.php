@@ -37,6 +37,7 @@ class BundlePOS extends Component
             LEFT JOIN bundles_setting s
                 ON b.bundle_id = s.bundle_id
             where owner_id = ?
+                and status = 'active'
         ", [$owner_id]);
         $this->showBundles = true;
     }

@@ -198,6 +198,7 @@ class CreateBundle extends Component
         }
     }
 
+    public $discountError = null;
 
     public function createBundle()
     {
@@ -214,6 +215,20 @@ class CreateBundle extends Component
         if ($selectedItems->isEmpty()) {
             session()->flash('error', 'Please select at least one product.');
             return;
+        }
+
+        if($this->status == 'ACTIVE') {
+            if(empty($this->startDate) || empty($this->endDate)) {
+                $this->startDate = Carbon::now()->toDateString();
+                return;
+            }
+        }
+
+        if($this->bundleType != 'BOGO2' && $this->selectedDiscount === null) {  
+            $this->discountError = "Cannot proceed. Choose a discount to proceed.";
+            return;
+        } else {
+            $this->discountError = null;
         }
 
         $this->validate([
@@ -246,6 +261,7 @@ class CreateBundle extends Component
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
 
             // Insert bundle settings
             DB::table('bundles_setting')->insert([
@@ -297,7 +313,12 @@ class CreateBundle extends Component
         $this->resetValidation();
     }
 
-
+    public $nextStep;
+    
+    public function updatedNextStep()
+    {
+        $this->calculatePricingPreview();
+    }
 
     public function updatedSelectedProducts($value, $key)
     {
@@ -431,7 +452,6 @@ class CreateBundle extends Component
             $discountOptions = collect($discountTiers)
                 ->map(function ($yDiscountPercent) use ($regularTotal, $totalCostBogo, $minProfit, $yProducts, $xProducts) {
                     
-                    
                     $tierBundlePrice = 0;
                     
                     foreach ($xProducts as $product) {
@@ -449,14 +469,16 @@ class CreateBundle extends Component
                     
                     return [
                         'y_discount_percent' => $yDiscountPercent, 
-                        'discount_percent' => $yDiscountPercent, 
+                        'discount_percent' => $effectiveDiscountPercent,
                         'bundle_price'     => round($tierBundlePrice, 2),
                         'profit'           => $tierProfit,
                         'calculation_note' => "{$yDiscountPercent}% on Y = {$effectiveDiscountPercent}% overall",
                     ];
                 })
-                ->filter(fn ($opt) => $opt['profit'] >= $minProfit)
-                ->values();
+            ->filter(fn ($opt) => $opt['profit'] >= $minProfit)
+            ->unique(fn ($opt) => $opt['bundle_price'].'-'.$opt['profit']) 
+            ->values();
+
             
             $selectedBundlePrice = optional($discountOptions->first())['bundle_price'] ?? $bundlePrice;
             $matchingOption = $discountOptions->firstWhere('y_discount_percent', $discountPercent);
@@ -562,6 +584,7 @@ class CreateBundle extends Component
                     ];
                 })
                 ->filter(fn ($opt) => $opt['profit'] >= $minProfit)
+                ->unique(fn ($opt) => $opt['bundle_price'].'-'.$opt['profit'])
                 ->values();
             
             $selectedBundlePrice = optional($discountOptions->first())['bundle_price'] ?? null;
@@ -645,6 +668,7 @@ class CreateBundle extends Component
     public function render()
     {
         $owner_id = Auth::guard('owner')->user()->owner_id;
+
 
         if (!Auth::guard('owner')->check()) {
             abort(403, 'Unauthorized access.');
@@ -759,6 +783,28 @@ class CreateBundle extends Component
         
         $this->showBundles = false;
     }
+
+    public $updateBundleId;
+    public $updateStat;
+
+    public function saveStatus($bundleId, $index)
+    {
+        // Get the new status from the collection
+        $newStatus = $this->allBundle[$index]->status;
+
+        // Update the DB
+        DB::table('bundles')
+            ->where('bundle_id', $bundleId)
+            ->update([
+                'status' => $newStatus,
+                'updated_at' => now(),
+            ]);
+
+        session()->flash('success', 'Status updated successfully!');
+    }
+
+
+
 
 
 // public function loadNearExpiryBundles()

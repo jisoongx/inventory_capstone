@@ -55,7 +55,7 @@
                                         <div class="bg-gray-50 rounded-lg p-2.5 border border-gray-100">
                                             <div class="flex items-center gap-1.5 mb-2">
                                                 <div class="w-4 h-4 rounded bg-gray-900 flex items-center justify-center">
-                                                    <span class="text-[9px] font-black text-white">R</span>
+                                                    <span class="text-[9px] font-black text-white">1</span>
                                                 </div>
                                                 <h3 class="text-[10px] font-black text-gray-900 uppercase tracking-wider">Reason / Objective</h3>
                                             </div>
@@ -348,6 +348,14 @@
                                                             {{--@endif--}}
                                                         </div>
                                                     </div>
+                                                    @if($discountError)
+                                                        <p class="flex items-center gap-0.5 text-[9px] font-semibold text-red-600 mt-0.5">
+                                                            <svg class="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            {{ $discountError }}
+                                                        </p>
+                                                    @endif
                                                 </div>
 
                                             </div>
@@ -806,10 +814,14 @@
                                                     <h3 class="text-xs font-semibold text-gray-900">{{ $bundle->bundle_name }}</h3>
                                                     <p class="text-[10px] text-gray-500 mt-0.5">{{ $bundle->bundle_code }}</p>
                                                 </div>
-                                                <span class="px-2 py-0.5 text-[10px] font-medium rounded-full 
-                                                    {{ $bundle->status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                                                    {{ $bundle->status }}
-                                                </span>
+                                                <select wire:model="allBundle.{{ $loop->index }}.status"
+                                                        wire:change="saveStatus({{ $bundle->bundle_id }}, {{ $loop->index }})"
+                                                        class="mt-0.5 text-[10px] px-2 py-1 rounded-full border cursor-pointer
+                                                        {{ $bundle->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                                                    <option value="active">Active</option>
+                                                    <option value="inactive">Inactive</option>
+                                                </select>
+
                                             </div>
                                             
                                             <div class="space-y-1.5">
@@ -860,12 +872,15 @@
 
                                                             <div>
                                                                 <label class="text-[10px] font-medium text-gray-500">Status</label>
-                                                                <p class="mt-0.5">
-                                                                    <span class="px-2 py-0.5 text-[10px] font-medium rounded-full 
-                                                                        {{ $selectedBundle[0]->status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                                                                        {{ $selectedBundle[0]->status }}
-                                                                    </span>
-                                                                </p>
+
+                                                                <select wire:model="updateStat"
+                                                                    wire:change="updateStatus"
+                                                                    class="mt-0.5 text-[10px] px-2 py-1 rounded-full border cursor-pointer
+                                                                    {{ $status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                                                                    
+                                                                    <option value="Active">Active</option>
+                                                                    <option value="Inactive">Inactive</option>
+                                                                </select>
                                                             </div>
 
                                                             <div class="border-t border-gray-200 pt-2">
