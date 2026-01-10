@@ -128,6 +128,10 @@
                             <span class="text-gray-700">Subtotal:</span>
                             <span id="calcSubtotal" class="font-semibold text-gray-900">₱0.00</span>
                         </div>
+                        <div id="calcPromoDiscountsRow" class="flex justify-between text-sm hidden">
+                            <span class="text-gray-700">Item Discounts:</span>
+                            <span id="calcPromoDiscounts" class="font-semibold text-orange-600">₱0.00</span>
+                        </div>
                         <div id="calcItemDiscountsRow" class="flex justify-between text-sm hidden">
                             <span class="text-gray-700">Item Discounts:</span>
                             <span id="calcItemDiscounts" class="font-semibold text-orange-600">₱0.00</span>
@@ -1257,32 +1261,39 @@ class PaymentProcessor {
         // --- Render receipt items with promo lines ---
         const itemsList = document.getElementById('receiptItemsList');
 
+
         if (paymentData.receipt_items && paymentData.receipt_items.length > 0) {
             itemsList.innerHTML = paymentData.receipt_items.map(item => {
-                // Build promo lines
-                const promoHtml = (item.promo_lines || []).map(promo => `
-                    <div class="flex justify-between text-xs text-red-600 pl-4">
-                        <div>${promo.label}${promo.quantity ? ` ${promo.quantity}x` : ''}</div>
-                        <div>₱${parseFloat(promo.amount).toFixed(2)}</div>
+                // Calculate amounts
+                const originalAmount = item.product.selling_price * item.quantity;
+                const netAmount = item.amount || originalAmount;
+                const hasPromo = (item.promo_lines || []).length > 0;
+                
+                // Build promo lines with consistent formatting
+                const promoHtml = (item.promo_lines || []).map(promo => {
+                    const discountPercent = Math.abs((parseFloat(promo.amount) / item.product.selling_price) * 100).toFixed(0);
+                    return `
+                    <div class="promo-line">
+                        <span class="promo-text">${promo.label} -${discountPercent}% off ${promo.quantity}x</span>
+                        <span class="promo-amount">-₱${Math.abs(parseFloat(promo.amount)).toFixed(2)}</span>
                     </div>
-                `).join('');
+                `}).join('');
 
                 return `
-                    <div class="flex flex-col py-2 border-b border-gray-100 last:border-b-0">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1 pr-2">
-                                <div class="text-sm font-medium text-gray-900">${item.product.name}</div>
-                                <div class="text-xs text-gray-500">
-                                    ${item.quantity} × ₱${parseFloat(item.product.selling_price).toFixed(2)}
-                                </div>
-                            </div>
-                            <!-- Keep original product amount -->
-                            <div class="text-sm font-bold text-gray-900">
-                                ₱${(item.product.selling_price * item.quantity).toFixed(2)}
-                            </div>
+                    <div class="receipt-item">
+                        <div class="item-name">${item.product.name}</div>
+                        <div class="item-line">
+                            <span class="item-qty">${item.quantity} × ₱${parseFloat(item.product.selling_price).toFixed(2)}</span>
+                            <span class="item-amount">₱${originalAmount.toFixed(2)}</span>
                         </div>
-                        <!-- Show promo lines subtracting from total -->
                         ${promoHtml}
+                        ${hasPromo ? `
+                        <div class="net-separator"></div>
+                        <div class="net-line">
+                            <span class="net-label">Net Amount:</span>
+                            <span class="net-amount">₱${netAmount.toFixed(2)}</span>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -1304,7 +1315,7 @@ class PaymentProcessor {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>Receipt - {{ $receipt_no ??  '0' }}</title>
+                    <title>Receipt - {{ $receipt_no ?? '0' }}</title>
                     <style>
                         @page {
                             size: 48mm auto;
@@ -1315,10 +1326,10 @@ class PaymentProcessor {
                             width: 48mm;
                             margin: 0 auto;
                             padding: 3px;
-                            font-size: 10.5px;
+                            font-size: 10px;
                             color: #000;
-                            background:  #fff;
-                            line-height: 1.05;
+                            background: #fff;
+                            line-height: 1.3;
                         }
 
                         .text-center { text-align: center; }
@@ -1328,33 +1339,35 @@ class PaymentProcessor {
                         .font-semibold { font-weight: 600; }
                         .font-medium { font-weight: 500; }
 
-                        .text-xl { font-size: 1rem; }
-                        .text-lg { font-size: 0.95rem; }
-                        .text-sm { font-size: 0.8rem; }
-                        .text-xs { font-size:  0.7rem; }
+                        .text-xl { font-size: 14px; }
+                        .text-lg { font-size: 12px; }
+                        .text-sm { font-size: 9px; }
+                        .text-xs { font-size: 8px; }
 
-                        .mb-1 { margin-bottom: 1px; }
-                        .mb-2 { margin-bottom:  2px; }
-                        .mb-3 { margin-bottom: 3px; }
-                        .mb-4 { margin-bottom: 4px; }
-                        .mb-6 { margin-bottom: 6px; }
-                        .mt-1 { margin-top:  1px; }
-                        .mt-2 { margin-top: 2px; }
-                        .mt-6 { margin-top: 6px; }
-                        .pb-2 { padding-bottom: 2px; }
-                        .pb-4 { padding-bottom: 4px; }
-                        .pt-2 { padding-top:  2px; }
-                        .pt-4 { padding-top: 4px; }
-                        .py-2 { padding-top:  2px; padding-bottom: 2px; }
-                        .pr-2 { padding-right:  2px; }
+                        .mb-1 { margin-bottom: 2px; }
+                        .mb-2 { margin-bottom: 4px; }
+                        .mb-3 { margin-bottom: 6px; }
+                        .mb-4 { margin-bottom: 8px; }
+                        .mb-6 { margin-bottom: 12px; }
+                        .mt-1 { margin-top: 2px; }
+                        .mt-2 { margin-top: 4px; }
+                        .mt-3 { margin-top: 6px; }
+                        .mt-6 { margin-top: 12px; }
+                        .pb-2 { padding-bottom: 4px; }
+                        .pb-4 { padding-bottom: 8px; }
+                        .pt-2 { padding-top: 4px; }
+                        .pt-4 { padding-top: 8px; }
+                        .py-2 { padding-top: 4px; padding-bottom: 4px; }
+                        .pr-2 { padding-right: 4px; }
+                        .pl-4 { padding-left: 8px; }
 
-                        .border-b { border-bottom: none; }
+                        .border-b { border-bottom: 1px solid #ddd; }
                         .border-t { border-top: 1px solid #000; }
-                        .border-b-2 { border-bottom:  2px solid #000; }
-                        .border-t-2 { border-top:  2px solid #000; }
+                        .border-b-2 { border-bottom: 2px solid #000; }
+                        .border-t-2 { border-top: 2px solid #000; }
                         .border-gray-100 { border-color: transparent; }
-                        .border-gray-200 { border-color:  #000; }
-                        .border-gray-300 { border-color: #000; }
+                        .border-gray-200 { border-color: #ddd; }
+                        .border-gray-300 { border-color: #999; }
 
                         .text-gray-500,
                         .text-gray-600,
@@ -1369,62 +1382,176 @@ class PaymentProcessor {
                         }
 
                         .flex { display: flex; }
+                        .flex-col { flex-direction: column; }
                         .justify-between { justify-content: space-between; }
                         .items-center { align-items: center; }
                         .items-start { align-items: flex-start; }
                         .flex-1 { flex: 1; }
 
-                        .space-y-1 > * + * { margin-top: 1px; }
-                        .space-y-2 > * + * { margin-top: 2px; }
+                        .space-y-1 > * + * { margin-top: 2px; }
+                        .space-y-2 > * + * { margin-top: 4px; }
 
+                        /* Receipt header info */
                         .mb-4 .flex {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 2px;
+                        }
+
+                        .mb-4 .flex span:first-child {
+                            text-align: left;
+                        }
+
+                        .mb-4 .flex span:last-child {
+                            text-align: right;
+                        }
+
+                        /* Items section header */
+                        h4.font-semibold {
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 4px;
+                            margin-bottom: 6px;
+                            font-size: 11px;
+                        }
+
+                        /* Receipt items container */
+                        #receiptItemsList {
+                            margin: 4px 0;
+                        }
+
+                        /* Each item block */
+                        .receipt-item {
+                            margin-bottom: 8px;
+                            page-break-inside: avoid;
+                        }
+
+                        /* Product name */
+                        .item-name {
+                            font-size: 10px;
+                            font-weight: 500;
+                            color: #000;
+                            margin-bottom: 2px;
+                        }
+
+                        /* Quantity × Price line */
+                        .item-line {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 2px;
+                        }
+
+                        .item-qty {
+                            font-size: 8px;
+                            color: #000;
+                        }
+
+                        .item-amount {
+                            font-size: 9px;
+                            font-weight: bold;
+                            color: #000;
+                            white-space: nowrap;
+                        }
+
+                        /* Promo line - Single line */
+                        .promo-line {
+                            display: flex;
+                            justify-content: space-between;
+                            padding-left: 12px;
+                            margin-top: 1px;
+                            margin-bottom: 1px;
+                        }
+
+                        .promo-text {
+                            font-size: 7px;
+                            color: #000;
+                        }
+
+                        .promo-amount {
+                            font-size: 7px;
+                            color: #000;
+                            white-space: nowrap;
+                        }
+
+                        /* Promo line - Multi-line wrapper */
+                        .promo-line-wrapper {
+                            padding-left: 12px;
+                            margin-top: 1px;
+                            margin-bottom: 1px;
+                        }
+
+                        .promo-line-split {
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
                         }
 
-                        .mb-4 .flex span: first-child {
-                            text-align: left;
+                        .promo-line-split:first-child {
+                            margin-bottom: 0;
                         }
 
-                        .mb-4 .flex span:last-child {
-                            text-align:  right;
+                        .promo-text-small {
+                            font-size: 7px;
+                            color: #000;
+                            padding-left: 6px;
                         }
 
-                        #receiptItemsList .flex {
+                        /* Net amount separator */
+                        .net-separator {
+                            border-top: 1px dashed #999;
+                            margin: 3px 0;
+                        }
+
+                        /* Net amount line */
+                        .net-line {
                             display: flex;
                             justify-content: space-between;
-                            align-items: flex-start;
-                            width: 100%;
+                            padding-left: 12px;
+                            margin-top: 3px;
                         }
 
-                        #receiptItemsList .flex-1 {
-                            flex:  1;
-                            text-align: left;
-                            padding-right: 4px;
+                        .net-label {
+                            font-size: 8px;
+                            font-weight: 600;
+                            color: #000;
                         }
 
-                        #receiptItemsList .text-right {
-                            text-align:  right;
+                        .net-amount {
+                            font-size: 9px;
+                            font-weight: bold;
+                            color: #000;
                             white-space: nowrap;
                         }
 
-                        #receiptItemsList .text-sm.font-medium {
-                            text-align: left;
+                        /* Summary section */
+                        .border-t-2.border-gray-300.pt-4.space-y-2 {
+                            border-top: 2px solid #000;
+                            padding-top: 8px;
+                            margin-top: 8px;
                         }
 
-                        #receiptItemsList .text-sm.font-bold {
-                            text-align: right;
+                        .border-t-2.border-gray-300.pt-4.space-y-2 > div {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-bottom: 2px;
                         }
 
-                        h4.font-semibold {
-                            border-bottom: 2px solid #000;
-                            padding-bottom: 2px;
-                            margin-bottom: 3px;
+                        .border-t-2.border-gray-300.pt-4.space-y-2 > div:last-child {
+                            border-bottom: none !important;
                         }
 
-                        .border-t-2.border-gray-300.pt-4.space-y-2 > div: last-child {
-                            border-bottom: none ! important;
+                        /* VAT section */
+                        .border-t.pt-2.mt-2 {
+                            border-top: 1px solid #000;
+                            padding-top: 4px;
+                            margin-top: 4px;
+                        }
+
+                        .border-t.pt-2.mt-2.space-y-1 > div {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-bottom: 2px;
                         }
 
                         @media print {
@@ -1433,6 +1560,10 @@ class PaymentProcessor {
                                 margin: 0;
                                 width: 48mm;
                                 font-size: 10px;
+                            }
+                            
+                            .receipt-item {
+                                page-break-inside: avoid;
                             }
                         }
                     </style>

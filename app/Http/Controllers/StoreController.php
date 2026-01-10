@@ -970,57 +970,66 @@ class StoreController extends Controller
 
                 $totalItemDiscount = 0;
                 $totalPromoDiscount = 0;
+                $bundleAppliedUnits = 0;
 
                 // --- Item discount ---
                 if (isset($itemDiscounts[$item['prod_code']])) {
                     $discount = $itemDiscounts[$item['prod_code']];
                     $type = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
-                    $discountPerUnit = $type === 'percent' ? $pricePerUnit * ($discount['value'] / 100) : min($discount['value'], $pricePerUnit);
+
+                    $discountPerUnit = $type === 'percent'
+                        ? $pricePerUnit * ($discount['value'] / 100)
+                        : min($discount['value'], $pricePerUnit);
+
                     $totalItemDiscount = $discountPerUnit * $item['quantity'];
                 }
 
-                // --- Promo/bundle discount ---
+                // --- Promo / bundle discount ---
                 if (isset($eligibleBundles[$item['prod_code']])) {
                     foreach ($eligibleBundles[$item['prod_code']] as $bundle) {
 
                         $ruleQty = $bundle['required_qty'] ?? 1;
                         $remainingQty = $item['quantity'] - $bundleAppliedUnits;
+                        if ($remainingQty <= 0) break;
+
                         $applyQty = min($ruleQty, $remainingQty);
-                        
+
                         switch ($bundle['bundle_type']) {
+
                             case 'BOGO1':
-                                // P = regular price, NULL = discounted
                                 if ($bundle['bogoType'] === null) {
                                     $percent = $bundle['discount_percent'] ?? 0;
                                     $totalPromoDiscount += $pricePerUnit * ($percent / 100) * $applyQty;
+                                    $bundleAppliedUnits += $applyQty;
                                 }
                                 break;
 
                             case 'BOGO2':
-                                // P = paid, NULL = free
                                 if ($bundle['bogoType'] === null) {
                                     $totalPromoDiscount += $pricePerUnit * $applyQty;
+                                    $bundleAppliedUnits += $applyQty;
                                 }
                                 break;
 
                             case 'MULTI-BUY':
                             case 'EXPIRY':
                             case 'MIXED':
-                                // Everyone discounted
                                 $percent = $bundle['discount_percent'] ?? 0;
                                 $totalPromoDiscount += $pricePerUnit * ($percent / 100) * $applyQty;
+                                $bundleAppliedUnits += $applyQty;
                                 break;
                         }
-
-                        
                     }
                 }
 
                 $totalDiscount = $totalItemDiscount + $totalPromoDiscount;
-                $afterDiscount = $pricePerUnit * $item['quantity'] - $totalDiscount;
+
+                // ✅ ACCUMULATE instead of overwrite
+                $afterDiscount += $pricePerUnit * $item['quantity'] - $totalDiscount;
             }
 
             $afterPromoDiscounts = $afterItemDiscounts - $afterDiscount;
+
 
 
             // receipt-level discount (PER UNIT basis)
