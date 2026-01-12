@@ -1102,22 +1102,35 @@ class PaymentProcessor {
 
     async processPayment() {
 
-        const paid = Math.round(this.amountPaid * 100);
+        const paid  = Math.round(this.amountPaid * 100);
         const total = Math.round(this.totalAmount * 100);
 
-        if (this.paid < this.total) {
-            this.showToast(`Insufficient amount paid: ₱${this.totalAmount.toFixed(2)} ----- ₱${this.totalAmount.toFixed(2)}`,
-            'error');
+        if (paid < total) {
+            this.showToast(
+                `Insufficient amount paid: ₱${this.amountPaid.toFixed(2)} / ₱${this.totalAmount.toFixed(2)}`,
+                'error'
+            );
             return;
         }
 
-        const hasItemDiscounts = Object.values(this.itemDiscounts).some(d => d.value > 0);
-        const hasReceiptDiscount = this.receiptDiscount.value > 0;
-        
+        const itemDiscounts = this.itemDiscounts || {};
+        const hasItemDiscounts = Object.values(itemDiscounts)
+            .some(d => (d?.value || 0) > 0);
+
+        const receiptDiscount = this.receiptDiscount || { value: 0, type: null };
+        const hasReceiptDiscount = receiptDiscount.value > 0;
+
         if (hasItemDiscounts && hasReceiptDiscount) {
-            this.showToast('❌ Cannot apply both item and receipt discounts simultaneously', 'error');
+            this.showToast(
+                '❌ Cannot apply both item and receipt discounts simultaneously',
+                'error'
+            );
             return;
         }
+
+        
+            console.log('itemDiscounts:', this.itemDiscounts);
+            console.log('receiptDiscount:', this.receiptDiscount);
 
         const completeBtn = document.getElementById('completePayment');
         completeBtn.disabled = true;
@@ -1155,6 +1168,7 @@ class PaymentProcessor {
                 completeBtn.textContent = 'Complete Payment';
             }
         } catch (error) {
+
             console.error('Error processing payment:', error);
             this.showToast('Error processing payment:  ' + error.message, 'error');
             completeBtn.disabled = false;
@@ -1199,7 +1213,7 @@ class PaymentProcessor {
         document.getElementById('receiptTransactionDate').textContent = now.toLocaleString('en-US', options);
 
         // --- Apply eligible bundles to receipt_items ---
-        Object.values(this.eligibleBundles).forEach(bundleItems => {
+        Object.values(this.eligibleBundles || {}).forEach(bundleItems => {
             bundleItems.forEach(bundleItem => {
                 const cartItem = paymentData.receipt_items.find(
                     ci => ci.product.prod_code === bundleItem.prod_code

@@ -231,6 +231,10 @@ class CreateBundle extends Component
             $this->discountError = null;
         }
 
+        if($this->bundleType == 'BOGO2' && $this->bogoType === null) {  
+            $this->selectedDiscount = 100;
+        }
+
         $this->validate([
             'bundleCode' => 'required|unique:bundles,bundle_code',
             'bundleName' => 'required',

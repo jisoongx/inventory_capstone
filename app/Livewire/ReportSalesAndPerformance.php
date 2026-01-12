@@ -235,17 +235,21 @@ class ReportSalesAndPerformance extends Component
                 COUNT(DISTINCT ri.item_id) as total_items,
                 SUM(ri.item_quantity) as total_quantity,
                 
-                COALESCE(SUM(ri.item_quantity * COALESCE(
-                            (SELECT ph.old_selling_price
-                            FROM pricing_history ph
-                            WHERE ph.prod_code = ri.prod_code
-                            AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
-                            ORDER BY ph.effective_from DESC
-                            LIMIT 1),
-                            p.selling_price
-                        )), 0) as subtotal,
+                COALESCE(SUM(
+                    ri.item_quantity * COALESCE(
+                        (SELECT ph.old_selling_price
+                        FROM pricing_history ph
+                        WHERE ph.prod_code = ri.prod_code
+                        AND r.receipt_date BETWEEN ph.effective_from AND ph.effective_to
+                        ORDER BY ph.effective_from DESC
+                        LIMIT 1),
+                        p.selling_price
+                    )
+                ), 0) as subtotal,
                 
-                COALESCE(SUM(ri.item_discount_amount), 0) as total_item_discounts,
+                -- ✅ FIX IS HERE
+                COALESCE(SUM(ri.item_discount_amount * ri.item_quantity), 0) 
+                    as total_item_discounts,
                 
                 COALESCE(SUM(ri.vat_amount), 0) as total_vat_inclusive
                 
@@ -254,9 +258,16 @@ class ReportSalesAndPerformance extends Component
             LEFT JOIN products p ON ri.prod_code = p.prod_code
             WHERE r.owner_id = ?  
             AND DATE(r.receipt_date) BETWEEN ? AND ?
-            GROUP BY r.receipt_id, r.receipt_date, r.amount_paid, r.discount_type, r.discount_value, r.discount_amount
+            GROUP BY 
+                r.receipt_id,
+                r.receipt_date,
+                r.amount_paid,
+                r.discount_type,
+                r.discount_value,
+                r.discount_amount
             ORDER BY r.receipt_date DESC
         ", [$owner_id, $this->dateFrom, $this->dateTo]));
+
     
         $this->transactions = $this->transactions->map(function($transaction) {
             $subtotal = floatval($transaction->subtotal ??  0);
