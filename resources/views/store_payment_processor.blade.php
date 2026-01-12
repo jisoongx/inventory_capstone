@@ -143,7 +143,7 @@
                         <!-- ✅ VAT Breakdown - Always visible -->
                         <div class="border-t pt-2 mt-2">
                             <div class="flex justify-between text-sm">
-                                <span class="text-gray-700">VAT-Inclusive: </span>
+                                <span class="text-gray-700">VAT-Inclusive:</span>
                                 <span id="calcVATInclusive" class="font-semibold text-blue-600">₱0.00</span>
                             </div>
                             <div class="flex justify-between text-sm">
@@ -1191,8 +1191,11 @@ class PaymentProcessor {
 
         const itemDiscountsAmount = paymentData.total_item_discounts ??  0;
         const receiptDiscountAmount = paymentData.receipt_discount_amount ?? 0;
-        const vatAmountInclusive = paymentData.vat_amount_inclusive ??  0;
-        const vatAmountExempt = paymentData.vat_amount_exempt ??  0;
+            const vatAmountInclusive = parseFloat(paymentData.vat_amount_inclusive || 0);
+            const vatAmountExempt = parseFloat(paymentData.vat_amount_exempt || 0);
+            const totalVatAmount = parseFloat(paymentData.vat_amount || 0);
+
+            console.log('VAT Data:', { vatAmountInclusive, vatAmountExempt, totalVatAmount });
 
         document.getElementById('receiptItemDiscounts').textContent = `₱${parseFloat(itemDiscountsAmount).toFixed(2)}`;
         document.getElementById('receiptReceiptDiscount').textContent = `₱${parseFloat(receiptDiscountAmount).toFixed(2)}`;

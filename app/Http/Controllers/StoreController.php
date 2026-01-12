@@ -1056,27 +1056,66 @@ class StoreController extends Controller
             }
 
             $afterReceiptDiscount = $afterPromoDiscounts - $receiptDiscountAmount;
-    
-            
+
+
+            // new vat changes
             $vatAmountInclusive = 0;
             $vatAmountExempt = 0;
-            
+
             if ($vatEnabled && $vatRate > 0) {
-                $discountMultiplier = $subtotal > 0 ? ($afterReceiptDiscount / $subtotal) : 0;
-                
                 foreach ($items as $item) {
                     $product = Product::where('prod_code', $item['prod_code'])->first();
-                    $itemTotal = $product->selling_price * $item['quantity'];
-                    $itemAfterDiscounts = $itemTotal * $discountMultiplier;
+                    $pricePerUnit = $product->selling_price;
+                    $totalQty = $item['quantity'];
                     
+                    // Calculate item discount
+                    $itemDiscountAmount = 0;
+                    if (isset($itemDiscounts[$item['prod_code']])) {
+                        $discount = $itemDiscounts[$item['prod_code']];
+                        $discountType = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
+                        
+                        if ($discountType === 'percent') {
+                            $itemDiscountAmount = ($pricePerUnit * ($discount['value'] / 100)) * $totalQty;
+                        } else {
+                            $itemDiscountAmount = min($discount['value'], $pricePerUnit) * $totalQty;
+                        }
+                    }
+                    
+                    // Calculate bundle discount
+                    $bundleDiscountAmount = 0;
+                    if (isset($eligibleBundlesByProduct[$item['prod_code']])) {
+                        foreach ($eligibleBundlesByProduct[$item['prod_code']] as $bundle) {
+                            $bundlePercent = (float) ($bundle['discount_percent'] ??  0);
+                            $requiredQty = (int) ($bundle['required_qty'] ?? 1);
+                            $bogoType = $bundle['bogoType'] ?? null;
+                            
+                            $applyQty = min($requiredQty, $totalQty);
+                            
+                            if ($bogoType === null && $bundlePercent > 0) {
+                                $bundleDiscountAmount += ($pricePerUnit * ($bundlePercent / 100)) * $applyQty;
+                            }
+                        }
+                    }
+                    
+                    // Calculate item total after item and bundle discounts
+                    $itemGross = $pricePerUnit * $totalQty;
+                    $itemAfterItemDiscount = $itemGross - $itemDiscountAmount;
+                    $itemAfterBundleDiscount = $itemAfterItemDiscount - $bundleDiscountAmount;
+                    
+                    // Apply proportional receipt discount
+                    $itemShare = $subtotal > 0 ? ($itemGross / $subtotal) : 0;
+                    $itemReceiptDiscount = $receiptDiscountAmount * $itemShare;
+                    $itemFinalAmount = $itemAfterBundleDiscount - $itemReceiptDiscount;
+                    
+                    // Calculate VAT based on final amount
                     if ($product->vat_category === 'vat_inclusive') {
-                        $vatAmountInclusive += $itemAfterDiscounts * ($vatRate / (100 + $vatRate));
+                        $vatAmountInclusive += $itemFinalAmount * ($vatRate / (100 + $vatRate));
                     } else {
-                        $vatAmountExempt += $itemAfterDiscounts;
+                        $vatAmountExempt += $itemFinalAmount;
                     }
                 }
             }
-            
+
             $totalVatAmount = $vatAmountInclusive;
     
             $totalAmount = $afterReceiptDiscount;
@@ -1203,6 +1242,7 @@ class StoreController extends Controller
                 'receipt_id' => $receipt->receipt_id,
                 'subtotal' => $subtotal,
                 'total_item_discounts' => $totalItemDiscounts,
+                'total_promo_discounts' => $afterDiscount,
                 'receipt_discount_amount' => $receiptDiscountAmount,
                 'vat_amount' => $totalVatAmount,
                 'vat_amount_inclusive' => $vatAmountInclusive,
