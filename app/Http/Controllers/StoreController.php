@@ -749,6 +749,7 @@ class StoreController extends Controller
                                 $eligibleBundlesByProduct[$prodCode][] = [
                                     'bundle_id' => $rule->bundle_id,
                                     'bundle_code' => $rule->bundle_code,
+                                    'bundle_type' => $rule->bundle_type,
                                     'discount_percent' => $rule->discount_percent,
                                     'bogoType' => $rule->bogoType,
                                     'required_qty' => $rule->required_qty
@@ -979,83 +980,63 @@ class StoreController extends Controller
             $bundleAppliedUnits = 0;
 
             // -----------------------PROMO DISCOUNT----------------
+            $totalBundleDiscounts = 0; // ✅ NEW:  Track total bundle discounts
+
             foreach ($items as $item) {
                 $product = Product::where('prod_code', $item['prod_code'])->first();
                 $pricePerUnit = $product->selling_price;
-
-                $totalItemDiscount = 0;
-                $totalPromoDiscount = 0;
+                $totalQty = $item['quantity'];
+                
+                $bundleDiscountForItem = 0; // ✅ Track discount for THIS item
                 $bundleAppliedUnits = 0;
-
                 
-                if (isset($itemDiscounts[$item['prod_code']])) {
-                    $discount = $itemDiscounts[$item['prod_code']];
-                    $type = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
-
-                    $discountPerUnit = $type === 'percent'
-                        ? $pricePerUnit * ($discount['value'] / 100)
-                        : min($discount['value'], $pricePerUnit);
-
-                    $totalItemDiscount = $discountPerUnit * $item['quantity'];
-                }
-
-                
-                if (isset($eligibleBundles[$item['prod_code']])) {
-                    foreach ($eligibleBundles[$item['prod_code']] as $bundle) {
-                        $bundleId = $bundle['bundle_id'];
-                        $bundleCode = $bundle['bundle_code'];
-                        $ruleQty = $bundle['required_qty'] ?? 1;
-
-                        $remainingQty = $item['quantity'] - $bundleAppliedUnits;
+                if (isset($eligibleBundlesByProduct[$item['prod_code']])) {
+                    foreach ($eligibleBundlesByProduct[$item['prod_code']] as $bundle) {
+                        $bundlePercent = (float) ($bundle['discount_percent'] ??  0);
+                        $bundleType = $bundle['bundle_type'] ?? '';
+                        $requiredQty = (int) ($bundle['required_qty'] ?? 1);
+                        $bogoType = $bundle['bogoType'] ?? null;
+                        
+                        $remainingQty = $totalQty - $bundleAppliedUnits;
                         if ($remainingQty <= 0) break;
-
-                        $applyQty = min($ruleQty, $remainingQty);
-                        $bundlePercent = $bundleSettings[$bundleId]->discount_percent ?? 0;
-
                         
-                        $discountPerUnit = $pricePerUnit * ($bundlePercent / 100);
-                        $discountAmountForBundle = $discountPerUnit * $applyQty;
-
+                        $applyQty = min($requiredQty, $remainingQty);
                         
-                        $bundleAppliedUnits += $applyQty;
-
-                        
-                        if (!isset($itemBundleDiscounts[$bundleCode])) {
-                            $itemBundleDiscounts[$bundleCode] = [
-                                'bundle_percent' => $bundlePercent,
-                                'total_discount' => 0,
-                                'apply_qty' => 0
-                            ];
+                        // Only apply discount if bogoType is null (FREE item, not PAID)
+                        if ($bogoType === null) {
+                            $bundleType = $bundle['bundle_type'] ?? '';
+                            
+                            // For BOGO2 (free items), apply 100% discount
+                            if ($bundleType === 'BOGO2') {
+                                $bundleDiscountForItem += $pricePerUnit * $applyQty;  // ✅ Full price as discount
+                            } elseif ($bundlePercent > 0) {
+                                // For other bundles (BOGO1, MULTI-BUY, etc.), use the discount percentage
+                                $discountPerUnit = $pricePerUnit * ($bundlePercent / 100);
+                                $discountAmountForBundle = $discountPerUnit * $applyQty;
+                                $bundleDiscountForItem += $discountAmountForBundle;
+                            }
                         }
                         
-                        $itemBundleDiscounts[$bundleCode]['total_discount'] += $discountAmountForBundle;
-                        $itemBundleDiscounts[$bundleCode]['apply_qty'] += $applyQty;
-                        
-                        
-                        $totalPromoDiscount += $discountAmountForBundle;
+                        $bundleAppliedUnits += $applyQty;
                     }
                 }
-
-                $totalDiscount = $totalItemDiscount + $totalPromoDiscount;
-                $afterDiscount += $pricePerUnit * $item['quantity'] - $totalDiscount;
+                
+                $totalBundleDiscounts += $bundleDiscountForItem; // ✅ Add to total
             }
-
-            $afterPromoDiscounts = $afterItemDiscounts - $afterDiscount;
-
-
             
+            $afterBundleDiscounts = $afterItemDiscounts - $totalBundleDiscounts;
+
             $receiptDiscountAmount = 0;
 
-            if (! $hasItemDiscounts && $hasReceiptDiscount) {
+            if (!  $hasItemDiscounts && $hasReceiptDiscount) {
                 if ($receiptDiscountType === 'percent') {
-                    $receiptDiscountAmount = $afterPromoDiscounts * ($receiptDiscountValue / 100);
+                    $receiptDiscountAmount = $afterBundleDiscounts * ($receiptDiscountValue / 100);
                 } else {
-                    // FIXED receipt discount — apply ONCE
-                    $receiptDiscountAmount = min($receiptDiscountValue, $afterPromoDiscounts);
+                    $receiptDiscountAmount = min($receiptDiscountValue, $afterBundleDiscounts);
                 }
             }
-
-            $afterReceiptDiscount = $afterPromoDiscounts - $receiptDiscountAmount;
+            
+            $afterReceiptDiscount = $afterBundleDiscounts - $receiptDiscountAmount;
 
 
             // new vat changes
@@ -1086,13 +1067,20 @@ class StoreController extends Controller
                     if (isset($eligibleBundlesByProduct[$item['prod_code']])) {
                         foreach ($eligibleBundlesByProduct[$item['prod_code']] as $bundle) {
                             $bundlePercent = (float) ($bundle['discount_percent'] ??  0);
+                            $bundleType = $bundle['bundle_type'] ?? '';
                             $requiredQty = (int) ($bundle['required_qty'] ?? 1);
                             $bogoType = $bundle['bogoType'] ?? null;
                             
                             $applyQty = min($requiredQty, $totalQty);
                             
-                            if ($bogoType === null && $bundlePercent > 0) {
-                                $bundleDiscountAmount += ($pricePerUnit * ($bundlePercent / 100)) * $applyQty;
+                            if ($bogoType === null) {
+                                $bundleType = $bundle['bundle_type'] ?? '';
+                                
+                                if ($bundleType === 'BOGO2') {
+                                    $bundleDiscountAmount += $pricePerUnit * $applyQty;  // ✅ 100% discount
+                                } elseif ($bundlePercent > 0) {
+                                    $bundleDiscountAmount += ($pricePerUnit * ($bundlePercent / 100)) * $applyQty;
+                                }
                             }
                         }
                     }
@@ -1121,13 +1109,15 @@ class StoreController extends Controller
             $totalAmount = $afterReceiptDiscount;
     
             $paidRounded  = round($request->amount_paid, 2);
-            $totalRounded = $totalAmount;
-
-            if ($paidRounded < $totalRounded) {
+            $totalRounded = round($afterReceiptDiscount, 2);
+            
+            // Use tolerance to handle floating-point precision issues
+            $tolerance = 0.01; 
+            
+            if ($paidRounded < ($totalRounded - $tolerance)) {
                 throw new \Exception(
                     "Amount paid (₱" . number_format($paidRounded, 2) . 
-                    ") is less than total amount (₱" . number_format($totalRounded, 2) . ")" . 
-                    "\n" . number_format($afterDiscount, 2) . "   - " . number_format($afterReceiptDiscount, 2) 
+                    ") is less than total amount (₱" . number_format($totalRounded, 2) . ")"
                 );
             }
     
@@ -1138,7 +1128,7 @@ class StoreController extends Controller
                 'amount_paid' => $request->amount_paid,
                 'discount_type' => $receiptDiscountType,
                 'discount_value' => $receiptDiscountValue,
-                'discount_amount' => $receiptDiscountValue 
+                'discount_amount' => $receiptDiscountAmount 
             ]);
     
             foreach ($items as $item) {
@@ -1146,60 +1136,95 @@ class StoreController extends Controller
                 $pricePerUnit = $product->selling_price;
                 $totalQty = $item['quantity'];
 
+                $manualDiscountPerUnit = 0;
+                if (isset($itemDiscounts[$item['prod_code']])) {
+                    $discount = $itemDiscounts[$item['prod_code']];
+                    $discountType = $discount['type'] === 'fixed' ? 'amount' : $discount['type'];
+                    
+                    if ($discountType === 'percent') {
+                        $manualDiscountPerUnit = $pricePerUnit * ($discount['value'] / 100);
+                    } else {
+                        $manualDiscountPerUnit = min($discount['value'], $pricePerUnit);
+                    }
+                }
+            
                 $allocatedReceiptItems = [];
                 $remainingQty = $totalQty;
-
+            
+                // Process bundle allocations
                 if (isset($eligibleBundlesByProduct[$item['prod_code']])) {
                     foreach ($eligibleBundlesByProduct[$item['prod_code']] as $bundle) {
                         if ($remainingQty <= 0) break;
-
+            
                         $bundleCode = $bundle['bundle_code'];
                         $discountPercent = (float) ($bundle['discount_percent'] ?? 0);
-                        $requiredQty = (int) ($bundle['required_qty'] ?? 1);
+                        $requiredQty = (int) ($bundle['required_qty'] ??  1);
                         $bogoType = $bundle['bogoType'] ?? null;
-
+            
                         $applyQty = min($requiredQty, $remainingQty);
                         if ($applyQty <= 0) continue;
-
+            
+                        // ✅ Calculate discount per unit for bundle items
+                        $bundleDiscountPerUnit = $pricePerUnit * ($discountPercent / 100);
+            
                         if ($bogoType === null) {
-                            $allocatedReceiptItems[] = [
-                                'quantity' => $applyQty,
-                                'item_discount_type' => 'bundle',
-                                'item_receipt_type' => $bundleCode,
-                                'item_discount_value' => $discountPercent,
-                                'item_discount_amount' => $pricePerUnit * ($discountPercent / 100),
-                            ];
-                        } else {
-                            $allocatedReceiptItems[] = [
-                                'quantity' => $applyQty,
-                                'item_discount_type' => 'normal',
-                                'item_receipt_type' => 'regular',
-                                'item_discount_value' => 0,
-                                'item_discount_amount' => 0,
-                            ];
+                            $bundleType = $bundle['bundle_type'] ?? '';
+                            
+                            // For BOGO2, apply 100% discount
+                            if ($bundleType === 'BOGO2') {
+                                $allocatedReceiptItems[] = [
+                                    'quantity' => $applyQty,
+                                    'item_discount_type' => 'percent',
+                                    'item_receipt_type' => $bundleCode,
+                                    'item_discount_value' => 100,  // ✅ 100% discount
+                                    'item_discount_amount' => $pricePerUnit,  // ✅ Full price
+                                ];
+                            } else {
+                                // For other bundle types, use the discount percentage
+                                $bundleDiscountPerUnit = $pricePerUnit * ($discountPercent / 100);
+                                $allocatedReceiptItems[] = [
+                                    'quantity' => $applyQty,
+                                    'item_discount_type' => 'percent',
+                                    'item_receipt_type' => $bundleCode,
+                                    'item_discount_value' => $discountPercent,
+                                    'item_discount_amount' => $bundleDiscountPerUnit,
+                                ];
+                            }
                         }
-
+            
                         $remainingQty -= $applyQty;
                     }
                 }
-
+            
+                // Regular items (no bundle) - apply manual discount if any
                 if ($remainingQty > 0) {
-                    $allocatedReceiptItems[] = [
-                        'quantity' => $remainingQty,
-                        'item_discount_type' => 'normal',
-                        'item_receipt_type' => 'regular',
-                        'item_discount_value' => 0,
-                        'item_discount_amount' => 0,
-                    ];
+                    if ($manualDiscountPerUnit > 0) {
+                        $allocatedReceiptItems[] = [
+                            'quantity' => $remainingQty,
+                            'item_discount_type' => isset($itemDiscounts[$item['prod_code']]) ? $itemDiscounts[$item['prod_code']]['type'] : 'percent',
+                            'item_receipt_type' => 'regular',
+                            'item_discount_value' => isset($itemDiscounts[$item['prod_code']]) ? $itemDiscounts[$item['prod_code']]['value'] : 0,
+                            'item_discount_amount' => $manualDiscountPerUnit, // ✅ Per unit amount
+                        ];
+                    } else {
+                        $allocatedReceiptItems[] = [
+                            'quantity' => $remainingQty,
+                            'item_discount_type' => 'percent',
+                            'item_receipt_type' => 'regular',
+                            'item_discount_value' => 0,
+                            'item_discount_amount' => 0,
+                        ];
+                    }
                 }
-
+            
+                // Save to database with batch allocation
                 foreach ($item['allocated_batches'] as $batch) {
                     $batchProportion = $batch['quantity'] / $totalQty;
-
+            
                     foreach ($allocatedReceiptItems as $alloc) {
                         $qtyForBatch = (int) round($alloc['quantity'] * $batchProportion);
                         if ($qtyForBatch <= 0) continue;
-
+            
                         ReceiptItem::create([
                             'prod_code' => $item['prod_code'],
                             'receipt_id' => $receipt->receipt_id,
@@ -1207,11 +1232,11 @@ class StoreController extends Controller
                             'item_discount_type' => $alloc['item_discount_type'],
                             'item_receipt_type' => $alloc['item_receipt_type'],
                             'item_discount_value' => $alloc['item_discount_value'],
-                            'item_discount_amount' => $alloc['item_discount_amount'],
+                            'item_discount_amount' => $alloc['item_discount_amount'], // ✅ Per-unit amount
                             'vat_amount' => 0,
                             'inven_code' => $batch['inven_code'],
                         ]);
-
+            
                         Inventory::where('inven_code', $batch['inven_code'])
                             ->where('owner_id', $owner_id)
                             ->decrement('stock', $qtyForBatch);
@@ -1238,22 +1263,23 @@ class StoreController extends Controller
     
             $response = [
                 'success' => true,
-                'message' => 'Transaction completed successfully! ',
+                'message' => 'Transaction completed successfully!  ',
                 'receipt_id' => $receipt->receipt_id,
                 'subtotal' => $subtotal,
                 'total_item_discounts' => $totalItemDiscounts,
-                'total_promo_discounts' => $afterDiscount,
+                'total_bundle_discounts' => $totalBundleDiscounts, // ✅ Add this
                 'receipt_discount_amount' => $receiptDiscountAmount,
                 'vat_amount' => $totalVatAmount,
                 'vat_amount_inclusive' => $vatAmountInclusive,
                 'vat_amount_exempt' => $vatAmountExempt,
-                'total_amount' => $totalAmount,
+                'total_amount' => $afterReceiptDiscount, // ✅ Use correct final amount
                 'amount_paid' => $request->amount_paid,
-                'change' => $request->amount_paid - $totalAmount,
+                'change' => $request->amount_paid - $afterReceiptDiscount, // ✅ Fix change calculation
                 'receipt_items' => $receiptItems,
                 'total_quantity' => array_sum(array_column($items, 'quantity')),
+
             ];
-    
+
             if (! empty($lowStockProducts)) {
                 $response['low_stock_warning'] = $lowStockProducts;
             }
