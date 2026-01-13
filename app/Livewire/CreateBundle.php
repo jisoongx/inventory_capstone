@@ -271,7 +271,7 @@ class CreateBundle extends Component
             DB::table('bundles_setting')->insert([
                 'bundle_id' => $bundleId,
                 'start_date'=> $this->startDate ?? now(),
-                'end_date'=> $this->endDate ?? now(),
+                'end_date'=> $this->endDate ?? null,
                 'min_margin' => $this->minProfit ?? 0,
                 'discount_percent' => $this->selectedDiscount ?? 0,
             ]);

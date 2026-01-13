@@ -258,7 +258,7 @@
                     </div>
                     <div class="border-t pt-2 mt-2 space-y-1">
                         <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700">VAT-Inclusive: </span>
+                            <span class="text-sm font-medium text-gray-700">VAT-Inclusive:</span>
                             <span id="receiptVatInclusive" class="text-sm text-blue-600">₱0.00</span>
                         </div>
                         <div class="flex justify-between items-center">
@@ -1180,42 +1180,29 @@ class PaymentProcessor {
         document.getElementById('receiptNumber').textContent = paymentData.receipt_id || '{{ $receipt_no ??  "0" }}';
         document.getElementById('receiptTotalItems').textContent = paymentData.total_quantity;
         
-        // ✅ Calculate amounts properly
-        const subtotal = parseFloat(paymentData.subtotal || 0);
-        const manualItemDiscounts = parseFloat(paymentData.total_item_discounts || 0);
-        const bundleDiscounts = parseFloat(paymentData.total_bundle_discounts || 0);
-        const totalItemDiscounts = manualItemDiscounts + bundleDiscounts; // Combined
-        const receiptDiscountAmount = parseFloat(paymentData.receipt_discount_amount || 0);
-        const vatAmountInclusive = parseFloat(paymentData.vat_amount_inclusive || 0);
-        const vatAmountExempt = parseFloat(paymentData.vat_amount_exempt || 0);
+        const subtotal = paymentData.subtotal || paymentData.receipt_items.reduce((sum, item) => {
+            return sum + (item.product.selling_price * item.quantity);
+        }, 0);
         
-        // ✅ Use backend's calculated total and change
-        const totalAmount = parseFloat(paymentData.total_amount || 0);
-        const amountPaid = parseFloat(paymentData.amount_paid || 0);
-        const change = parseFloat(paymentData.change || 0);
-
-        console.log('Receipt Data:', {
-            subtotal,
-            manualItemDiscounts,
-            bundleDiscounts,
-            totalItemDiscounts,
-            receiptDiscountAmount,
-            totalAmount,
-            amountPaid,
-            change
-        });
-
-        // ✅ Update all displays
         document.getElementById('receiptSubtotal').textContent = `₱${subtotal.toFixed(2)}`;
-        document.getElementById('receiptItemDiscounts').textContent = `₱${totalItemDiscounts.toFixed(2)}`;
-        document.getElementById('receiptReceiptDiscount').textContent = `₱${receiptDiscountAmount.toFixed(2)}`;
-        document.getElementById('receiptVatInclusive').textContent = `₱${vatAmountInclusive.toFixed(2)}`;
-        document.getElementById('receiptVatExempt').textContent = `₱${vatAmountExempt.toFixed(2)}`;
-        document.getElementById('receiptTotalAmount').textContent = `₱${totalAmount.toFixed(2)}`;
-        document.getElementById('receiptAmountPaid').textContent = `₱${amountPaid.toFixed(2)}`;
-        document.getElementById('receiptChange').textContent = `₱${change.toFixed(2)}`;
+        document.getElementById('receiptTotalAmount').textContent = `₱${paymentData.total_amount.toFixed(2)}`;
+        document.getElementById('receiptAmountPaid').textContent = `₱${paymentData.amount_paid.toFixed(2)}`;
+        document.getElementById('receiptChange').textContent = `₱${paymentData.change.toFixed(2)}`;
 
-        // Date/time
+        const itemDiscountsAmount = paymentData.total_item_discounts ??  0;
+        const receiptDiscountAmount = paymentData.receipt_discount_amount ?? 0;
+            const vatAmountInclusive = parseFloat(paymentData.vat_amount_inclusive || 0);
+            const vatAmountExempt = parseFloat(paymentData.vat_amount_exempt || 0);
+            const totalVatAmount = parseFloat(paymentData.vat_amount || 0);
+
+            console.log('VAT Data:', { vatAmountInclusive, vatAmountExempt, totalVatAmount });
+
+        document.getElementById('receiptItemDiscounts').textContent = `₱${parseFloat(itemDiscountsAmount).toFixed(2)}`;
+        document.getElementById('receiptReceiptDiscount').textContent = `₱${parseFloat(receiptDiscountAmount).toFixed(2)}`;
+        
+        document.getElementById('receiptVatInclusive').textContent = `₱${parseFloat(vatAmountInclusive).toFixed(2)}`;
+        document.getElementById('receiptVatExempt').textContent = `₱${parseFloat(vatAmountExempt).toFixed(2)}`;
+
         const now = new Date();
         const options = {
             year: 'numeric',
@@ -1228,15 +1215,15 @@ class PaymentProcessor {
         };
         document.getElementById('receiptTransactionDate').textContent = now.toLocaleString('en-US', options);
 
-        // --- Apply eligible bundles to receipt_items for display ---
+        // --- Apply eligible bundles to receipt_items ---
         Object.values(this.eligibleBundles || {}).forEach(bundleItems => {
             bundleItems.forEach(bundleItem => {
                 const cartItem = paymentData.receipt_items.find(
                     ci => ci.product.prod_code === bundleItem.prod_code
                 );
-                if (! cartItem) return;
+                if (!cartItem) return;
 
-                if (! cartItem.bundle_applied_units) cartItem.bundle_applied_units = 0;
+                if (!cartItem.bundle_applied_units) cartItem.bundle_applied_units = 0;
                 if (!cartItem.promo_lines) cartItem.promo_lines = [];
 
                 const ruleQty = bundleItem.required_qty || 1;
@@ -1249,13 +1236,13 @@ class PaymentProcessor {
 
                 switch (bundleItem.bundle_type) {
                     case 'BOGO1':
-                        if (! bundleItem.bogoType) {
+                        if (!bundleItem.bogoType) {
                             const discountPercent = bundleItem.discount_percent || 0;
                             promoAmount = (cartItem.product.selling_price * applicableQty) * (discountPercent / 100);
                             promoLabel = 'BOGO (Discount)';
                         }
                         break;
-                    case 'BOGO2': 
+                    case 'BOGO2':
                         if (!bundleItem.bogoType) {
                             promoAmount = cartItem.product.selling_price * applicableQty;
                             promoLabel = 'BOGO (Free)';
@@ -1271,28 +1258,35 @@ class PaymentProcessor {
                 }
 
                 if (promoAmount > 0) {
+                    // Track promo lines for display
                     cartItem.promo_lines.push({
                         label: promoLabel,
                         quantity: applicableQty,
                         amount: -promoAmount
                     });
 
-                    cartItem.amount = (cartItem.amount ??  cartItem.product.selling_price * cartItem.quantity) - promoAmount;
+                    // Update total amount for this item
+                    cartItem.amount = (cartItem.amount ?? cartItem.product.selling_price * cartItem.quantity) - promoAmount;
+
+                    // Track applied units
                     cartItem.bundle_applied_units += applicableQty;
                     cartItem.bundle_applied = true;
                 }
             });
         });
 
-        // --- Render receipt items ---
+        // --- Render receipt items with promo lines ---
         const itemsList = document.getElementById('receiptItemsList');
+
 
         if (paymentData.receipt_items && paymentData.receipt_items.length > 0) {
             itemsList.innerHTML = paymentData.receipt_items.map(item => {
+                // Calculate amounts
                 const originalAmount = item.product.selling_price * item.quantity;
                 const netAmount = item.amount || originalAmount;
                 const hasPromo = (item.promo_lines || []).length > 0;
                 
+                // Build promo lines with consistent formatting
                 const promoHtml = (item.promo_lines || []).map(promo => {
                     const discountPercent = Math.abs((parseFloat(promo.amount) / item.product.selling_price) * 100).toFixed(0);
                     return `
@@ -1324,6 +1318,7 @@ class PaymentProcessor {
             itemsList.innerHTML = '<div class="text-center py-4 text-gray-500">No items found</div>';
         }
 
+        
         document.getElementById('receiptModal').classList.remove('hidden');
     }
 
@@ -1568,32 +1563,12 @@ class PaymentProcessor {
                             border-top: 1px solid #000;
                             padding-top: 4px;
                             margin-top: 4px;
-                            display: block;
-                            width: 100%;
-                        }
-
-                        .border-t.pt-2.mt-2.space-y-1 {
-                            display: flex;
-                            flex-direction: column;
                         }
 
                         .border-t.pt-2.mt-2.space-y-1 > div {
                             display: flex;
-                            justify-content:  space-between;
-                            align-items: center;
-                            width: 100%;
+                            justify-content: space-between;
                             margin-bottom: 2px;
-                            clear: both;
-                        }
-
-                        .border-t.pt-2.mt-2.space-y-1 > div span: first-child {
-                            float: left;
-                            clear: left;
-                        }
-
-                        .border-t.pt-2.mt-2.space-y-1 > div span:last-child {
-                            float: right;
-                            clear: right;
                         }
 
                         @media print {
@@ -1606,13 +1581,6 @@ class PaymentProcessor {
                             
                             .receipt-item {
                                 page-break-inside: avoid;
-                            }
-                        
-                            .border-t.pt-2.mt-2.space-y-1 > div {
-                                display: block;
-                                width: 100%;
-                                overflow: hidden;
-                                margin-bottom: 3px;
                             }
                         }
                     </style>

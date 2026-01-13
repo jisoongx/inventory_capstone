@@ -60,6 +60,7 @@ class StockAlert extends Component
 
         $results = DB::select("
             select * from vw_expiration_status
+            where days_until_expiry >= 0
         ");
 
         $this->expiry = collect($results)->map(function ($item) {

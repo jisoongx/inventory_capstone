@@ -17,14 +17,14 @@ class Receipt extends Model
         'amount_paid',
         'discount_type',
         'discount_value',
-        'discount_amount' // ✅ Added - stores calculated discount amount
+        'discount_amount',
     ];
     
     protected $casts = [
         'receipt_date' => 'datetime',
         'amount_paid' => 'decimal:2',
         'discount_value' => 'decimal:2',
-        'discount_amount' => 'decimal:2' // ✅ Added
+        'discount_amount' => 'decimal:2',
     ];
 
     // Relationships
